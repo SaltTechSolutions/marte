@@ -3,6 +3,7 @@ import React from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
+import { hapticAction, hapticSelection } from '@/utils/haptics';
 
 import { Text } from './Text';
 
@@ -25,9 +26,17 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
   const { colors, radius } = useAppTheme();
   const height = critical ? 56 : compact ? 44 : 48;
 
+  // Weight the feedback by consequence: a filled primary/critical button
+  // commits something, a ghost one usually just backs out.
+  const press = () => {
+    if (variant === 'ghost') hapticSelection();
+    else hapticAction();
+    onPress?.();
+  };
+
   if (variant === 'pulse') {
     return (
-      <Pressable onPress={onPress} disabled={disabled} style={[{ opacity: disabled ? 0.5 : 1 }, style]}>
+      <Pressable onPress={press} disabled={disabled} style={[{ opacity: disabled ? 0.5 : 1 }, style]}>
         <LinearGradient
           colors={[colors.g1, colors.g2, colors.g3]}
           start={{ x: 0, y: 1 }}

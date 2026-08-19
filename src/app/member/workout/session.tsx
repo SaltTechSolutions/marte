@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, Pressable, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
@@ -12,6 +11,7 @@ import { completeWorkoutLog, saveExerciseLogs, watchWorkoutLog } from '@/data/fi
 import { WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
+import { hapticSelection, hapticSuccess } from '@/utils/haptics';
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -70,7 +70,7 @@ export default function WorkoutSession() {
   }, [log, running]);
 
   const toggleRunning = () => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    hapticSelection();
     const now = Date.now();
     if (running) {
       if (segmentStartRef.current) accumulatedMsRef.current += now - segmentStartRef.current;
@@ -112,7 +112,7 @@ export default function WorkoutSession() {
 
   const toggleSet = () => {
     if (!exercise || exercise.setsCompleted >= exercise.setsTarget) return;
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    hapticSuccess();
     updateExercise({ setsCompleted: exercise.setsCompleted + 1 });
   };
 

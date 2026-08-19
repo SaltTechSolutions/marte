@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
+import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
@@ -102,7 +103,7 @@ export default function AdminClasses() {
   }
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <KeyboardAwareScroll contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text variant="h3">Ders programı</Text>
         <Button label={showForm ? 'Vazgeç' : '+ Ders ekle'} compact variant={showForm ? 'ghost' : 'primary'} onPress={() => setShowForm((v) => !v)} />
@@ -186,6 +187,6 @@ export default function AdminClasses() {
       )}
 
       {snack && <Snackbar message={snack} onAction={() => setSnack(null)} />}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

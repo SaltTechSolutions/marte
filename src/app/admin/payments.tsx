@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 
+import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Screen } from '@/components/Screen';
@@ -12,6 +13,7 @@ import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { confirmPayment, rejectPayment, recordPayment, watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
 import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { confirmDestructive } from '@/utils/confirm';
 
 const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi' };
 
@@ -97,7 +99,15 @@ export default function AdminPayments() {
     }
   };
 
-  const reject = async (id: string) => {
+  const reject = (id: string, memberName: string, amount: number) =>
+    confirmDestructive({
+      title: 'Ödeme bildirimini reddet',
+      message: `${memberName} adlı üyenin ${amount} ₺ tutarındaki bildirimi reddedilecek. Bu karar geri alınamaz.`,
+      confirmLabel: 'Reddet',
+      onConfirm: () => void doReject(id),
+    });
+
+  const doReject = async (id: string) => {
     setBusyId(id);
     try {
       await rejectPayment(id);
@@ -107,7 +117,7 @@ export default function AdminPayments() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
+    <KeyboardAwareScroll contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
       <Text variant="h3">Ödemeler</Text>
 
       {pending.length > 0 && (
@@ -131,7 +141,7 @@ export default function AdminPayments() {
               </Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Button label={busyId === p.id ? '…' : 'Onayla'} compact style={{ flex: 1 }} disabled={busyId === p.id} onPress={() => confirm(p.id)} />
-                <Button label="Reddet" variant="ghost" compact style={{ flex: 1 }} disabled={busyId === p.id} onPress={() => reject(p.id)} />
+                <Button label="Reddet" variant="ghost" compact style={{ flex: 1 }} disabled={busyId === p.id} onPress={() => reject(p.id, p.memberName, p.amount)} />
               </View>
             </View>
           ))}
@@ -200,6 +210,6 @@ export default function AdminPayments() {
           ))}
         </View>
       )}
-    </ScrollView>
+    </KeyboardAwareScroll>
   );
 }

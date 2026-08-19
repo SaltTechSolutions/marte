@@ -17,6 +17,7 @@ import { canManageGym, tenantIdIf } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { confirmDestructive } from '@/utils/confirm';
 
 const FREE_MEMBER_LIMIT = 10;
 
@@ -105,7 +106,15 @@ export default function AdminMembers() {
     }
   };
 
-  const reject = async (r: TenantMembership) => {
+  const reject = (r: TenantMembership) =>
+    confirmDestructive({
+      title: 'Katılım isteğini reddet',
+      message: `${requesterLabel(r)} salonuna alınmayacak. İstek geri getirilemez; tekrar katılmak isterse yeniden başvurmalı.`,
+      confirmLabel: 'Reddet',
+      onConfirm: () => void doReject(r),
+    });
+
+  const doReject = async (r: TenantMembership) => {
     setBusyId(r.id);
     try {
       await rejectMembership(r.id);

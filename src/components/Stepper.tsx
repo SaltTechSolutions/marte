@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
 import React from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
+import { hapticSelection } from '@/utils/haptics';
 
 import { Text } from './Text';
 
@@ -23,7 +23,7 @@ export function Stepper({
   const { colors, radius } = useAppTheme();
 
   const bump = (delta: number) => {
-    if (Platform.OS !== 'web') Haptics.selectionAsync();
+    hapticSelection();
     onChange(Math.max(0, Math.round((value + delta) * 10) / 10));
   };
 

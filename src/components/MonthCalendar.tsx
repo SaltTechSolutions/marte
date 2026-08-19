@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
+import { hapticSelection } from '@/utils/haptics';
 
 import { Text } from './Text';
 
@@ -110,7 +111,7 @@ export function MonthCalendar({
             return (
               <Pressable
                 key={d.toISOString()}
-                onPress={() => onSelectDate(d)}
+                onPress={() => { hapticSelection(); onSelectDate(d); }}
                 style={{ flex: 1, height: 42, alignItems: 'center', justifyContent: 'center' }}>
                 <View
                   style={{

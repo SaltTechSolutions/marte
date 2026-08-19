@@ -1,7 +1,8 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Screen } from '@/components/Screen';
@@ -73,7 +74,7 @@ export default function MemberPayments() {
           <Text variant="h3">Ödemelerim</Text>
         </View>
 
-        <ScrollView contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg }}>
+        <KeyboardAwareScroll contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg }}>
           {adding ? (
             <View style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12, gap: 10 }}>
               <Text variant="helper" weight="700">
@@ -129,7 +130,7 @@ export default function MemberPayments() {
               </View>
             ))
           )}
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
     </Screen>
   );

@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { requestJoin } from '@/data/firebase/membershipRepo';
@@ -70,8 +70,8 @@ export default function GymCodeScreen() {
   };
 
   return (
-    <Screen>
-      <View style={{ flex: 1, paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+    <FormScreen contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+      <View style={{ flex: 1, gap: spacing.md }}>
         <Text variant="h2">Salonuna katıl</Text>
         <Text variant="helper" tone="sub">
           Resepsiyondaki QR&rsquo;ı okut ya da salon kodunu gir.
@@ -178,6 +178,6 @@ export default function GymCodeScreen() {
           }}
         />
       </View>
-    </Screen>
+    </FormScreen>
   );
 }

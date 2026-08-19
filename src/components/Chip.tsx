@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
+import { hapticSelection } from '@/utils/haptics';
 
 import { Text } from './Text';
 
@@ -18,7 +19,7 @@ export function Chip({
   const Wrapper = onPress ? Pressable : View;
   return (
     <Wrapper
-      onPress={onPress}
+      onPress={() => { hapticSelection(); onPress?.(); }}
       style={{
         backgroundColor: selected ? colors.p : colors.surf2,
         borderRadius: radius.pill,

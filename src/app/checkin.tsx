@@ -1,10 +1,10 @@
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
@@ -14,6 +14,7 @@ import { canCheckIn, tenantIdIf } from '@/data/membership';
 import { checkInByMembershipId, checkInByShortCode } from '@/data/firebase/checkinRepo';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
+import { hapticError, hapticSuccess } from '@/utils/haptics';
 
 const REASON_MESSAGE: Record<string, string> = {
   'not-found': 'Bu kod tanınmadı. Kodu kontrol edip tekrar dene.',
@@ -43,13 +44,13 @@ export default function AdminCheckin() {
 
   const finishSubmit = (outcome: { ok: true; name: string } | { ok: false; reason: string }) => {
     if (outcome.ok) {
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      hapticSuccess();
       setResult({ ok: true, message: `${outcome.name} içeri girdi` });
       // Back to scanning on its own: staff run a queue of people through and
       // shouldn't have to dismiss a confirmation between each one.
       resetTimer.current = setTimeout(scanAgain, 1600);
     } else {
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      hapticError();
       setResult({ ok: false, message: REASON_MESSAGE[outcome.reason] ?? 'Bir hata oluştu, tekrar dene.' });
     }
   };
@@ -94,7 +95,10 @@ export default function AdminCheckin() {
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
           <Text style={{ fontSize: 28 }}>🔒</Text>
           <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon yönetici oturumu gerekli
+            Üye kabul yetkin yok
+          </Text>
+          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
+            Salon yöneticisi bu yetkiyi sana verebilir.
           </Text>
         </View>
       </Screen>
@@ -102,8 +106,8 @@ export default function AdminCheckin() {
   }
 
   return (
-    <Screen>
-      <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md }}>
+    <FormScreen contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md }}>
+      <View style={{ flex: 1, gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           {/* Falls back to '/', which re-routes to whichever home this
               person's role gives them — the screen is now reachable by both
@@ -198,6 +202,6 @@ export default function AdminCheckin() {
           </>
         )}
       </View>
-    </Screen>
+    </FormScreen>
   );
 }

@@ -2,8 +2,8 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -69,8 +69,8 @@ export default function CreateGymScreen() {
   };
 
   return (
-    <Screen>
-      <View style={{ flex: 1, paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+    <FormScreen contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+      <View style={{ flex: 1, gap: spacing.md }}>
         <Text variant="h2">Salonunu oluştur</Text>
         <Text variant="helper" tone="sub">
           Kendi salonunun GymEntra sayfasını aç — üyelerin bu kodla katılsın.
@@ -131,6 +131,6 @@ export default function CreateGymScreen() {
           style={{ marginBottom: spacing.lg }}
         />
       </View>
-    </Screen>
+    </FormScreen>
   );
 }

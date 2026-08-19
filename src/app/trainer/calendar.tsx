@@ -16,6 +16,7 @@ import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { createPtSession, reassignSession, setSessionStatus, watchSessionsForTenant, watchSessionsForTrainer } from '@/data/firebase/ptSessionRepo';
 import { PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { confirmDestructive } from '@/utils/confirm';
 
 function formatTime(d: Date): string {
   return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -181,7 +182,20 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
     }
   };
 
-  const setStatus = async (session: PtSession, status: 'completed' | 'cancelled') => {
+  const setStatus = (session: PtSession, status: 'completed' | 'cancelled') => {
+    if (status !== 'cancelled') {
+      void applyStatus(session, status);
+      return;
+    }
+    confirmDestructive({
+      title: 'Randevuyu iptal et',
+      message: `${session.memberName} ile ${formatLongDate(session.date)} ${formatTime(session.date)} randevusu iptal edilecek. Geri alınamaz.`,
+      confirmLabel: 'İptal et',
+      onConfirm: () => void applyStatus(session, status),
+    });
+  };
+
+  const applyStatus = async (session: PtSession, status: 'completed' | 'cancelled') => {
     setBusyId(session.id);
     try {
       await setSessionStatus(session.id, status);

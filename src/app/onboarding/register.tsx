@@ -8,9 +8,9 @@ import {
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { GoogleIcon } from '@/components/GoogleIcon';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { getActiveMembership } from '@/data/firebase/membershipRepo';
@@ -119,8 +119,8 @@ export default function RegisterScreen() {
   const canSubmit = email.trim().length > 3 && password.length >= 6 && (mode === 'signIn' || name.trim().length > 0);
 
   return (
-    <Screen>
-      <View style={{ flex: 1, paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+    <FormScreen contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+      <View style={{ flex: 1, gap: spacing.md }}>
         <View style={{ alignItems: 'center', gap: 4, marginBottom: spacing.lg }}>
           <Text variant="h2">GymEntra</Text>
           <Text variant="helper" tone="sub">
@@ -197,6 +197,6 @@ export default function RegisterScreen() {
           Doğum günü, fotoğraf vs. SONRA sorulur
         </Text>
       </View>
-    </Screen>
+    </FormScreen>
   );
 }

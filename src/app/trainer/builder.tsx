@@ -11,6 +11,7 @@ import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from
 import { Program, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
+import { confirmDestructive } from '@/utils/confirm';
 
 const EXERCISE_LIBRARY = ['Bench Press', 'Squat', 'Deadlift', 'Omuz Pres', 'Lat Pulldown', 'Biceps Curl', 'Triceps Pushdown', 'Leg Press', 'Plank', 'Mekik'];
 
@@ -71,8 +72,16 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   };
 
   const removeExercise = (id: string) => {
-    persist(exercises.filter((e) => e.id !== id));
-    if (expandedId === id) setExpandedId(null);
+    const exercise = exercises.find((e) => e.id === id);
+    confirmDestructive({
+      title: 'Egzersizi kaldır',
+      message: `"${exercise?.name ?? 'Egzersiz'}" programdan çıkarılacak. Program anında kaydedildiği için geri alınamaz.`,
+      confirmLabel: 'Kaldır',
+      onConfirm: () => {
+        persist(exercises.filter((e) => e.id !== id));
+        if (expandedId === id) setExpandedId(null);
+      },
+    });
   };
 
   const leaveDraft = () => safeBack(router, '/trainer');
