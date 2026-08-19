@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -12,7 +11,6 @@ import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { canCheckIn, tenantIdIf } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
-import { safeBack } from '@/utils/navigation';
 
 function initialsOf(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
@@ -29,7 +27,6 @@ function initialsOf(name: string): string {
  * joined here rather than denormalised onto every scan.
  */
 export default function AdminToday() {
-  const router = useRouter();
   const { colors, spacing } = useAppTheme();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canCheckIn(activeMembership));
@@ -69,14 +66,9 @@ export default function AdminToday() {
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Text onPress={() => safeBack(router, '/admin')} style={{ fontSize: 20, color: colors.txt, paddingRight: 4 }}>
-          ‹
-        </Text>
-        <Text variant="h3">
-          Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries.length}</Text>
-        </Text>
-      </View>
+      <Text variant="h3">
+        Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries.length}</Text>
+      </Text>
 
       {failed ? (
         <ErrorNotice message="Giriş listesi alınamadı." onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }} />

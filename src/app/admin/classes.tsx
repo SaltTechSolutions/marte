@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -90,15 +91,10 @@ export default function AdminClasses() {
 
   if (!tenantId) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-        <Text style={{ fontSize: 28 }}>📅</Text>
-        <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-          Salon yönetici oturumu gerekli
-        </Text>
-        <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-          Ders programını yönetmek için bir salonun admin&rsquo;i olarak giriş yapmalısın.
-        </Text>
-      </View>
+      <AccessGuard
+        title="Salon yönetici oturumu gerekli"
+        hint="Ders programını yönetmek için bir salonun admin’i olarak giriş yapmalısın."
+      />
     );
   }
 

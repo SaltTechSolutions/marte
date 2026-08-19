@@ -2,9 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchMeasurements } from '@/data/firebase/measurementRepo';
@@ -13,7 +13,6 @@ import { watchWorkoutLogsForMember } from '@/data/firebase/workoutLogRepo';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { MeasurementEntry, Program, WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
-import { safeBack } from '@/utils/navigation';
 
 function initialsOf(name: string): string {
   return name
@@ -83,16 +82,7 @@ export default function TrainerMemberDetail() {
   }, [tenantId, memberId]);
 
   if (!tenantId || !memberId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon antrenör oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   const name = memberName || 'Üye';
@@ -119,9 +109,6 @@ export default function TrainerMemberDetail() {
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <Text onPress={() => safeBack(router, '/trainer')} style={{ fontSize: 20, color: colors.txt, paddingRight: 4 }}>
-          ‹
-        </Text>
         <View
           style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="helper" weight="900" style={{ color: colors.p }}>

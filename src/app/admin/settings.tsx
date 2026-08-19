@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
@@ -23,21 +24,11 @@ const SWATCHES = ['#10B981', '#F97316', '#8B5CF6', '#EF4444', '#0EA5E9'];
 
 /** Branding settings — the white-label magic moment: live preview of what members see. */
 export default function AdminSettings() {
-  const { spacing } = useAppTheme();
   const { activeMembership, activeTenant } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   if (!tenantId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon yönetici oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
 
   // Wait for the real tenant doc before mounting the form, so its useState

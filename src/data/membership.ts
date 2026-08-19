@@ -1,3 +1,5 @@
+import type { Href } from 'expo-router';
+
 import { MembershipPermission, MembershipRole, TenantMembership } from './types';
 
 /**
@@ -66,7 +68,7 @@ export function primaryRole(m: Maybe): MembershipRole | null {
   return null;
 }
 
-export const ROLE_HOME: Record<MembershipRole, string> = {
+export const ROLE_HOME: Record<MembershipRole, Href> = {
   admin: '/admin',
   trainer: '/trainer',
   member: '/member',

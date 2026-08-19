@@ -2,11 +2,11 @@ import { User } from 'firebase/auth';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { dayKey, isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar';
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { Screen } from '@/components/Screen';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -28,19 +28,9 @@ function formatLongDate(d: Date): string {
 
 /** Trainer's own PT calendar, colleagues' shared calendars, and — for admins — every trainer's. */
 export default function TrainerCalendar() {
-  const { spacing } = useAppTheme();
   const { user, activeMembership } = useAuth();
   if (!isStaff(activeMembership) || !user || !activeMembership) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon antrenör oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   return (

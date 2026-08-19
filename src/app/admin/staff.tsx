@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ErrorNotice } from '@/components/ErrorNotice';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -68,16 +68,7 @@ export default function AdminStaff() {
   }, [tenantId, retryKey]);
 
   if (!tenantId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon yönetici oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
 
   const toggleCheckin = async (m: TenantMembership) => {

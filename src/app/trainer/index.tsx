@@ -3,10 +3,10 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Chip } from '@/components/Chip';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListRow } from '@/components/ListRow';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { canCheckIn, isStaff, tenantIdIf } from '@/data/membership';
@@ -55,16 +55,7 @@ export default function TrainerClients() {
   };
 
   if (!tenantId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon antrenör oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   const programByMember = new Map(activePrograms.map((p) => [p.memberId, p]));

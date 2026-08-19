@@ -52,7 +52,10 @@ export function TabBar({ items }: { items: TabItem[] }) {
         return (
           <Pressable
             key={String(item.href)}
-            onPress={() => router.push(item.href)}
+            // replace, not push: tabs are peers, not a stack. Pushing meant
+            // every tab visit stacked up, so Android's back button walked
+            // backwards through tab history instead of leaving the app.
+            onPress={() => router.replace(item.href)}
             style={{ alignItems: 'center', minWidth: 44, minHeight: 44, justifyContent: 'center', gap: 2 }}>
             <Ionicons
               name={active ? activeGlyph(item.icon) : item.icon}

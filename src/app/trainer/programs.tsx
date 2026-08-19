@@ -2,10 +2,10 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Chip } from '@/components/Chip';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListGroup, ListRow } from '@/components/ListRow';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
@@ -49,16 +49,7 @@ export default function TrainerPrograms() {
   };
 
   if (!tenantId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon antrenör oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   const activeCount = programs.filter((p) => p.status === 'active').length;

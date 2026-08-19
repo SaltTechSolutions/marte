@@ -31,7 +31,7 @@ export function RoleSwitcher() {
   const switchTo = async (role: MembershipRole) => {
     if (role === activeRole) return;
     await setActiveRole(role);
-    router.replace(ROLE_HOME[role] as never);
+    router.replace(ROLE_HOME[role]);
   };
 
   return (

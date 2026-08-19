@@ -22,7 +22,7 @@ export default function Launcher() {
     } else if (activeRole ?? primaryRole(activeMembership)) {
       // activeRole is the surface a multi-role user last chose; it falls
       // back to the most privileged role they hold.
-      router.replace(ROLE_HOME[(activeRole ?? primaryRole(activeMembership))!] as never);
+      router.replace(ROLE_HOME[(activeRole ?? primaryRole(activeMembership))!]);
     } else {
       router.replace('/onboarding/gym-code');
     }

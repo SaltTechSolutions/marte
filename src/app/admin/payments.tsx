@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -48,16 +48,7 @@ export default function AdminPayments() {
   }, [tenantId]);
 
   if (!tenantId) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon yönetici oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
 
   const pending = payments.filter((p) => p.status === 'pending');

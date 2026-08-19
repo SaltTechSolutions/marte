@@ -42,7 +42,7 @@ async function routeAfterAuth(router: ReturnType<typeof useRouter>, user: User) 
   const membership = await getActiveMembership(user.uid);
   const role = primaryRole(membership);
   if (role) {
-    router.replace(ROLE_HOME[role] as never);
+    router.replace(ROLE_HOME[role]);
   } else {
     router.push('/onboarding/gym-code');
   }

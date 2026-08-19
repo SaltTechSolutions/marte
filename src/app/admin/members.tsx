@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Snackbar } from '@/components/Snackbar';
@@ -128,15 +129,10 @@ export default function AdminMembers() {
 
   if (!tenantId) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-        <Text style={{ fontSize: 28 }}>🔒</Text>
-        <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-          Salon yönetici oturumu gerekli
-        </Text>
-        <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-          Katılım isteklerini görmek ve onaylamak için bir salonun admin&rsquo;i olarak giriş yapmalısın.
-        </Text>
-      </View>
+      <AccessGuard
+        title="Salon yönetici oturumu gerekli"
+        hint="Katılım isteklerini görmek ve onaylamak için bir salonun admin’i olarak giriş yapmalısın."
+      />
     );
   }
 

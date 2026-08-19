@@ -2,11 +2,11 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
@@ -113,16 +113,7 @@ export default function TrainerProfile() {
   const myPrograms = useMemo(() => programs.filter((p) => p.trainerId === user?.uid), [programs, user?.uid]);
 
   if (!tenantId || !user) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Salon antrenör oturumu gerekli
-          </Text>
-        </View>
-      </Screen>
-    );
+    return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   const grantedTo = new Set(grantedShares.map((s) => s.viewerTrainerId));
