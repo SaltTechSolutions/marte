@@ -8,7 +8,6 @@ import { Button } from '@/components/Button';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { ProgressRing } from '@/components/ProgressRing';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
@@ -35,11 +34,7 @@ export default function AdminSettings() {
   // initializers below can seed straight from server data — no effect, no
   // cascading-render lint trip, no flash of stale/default branding.
   if (!activeTenant) {
-    return (
-      <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }} />
-      </Screen>
-    );
+    return <View style={{ flex: 1 }} />;
   }
 
   return <AdminSettingsForm tenantId={tenantId} tenant={activeTenant} />;

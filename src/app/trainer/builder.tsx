@@ -4,7 +4,6 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
-import { Screen } from '@/components/Screen';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
@@ -24,21 +23,15 @@ export default function ProgramBuilder() {
     return watchProgram(programId, setProgram);
   }, [programId]);
 
-  if (!programId || program === undefined) return (
-      <Screen>
-        <View />
-      </Screen>
-    );
+  if (!programId || program === undefined) return <View style={{ flex: 1 }} />;
 
   if (!program) {
     return (
-      <Screen>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" weight="900">
             Program bulunamadı
           </Text>
         </View>
-      </Screen>
     );
   }
 

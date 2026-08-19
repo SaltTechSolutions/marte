@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
@@ -38,11 +37,7 @@ export default function WorkoutOverview() {
     }
   };
 
-  if (program === undefined) return (
-      <Screen>
-        <View />
-      </Screen>
-    );
+  if (program === undefined) return <View style={{ flex: 1 }} />;
 
   if (!program) {
     return (

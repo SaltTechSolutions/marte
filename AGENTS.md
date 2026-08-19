@@ -50,6 +50,10 @@ v1'de tablet desteği yok, yalnızca dikey yön.
   `error`. Boş ile yükleniyor aynı görünmemeli; hata sessizce yutulmamalı.
 - **Platform yerelliği.** iOS'ta kenardan geri kaydırma, Android'de sistem
   geri tuşu çalışmalı. Özel geri butonu yalnızca gerçek modal ekranlarda.
+- **`Screen` iç içe kullanılmaz.** Rol layout'ları (`member/`, `trainer/`,
+  `admin/`) zaten bir tane render ediyor; içeride ikincisi çentik payını iki
+  kez uygular. Tab bar'ı olmayan ekranlar `Screen`'i doğrudan kullanır ve
+  varsayılan olarak dört kenarı da alır.
 - Metinler Türkçe, sade ve insani. Teknik jargon ve hata kodu kullanıcıya
   gösterilmez.
 

@@ -3,7 +3,6 @@ import { ScrollView, View } from 'react-native';
 
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListGroup, ListRow } from '@/components/ListRow';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchTodayCheckins } from '@/data/firebase/checkinRepo';
@@ -48,14 +47,12 @@ export default function AdminToday() {
 
   if (!tenantId) {
     return (
-      <Screen>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
           <Text style={{ fontSize: 28 }}>🔒</Text>
           <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
             Bu ekran için yetkin yok
           </Text>
         </View>
-      </Screen>
     );
   }
 

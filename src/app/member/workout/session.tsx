@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
-import { Screen } from '@/components/Screen';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { completeWorkoutLog, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
@@ -28,6 +28,10 @@ export default function WorkoutSession() {
   const router = useRouter();
   const { logId } = useLocalSearchParams<{ logId: string }>();
   const { colors, spacing, radius } = useAppTheme();
+  // The tab bar is hidden during a session, so nothing else claims the
+  // bottom inset — the finish button would otherwise sit on the home
+  // indicator.
+  const insets = useSafeAreaInsets();
 
   const [log, setLog] = useState<WorkoutLog | null | undefined>(undefined);
   const [exerciseIndex, setExerciseIndex] = useState(0);
@@ -88,9 +92,7 @@ export default function WorkoutSession() {
     exerciseAccumulatedMsRef.current + (running && exerciseSegmentStartRef.current ? Date.now() - exerciseSegmentStartRef.current : 0);
 
   if (log === undefined || !logId) return (
-      <Screen>
         <View />
-      </Screen>
     );
   if (!log) {
     return (
@@ -142,9 +144,7 @@ export default function WorkoutSession() {
   };
 
   if (!exercise) return (
-      <Screen>
         <View />
-      </Screen>
     );
 
   const progressPercent = Math.round(((exerciseIndex + 1) / log.exerciseLogs.length) * 100);
@@ -250,7 +250,7 @@ export default function WorkoutSession() {
         </View>
       </View>
 
-      <Button label={isLast ? 'Antrenmanı bitir' : 'Sonraki egzersiz'} critical style={{ marginBottom: spacing.xl }} onPress={advance} />
+      <Button label={isLast ? 'Antrenmanı bitir' : 'Sonraki egzersiz'} critical style={{ marginBottom: Math.max(insets.bottom, spacing.md) }} onPress={advance} />
     </View>
   );
 }

@@ -5,7 +5,6 @@ import { Pressable, View } from 'react-native';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
-import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -41,7 +40,7 @@ export default function MemberPayments() {
     return watchPaymentsForMember(tenantId, uid, setPayments);
   }, [tenantId, uid]);
 
-  if (!tenantId || !user) return <Screen><View /></Screen>;
+  if (!tenantId || !user) return <View style={{ flex: 1 }} />;
 
   const submit = async () => {
     const amountNum = Number(amount.replace(',', '.'));
@@ -65,7 +64,6 @@ export default function MemberPayments() {
   };
 
   return (
-    <Screen>
       <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Pressable onPress={() => safeBack(router, '/member')}>
@@ -132,6 +130,5 @@ export default function MemberPayments() {
           )}
         </KeyboardAwareScroll>
       </View>
-    </Screen>
   );
 }

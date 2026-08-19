@@ -34,8 +34,9 @@ export default function AdminLayout() {
     headerShadowVisible: false,
   } as const;
 
+  // No bottom edge: the TabBar sits over that inset and consumes it itself.
   return (
-    <Screen>
+    <Screen edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg0 } }}>
           <Stack.Screen name="index" />
