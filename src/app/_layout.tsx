@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 
 import { AuthProvider } from '@/context/AuthContext';
+import { AuthRedirect } from '@/context/AuthRedirect';
 import { PushNotificationSync } from '@/notifications/PushNotificationSync';
 import { ThemeProvider as AppThemeProvider } from '@/theme/ThemeContext';
 import { ThemeSync } from '@/theme/ThemeSync';
@@ -36,6 +37,7 @@ export default function RootLayout() {
   return (
     <AppThemeProvider>
       <AuthProvider>
+        <AuthRedirect />
         <ThemeSync />
         <PushNotificationSync />
         <Stack screenOptions={{ headerShown: false }}>
