@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -10,10 +11,13 @@ export function Chip({
   label,
   selected,
   onPress,
+  icon,
 }: {
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  /** Leading glyph — for chips that act rather than filter (e.g. a sort toggle). */
+  icon?: keyof typeof Ionicons.glyphMap;
 }) {
   const { colors, radius } = useAppTheme();
   const Wrapper = onPress ? Pressable : View;
@@ -26,8 +30,11 @@ export function Chip({
         paddingHorizontal: 14,
         paddingVertical: 8,
         minHeight: 44,
-        justifyContent: 'center',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
       }}>
+      {icon ? <Ionicons name={icon} size={15} color={selected ? colors.onp : colors.txt} /> : null}
       <Text variant="helper" weight="600" tone={selected ? 'onp' : 'primary'}>
         {label}
       </Text>

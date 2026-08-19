@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
@@ -8,12 +8,14 @@ import { Chip } from '@/components/Chip';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { canCheckIn, isStaff, tenantIdIf } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { watchActiveProgramsForTenant } from '@/data/firebase/programRepo';
 import { Program, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { compareTr, matchesTr } from '@/utils/search';
 
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -25,6 +27,20 @@ function initialsOf(name: string): string {
 
 const FILTERS = ['Tümü', 'Programsız'] as const;
 
+/**
+ * "Son aktiviteye göre" was on the brief but is deliberately not here: nothing
+ * on the membership records last activity, so it would mean scanning every
+ * member's check-in history on a screen that already loads two collections.
+ * Join date answers the same "who is new to me?" question from data already
+ * in hand.
+ */
+const SORTS = { name: 'Ada göre', recent: 'Yeni üyeler' } as const;
+type Sort = keyof typeof SORTS;
+
+function joinedAt(m: TenantMembership): number {
+  return (m.approvedAt ?? m.requestedAt).getTime();
+}
+
 /** Client list — built for interrupted, repeated glances. */
 export default function TrainerClients() {
   const router = useRouter();
@@ -33,6 +49,8 @@ export default function TrainerClients() {
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Tümü');
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<Sort>('name');
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [activePrograms, setActivePrograms] = useState<Program[]>([]);
   const [failed, setFailed] = useState(false);
@@ -54,12 +72,30 @@ export default function TrainerClients() {
     setRetryKey((k) => k + 1);
   };
 
+  const programByMember = useMemo(
+    () => new Map(activePrograms.map((p) => [p.memberId, p])),
+    [activePrograms],
+  );
+
+  const nameOf = (m: TenantMembership) => m.userDisplayName || m.userEmail || 'Üye';
+
+  const withoutProgram = useMemo(
+    () => members.filter((m) => !programByMember.has(m.userId)),
+    [members, programByMember],
+  );
+
+  const visible = useMemo(() => {
+    const base = filter === 'Programsız' ? withoutProgram : members;
+    const q = query.trim();
+    const found = q ? base.filter((m) => matchesTr(nameOf(m), q) || matchesTr(m.userEmail ?? '', q)) : base;
+    return [...found].sort((a, b) =>
+      sort === 'name' ? compareTr(nameOf(a), nameOf(b)) : joinedAt(b) - joinedAt(a),
+    );
+  }, [filter, members, withoutProgram, query, sort]);
+
   if (!tenantId) {
     return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
-
-  const programByMember = new Map(activePrograms.map((p) => [p.memberId, p]));
-  const visible = filter === 'Programsız' ? members.filter((m) => !programByMember.has(m.userId)) : members;
 
   // Opens the coaching detail screen. Deliberately does NOT create a
   // programme: this used to call findOrCreateDraftProgram, so merely
@@ -104,17 +140,49 @@ export default function TrainerClients() {
           </View>
         </Pressable>
       )}
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      {/* Search earns its place past a couple of dozen members — the pilot gym
+          has 50 — and it is the fastest way to a specific person, so it sits
+          above the filters rather than behind them. */}
+      <View style={{ justifyContent: 'center' }}>
+        <TextField
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Üye ara"
+          autoCorrect={false}
+          autoCapitalize="none"
+          clearButtonMode="while-editing"
+          returnKeyType="search"
+          style={{ paddingLeft: 40 }}
+        />
+        <Ionicons name="search" size={17} color={colors.sub} style={{ position: 'absolute', left: 14 }} />
+      </View>
+
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         {FILTERS.map((f) => (
-          <Chip key={f} label={f === 'Tümü' ? `Tümü (${members.length})` : `Programsız (${members.filter((m) => !programByMember.has(m.userId)).length})`} selected={filter === f} onPress={() => setFilter(f)} />
+          <Chip
+            key={f}
+            label={f === 'Tümü' ? `Tümü (${members.length})` : `Programsız (${withoutProgram.length})`}
+            selected={filter === f}
+            onPress={() => setFilter(f)}
+          />
         ))}
+        <View style={{ flex: 1 }} />
+        <Chip
+          label={SORTS[sort]}
+          icon="swap-vertical-outline"
+          onPress={() => setSort((c) => (c === 'name' ? 'recent' : 'name'))}
+        />
       </View>
 
       {failed ? (
         <ErrorNotice message="Üye listesi alınamadı." onRetry={retry} />
       ) : visible.length === 0 ? (
         <Text variant="helper" tone="sub" style={{ textAlign: 'center', marginTop: spacing.xl }}>
-          {filter === 'Programsız' ? 'Herkesin bir programı var 🎉' : 'Henüz aktif üye yok.'}
+          {query.trim()
+            ? `"${query.trim()}" ile eşleşen üye yok.`
+            : filter === 'Programsız'
+              ? 'Herkesin bir programı var 🎉'
+              : 'Henüz aktif üye yok.'}
         </Text>
       ) : (
         // FlatList rather than ScrollView: a real gym has dozens of members
