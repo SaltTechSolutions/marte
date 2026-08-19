@@ -1,0 +1,202 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  User,
+} from 'firebase/auth';
+import React, { useState } from 'react';
+import { Pressable, View } from 'react-native';
+
+import { Button } from '@/components/Button';
+import { GoogleIcon } from '@/components/GoogleIcon';
+import { Screen } from '@/components/Screen';
+import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
+import { getActiveMembership } from '@/data/firebase/membershipRepo';
+import { primaryRole, ROLE_HOME } from '@/data/membership';
+import { auth } from '@/services/firebase';
+import { isAppleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/socialAuth';
+import { useAppTheme } from '@/theme/ThemeContext';
+
+function authErrorMessage(code: string): string {
+  switch (code) {
+    case 'auth/email-already-in-use':
+      return 'Bu e-posta zaten kayıtlı. Giriş yapmayı deneyin.';
+    case 'auth/invalid-email':
+      return 'E-posta adresi geçersiz görünüyor.';
+    case 'auth/weak-password':
+      return 'Şifre en az 6 karakter olmalı.';
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      return 'E-posta veya şifre hatalı.';
+    default:
+      return 'Bir şeyler ters gitti. Tekrar deneyin.';
+  }
+}
+
+/** Shared by every sign-in path (email, Google, Apple): existing member goes
+ * straight to their role's home, first-timer goes to pick/create a gym. */
+async function routeAfterAuth(router: ReturnType<typeof useRouter>, user: User) {
+  const membership = await getActiveMembership(user.uid);
+  const role = primaryRole(membership);
+  if (role) {
+    router.replace(ROLE_HOME[role] as never);
+  } else {
+    router.push('/onboarding/gym-code');
+  }
+}
+
+/** Onboarding 1/4 — sign up (or sign in for returning users) with Firebase Auth. */
+export default function RegisterScreen() {
+  const router = useRouter();
+  const { spacing, colors } = useAppTheme();
+  const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
+  // modeOverride wins once the user taps the toggle; until then the mode
+  // tracks the ?mode= param, including when Expo Router reuses this same
+  // screen instance for a fresh navigation instead of remounting it.
+  const [modeOverride, setModeOverride] = useState<'signUp' | 'signIn' | null>(null);
+  const mode = modeOverride ?? (modeParam === 'signIn' ? 'signIn' : 'signUp');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      if (mode === 'signUp') {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        if (name.trim()) await updateProfile(cred.user, { displayName: name.trim() });
+        router.push('/onboarding/gym-code');
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        await routeAfterAuth(router, cred.user);
+      }
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? '';
+      setError(authErrorMessage(code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const continueWithGoogle = async () => {
+    setError(null);
+    setSocialLoading('google');
+    try {
+      const cred = await signInWithGoogle();
+      await routeAfterAuth(router, cred.user);
+    } catch (e) {
+      if ((e as { message?: string }).message !== 'GOOGLE_SIGN_IN_CANCELLED') {
+        setError('Google ile giriş başarısız oldu. Tekrar deneyin.');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const continueWithApple = async () => {
+    setError(null);
+    setSocialLoading('apple');
+    try {
+      const cred = await signInWithApple();
+      await routeAfterAuth(router, cred.user);
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? '';
+      if (code !== 'ERR_REQUEST_CANCELED') {
+        setError('Apple ile giriş başarısız oldu. Tekrar deneyin.');
+      }
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  const canSubmit = email.trim().length > 3 && password.length >= 6 && (mode === 'signIn' || name.trim().length > 0);
+
+  return (
+    <Screen>
+      <View style={{ flex: 1, paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+        <View style={{ alignItems: 'center', gap: 4, marginBottom: spacing.lg }}>
+          <Text variant="h2">GymEntra</Text>
+          <Text variant="helper" tone="sub">
+            Powering Modern Gyms
+          </Text>
+        </View>
+
+        {mode === 'signUp' && (
+          <TextField placeholder="Ad Soyad" value={name} onChangeText={setName} autoCapitalize="words" />
+        )}
+        <TextField
+          placeholder="E-posta"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+        <TextField
+          placeholder="Şifre"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          autoComplete="password"
+        />
+
+        {error && (
+          <Text variant="helper" style={{ color: '#F87171' }}>
+            {error}
+          </Text>
+        )}
+
+        <Button
+          label={loading ? 'Lütfen bekleyin…' : mode === 'signUp' ? 'Devam et' : 'Giriş yap'}
+          onPress={submit}
+          disabled={!canSubmit || loading}
+          style={{ marginTop: spacing.sm }}
+        />
+
+        <Pressable
+          onPress={() => setModeOverride(mode === 'signUp' ? 'signIn' : 'signUp')}
+          style={{ alignItems: 'center', paddingVertical: 13, minHeight: 44, justifyContent: 'center' }}>
+          <Text variant="helper" tone="sub">
+            {mode === 'signUp' ? 'Zaten hesabın var mı? Giriş yap' : 'Hesabın yok mu? Kayıt ol'}
+          </Text>
+        </Pressable>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
+          <Text variant="label" tone="sub">
+            VEYA
+          </Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />
+        </View>
+
+        {isAppleSignInAvailable() && (
+          <Button
+            label={socialLoading === 'apple' ? '…' : ' Apple ile devam et'}
+            variant="secondary"
+            onPress={continueWithApple}
+            disabled={socialLoading !== null}
+          />
+        )}
+        <Button
+          label={socialLoading === 'google' ? '…' : 'Google ile devam et'}
+          variant="secondary"
+          leftIcon={<GoogleIcon />}
+          onPress={continueWithGoogle}
+          disabled={socialLoading !== null}
+        />
+
+        <View style={{ flex: 1 }} />
+        <Text variant="label" tone="sub" style={{ textAlign: 'center', marginBottom: spacing.lg }}>
+          Doğum günü, fotoğraf vs. SONRA sorulur
+        </Text>
+      </View>
+    </Screen>
+  );
+}
