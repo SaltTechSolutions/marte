@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck & lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` needs the lockfile to match package.json exactly, which is
+      # what we want in CI — a drifted lockfile should fail here, not later.
+      - run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      # Zero warnings, not just zero errors: warnings hid a broken Firestore
+      # query for days (see plan.md DEV-1), so they are treated as failures.
+      - name: ESLint
+        run: npx expo lint --max-warnings 0
