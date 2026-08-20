@@ -53,6 +53,7 @@ export default function AdminLayout() {
           <Stack.Screen name="promotion-form" options={{ ...detail, title: 'Promosyon' }} />
           <Stack.Screen name="member" options={{ ...detail, title: 'Üye' }} />
           <Stack.Screen name="assign-package" options={{ ...detail, title: 'Paket ata' }} />
+          <Stack.Screen name="propose-package-change" options={{ ...detail, title: 'Paket değiştir' }} />
         </Stack>
       </View>
       <TabBar items={TABS} />

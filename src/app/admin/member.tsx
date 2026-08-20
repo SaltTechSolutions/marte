@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
@@ -152,24 +152,48 @@ export default function AdminMemberDetail() {
         <EmptyState icon="pricetags-outline" title="Henüz paket atanmadı" description="Yukarıdaki düğmeyle bu üyeye bir paket atayabilirsin." />
       ) : (
         <View style={{ gap: spacing.sm }}>
-          {packages.map((p) => (
-            <Card key={p.id} style={{ gap: 6 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Text variant="body" weight="900">
-                  {p.packageName}
+          {packages.map((p) => {
+            const card = (
+              <Card key={p.id} style={{ gap: 6 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Text variant="body" weight="900">
+                    {p.packageName}
+                  </Text>
+                  <Text variant="body" weight="900" style={{ color: colors.p }}>
+                    {p.finalPrice.toLocaleString('tr-TR')} ₺
+                  </Text>
+                </View>
+                <Text variant="helper" tone="sub">
+                  {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
                 </Text>
-                <Text variant="body" weight="900" style={{ color: colors.p }}>
-                  {p.finalPrice.toLocaleString('tr-TR')} ₺
-                </Text>
-              </View>
-              <Text variant="helper" tone="sub">
-                {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <StatusBadge label={STATUS_LABEL[p.status]} tone={statusTone(p.status)} />
-              </View>
-            </Card>
-          ))}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <StatusBadge label={STATUS_LABEL[p.status]} tone={statusTone(p.status)} />
+                  {p.status === 'active' && (
+                    <Text variant="label" style={{ color: colors.p }}>
+                      Değiştir ›
+                    </Text>
+                  )}
+                </View>
+              </Card>
+            );
+            // Only an active holding can be swapped — a swap replaces what's
+            // currently in effect, so an already-cancelled/expired row has
+            // nothing live to propose changing.
+            return p.status === 'active' ? (
+              <Pressable
+                key={p.id}
+                onPress={() =>
+                  router.push({
+                    pathname: '/admin/propose-package-change',
+                    params: { memberId, memberName: name, currentAssignmentId: p.id },
+                  })
+                }>
+                {card}
+              </Pressable>
+            ) : (
+              card
+            );
+          })}
         </View>
       )}
     </ScrollView>

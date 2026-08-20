@@ -61,6 +61,16 @@ export default function MemberLayout() {
               headerShadowVisible: false,
             }}
           />
+          <Stack.Screen
+            name="package-offer"
+            options={{
+              headerShown: true,
+              title: 'Paket teklifi',
+              headerStyle: { backgroundColor: colors.bg0 },
+              headerTintColor: colors.txt,
+              headerShadowVisible: false,
+            }}
+          />
         </Stack>
       </View>
       {!hideTabBar && <TabBar items={TABS} />}

@@ -207,6 +207,10 @@ export interface MeasurementEntry {
 
 export type PaymentMethod = 'cash' | 'bank_transfer';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
+/** Absent/`'charge'` on every pre-PKG-6 record — added so a downgrade's
+ *  prorated refund (PKG-6) can share this ledger instead of a second one.
+ *  Amount is always positive; `kind` carries the direction. */
+export type PaymentKind = 'charge' | 'refund';
 
 /**
  * A manual payment record — no in-app purchase/subscription processing.
@@ -223,6 +227,7 @@ export interface Payment {
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
+  kind?: PaymentKind;
   note?: string;
   createdAt: Date;
   confirmedAt?: Date;
@@ -471,6 +476,60 @@ export interface Promotion {
   redeemed: number;
   isActive: boolean;
   createdAt: Date;
+}
+
+// ============================================================================
+// PACKAGE CHANGE REQUESTS — member consent for a non-first-time swap (PKG-6)
+// ============================================================================
+
+export type PackageChangeKind = 'upgrade' | 'downgrade' | 'promotion' | 'addon';
+export type PackageChangeStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
+
+/** Display-only snapshot for the side-by-side comparison — never the source
+ *  of truth for what gets applied, that's `proposedPackageId`/`proposedPromotionId`. */
+export interface PackageChangeSummary {
+  packageName: string;
+  entitlements: PackageEntitlements;
+  price: number;
+  endsAt: Date;
+}
+
+/**
+ * A proposed swap awaiting the member's yes/no. `assignPackageToMember` is
+ * only correct for a first-time or additive grant ("İlk atama onay
+ * istemez"); *changing* what an already-holding member gets goes through
+ * this instead, and only `applyPackageChange` (Cloud Function, triggered on
+ * `pending` → `approved`) is trusted to actually touch `member_packages` —
+ * that collection has no client update path at all, admin included.
+ */
+export interface PackageChangeRequest {
+  id: string;
+  tenantId: string;
+  memberId: string;
+  memberName: string;
+  /** Labels the request for display/reporting — the apply logic derives
+   *  what actually happens (replace vs. add) by comparing kinds, not this. */
+  kind: PackageChangeKind;
+  /** The `member_packages` row this replaces. Absent for a pure addition —
+   *  e.g. a lessons package proposed alongside an untouched membership,
+   *  where the member holds none of that kind yet. */
+  currentPackageAssignmentId?: string;
+  currentSummary?: PackageChangeSummary;
+  proposedPackageId: string;
+  proposedPromotionId?: string;
+  proposedSummary: PackageChangeSummary;
+  /** + ek ücret · − iade · 0 değişmiyor. */
+  priceDelta: number;
+  refundAmount?: number;
+  /** Human-readable "kalan 92/180 gün" — the number alone doesn't explain itself. */
+  refundBasis?: string;
+  note?: string;
+  effectiveAt: Date;
+  expiresAt: Date;
+  status: PackageChangeStatus;
+  createdBy: string;
+  createdAt: Date;
+  respondedAt?: Date;
 }
 
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';

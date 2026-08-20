@@ -8,6 +8,7 @@ import {
   MemberCredit,
   MemberEntitlementsCache,
   MemberPackage,
+  PackageChangeRequest,
   Payment,
   Program,
   Promotion,
@@ -163,6 +164,7 @@ export function paymentFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     amount: data.amount,
     method: data.method,
     status: data.status,
+    kind: data.kind ?? 'charge',
     note: data.note,
     createdAt: toDate(data.createdAt) ?? new Date(),
     confirmedAt: toDate(data.confirmedAt),
@@ -243,6 +245,42 @@ export function promotionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot)
     redeemed: data.redeemed ?? 0,
     isActive: data.isActive,
     createdAt: toDate(data.createdAt) ?? new Date(),
+  };
+}
+
+function packageChangeSummaryFromField(field: Record<string, unknown> | undefined) {
+  if (!field) return undefined;
+  return {
+    packageName: field.packageName as string,
+    entitlements: field.entitlements as PackageChangeRequest['proposedSummary']['entitlements'],
+    price: field.price as number,
+    endsAt: toDate(field.endsAt as Timestamp) ?? new Date(),
+  };
+}
+
+export function packageChangeRequestFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): PackageChangeRequest {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    memberName: data.memberName,
+    kind: data.kind,
+    currentPackageAssignmentId: data.currentPackageAssignmentId,
+    currentSummary: packageChangeSummaryFromField(data.currentSummary),
+    proposedPackageId: data.proposedPackageId,
+    proposedPromotionId: data.proposedPromotionId,
+    proposedSummary: packageChangeSummaryFromField(data.proposedSummary)!,
+    priceDelta: data.priceDelta,
+    refundAmount: data.refundAmount,
+    refundBasis: data.refundBasis,
+    note: data.note,
+    effectiveAt: toDate(data.effectiveAt) ?? new Date(),
+    expiresAt: toDate(data.expiresAt) ?? new Date(),
+    status: data.status,
+    createdBy: data.createdBy,
+    createdAt: toDate(data.createdAt) ?? new Date(),
+    respondedAt: toDate(data.respondedAt),
   };
 }
 

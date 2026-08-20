@@ -11,10 +11,11 @@ import { useAuth } from '@/context/AuthContext';
 import { toGymClass } from '@/data/classDisplay';
 import { watchMyCheckins } from '@/data/firebase/checkinRepo';
 import { watchClassesForTenant } from '@/data/firebase/classRepo';
+import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
 import { watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
-import { GymClass, Payment, PtSession } from '@/data/types';
+import { GymClass, PackageChangeRequest, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 const WEEKLY_TARGET = 4;
@@ -61,6 +62,7 @@ export default function MemberHome() {
   const [sessions, setSessions] = useState<PtSession[]>([]);
   const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [visits, setVisits] = useState<Date[]>([]);
+  const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -91,6 +93,11 @@ export default function MemberHome() {
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchPaymentsForMember(tenantId, uid, setPayments);
+  }, [tenantId, uid]);
+
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchPendingPackageChangeRequests(tenantId, uid, setPackageOffers);
   }, [tenantId, uid]);
 
   const weekStart = useMemo(() => startOfWeek(), []);
@@ -131,6 +138,28 @@ export default function MemberHome() {
           <Ionicons name="person-outline" size={19} color={colors.txt} />
         </Pressable>
       </View>
+
+      {/* A pending offer outranks even today's action — it's the one thing
+          on this screen with a real deadline (expiresAt) and a decision only
+          this person can make. */}
+      {packageOffers.map((offer) => (
+        <Pressable key={offer.id} onPress={() => router.push({ pathname: '/member/package-offer', params: { requestId: offer.id } })}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} outlineColor={colors.p}>
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="swap-horizontal-outline" size={19} color={colors.p} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="helper" weight="700">
+                Paket teklifin var
+              </Text>
+              <Text variant="label" tone="sub" numberOfLines={1}>
+                {offer.proposedSummary.packageName} — incelemek için dokun
+              </Text>
+            </View>
+            <Text tone="sub">›</Text>
+          </Card>
+        </Pressable>
+      ))}
 
       {/* --- Today's action --- */}
       <Button
