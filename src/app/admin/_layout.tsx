@@ -39,11 +39,11 @@ export default function AdminLayout() {
     <Screen edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg0 } }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="members" />
-          <Stack.Screen name="classes" />
-          <Stack.Screen name="payments" />
-          <Stack.Screen name="settings" />
+          <Stack.Screen name="index" options={{ title: 'Panel' }} />
+          <Stack.Screen name="members" options={{ title: 'Üyeler' }} />
+          <Stack.Screen name="classes" options={{ title: 'Dersler' }} />
+          <Stack.Screen name="payments" options={{ title: 'Ödemeler' }} />
+          <Stack.Screen name="settings" options={{ title: 'Salon' }} />
           <Stack.Screen name="today" options={{ ...detail, title: 'Bugün girenler' }} />
           <Stack.Screen name="staff" options={{ ...detail, title: 'Ekip ve yetkiler' }} />
           <Stack.Screen name="calendar" options={{ ...detail, title: 'Antrenör takvimleri' }} />

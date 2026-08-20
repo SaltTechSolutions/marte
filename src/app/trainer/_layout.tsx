@@ -38,10 +38,10 @@ export default function TrainerLayout() {
     <Screen edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg0 } }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="calendar" />
-          <Stack.Screen name="programs" />
-          <Stack.Screen name="profile" />
+          <Stack.Screen name="index" options={{ title: 'Üyeler' }} />
+          <Stack.Screen name="calendar" options={{ title: 'Takvim' }} />
+          <Stack.Screen name="programs" options={{ title: 'Programlar' }} />
+          <Stack.Screen name="profile" options={{ title: 'Profil' }} />
           <Stack.Screen name="availability" options={{ ...detail, title: 'Çalışma Saatlerim' }} />
           <Stack.Screen name="member" options={{ ...detail, title: 'Üye' }} />
           <Stack.Screen name="builder" options={{ ...detail, title: 'Program' }} />

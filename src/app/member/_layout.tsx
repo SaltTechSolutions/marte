@@ -36,11 +36,11 @@ export default function MemberLayout() {
     <Screen edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg0 } }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="card" />
-          <Stack.Screen name="classes" />
-          <Stack.Screen name="workout" />
-          <Stack.Screen name="progress" />
+          <Stack.Screen name="index" options={{ title: 'Bugün' }} />
+          <Stack.Screen name="card" options={{ title: 'Üye Kartım' }} />
+          <Stack.Screen name="classes" options={{ title: 'Dersler' }} />
+          <Stack.Screen name="workout" options={{ title: 'Program' }} />
+          <Stack.Screen name="progress" options={{ title: 'Gelişim' }} />
           <Stack.Screen
             name="profile"
             options={{
