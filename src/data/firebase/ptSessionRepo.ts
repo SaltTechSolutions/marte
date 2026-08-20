@@ -1,4 +1,4 @@
-import { collection, doc, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
@@ -50,6 +50,30 @@ export function watchSessionsForTrainer(
     orderBy('date', 'asc'),
   );
   return watchQuery('Antrenör takvimi', q, (snap) => snap.docs.map(ptSessionFromDoc), onChange, onError);
+}
+
+/**
+ * A member's own upcoming PT sessions.
+ *
+ * Security rules already allowed this (`memberId == request.auth.uid`); there
+ * was simply no query for it, so the member had no way to see a booking made
+ * for them. `limit` keeps the home card cheap — it only ever shows the next one.
+ */
+export function watchUpcomingSessionsForMember(
+  tenantId: string,
+  memberId: string,
+  onChange: (sessions: PtSession[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'pt_sessions'),
+    where('tenantId', '==', tenantId),
+    where('memberId', '==', memberId),
+    where('date', '>=', Timestamp.fromDate(new Date())),
+    orderBy('date', 'asc'),
+    limit(3),
+  );
+  return watchQuery('Randevularım', q, (snap) => snap.docs.map(ptSessionFromDoc), onChange, onError);
 }
 
 /** Every PT session in the tenant — admin oversight, e.g. to spot an absent trainer's day. */

@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -8,14 +9,45 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { toGymClass } from '@/data/classDisplay';
+import { watchMyCheckins } from '@/data/firebase/checkinRepo';
 import { watchClassesForTenant } from '@/data/firebase/classRepo';
+import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
+import { watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
-import { GymClass } from '@/data/types';
+import { GymClass, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 const WEEKLY_TARGET = 4;
 
-/** Member home — "what's my next class?" answerable in under 3 seconds. */
+function startOfWeek(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  // Monday-based, matching how a Turkish gym week reads.
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d;
+}
+
+function formatSessionDate(d: Date): string {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === today.toDateString()) return `Bugün ${time}`;
+  if (d.toDateString() === tomorrow.toDateString()) return `Yarın ${time}`;
+  return `${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} ${time}`;
+}
+
+/**
+ * Member home — a dashboard, not a greeting.
+ *
+ * It used to answer one question ("what's my next class?") and left the rest
+ * of what a member actually wonders — do I owe money, when is my PT session,
+ * have I been coming — spread across other tabs or nowhere at all.
+ *
+ * Order is deliberate: today's action first, then what's coming, then status.
+ * Status is last because it is the thing you check occasionally, not the
+ * thing you opened the app for.
+ */
 export default function MemberHome() {
   const router = useRouter();
   const { colors, spacing, tenantName } = useAppTheme();
@@ -26,6 +58,9 @@ export default function MemberHome() {
 
   const [todayClass, setTodayClass] = useState<GymClass | null | undefined>(undefined);
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
+  const [sessions, setSessions] = useState<PtSession[]>([]);
+  const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
+  const [visits, setVisits] = useState<Date[]>([]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -34,9 +69,9 @@ export default function MemberHome() {
     from.setHours(0, 0, 0, 0);
     const to = new Date(from);
     to.setDate(to.getDate() + 1);
-    return watchClassesForTenant(tenantId, { from, to }, (sessions) => {
+    return watchClassesForTenant(tenantId, { from, to }, (all) => {
       const now = new Date();
-      const todaySessions = sessions.filter((s) => s.date.toDateString() === now.toDateString());
+      const todaySessions = all.filter((s) => s.date.toDateString() === now.toDateString());
       const bookedToday = todaySessions.find((s) => uid && s.bookedUserIds.includes(uid));
       const pick = bookedToday ?? todaySessions[0] ?? null;
       setTodayClass(pick ? toGymClass(pick, uid) : null);
@@ -48,7 +83,26 @@ export default function MemberHome() {
     return watchCompletedThisWeek(tenantId, uid, setCompletedThisWeek);
   }, [tenantId, uid]);
 
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchUpcomingSessionsForMember(tenantId, uid, setSessions);
+  }, [tenantId, uid]);
+
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchPaymentsForMember(tenantId, uid, setPayments);
+  }, [tenantId, uid]);
+
+  const weekStart = useMemo(() => startOfWeek(), []);
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchMyCheckins(tenantId, uid, weekStart, setVisits);
+  }, [tenantId, uid, weekStart]);
+
   const percent = Math.min(100, Math.round((completedThisWeek / WEEKLY_TARGET) * 100));
+  const nextSession = sessions[0];
+  const pendingPayment = payments?.find((p) => p.status === 'pending');
+  const lastConfirmed = payments?.find((p) => p.status === 'confirmed');
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg }}>
@@ -66,22 +120,26 @@ export default function MemberHome() {
             Merhaba {displayName} 👋
           </Text>
         </View>
-        <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Text>🔔</Text>
-        </View>
+        {/* Account lives here rather than in a sixth tab — it is somewhere you
+            visit, not somewhere you switch between. */}
+        <Pressable
+          onPress={() => router.push('/member/profile')}
+          accessibilityRole="button"
+          accessibilityLabel="Hesabım"
+          hitSlop={8}
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="person-outline" size={19} color={colors.txt} />
+        </Pressable>
       </View>
 
-      <Card style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-        <ProgressRing percent={percent} label={`%${percent}`} sublabel="hedef" />
-        <View style={{ flex: 1 }}>
-          <Text variant="body" weight="900">
-            Haftada {completedThisWeek}/{WEEKLY_TARGET} antrenman
-          </Text>
-          <Text variant="helper" tone="sub" style={{ marginTop: 3 }}>
-            {completedThisWeek >= WEEKLY_TARGET ? 'Bu haftaki hedefini tamamladın 🎉' : `Hedefe ${WEEKLY_TARGET - completedThisWeek} antrenman kaldı`}
-          </Text>
-        </View>
-      </Card>
+      {/* --- Today's action --- */}
+      <Button
+        variant="pulse"
+        label="Üye Kartım"
+        icon="▦"
+        critical
+        onPress={() => router.push('/member/card')}
+      />
 
       {todayClass && (
         <>
@@ -108,21 +166,65 @@ export default function MemberHome() {
         </>
       )}
 
-      <Button
-        variant="pulse"
-        label="Üye Kartım"
-        icon="▦"
-        critical
-        onPress={() => router.push('/member/card')}
-        style={{ marginTop: spacing.sm }}
-      />
+      {/* --- What's coming --- */}
+      {nextSession && (
+        <>
+          <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
+            YAKLAŞAN RANDEVU
+          </Text>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="barbell-outline" size={19} color={colors.p} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="helper" weight="700">
+                {formatSessionDate(nextSession.date)}
+              </Text>
+              <Text variant="label" tone="sub">
+                {nextSession.trainerName} · {nextSession.durationMinutes} dk
+              </Text>
+            </View>
+          </Card>
+        </>
+      )}
+
+      {/* --- Status --- */}
+      <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
+        DURUMUM
+      </Text>
+
+      <Card style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+        <ProgressRing percent={percent} label={`%${percent}`} sublabel="hedef" />
+        <View style={{ flex: 1 }}>
+          <Text variant="body" weight="900">
+            Haftada {completedThisWeek}/{WEEKLY_TARGET} antrenman
+          </Text>
+          <Text variant="helper" tone="sub" style={{ marginTop: 3 }}>
+            {completedThisWeek >= WEEKLY_TARGET ? 'Bu haftaki hedefini tamamladın 🎉' : `Hedefe ${WEEKLY_TARGET - completedThisWeek} antrenman kaldı`}
+          </Text>
+          <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
+            {visits.length > 0 ? `Bu hafta ${visits.length} kez salona geldin` : 'Bu hafta henüz salona gelmedin'}
+          </Text>
+        </View>
+      </Card>
 
       <Pressable onPress={() => router.push('/member/payments')}>
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 18 }}>💳</Text>
-          <Text variant="helper" weight="700" style={{ flex: 1 }}>
-            Ödemelerim
-          </Text>
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="card-outline" size={19} color={pendingPayment ? colors.warn : colors.p} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Ödemelerim
+            </Text>
+            <Text variant="label" tone="sub">
+              {pendingPayment
+                ? `${pendingPayment.amount} ₺ bildirimin onay bekliyor`
+                : lastConfirmed
+                  ? `Son ödeme: ${lastConfirmed.amount} ₺ · ${lastConfirmed.createdAt.toLocaleDateString('tr-TR')}`
+                  : 'Henüz ödeme kaydın yok'}
+            </Text>
+          </View>
           <Text tone="sub">›</Text>
         </Card>
       </Pressable>

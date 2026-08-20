@@ -42,6 +42,16 @@ export default function MemberLayout() {
           <Stack.Screen name="workout" />
           <Stack.Screen name="progress" />
           <Stack.Screen
+            name="profile"
+            options={{
+              headerShown: true,
+              title: 'Hesabım',
+              headerStyle: { backgroundColor: colors.bg0 },
+              headerTintColor: colors.txt,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
             name="payments"
             options={{
               headerShown: true,
