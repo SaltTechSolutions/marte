@@ -91,6 +91,14 @@ export interface TenantMembership {
   // Short human-typeable front-desk check-in code (6 digits). Not present on
   // memberships created before this field existed until backfilled.
   shortCode?: string;
+  /**
+   * Contact info, present only for members carried over from the legacy
+   * marte06 web app (backfilled from its `members` collection — see
+   * `marte06/scripts/backfill_member_contact_info.cjs`). New sign-ups don't
+   * collect these yet, so absence is normal, not a data gap.
+   */
+  phone?: string;
+  birthDate?: Date;
 }
 
 export interface GymClass {

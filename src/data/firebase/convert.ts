@@ -55,6 +55,8 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     userDisplayName: data.userDisplayName,
     userEmail: data.userEmail,
     shortCode: data.shortCode,
+    phone: data.phone,
+    birthDate: toDate(data.birthDate),
   };
 }
 
