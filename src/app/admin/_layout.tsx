@@ -47,6 +47,8 @@ export default function AdminLayout() {
           <Stack.Screen name="today" options={{ ...detail, title: 'Bugün girenler' }} />
           <Stack.Screen name="staff" options={{ ...detail, title: 'Ekip ve yetkiler' }} />
           <Stack.Screen name="calendar" options={{ ...detail, title: 'Antrenör takvimleri' }} />
+          <Stack.Screen name="packages" options={{ ...detail, title: 'Paketler' }} />
+          <Stack.Screen name="package-form" options={{ ...detail, title: 'Paket' }} />
         </Stack>
       </View>
       <TabBar items={TABS} />

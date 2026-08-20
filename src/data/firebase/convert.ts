@@ -3,6 +3,7 @@ import { DocumentSnapshot, QueryDocumentSnapshot, Timestamp } from 'firebase/fir
 import {
   CalendarShare,
   ClassSession,
+  GymPackage,
   MeasurementEntry,
   Payment,
   Program,
@@ -159,5 +160,27 @@ export function paymentFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     note: data.note,
     createdAt: toDate(data.createdAt) ?? new Date(),
     confirmedAt: toDate(data.confirmedAt),
+  };
+}
+
+export function gymPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): GymPackage {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    name: data.name,
+    kind: data.kind,
+    price: data.price,
+    durationDays: data.durationDays,
+    lessonCount: data.lessonCount,
+    lessonValidityDays: data.lessonValidityDays,
+    entitlements: data.entitlements,
+    freezePolicy: data.freezePolicy,
+    activeAssignmentCount: data.activeAssignmentCount ?? 0,
+    supersedesId: data.supersedesId,
+    isActive: data.isActive,
+    sortOrder: data.sortOrder ?? 0,
+    createdAt: toDate(data.createdAt) ?? new Date(),
+    updatedAt: toDate(data.updatedAt),
   };
 }

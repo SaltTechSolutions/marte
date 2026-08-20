@@ -249,6 +249,31 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         critical
       />
 
+      <Pressable onPress={() => router.push('/admin/packages')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Text style={{ fontSize: 18 }}>🏷️</Text>
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Paketler
+            </Text>
+            <Text variant="label" tone="sub">
+              Sattığın üyelikleri ve ders paketlerini tanımla
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
+
       <Pressable onPress={() => router.push('/admin/staff')}>
         <View
           style={{

@@ -25,3 +25,21 @@ export function confirmDestructive(params: {
     { text: params.confirmLabel, style: 'destructive', onPress: params.onConfirm },
   ]);
 }
+
+/**
+ * Same shape as `confirmDestructive`, styled as a normal action rather than
+ * red — for a consequential-but-not-destructive step where nothing is lost,
+ * only something the user should see coming (e.g. editing a locked package
+ * creates a new version instead of quietly changing what's already sold).
+ */
+export function confirmAction(params: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+}): void {
+  Alert.alert(params.title, params.message, [
+    { text: 'Vazgeç', style: 'cancel' },
+    { text: params.confirmLabel, style: 'default', onPress: params.onConfirm },
+  ]);
+}

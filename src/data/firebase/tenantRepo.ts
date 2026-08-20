@@ -6,6 +6,7 @@ import { db, storage } from '@/services/firebase';
 import { Tenant, TenantBranding } from '../types';
 import { tenantFromDoc } from './convert';
 import { membershipId } from './membershipRepo';
+import { seedDefaultPackages } from './packageRepo';
 
 /** Look up a gym by its join code (e.g. "TARABYA-01"). Case-insensitive. */
 export async function findTenantByCode(code: string): Promise<Tenant | null> {
@@ -60,6 +61,10 @@ export async function createTenantWithOwner(params: {
     requestedAt: serverTimestamp(),
     approvedAt: serverTimestamp(),
   });
+
+  // Best-effort: an admin with an empty catalog can still add packages by
+  // hand, so this must not fail gym creation itself.
+  await seedDefaultPackages(tenantRef.id).catch((e) => console.warn('[tenantRepo] Varsayılan paketler oluşturulamadı:', e));
 
   return { id: tenantRef.id, ...tenantData, createdAt: new Date() };
 }

@@ -249,6 +249,78 @@ export interface CalendarShare {
   createdAt: Date;
 }
 
+// ============================================================================
+// PACKAGES — what a membership actually grants (PKG-1)
+// ============================================================================
+
+export type PackageKind = 'membership' | 'lessons';
+
+/** A quota-shaped right — unlimited, or a count that refills every `periodDays`. */
+export interface QuotaEntitlement {
+  unlimited?: boolean;
+  /** Required unless `unlimited`. */
+  count?: number;
+  /** Required unless `unlimited`. */
+  periodDays?: number;
+}
+
+/**
+ * What a package's holder can do. Deliberately a bag of named rights rather
+ * than a "tier" enum — a gym owner edits these per package, so a new right
+ * only ever means adding a key here, never a new package type or a `switch`
+ * somewhere in the app. Screens must ask `entitlements.ptLessons != null`,
+ * never compare a package's `name` against "Gold" or "Platinium".
+ */
+export interface PackageEntitlements {
+  gymAccess: boolean;
+  /** Absent = no group-class right at all (must book a session instead). */
+  groupClasses?: QuotaEntitlement;
+  /** Absent = no complimentary/bundled PT lessons from this package. */
+  ptLessons?: QuotaEntitlement;
+}
+
+export interface FreezePolicy {
+  minDays: number;
+  maxCount: number;
+}
+
+export type PackageStatus = 'active' | 'frozen' | 'expired' | 'cancelled';
+
+/**
+ * A gym's sellable package. Once any `member_packages` document is assigned
+ * from it (`activeAssignmentCount > 0`), its price/duration/entitlements are
+ * locked — see `canEditPackage`. An admin who wants to change a locked
+ * package's content creates a new version instead (`supersedesId`).
+ */
+export interface GymPackage {
+  id: string;
+  tenantId: string;
+  name: string;
+  kind: PackageKind;
+  price: number;
+  /** `membership` packages only. */
+  durationDays?: number;
+  /** `lessons` packages only. */
+  lessonCount?: number;
+  /** `lessons` packages only — how long the credit stays usable. */
+  lessonValidityDays?: number;
+  entitlements: PackageEntitlements;
+  /** `membership` packages only. */
+  freezePolicy?: FreezePolicy;
+  /**
+   * Server-owned tally maintained by a Cloud Function, same pattern as
+   * `Tenant.activeMemberCount` — rules cannot count documents themselves.
+   * Never written by the client.
+   */
+  activeAssignmentCount: number;
+  /** Set when this package replaces a locked one that needed a content change. */
+  supersedesId?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';
 
 export interface AppNotification {
