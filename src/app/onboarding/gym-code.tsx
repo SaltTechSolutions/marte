@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -89,7 +90,7 @@ export default function GymCodeScreen() {
             gap: 6,
             opacity: 0.5,
           }}>
-          <Text style={{ fontSize: 26, color: colors.p }}>⌗</Text>
+          <Ionicons name="qr-code-outline" size={26} color={colors.p} />
           <Text variant="helper" weight="700" style={{ color: colors.p }}>
             QR kodu tara (yakında)
           </Text>

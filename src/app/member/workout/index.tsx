@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -42,7 +43,7 @@ export default function WorkoutOverview() {
   if (!program) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-        <Text style={{ fontSize: 28 }}>🏋️</Text>
+        <Ionicons name="barbell-outline" size={28} color={colors.sub} />
         <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
           Henüz programın yok
         </Text>

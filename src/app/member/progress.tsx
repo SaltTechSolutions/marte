@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -206,7 +207,7 @@ export default function MemberProgress() {
 
       {!latest ? (
         <Card style={{ alignItems: 'center', gap: 6, paddingVertical: spacing.lg }}>
-          <Text style={{ fontSize: 24 }}>📈</Text>
+          <Ionicons name="trending-up-outline" size={24} color={colors.sub} />
           <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
             Henüz ölçüm yok
           </Text>

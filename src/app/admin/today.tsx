@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
@@ -49,14 +50,7 @@ export default function AdminToday() {
   }, [tenantId, retryKey]);
 
   if (!tenantId) {
-    return (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Bu ekran için yetkin yok
-          </Text>
-        </View>
-    );
+    return <AccessGuard title="Bu ekran için yetkin yok" />;
   }
 
   const nameOf = (userId: string) => {

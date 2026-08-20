@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { View } from 'react-native';
@@ -26,7 +27,7 @@ import { Text } from './Text';
  */
 export function AccessGuard({ title, hint }: { title: string; hint?: string }) {
   const router = useRouter();
-  const { spacing } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
   const { activeMembership } = useAuth();
   const [leaving, setLeaving] = useState(false);
 
@@ -50,7 +51,7 @@ export function AccessGuard({ title, hint }: { title: string; hint?: string }) {
   return (
     <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.md }}>
       <View style={{ alignItems: 'center', gap: 6 }}>
-        <Text style={{ fontSize: 28 }}>🔒</Text>
+        <Ionicons name="lock-closed-outline" size={28} color={colors.sub} />
         <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
           {title}
         </Text>

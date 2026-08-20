@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
@@ -48,7 +49,7 @@ export default function PendingScreen() {
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Text style={{ fontSize: 34 }}>⏳</Text>
+          <Ionicons name="hourglass-outline" size={34} color={colors.p} />
         </View>
 
         <Text variant="h3" style={{ textAlign: 'center' }}>
@@ -71,7 +72,12 @@ export default function PendingScreen() {
           </Text>
         </Card>
 
-        <Button label="📞 Salonu ara" variant="ghost" style={{ alignSelf: 'stretch' }} />
+        <Button
+          label="Salonu ara"
+          leftIcon={<Ionicons name="call-outline" size={18} color={colors.txt} />}
+          variant="ghost"
+          style={{ alignSelf: 'stretch' }}
+        />
 
         <View style={{ flex: 1 }} />
         <Text variant="label" tone="sub" style={{ textAlign: 'center', marginBottom: spacing.lg }}>

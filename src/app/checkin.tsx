@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { AccessGuard } from '@/components/AccessGuard';
 import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
@@ -134,17 +135,11 @@ export default function AdminCheckin() {
   };
 
   if (!tenantId) {
+    // Top-level route (registered outside any role layout), so unlike other
+    // AccessGuard call sites it has no ambient Screen already wrapping it.
     return (
       <Screen>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: 6 }}>
-          <Text style={{ fontSize: 28 }}>🔒</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            Üye kabul yetkin yok
-          </Text>
-          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-            Salon yöneticisi bu yetkiyi sana verebilir.
-          </Text>
-        </View>
+        <AccessGuard title="Üye kabul yetkin yok" hint="Salon yöneticisi bu yetkiyi sana verebilir." />
       </Screen>
     );
   }
@@ -248,7 +243,7 @@ export default function AdminCheckin() {
                 />
               ) : (
                 <View style={{ alignItems: 'center', gap: 10, padding: spacing.lg }}>
-                  <Text style={{ fontSize: 30 }}>📷</Text>
+                  <Ionicons name="camera-outline" size={30} color={colors.sub} />
                   <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                     {permission?.granted
                       ? 'İşleniyor…'

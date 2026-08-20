@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -261,7 +262,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
             borderRadius: radius.md,
             padding: 13,
           }}>
-          <Text style={{ fontSize: 18 }}>🏷️</Text>
+          <Ionicons name="pricetags-outline" size={18} color={colors.txt} />
           <View style={{ flex: 1 }}>
             <Text variant="helper" weight="700">
               Paketler
@@ -286,7 +287,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
             borderRadius: radius.md,
             padding: 13,
           }}>
-          <Text style={{ fontSize: 18 }}>👥</Text>
+          <Ionicons name="people-outline" size={18} color={colors.txt} />
           <View style={{ flex: 1 }}>
             <Text variant="helper" weight="700">
               Ekip ve yetkiler
@@ -311,7 +312,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
             borderRadius: radius.md,
             padding: 13,
           }}>
-          <Text style={{ fontSize: 18 }}>📅</Text>
+          <Ionicons name="calendar-outline" size={18} color={colors.txt} />
           <View style={{ flex: 1 }}>
             <Text variant="helper" weight="700">
               Antrenör takvimleri

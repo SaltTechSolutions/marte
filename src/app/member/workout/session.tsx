@@ -154,7 +154,7 @@ export default function WorkoutSession() {
     <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 }}>
         <Pressable onPress={exit} hitSlop={10} style={{ width: 32, height: 32, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 20, color: colors.txt }}>✕</Text>
+          <Ionicons name="close" size={22} color={colors.txt} />
         </Pressable>
         <Text variant="body" weight="900">
           {log.programName} <Text variant="helper" tone="sub">{exerciseIndex + 1}/{log.exerciseLogs.length} egzersiz</Text>
