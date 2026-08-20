@@ -226,7 +226,10 @@ export default function AdminMembers() {
       ) : (
         <ListGroup>
           {members.map((m, i) => (
-            <ListRow key={m.id} last={i === members.length - 1}>
+            <ListRow
+              key={m.id}
+              last={i === members.length - 1}
+              onPress={() => router.push({ pathname: '/admin/member', params: { memberId: m.userId, memberName: requesterLabel(m) } })}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
                 <Text variant="helper" weight="900" style={{ color: colors.p }}>
                   {requesterInitials(m)}
@@ -240,6 +243,7 @@ export default function AdminMembers() {
                   {m.shortCode ? `Giriş kodu ${m.shortCode}` : 'Giriş kodu atanıyor…'}
                 </Text>
               </View>
+              <Text tone="sub">›</Text>
             </ListRow>
           ))}
         </ListGroup>

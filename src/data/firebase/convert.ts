@@ -5,6 +5,8 @@ import {
   ClassSession,
   GymPackage,
   MeasurementEntry,
+  MemberCredit,
+  MemberPackage,
   Payment,
   Program,
   PtSession,
@@ -184,5 +186,59 @@ export function gymPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     sortOrder: data.sortOrder ?? 0,
     createdAt: toDate(data.createdAt) ?? new Date(),
     updatedAt: toDate(data.updatedAt),
+  };
+}
+
+export function memberPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): MemberPackage {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    memberName: data.memberName,
+    packageId: data.packageId,
+    packageName: data.packageName,
+    kind: data.kind,
+    entitlements: data.entitlements,
+    freezePolicy: data.freezePolicy,
+    listPrice: data.listPrice,
+    finalPrice: data.finalPrice,
+    promotionId: data.promotionId,
+    promotionName: data.promotionName,
+    bonusDays: data.bonusDays,
+    bonusLessons: data.bonusLessons,
+    startsAt: toDate(data.startsAt) ?? new Date(),
+    endsAt: toDate(data.endsAt) ?? new Date(),
+    frozenDays: data.frozenDays ?? 0,
+    freezes: (data.freezes ?? []).map(
+      (f: { startsAt: Timestamp; endsAt: Timestamp; days: number; createdBy: string; createdAt: Timestamp }) => ({
+        startsAt: toDate(f.startsAt) ?? new Date(),
+        endsAt: toDate(f.endsAt) ?? new Date(),
+        days: f.days,
+        createdBy: f.createdBy,
+        createdAt: toDate(f.createdAt) ?? new Date(),
+      }),
+    ),
+    status: data.status,
+    paymentId: data.paymentId,
+    assignedAt: toDate(data.assignedAt) ?? new Date(),
+    assignedBy: data.assignedBy,
+  };
+}
+
+export function memberCreditFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): MemberCredit {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    kind: data.kind,
+    source: data.source,
+    sourcePackageId: data.sourcePackageId,
+    total: data.total,
+    used: data.used ?? 0,
+    startsAt: toDate(data.startsAt) ?? new Date(),
+    expiresAt: toDate(data.expiresAt) ?? new Date(),
+    status: data.status,
   };
 }

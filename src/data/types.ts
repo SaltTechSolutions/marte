@@ -329,6 +329,83 @@ export interface GymPackage {
   updatedAt?: Date;
 }
 
+// ============================================================================
+// PACKAGE ASSIGNMENT — who holds what, and their quota balances (PKG-2)
+// ============================================================================
+
+export type MemberPackageStatus = 'active' | 'frozen' | 'expired' | 'cancelled';
+
+export interface PackageFreeze {
+  startsAt: Date;
+  endsAt: Date;
+  days: number;
+  createdBy: string;
+  createdAt: Date;
+}
+
+/**
+ * One assignment of a `GymPackage` to a member. Everything sellable
+ * (`entitlements`, `freezePolicy`, price) is **copied** at assignment time,
+ * not referenced — the catalog can move on (new versions, retired
+ * packages) without rewriting what this member already holds.
+ */
+export interface MemberPackage {
+  id: string;
+  tenantId: string;
+  memberId: string;
+  memberName: string;
+  packageId: string;
+  packageName: string;
+  kind: PackageKind;
+  entitlements: PackageEntitlements;
+  freezePolicy?: FreezePolicy;
+  listPrice: number;
+  /** Equal to `listPrice` until PKG-5 promotions exist. */
+  finalPrice: number;
+  promotionId?: string;
+  promotionName?: string;
+  bonusDays?: number;
+  bonusLessons?: number;
+  startsAt: Date;
+  /** `membership`: `startsAt + durationDays (+ bonusDays)`. `lessons`: `startsAt + lessonValidityDays`. */
+  endsAt: Date;
+  frozenDays: number;
+  freezes: PackageFreeze[];
+  status: MemberPackageStatus;
+  paymentId?: string;
+  assignedAt: Date;
+  assignedBy: string;
+}
+
+export type CreditKind = 'ptLesson' | 'groupClass';
+export type CreditSource = 'purchase' | 'entitlement';
+export type CreditStatus = 'active' | 'exhausted' | 'expired';
+
+/**
+ * One quota balance — a purchased lesson bundle, or one period's worth of a
+ * package's recurring entitlement (Platinium's quarterly 12 lessons, a
+ * quota'd group-class allowance). Both live here rather than in separate
+ * tables so consumption (PKG-8), cancellation refunds (PKG-11) and the
+ * quota'd-group-class path (PKG-4) share one mechanism instead of three.
+ */
+export interface MemberCredit {
+  id: string;
+  tenantId: string;
+  memberId: string;
+  kind: CreditKind;
+  source: CreditSource;
+  /** The `member_packages` assignment this credit came from — not the
+   *  `gym_packages` catalog entry, so a renewal or refund can tell which
+   *  specific holding is still active without guessing across re-purchases. */
+  sourcePackageId: string;
+  total: number;
+  /** Server-owned — only a Cloud Function moves this. Never written by the client. */
+  used: number;
+  startsAt: Date;
+  expiresAt: Date;
+  status: CreditStatus;
+}
+
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';
 
 export interface AppNotification {
