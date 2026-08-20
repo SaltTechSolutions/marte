@@ -42,6 +42,7 @@ export default function TrainerLayout() {
           <Stack.Screen name="calendar" />
           <Stack.Screen name="programs" />
           <Stack.Screen name="profile" />
+          <Stack.Screen name="availability" options={{ ...detail, title: 'Çalışma Saatlerim' }} />
           <Stack.Screen name="member" options={{ ...detail, title: 'Üye' }} />
           <Stack.Screen name="builder" options={{ ...detail, title: 'Program' }} />
         </Stack>

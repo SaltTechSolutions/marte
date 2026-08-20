@@ -196,26 +196,40 @@ export default function MemberHome() {
       )}
 
       {/* --- What's coming --- */}
+      <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
+        YAKLAŞAN RANDEVU
+      </Text>
       {nextSession && (
-        <>
-          <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
-            YAKLAŞAN RANDEVU
-          </Text>
-          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="barbell-outline" size={19} color={colors.p} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="helper" weight="700">
-                {formatSessionDate(nextSession.date)}
-              </Text>
-              <Text variant="label" tone="sub">
-                {nextSession.trainerName} · {nextSession.durationMinutes} dk
-              </Text>
-            </View>
-          </Card>
-        </>
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="barbell-outline" size={19} color={colors.p} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              {formatSessionDate(nextSession.date)}
+            </Text>
+            <Text variant="label" tone="sub">
+              {nextSession.trainerName} · {nextSession.durationMinutes} dk
+            </Text>
+          </View>
+        </Card>
       )}
+      <Pressable onPress={() => router.push('/member/trainers')}>
+        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="calendar-outline" size={18} color={colors.p} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Randevu al
+            </Text>
+            <Text variant="label" tone="sub">
+              Bir antrenörden özel ders saati seç
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </Card>
+      </Pressable>
 
       {/* --- Status --- */}
       <Text variant="label" tone="sub" style={{ marginTop: 8 }}>

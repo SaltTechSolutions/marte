@@ -1,10 +1,14 @@
 import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { db } from '@/services/firebase';
+import { app, db } from '@/services/firebase';
 
 import { PtSession, PtSessionStatus } from '../types';
 import { ptSessionFromDoc } from './convert';
 import { WatchErrorHandler, watchQuery } from './watch';
+
+// Functions are deployed to europe-west1, same as the rest of the project.
+const functions = getFunctions(app, 'europe-west1');
 
 export async function createPtSession(params: {
   tenantId: string;
@@ -81,6 +85,25 @@ export function watchUpcomingSessionsForMember(
  * check-in's ders-paketi path (PKG-3) uses this to decide whether the
  * whole day is open to them or their credit alone isn't enough.
  */
+/**
+ * A member spends their own lesson credit on a specific trainer/time.
+ * Server-side on purpose: security rules refuse to let any client create a
+ * `pt_sessions` doc with a `creditId` at all — deciding "does this member
+ * have enough credit, and which of their (possibly several) credit rows pays
+ * for it" needs a query rules cannot run, and consuming it has to be atomic
+ * against a second device racing for the same slot. See `bookPtSessions` in
+ * marte06/functions.
+ */
+export async function bookPtSessions(params: { tenantId: string; trainerId: string; slots: Date[] }): Promise<{ booked: number }> {
+  const call = httpsCallable<{ tenantId: string; trainerId: string; slots: string[] }, { booked: number }>(functions, 'bookPtSessions');
+  const { data } = await call({
+    tenantId: params.tenantId,
+    trainerId: params.trainerId,
+    slots: params.slots.map((s) => s.toISOString()),
+  });
+  return data;
+}
+
 export async function hasSessionToday(tenantId: string, memberId: string, now: Date): Promise<boolean> {
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);

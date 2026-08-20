@@ -71,6 +71,26 @@ export default function MemberLayout() {
               headerShadowVisible: false,
             }}
           />
+          <Stack.Screen
+            name="trainers"
+            options={{
+              headerShown: true,
+              title: 'Antrenör seç',
+              headerStyle: { backgroundColor: colors.bg0 },
+              headerTintColor: colors.txt,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="book-session"
+            options={{
+              headerShown: true,
+              title: 'Randevu al',
+              headerStyle: { backgroundColor: colors.bg0 },
+              headerTintColor: colors.txt,
+              headerShadowVisible: false,
+            }}
+          />
         </Stack>
       </View>
       {!hideTabBar && <TabBar items={TABS} />}

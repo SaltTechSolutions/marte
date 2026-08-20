@@ -251,6 +251,10 @@ export interface PtSession {
   date: Date;
   durationMinutes: number;
   status: PtSessionStatus;
+  /** Which `member_credits` doc paid for this — absent for a trainer's own
+   *  package-independent booking (PKG-8's addition; existing behavior for
+   *  a trainer-created session is unchanged, `creditId` just never applies). */
+  creditId?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -530,6 +534,58 @@ export interface PackageChangeRequest {
   createdBy: string;
   createdAt: Date;
   respondedAt?: Date;
+}
+
+// ============================================================================
+// TRAINER AVAILABILITY — the precondition for a member booking a PT slot (PKG-7)
+// ============================================================================
+
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+/** `'08:00'`-style, always 24h HH:mm. */
+export interface TimeWindow {
+  start: string;
+  end: string;
+}
+
+/** A specific date overriding the weekly pattern — a holiday, a one-off
+ *  half-day. `windows` absent + `closed` true = fully closed that day;
+ *  `windows` present = replaces (not adds to) that day's weekly pattern. */
+export interface AvailabilityException {
+  /** `'YYYY-MM-DD'`. */
+  date: string;
+  closed?: boolean;
+  windows?: TimeWindow[];
+}
+
+/**
+ * One trainer's recurring working hours, doc id `{tenantId}_{trainerId}`.
+ * An **absent or empty `weekly`** means "never configured" — deliberately
+ * distinct from "configured with zero hours." A member must never see a
+ * silent "no slots" for a trainer who simply hasn't set this up yet; that
+ * reads as the trainer being fully booked forever. See `hasAnyAvailability`.
+ */
+export interface TrainerAvailability {
+  tenantId: string;
+  trainerId: string;
+  weekly: Partial<Record<Weekday, TimeWindow[]>>;
+  slotMinutes: number;
+  exceptions: AvailabilityException[];
+  updatedAt: Date;
+}
+
+/**
+ * A privacy-preserving mirror of one `pt_sessions` doc — same id, but only
+ * `date`/`durationMinutes`/`status`, no `memberId`/`memberName`. Exists so a
+ * member browsing a trainer's free slots (PKG-8) can see *that* a time is
+ * taken without seeing *whose* session it is; `pt_sessions` itself is only
+ * readable by its own member, its trainer, or staff. Kept in sync by
+ * `syncTrainerBusySlots` (Cloud Function, triggered on `pt_sessions` writes).
+ */
+export interface TrainerBusySlot {
+  date: Date;
+  durationMinutes: number;
+  status: PtSessionStatus;
 }
 
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';

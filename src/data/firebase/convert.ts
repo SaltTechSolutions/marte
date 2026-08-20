@@ -9,6 +9,7 @@ import {
   MemberEntitlementsCache,
   MemberPackage,
   PackageChangeRequest,
+  TrainerAvailability,
   Payment,
   Program,
   Promotion,
@@ -137,7 +138,20 @@ export function ptSessionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot)
     date: toDate(data.date) ?? new Date(),
     durationMinutes: data.durationMinutes,
     status: data.status,
+    creditId: data.creditId,
     createdAt: toDate(data.createdAt) ?? new Date(),
+    updatedAt: toDate(data.updatedAt) ?? new Date(),
+  };
+}
+
+export function trainerAvailabilityFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): TrainerAvailability {
+  const data = snap.data()!;
+  return {
+    tenantId: data.tenantId,
+    trainerId: data.trainerId,
+    weekly: data.weekly ?? {},
+    slotMinutes: data.slotMinutes ?? 60,
+    exceptions: data.exceptions ?? [],
     updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
 }

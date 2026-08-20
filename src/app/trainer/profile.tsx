@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
@@ -204,6 +205,31 @@ export default function TrainerProfile() {
           </View>
         </View>
       </Card>
+
+      <Pressable onPress={() => router.push('/trainer/availability')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name="time-outline" size={18} color={colors.txt} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Çalışma saatlerim
+            </Text>
+            <Text variant="label" tone="sub">
+              Üyeler yalnızca bu saatlerde randevu alabilir
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
 
       {/* --- Coaching load --- */}
       <Card style={{ gap: 12 }}>
