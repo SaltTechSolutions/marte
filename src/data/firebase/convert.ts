@@ -10,6 +10,7 @@ import {
   MemberPackage,
   Payment,
   Program,
+  Promotion,
   PtSession,
   Tenant,
   TenantMembership,
@@ -224,6 +225,24 @@ export function memberPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnaps
     paymentId: data.paymentId,
     assignedAt: toDate(data.assignedAt) ?? new Date(),
     assignedBy: data.assignedBy,
+  };
+}
+
+export function promotionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): Promotion {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    name: data.name,
+    kind: data.kind,
+    value: data.value,
+    appliesTo: data.appliesTo ?? [],
+    startsAt: toDate(data.startsAt) ?? new Date(),
+    endsAt: toDate(data.endsAt) ?? new Date(),
+    maxRedemptions: data.maxRedemptions,
+    redeemed: data.redeemed ?? 0,
+    isActive: data.isActive,
+    createdAt: toDate(data.createdAt) ?? new Date(),
   };
 }
 

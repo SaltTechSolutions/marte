@@ -1,8 +1,21 @@
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, Timestamp, where, writeBatch } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
-import { GymPackage, MemberCredit, MemberEntitlementsCache, MemberPackage } from '../types';
+import { GymPackage, MemberCredit, MemberEntitlementsCache, MemberPackage, Promotion } from '../types';
 import { memberCreditFromDoc, memberEntitlementsFromDoc, memberPackageFromDoc } from './convert';
 import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
 
@@ -18,15 +31,44 @@ function addDays(date: Date, days: number): Date {
 }
 
 /**
+ * What a promotion does to a price/term, in isolation from any particular
+ * assignment. `bonusDays` only means something for a `membership` package
+ * (extends `endsAt`); `bonusLessons` only for a `lessons` package (adds to
+ * the purchased credit). Picking a mismatched promotion kind for a package
+ * is a no-op, not an error — the value still gets copied for the record,
+ * it just doesn't change anything. The assign screen filters the picker so
+ * this shouldn't come up in practice.
+ */
+export function applyPromotionEffect(price: number, promotion: Pick<Promotion, 'kind' | 'value'>): { finalPrice: number; bonusDays: number; bonusLessons: number } {
+  switch (promotion.kind) {
+    case 'percentDiscount':
+      return { finalPrice: Math.max(0, Math.round(price * (1 - promotion.value / 100))), bonusDays: 0, bonusLessons: 0 };
+    case 'amountDiscount':
+      return { finalPrice: Math.max(0, price - promotion.value), bonusDays: 0, bonusLessons: 0 };
+    case 'bonusDays':
+      return { finalPrice: price, bonusDays: promotion.value, bonusLessons: 0 };
+    case 'bonusLessons':
+      return { finalPrice: price, bonusDays: 0, bonusLessons: promotion.value };
+  }
+}
+
+/**
  * Assigns a package to a member: one `member_packages` row plus whatever
- * `member_credits` rows its entitlements imply, written as a single batch so
- * a member never has a package with no matching credit (or the reverse).
+ * `member_credits` rows its entitlements imply, written together so a
+ * member never has a package with no matching credit (or the reverse).
  *
  * This is the *direct* assignment path — no member approval. That is only
  * correct for a first-time or additive assignment ("İlk atama onay
  * istemez" — PKG-6). Changing what an already-holding member gets goes
  * through `package_change_requests` instead (PKG-6, not built yet); this
  * function must not be called for that case once PKG-6 lands.
+ *
+ * Without a promotion this is a plain batch — nothing to arbitrate.
+ * *With* one, it runs as a transaction: `promotions.redeemed` has to move by
+ * exactly +1 and stay under `maxRedemptions` even if two admins apply the
+ * same campaign at once, and rules alone can't stop a second concurrent
+ * assignment from reading the same stale count. Firestore transactions give
+ * that atomicity the same way `bookClass`'s capacity check does.
  */
 export async function assignPackageToMember(params: {
   tenantId: string;
@@ -36,17 +78,31 @@ export async function assignPackageToMember(params: {
   startsAt: Date;
   assignedBy: string;
   paymentId?: string;
+  promotion?: Promotion;
 }): Promise<void> {
-  const { tenantId, memberId, memberName, pkg, startsAt, assignedBy, paymentId } = params;
+  const { tenantId, memberId, memberName, pkg, startsAt, assignedBy, paymentId, promotion } = params;
 
+  const effect = promotion ? applyPromotionEffect(pkg.price, promotion) : { finalPrice: pkg.price, bonusDays: 0, bonusLessons: 0 };
   const endsAt =
     pkg.kind === 'membership'
-      ? addDays(startsAt, (pkg.durationDays ?? 0) /* + bonusDays once PKG-5 exists */)
+      ? addDays(startsAt, (pkg.durationDays ?? 0) + effect.bonusDays)
       : addDays(startsAt, pkg.lessonValidityDays ?? 0);
+  const lessonCount = pkg.kind === 'lessons' ? (pkg.lessonCount ?? 0) + effect.bonusLessons : 0;
 
-  const batch = writeBatch(db);
   const packageRef = doc(collection(db, 'member_packages'));
-  batch.set(packageRef, {
+  const creditRefs = {
+    lessons: pkg.kind === 'lessons' && lessonCount > 0 ? doc(collection(db, 'member_credits')) : null,
+    groupClass: null as ReturnType<typeof doc> | null,
+    ptLessons: null as ReturnType<typeof doc> | null,
+  };
+  if (pkg.kind === 'membership') {
+    const gc = pkg.entitlements.groupClasses;
+    if (gc && !gc.unlimited && gc.count && gc.periodDays) creditRefs.groupClass = doc(collection(db, 'member_credits'));
+    const pt = pkg.entitlements.ptLessons;
+    if (pt?.count && pt.periodDays) creditRefs.ptLessons = doc(collection(db, 'member_credits'));
+  }
+
+  const packageData = {
     tenantId,
     memberId,
     memberName,
@@ -56,7 +112,10 @@ export async function assignPackageToMember(params: {
     entitlements: pkg.entitlements,
     ...(pkg.freezePolicy ? { freezePolicy: pkg.freezePolicy } : {}),
     listPrice: pkg.price,
-    finalPrice: pkg.price,
+    finalPrice: effect.finalPrice,
+    ...(promotion
+      ? { promotionId: promotion.id, promotionName: promotion.name, bonusDays: effect.bonusDays, bonusLessons: effect.bonusLessons }
+      : {}),
     startsAt: Timestamp.fromDate(startsAt),
     endsAt: Timestamp.fromDate(endsAt),
     frozenDays: 0,
@@ -65,37 +124,57 @@ export async function assignPackageToMember(params: {
     ...(paymentId ? { paymentId } : {}),
     assignedAt: serverTimestamp(),
     assignedBy,
-  });
-
-  const addCredit = (kind: 'ptLesson' | 'groupClass', source: 'purchase' | 'entitlement', total: number, expiresAt: Date) => {
-    batch.set(doc(collection(db, 'member_credits')), {
-      tenantId,
-      memberId,
-      kind,
-      source,
-      // The member_packages assignment, not the gym_packages catalog entry —
-      // renewal (Cloud Function) needs to check THIS holding's status/endsAt.
-      sourcePackageId: packageRef.id,
-      total,
-      used: 0,
-      startsAt: Timestamp.fromDate(startsAt),
-      expiresAt: Timestamp.fromDate(expiresAt),
-      status: 'active',
-    });
   };
 
-  if (pkg.kind === 'lessons' && pkg.lessonCount) {
-    addCredit('ptLesson', 'purchase', pkg.lessonCount, endsAt);
+  const creditData = (kind: 'ptLesson' | 'groupClass', source: 'purchase' | 'entitlement', total: number, expiresAt: Date) => ({
+    tenantId,
+    memberId,
+    kind,
+    source,
+    // The member_packages assignment, not the gym_packages catalog entry —
+    // renewal (Cloud Function) needs to check THIS holding's status/endsAt.
+    sourcePackageId: packageRef.id,
+    total,
+    used: 0,
+    startsAt: Timestamp.fromDate(startsAt),
+    expiresAt: Timestamp.fromDate(expiresAt),
+    status: 'active',
+  });
+
+  if (promotion) {
+    const promotionRef = doc(db, 'promotions', promotion.id);
+    await runTransaction(db, async (tx) => {
+      const promoSnap = await tx.get(promotionRef);
+      const redeemed = (promoSnap.data()?.redeemed as number | undefined) ?? 0;
+      const maxRedemptions = promoSnap.data()?.maxRedemptions as number | undefined;
+      if (maxRedemptions != null && redeemed >= maxRedemptions) {
+        throw new Error('PROMOTION_EXHAUSTED');
+      }
+      tx.update(promotionRef, { redeemed: redeemed + 1 });
+      tx.set(packageRef, packageData);
+      if (creditRefs.lessons) tx.set(creditRefs.lessons, creditData('ptLesson', 'purchase', lessonCount, endsAt));
+      if (creditRefs.groupClass) {
+        const gc = pkg.entitlements.groupClasses!;
+        tx.set(creditRefs.groupClass, creditData('groupClass', 'entitlement', gc.count!, addDays(startsAt, gc.periodDays!)));
+      }
+      if (creditRefs.ptLessons) {
+        const pt = pkg.entitlements.ptLessons!;
+        tx.set(creditRefs.ptLessons, creditData('ptLesson', 'entitlement', pt.count!, addDays(startsAt, pt.periodDays!)));
+      }
+    });
+    return;
   }
-  if (pkg.kind === 'membership') {
-    const gc = pkg.entitlements.groupClasses;
-    if (gc && !gc.unlimited && gc.count && gc.periodDays) {
-      addCredit('groupClass', 'entitlement', gc.count, addDays(startsAt, gc.periodDays));
-    }
-    const pt = pkg.entitlements.ptLessons;
-    if (pt?.count && pt.periodDays) {
-      addCredit('ptLesson', 'entitlement', pt.count, addDays(startsAt, pt.periodDays));
-    }
+
+  const batch = writeBatch(db);
+  batch.set(packageRef, packageData);
+  if (creditRefs.lessons) batch.set(creditRefs.lessons, creditData('ptLesson', 'purchase', lessonCount, endsAt));
+  if (creditRefs.groupClass) {
+    const gc = pkg.entitlements.groupClasses!;
+    batch.set(creditRefs.groupClass, creditData('groupClass', 'entitlement', gc.count!, addDays(startsAt, gc.periodDays!)));
+  }
+  if (creditRefs.ptLessons) {
+    const pt = pkg.entitlements.ptLessons!;
+    batch.set(creditRefs.ptLessons, creditData('ptLesson', 'entitlement', pt.count!, addDays(startsAt, pt.periodDays!)));
   }
 
   await batch.commit();

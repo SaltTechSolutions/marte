@@ -4,16 +4,19 @@ import { Pressable, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
+import { Card } from '@/components/Card';
+import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
-import { assignPackageToMember } from '@/data/firebase/memberPackageRepo';
+import { applyPromotionEffect, assignPackageToMember } from '@/data/firebase/memberPackageRepo';
 import { watchPackagesForTenant } from '@/data/firebase/packageRepo';
+import { isPromotionUsable, watchPromotionsForTenant } from '@/data/firebase/promotionRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { GymPackage } from '@/data/types';
+import { GymPackage, Promotion } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 function summary(pkg: GymPackage): string {
@@ -42,7 +45,9 @@ export default function AdminAssignPackage() {
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [packages, setPackages] = useState<GymPackage[] | undefined>(undefined);
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [selected, setSelected] = useState<GymPackage | null>(null);
+  const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
@@ -50,11 +55,27 @@ export default function AdminAssignPackage() {
     return watchPackagesForTenant(tenantId, setPackages);
   }, [tenantId]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+    return watchPromotionsForTenant(tenantId, setPromotions);
+  }, [tenantId]);
+
   if (!tenantId || !memberId || !user) {
     return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
 
   const active = (packages ?? []).filter((p) => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder);
+  const usablePromotions = selected ? promotions.filter((p) => isPromotionUsable(p, selected.id)) : [];
+  const effect = selected
+    ? selectedPromotion
+      ? applyPromotionEffect(selected.price, selectedPromotion)
+      : { finalPrice: selected.price, bonusDays: 0, bonusLessons: 0 }
+    : null;
+
+  const selectPackage = (pkg: GymPackage) => {
+    setSelected(pkg);
+    setSelectedPromotion(null); // last package's promotion may not apply to the new one
+  };
 
   const assign = async () => {
     if (!selected || assigning) return;
@@ -67,11 +88,12 @@ export default function AdminAssignPackage() {
         pkg: selected,
         startsAt: new Date(),
         assignedBy: user.uid,
+        ...(selectedPromotion ? { promotion: selectedPromotion } : {}),
       });
       toast.success(`${selected.name} ${memberName || 'üyeye'} atandı`);
       router.back();
-    } catch {
-      toast.error('Paket atanamadı, tekrar deneyin.');
+    } catch (e) {
+      toast.error((e as Error).message === 'PROMOTION_EXHAUSTED' ? 'Bu promosyonun kontenjanı az önce doldu.' : 'Paket atanamadı, tekrar deneyin.');
     } finally {
       setAssigning(false);
     }
@@ -96,7 +118,7 @@ export default function AdminAssignPackage() {
           {active.map((pkg) => {
             const isSelected = selected?.id === pkg.id;
             return (
-              <Pressable key={pkg.id} onPress={() => setSelected(pkg)}>
+              <Pressable key={pkg.id} onPress={() => selectPackage(pkg)}>
                 <View
                   style={{
                     backgroundColor: colors.surf,
@@ -122,6 +144,63 @@ export default function AdminAssignPackage() {
             );
           })}
         </View>
+      )}
+
+      {selected && usablePromotions.length > 0 && (
+        <View style={{ gap: 6 }}>
+          <Text variant="label" tone="sub">
+            PROMOSYON UYGULA
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <Chip label="Yok" selected={!selectedPromotion} onPress={() => setSelectedPromotion(null)} />
+            {usablePromotions.map((promo) => (
+              <Chip
+                key={promo.id}
+                label={promo.name}
+                selected={selectedPromotion?.id === promo.id}
+                onPress={() => setSelectedPromotion(promo)}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {selected && effect && selectedPromotion && (
+        <Card style={{ gap: 6 }}>
+          <Text variant="label" tone="sub">
+            ÖZET
+          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="helper" tone="sub">
+              Fiyat
+            </Text>
+            <Text variant="helper" weight="700">
+              {effect.finalPrice === selected.price
+                ? `${selected.price.toLocaleString('tr-TR')} ₺`
+                : `${selected.price.toLocaleString('tr-TR')} ₺ → ${effect.finalPrice.toLocaleString('tr-TR')} ₺`}
+            </Text>
+          </View>
+          {effect.bonusDays > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text variant="helper" tone="sub">
+                Süre
+              </Text>
+              <Text variant="helper" weight="700" style={{ color: colors.ok }}>
+                +{effect.bonusDays} gün hediye
+              </Text>
+            </View>
+          )}
+          {effect.bonusLessons > 0 && (
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text variant="helper" tone="sub">
+                Ders
+              </Text>
+              <Text variant="helper" weight="700" style={{ color: colors.ok }}>
+                +{effect.bonusLessons} ders hediye
+              </Text>
+            </View>
+          )}
+        </Card>
       )}
 
       <Button

@@ -275,6 +275,31 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         </View>
       </Pressable>
 
+      <Pressable onPress={() => router.push('/admin/promotions')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name="megaphone-outline" size={18} color={colors.txt} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Promosyonlar
+            </Text>
+            <Text variant="label" tone="sub">
+              Sınırlı süreli kampanyalar — indirim, hediye ay veya ders
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
+
       <Pressable onPress={() => router.push('/admin/staff')}>
         <View
           style={{

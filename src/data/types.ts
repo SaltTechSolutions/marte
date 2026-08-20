@@ -438,6 +438,41 @@ export interface MemberEntitlementsCache {
   updatedAt: Date;
 }
 
+// ============================================================================
+// PROMOTIONS — time-boxed campaigns layered on top of the catalog (PKG-5)
+// ============================================================================
+
+export type PromotionKind = 'percentDiscount' | 'amountDiscount' | 'bonusDays' | 'bonusLessons';
+
+/**
+ * A promotion never touches `GymPackage` — the catalog's content is locked
+ * the moment anything is sold from it (PKG-1's "satılan donar" rule), so a
+ * seasonal campaign has to be a separate thing layered on top at assignment
+ * time, not a catalog edit. Its effect is **copied** onto the resulting
+ * `MemberPackage` the same way the package's own price and entitlements
+ * are — this doc can end, change, or be deleted afterward without touching
+ * what anyone already got.
+ */
+export interface Promotion {
+  id: string;
+  tenantId: string;
+  name: string;
+  kind: PromotionKind;
+  /** Percent (0–100), currency amount, days, or lesson count, matching `kind`. */
+  value: number;
+  /** `gym_packages` ids this applies to. Empty = every package. */
+  appliesTo: string[];
+  startsAt: Date;
+  endsAt: Date;
+  /** Absent = unlimited. */
+  maxRedemptions?: number;
+  /** Server-guarded counter — a client write may only ever move it by
+   *  exactly +1, and only while under `maxRedemptions`. Never set it directly. */
+  redeemed: number;
+  isActive: boolean;
+  createdAt: Date;
+}
+
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';
 
 export interface AppNotification {

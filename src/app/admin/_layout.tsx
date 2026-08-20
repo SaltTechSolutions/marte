@@ -49,6 +49,8 @@ export default function AdminLayout() {
           <Stack.Screen name="calendar" options={{ ...detail, title: 'Antrenör takvimleri' }} />
           <Stack.Screen name="packages" options={{ ...detail, title: 'Paketler' }} />
           <Stack.Screen name="package-form" options={{ ...detail, title: 'Paket' }} />
+          <Stack.Screen name="promotions" options={{ ...detail, title: 'Promosyonlar' }} />
+          <Stack.Screen name="promotion-form" options={{ ...detail, title: 'Promosyon' }} />
           <Stack.Screen name="member" options={{ ...detail, title: 'Üye' }} />
           <Stack.Screen name="assign-package" options={{ ...detail, title: 'Paket ata' }} />
         </Stack>
