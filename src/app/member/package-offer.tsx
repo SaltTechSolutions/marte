@@ -7,25 +7,10 @@ import { Card } from '@/components/Card';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { respondToPackageChangeRequest, watchPackageChangeRequest } from '@/data/firebase/packageChangeRepo';
-import { PackageChangeRequest, PackageChangeSummary } from '@/data/types';
+import { entitlementRows } from '@/data/entitlementRows';
+import { PackageChangeRequest } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
-
-/**
- * Built from the `entitlements` map, never hand-written — otherwise this
- * screen lies the moment an admin adds a right the copy here doesn't know
- * about yet.
- */
-function entitlementRows(summary: PackageChangeSummary): string[] {
-  const rows: string[] = [];
-  if (summary.entitlements.gymAccess) rows.push('Salon girişi');
-  const gc = summary.entitlements.groupClasses;
-  if (gc?.unlimited) rows.push('Sınırsız grup dersi');
-  else if (gc) rows.push(`${gc.periodDays} günde ${gc.count} grup dersi`);
-  const pt = summary.entitlements.ptLessons;
-  if (pt) rows.push(`${pt.periodDays} günde ${pt.count} özel ders`);
-  return rows;
-}
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });

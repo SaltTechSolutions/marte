@@ -14,6 +14,24 @@ function addDays(date: Date, days: number): Date {
 }
 
 /**
+ * Prorated refund on a downgrade: the unused portion of what's already been
+ * paid for the current holding, as of when the swap takes effect. Extracted
+ * as a named pure function so it can be unit-tested without pulling in
+ * Firestore (see plan-eng-review Faz 3.1).
+ */
+export function computeProratedRefund(
+  current: { finalPrice: number; startsAt: Date; endsAt: Date },
+  newFinalPrice: number,
+  effectiveAt: Date,
+): { refundAmount: number; refundBasis: string } {
+  const totalDays = Math.max(1, Math.round((current.endsAt.getTime() - current.startsAt.getTime()) / 86400000));
+  const remainingDays = Math.max(0, Math.round((current.endsAt.getTime() - effectiveAt.getTime()) / 86400000));
+  const refundAmount = Math.round((current.finalPrice - newFinalPrice) * (remainingDays / totalDays));
+  const refundBasis = `kalan ${remainingDays}/${totalDays} gün`;
+  return { refundAmount, refundBasis };
+}
+
+/**
  * Prepares — but does not apply — a swap for an already-holding member.
  * `applyPackageChange` (Cloud Function) is the only thing that ever touches
  * `member_packages` for this; this function only ever writes the request
@@ -64,10 +82,7 @@ export async function createPackageChangeRequest(params: {
   let refundAmount: number | undefined;
   let refundBasis: string | undefined;
   if (current && priceDelta < 0) {
-    const totalDays = Math.max(1, Math.round((current.pkg.endsAt.getTime() - current.pkg.startsAt.getTime()) / 86400000));
-    const remainingDays = Math.max(0, Math.round((current.pkg.endsAt.getTime() - effectiveAt.getTime()) / 86400000));
-    refundAmount = Math.round((current.pkg.finalPrice - effect.finalPrice) * (remainingDays / totalDays));
-    refundBasis = `kalan ${remainingDays}/${totalDays} gün`;
+    ({ refundAmount, refundBasis } = computeProratedRefund(current.pkg, effect.finalPrice, effectiveAt));
   }
 
   await addDoc(collection(db, 'package_change_requests'), {
