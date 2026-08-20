@@ -69,7 +69,7 @@ interface AccessResolution {
   warnReason: CheckInWarnReason | null;
 }
 
-async function resolveAccess(tenantId: string, userId: string): Promise<AccessResolution> {
+export async function resolveAccess(tenantId: string, userId: string): Promise<AccessResolution> {
   const now = new Date();
   const packages = await getMemberPackages(tenantId, userId);
 
@@ -79,16 +79,23 @@ async function resolveAccess(tenantId: string, userId: string): Promise<AccessRe
   );
   if (covering) return { access: 'ok', packageLabel: covering.packageName, warnReason: null };
 
-  // 2/3. A usable lesson credit — access depends on whether today is a
-  // scheduled day, not on holding the credit alone.
+  // 2. A booked session today is access on its own, independent of the
+  // credit's current status. The credit was already spent to create this
+  // exact session — checking `status === 'active'` again here would punish
+  // the member for having just used their last one (their appointment
+  // today is what they paid for; a second check-in-time toll isn't owed).
+  if (await hasSessionToday(tenantId, userId, now)) {
+    const sourcePackage = packages.find((p) => p.kind === 'lessons' && p.endsAt >= now);
+    const label = sourcePackage?.packageName ?? 'Ders paketi';
+    return { access: 'ok', packageLabel: `${label} · bugün randevulu`, warnReason: null };
+  }
+
+  // 3. No booked session — a credit that's still usable but unspent today.
   const credits = await getActiveMemberCredits(tenantId, userId, 'ptLesson');
   const usable = credits.find((c) => c.total - c.used > 0 && c.expiresAt >= now);
   if (usable) {
     const sourcePackage = packages.find((p) => p.id === usable.sourcePackageId) ?? (await getMemberPackage(usable.sourcePackageId));
     const label = sourcePackage?.packageName ?? 'Ders paketi';
-    if (await hasSessionToday(tenantId, userId, now)) {
-      return { access: 'ok', packageLabel: `${label} · bugün randevulu`, warnReason: null };
-    }
     return { access: 'warn', packageLabel: label, warnReason: 'no-session-today' };
   }
 
