@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import {
   setMembershipPermissions,
@@ -50,6 +51,7 @@ function rolesLabel(roles: MembershipRole[]): string {
  */
 export default function AdminStaff() {
   const { colors, spacing } = useAppTheme();
+  const toast = useToast();
   const { user, activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
@@ -79,6 +81,8 @@ export default function AdminStaff() {
     try {
       const has = m.permissions.includes('checkin');
       await setMembershipPermissions(m.id, has ? [] : ['checkin']);
+    } catch {
+      toast.error('Yetki güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
@@ -90,6 +94,8 @@ export default function AdminStaff() {
       const isTrainer = m.roles.includes('trainer');
       const next = isTrainer ? m.roles.filter((r) => r !== 'trainer') : ([...m.roles, 'trainer'] as MembershipRole[]);
       await setMembershipRoles(m.id, next);
+    } catch {
+      toast.error('Rol güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
@@ -27,6 +28,7 @@ function formatAmount(n: number): string {
 /** Manual payment ledger — admin enters what they received, confirms/rejects member-submitted notices. */
 export default function AdminPayments() {
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
@@ -87,6 +89,9 @@ export default function AdminPayments() {
         ...(note.trim() ? { note: note.trim() } : {}),
       });
       resetForm();
+      toast.success(`${amountNum} ₺ ödeme kaydedildi`);
+    } catch {
+      toast.error('Ödeme kaydedilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }
@@ -96,6 +101,8 @@ export default function AdminPayments() {
     setBusyId(id);
     try {
       await confirmPayment(id);
+    } catch {
+      toast.error('Ödeme onaylanamadı, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
@@ -113,6 +120,8 @@ export default function AdminPayments() {
     setBusyId(id);
     try {
       await rejectPayment(id);
+    } catch {
+      toast.error('Ödeme reddedilemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

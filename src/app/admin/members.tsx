@@ -7,8 +7,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
-import { Snackbar } from '@/components/Snackbar';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import {
   approveMembership,
   countActiveMembers,
@@ -37,6 +37,7 @@ function requesterInitials(r: TenantMembership) {
 export default function AdminMembers() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
   const { activeMembership } = useAuth();
 
   // Only a real signed-in tenant admin can act here. No fallback to a demo
@@ -50,7 +51,6 @@ export default function AdminMembers() {
   // No tenantId means there's nothing to load — start "loading" only when
   // there's actually a subscription about to kick off.
   const [loading, setLoading] = useState(() => !!tenantId);
-  const [snack, setSnack] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -93,17 +93,17 @@ export default function AdminMembers() {
         // gym just has to lift its seat limit first. Say so, then show the
         // upgrade screen; silently returning left the admin tapping a button
         // that appeared to do nothing.
-        setSnack(`${requesterLabel(r)} sırada bekliyor — üye limitine ulaştın.`);
+        toast.error(`${requesterLabel(r)} sırada bekliyor — üye limitine ulaştın.`);
         router.push('/paywall');
         return;
       }
       await approveMembership(r.id);
-      setSnack(`${requesterLabel(r)} onaylandı`);
+      toast.success(`${requesterLabel(r)} onaylandı`);
     } catch (e) {
       // The same limit is enforced in security rules, so a stale client-side
       // count still lands here rather than half-approving anyone.
       const denied = (e as { code?: string }).code?.includes('permission-denied');
-      setSnack(denied ? 'Üye limitine ulaştın — yükseltmen gerekiyor.' : 'Onaylanamadı, tekrar deneyin.');
+      toast.error(denied ? 'Üye limitine ulaştın — yükseltmen gerekiyor.' : 'Onaylanamadı, tekrar deneyin.');
       if (denied) router.push('/paywall');
     } finally {
       setBusyId(null);
@@ -122,9 +122,9 @@ export default function AdminMembers() {
     setBusyId(r.id);
     try {
       await rejectMembership(r.id);
-      setSnack(`${requesterLabel(r)} reddedildi`);
+      toast.success(`${requesterLabel(r)} reddedildi`);
     } catch {
-      setSnack('Reddedilemedi, tekrar deneyin.');
+      toast.error('Reddedilemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
@@ -244,8 +244,6 @@ export default function AdminMembers() {
           ))}
         </ListGroup>
       )}
-
-      {snack && <Snackbar message={snack} onAction={() => setSnack(null)} />}
     </ScrollView>
   );
 }

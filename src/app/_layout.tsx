@@ -9,6 +9,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 
+import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthRedirect } from '@/context/AuthRedirect';
 import { PushNotificationSync } from '@/notifications/PushNotificationSync';
@@ -36,22 +37,26 @@ export default function RootLayout() {
 
   return (
     <AppThemeProvider>
-      <AuthProvider>
-        <AuthRedirect />
-        <ThemeSync />
-        <PushNotificationSync />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="member" />
-          <Stack.Screen name="trainer" />
-          <Stack.Screen name="admin" />
-          {/* Shared: check-in is a capability (canCheckIn), not an admin-only
-              screen, so it lives outside both role tab groups. */}
-          <Stack.Screen name="checkin" />
-          <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
-        </Stack>
-      </AuthProvider>
+      {/* Outside AuthProvider so a toast survives sign-out, and outside the
+          navigator so it floats over every screen including the tab bar. */}
+      <ToastProvider>
+        <AuthProvider>
+          <AuthRedirect />
+          <ThemeSync />
+          <PushNotificationSync />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="member" />
+            <Stack.Screen name="trainer" />
+            <Stack.Screen name="admin" />
+            {/* Shared: check-in is a capability (canCheckIn), not an admin-only
+                screen, so it lives outside both role tab groups. */}
+            <Stack.Screen name="checkin" />
+            <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+          </Stack>
+        </AuthProvider>
+      </ToastProvider>
     </AppThemeProvider>
   );
 }

@@ -54,6 +54,13 @@ v1'de tablet desteği yok, yalnızca dikey yön.
   `admin/`) zaten bir tane render ediyor; içeride ikincisi çentik payını iki
   kez uygular. Tab bar'ı olmayan ekranlar `Screen`'i doğrudan kullanır ve
   varsayılan olarak dört kenarı da alır.
+- **Geri bildirim: kalıcı satır içi metin = form doğrulaması, geçici toast
+  = işlem sonucu.** `useToast()` ile `success`/`error`. Sonucu ekranda
+  zaten görünen işleme başarı mesajı koyma (canlı güncellenen liste,
+  dönen anahtar) — yalnızca hatayı bildir. Her şeyi duyurmak
+  bildirimleri okunmadan kapatılan gürültüye çevirir.
+- **Yazma işlemi `catch`siz bırakılmaz.** `try/finally` hatayı sessizce
+  yutar; kullanıcı butona basar, hiçbir şey olmaz.
 - Metinler Türkçe, sade ve insani. Teknik jargon ve hata kodu kullanıcıya
   gösterilmez.
 

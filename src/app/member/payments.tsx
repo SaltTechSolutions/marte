@@ -9,6 +9,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { submitPaymentNotice, watchPaymentsForMember } from '@/data/firebase/paymentRepo';
@@ -27,6 +28,7 @@ function formatAmount(n: number): string {
 export default function MemberPayments() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
   const { user, activeMembership } = useAuth();
   const uid = user?.uid;
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
@@ -64,6 +66,9 @@ export default function MemberPayments() {
       setAdding(false);
       setAmount('');
       setNote('');
+      toast.success('Bildirimin salona iletildi, onay bekleniyor.');
+    } catch {
+      toast.error('Bildirim gönderilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }

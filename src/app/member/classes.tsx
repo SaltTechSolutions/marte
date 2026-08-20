@@ -7,8 +7,8 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { dayKey, isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar';
-import { Snackbar } from '@/components/Snackbar';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { bookClass, cancelBooking, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { toGymClass } from '@/data/classDisplay';
@@ -29,11 +29,11 @@ function classButtonProps(status: GymClass['status']) {
 /** Class schedule — full/waitlist states included; cancel is undo-able, never a confirm dialog. */
 export default function MemberClasses() {
   const { colors, spacing } = useAppTheme();
+  const toast = useToast();
   const { user, activeTenant } = useAuth();
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(!!activeTenant);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [snack, setSnack] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   // Opens on today, so "what's on now?" needs no interaction.
@@ -75,13 +75,13 @@ export default function MemberClasses() {
     try {
       if (status === 'booked') {
         await cancelBooking(session.id, user.uid);
-        setSnack('İptal edildi');
+        toast.success('Rezervasyonun iptal edildi');
       } else {
         const result = await bookClass(session.id, user.uid);
-        setSnack(result === 'waitlisted' ? 'Bekleme listesine eklendin' : 'Katıldın!');
+        toast.success(result === 'waitlisted' ? 'Bekleme listesine eklendin' : 'Derse katıldın');
       }
     } catch {
-      setSnack('Bir hata oluştu, tekrar dene.');
+      toast.error('İşlem tamamlanamadı, tekrar dene.');
     } finally {
       setBusyId(null);
     }
@@ -193,8 +193,6 @@ export default function MemberClasses() {
           })}
         </ListGroup>
       )}
-
-      {snack && <Snackbar message={snack} onAction={() => setSnack(null)} />}
     </ScrollView>
   );
 }

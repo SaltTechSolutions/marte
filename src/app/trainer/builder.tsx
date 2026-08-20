@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
 import { Program, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -42,6 +43,7 @@ export default function ProgramBuilder() {
 function ProgramBuilderForm({ program }: { program: Program }) {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
 
   const [exercises, setExercises] = useState<ProgramExercise[]>(program.exercises);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -84,7 +86,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
     setAssigning(true);
     try {
       await setProgramStatus(program.id, 'active');
+      toast.success(`${program.memberName} için program aktif edildi`);
       safeBack(router, '/trainer');
+    } catch {
+      toast.error('Program aktif edilemedi, tekrar deneyin.');
     } finally {
       setAssigning(false);
     }

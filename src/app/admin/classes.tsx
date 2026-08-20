@@ -9,9 +9,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { ListGroup, ListRow } from '@/components/ListRow';
-import { Snackbar } from '@/components/Snackbar';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
@@ -36,6 +36,7 @@ function sessionDay(d: Date) {
 
 export default function AdminClasses() {
   const { spacing } = useAppTheme();
+  const toast = useToast();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
@@ -49,7 +50,6 @@ export default function AdminClasses() {
   const [duration, setDuration] = useState(DURATION_PRESETS[1]);
   const [capacity, setCapacity] = useState(10);
   const [submitting, setSubmitting] = useState(false);
-  const [snack, setSnack] = useState<string | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -83,9 +83,9 @@ export default function AdminClasses() {
       setName('');
       setTrainer('');
       setShowForm(false);
-      setSnack('Ders eklendi');
+      toast.success('Ders eklendi');
     } catch {
-      setSnack('Ders eklenemedi, tekrar dene.');
+      toast.error('Ders eklenemedi, tekrar dene.');
     } finally {
       setSubmitting(false);
     }
@@ -183,8 +183,6 @@ export default function AdminClasses() {
           ))}
         </ListGroup>
       )}
-
-      {snack && <Snackbar message={snack} onAction={() => setSnack(null)} />}
     </KeyboardAwareScroll>
   );
 }

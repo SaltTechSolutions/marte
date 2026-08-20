@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
@@ -46,6 +47,7 @@ function startOfWeek(): Date {
 export default function TrainerProfile() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
   const { user, activeMembership } = useAuth();
   const uid = user?.uid;
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
@@ -133,6 +135,8 @@ export default function TrainerProfile() {
           viewerTrainerId: colleague.userId,
         });
       }
+    } catch {
+      toast.error('Takvim paylaşımı güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
