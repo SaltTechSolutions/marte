@@ -5,6 +5,8 @@ import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Snackbar } from '@/components/Snackbar';
@@ -33,7 +35,7 @@ function sessionDay(d: Date) {
 }
 
 export default function AdminClasses() {
-  const { colors, spacing, radius } = useAppTheme();
+  const { spacing } = useAppTheme();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
@@ -147,15 +149,15 @@ export default function AdminClasses() {
       )}
 
       {loading ? (
-        <Text variant="helper" tone="sub">
-          Yükleniyor…
-        </Text>
+        <ListSkeleton rows={3} avatar={false} />
       ) : sessions.length === 0 ? (
-        <View style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, padding: 12, alignItems: 'center' }}>
-          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-            Henüz ders eklenmedi — üstteki butonla ilk dersini oluştur.
-          </Text>
-        </View>
+        <EmptyState
+          icon="calendar-outline"
+          title="Henüz ders eklenmedi"
+          description="Haftalık ders programını buradan kur; üyeler kendi Dersler sekmesinden yer ayırtabilir."
+          actionLabel="İlk dersi ekle"
+          onAction={() => setShowForm(true)}
+        />
       ) : (
         <ListGroup>
           {sessions.map((s, i) => (

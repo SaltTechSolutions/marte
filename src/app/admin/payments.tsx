@@ -5,6 +5,9 @@ import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -27,7 +30,8 @@ export default function AdminPayments() {
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
-  const [payments, setPayments] = useState<Payment[]>([]);
+  // undefined until the first snapshot; [] means no payments were ever logged.
+  const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [adding, setAdding] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TenantMembership | null>(null);
@@ -36,23 +40,30 @@ export default function AdminPayments() {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchPaymentsForTenant(tenantId, setPayments);
-  }, [tenantId]);
+    return watchPaymentsForTenant(tenantId, setPayments, () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchActiveMembers(tenantId, setMembers);
-  }, [tenantId]);
+    return watchActiveMembers(tenantId, setMembers, () => setFailed(true));
+  }, [tenantId, retryKey]);
+
+  const retry = () => {
+    setFailed(false);
+    setRetryKey((k) => k + 1);
+  };
 
   if (!tenantId) {
     return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
 
-  const pending = payments.filter((p) => p.status === 'pending');
-  const history = payments.filter((p) => p.status !== 'pending');
+  const pending = (payments ?? []).filter((p) => p.status === 'pending');
+  const history = (payments ?? []).filter((p) => p.status !== 'pending');
 
   const resetForm = () => {
     setAdding(false);
@@ -172,10 +183,16 @@ export default function AdminPayments() {
       <Text variant="label" tone="sub">
         GEÇMİŞ
       </Text>
-      {history.length === 0 ? (
-        <Text variant="helper" tone="sub" style={{ textAlign: 'center', marginTop: spacing.md }}>
-          Henüz kayıtlı ödeme yok.
-        </Text>
+      {failed ? (
+        <ErrorNotice message="Ödeme listesi alınamadı." onRetry={retry} />
+      ) : payments === undefined ? (
+        <ListSkeleton rows={3} avatar={false} />
+      ) : history.length === 0 ? (
+        <EmptyState
+          icon="receipt-outline"
+          title="Henüz kayıtlı ödeme yok"
+          description="Tahsil ettiğin ödemeleri buraya işledikçe üyenin geçmişi ve salonun cirosu birikmeye başlar."
+        />
       ) : (
         <View style={{ gap: 8 }}>
           {history.map((p) => (

@@ -5,7 +5,9 @@ import { FlatList, Pressable, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -51,8 +53,11 @@ export default function TrainerClients() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>('Tümü');
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<Sort>('name');
-  const [members, setMembers] = useState<TenantMembership[]>([]);
+  // undefined until the first snapshot lands — [] would claim the gym is
+  // empty while the query is still in flight.
+  const [members, setMembers] = useState<TenantMembership[] | undefined>(undefined);
   const [activePrograms, setActivePrograms] = useState<Program[]>([]);
+  const loading = members === undefined;
   const [failed, setFailed] = useState(false);
   // Bumping this re-runs the effects, which re-subscribes after a failure.
   const [retryKey, setRetryKey] = useState(0);
@@ -80,12 +85,12 @@ export default function TrainerClients() {
   const nameOf = (m: TenantMembership) => m.userDisplayName || m.userEmail || 'Üye';
 
   const withoutProgram = useMemo(
-    () => members.filter((m) => !programByMember.has(m.userId)),
+    () => (members ?? []).filter((m) => !programByMember.has(m.userId)),
     [members, programByMember],
   );
 
   const visible = useMemo(() => {
-    const base = filter === 'Programsız' ? withoutProgram : members;
+    const base = filter === 'Programsız' ? withoutProgram : (members ?? []);
     const q = query.trim();
     const found = q ? base.filter((m) => matchesTr(nameOf(m), q) || matchesTr(m.userEmail ?? '', q)) : base;
     return [...found].sort((a, b) =>
@@ -161,7 +166,7 @@ export default function TrainerClients() {
         {FILTERS.map((f) => (
           <Chip
             key={f}
-            label={f === 'Tümü' ? `Tümü (${members.length})` : `Programsız (${withoutProgram.length})`}
+            label={f === 'Tümü' ? `Tümü (${members?.length ?? 0})` : `Programsız (${withoutProgram.length})`}
             selected={filter === f}
             onPress={() => setFilter(f)}
           />
@@ -176,14 +181,30 @@ export default function TrainerClients() {
 
       {failed ? (
         <ErrorNotice message="Üye listesi alınamadı." onRetry={retry} />
+      ) : loading ? (
+        <ListSkeleton />
       ) : visible.length === 0 ? (
-        <Text variant="helper" tone="sub" style={{ textAlign: 'center', marginTop: spacing.xl }}>
-          {query.trim()
-            ? `"${query.trim()}" ile eşleşen üye yok.`
-            : filter === 'Programsız'
-              ? 'Herkesin bir programı var 🎉'
-              : 'Henüz aktif üye yok.'}
-        </Text>
+        query.trim() ? (
+          <EmptyState
+            icon="search-outline"
+            title="Eşleşen üye yok"
+            description={`"${query.trim()}" aramasına uyan kimse bulunamadı. Farklı bir yazım dene.`}
+            actionLabel="Aramayı temizle"
+            onAction={() => setQuery('')}
+          />
+        ) : filter === 'Programsız' ? (
+          <EmptyState
+            icon="checkmark-circle-outline"
+            title="Herkesin bir programı var"
+            description="Bu salondaki tüm aktif üyelere program atanmış durumda."
+          />
+        ) : (
+          <EmptyState
+            icon="people-outline"
+            title="Henüz aktif üye yok"
+            description="Üyeler salon koduyla katılıp yönetici onayından geçtikçe burada listelenecek."
+          />
+        )
       ) : (
         // FlatList rather than ScrollView: a real gym has dozens of members
         // and rendering every row up front is wasted work. This screen had no

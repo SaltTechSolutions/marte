@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { dayKey, isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar';
 import { Snackbar } from '@/components/Snackbar';
@@ -26,7 +28,7 @@ function classButtonProps(status: GymClass['status']) {
 
 /** Class schedule — full/waitlist states included; cancel is undo-able, never a confirm dialog. */
 export default function MemberClasses() {
-  const { colors, spacing, radius } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
   const { user, activeTenant } = useAuth();
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(!!activeTenant);
@@ -151,15 +153,13 @@ export default function MemberClasses() {
       {failed ? (
         <ErrorNotice message="Ders programı alınamadı." />
       ) : loading ? (
-        <Text variant="helper" tone="sub">
-          Yükleniyor…
-        </Text>
+        <ListSkeleton rows={3} avatar={false} />
       ) : gymClasses.length === 0 ? (
-        <View style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, padding: 12, alignItems: 'center' }}>
-          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-            Bu güne planlanmış ders yok.
-          </Text>
-        </View>
+        <EmptyState
+          icon="calendar-clear-outline"
+          title="Bu güne planlanmış ders yok"
+          description="Takvimden başka bir gün seçebilirsin; salon yeni ders ekledikçe burada görünür."
+        />
       ) : (
         <ListGroup>
           {gymClasses.map((c, i) => {

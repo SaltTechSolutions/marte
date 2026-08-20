@@ -4,7 +4,9 @@ import { ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -52,7 +54,8 @@ export default function AdminStaff() {
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [trainers, setTrainers] = useState<TenantMembership[]>([]);
-  const [members, setMembers] = useState<TenantMembership[]>([]);
+  // undefined until the roster snapshot lands.
+  const [members, setMembers] = useState<TenantMembership[] | undefined>(undefined);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -119,10 +122,14 @@ export default function AdminStaff() {
       <Text variant="label" tone="sub">
         ANTRENÖRLER
       </Text>
-      {trainers.length === 0 ? (
-        <Text variant="helper" tone="sub">
-          Bu salonda henüz antrenör yok.
-        </Text>
+      {failed ? null : members === undefined ? (
+        <ListSkeleton rows={2} />
+      ) : trainers.length === 0 ? (
+        <EmptyState
+          icon="barbell-outline"
+          title="Bu salonda henüz antrenör yok"
+          description="Aşağıdaki listeden bir üyeyi antrenör yaparak ekibini kurmaya başlayabilirsin."
+        />
       ) : (
         trainers.map((m) => {
           const canCheckIn = m.permissions.includes('checkin') || m.roles.includes('admin');
@@ -172,10 +179,14 @@ export default function AdminStaff() {
         Bir üyeyi antrenör yapabilirsin. Küçük salonlarda aynı kişi hem
         çalıştırıp hem üye olabilir — roller birbirini dışlamaz.
       </Text>
-      {members.length === 0 ? (
-        <Text variant="helper" tone="sub">
-          Henüz aktif üye yok.
-        </Text>
+      {failed ? null : members === undefined ? (
+        <ListSkeleton rows={3} />
+      ) : members.length === 0 ? (
+        <EmptyState
+          icon="people-outline"
+          title="Henüz aktif üye yok"
+          description="Üyeler salon koduyla katılıp onaydan geçtikçe burada listelenecek."
+        />
       ) : (
         members.map((m) => (
           <Card key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

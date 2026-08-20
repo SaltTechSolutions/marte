@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -30,7 +32,8 @@ export default function AdminToday() {
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canCheckIn(activeMembership));
 
-  const [entries, setEntries] = useState<{ id: string; userId: string; checkedInAt: Date }[]>([]);
+  // undefined until the first snapshot; [] genuinely means nobody came in yet.
+  const [entries, setEntries] = useState<{ id: string; userId: string; checkedInAt: Date }[] | undefined>(undefined);
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -64,15 +67,19 @@ export default function AdminToday() {
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">
-        Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries.length}</Text>
+        Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries?.length ?? 0}</Text>
       </Text>
 
       {failed ? (
         <ErrorNotice message="Giriş listesi alınamadı." onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }} />
+      ) : entries === undefined ? (
+        <ListSkeleton rows={3} />
       ) : entries.length === 0 ? (
-        <Text variant="helper" tone="sub" style={{ textAlign: 'center', marginTop: spacing.xl }}>
-          Bugün henüz kimse giriş yapmadı.
-        </Text>
+        <EmptyState
+          icon="log-in-outline"
+          title="Bugün henüz kimse giriş yapmadı"
+          description="Üyeler kartlarını okuttukça giriş saatleriyle birlikte burada listelenecek."
+        />
       ) : (
         <ListGroup>
           {entries.map((e, i) => (

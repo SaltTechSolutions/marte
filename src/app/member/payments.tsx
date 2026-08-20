@@ -4,6 +4,9 @@ import { Pressable, View } from 'react-native';
 
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -28,17 +31,20 @@ export default function MemberPayments() {
   const uid = user?.uid;
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
 
-  const [payments, setPayments] = useState<Payment[]>([]);
+  // undefined until the first snapshot lands.
+  const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [adding, setAdding] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchPaymentsForMember(tenantId, uid, setPayments);
-  }, [tenantId, uid]);
+    return watchPaymentsForMember(tenantId, uid, setPayments, () => setFailed(true));
+  }, [tenantId, uid, retryKey]);
 
   if (!tenantId || !user) return <View style={{ flex: 1 }} />;
 
@@ -93,10 +99,19 @@ export default function MemberPayments() {
             <Button label="+ Ödeme bildir" critical onPress={() => setAdding(true)} />
           )}
 
-          {payments.length === 0 ? (
-            <Text variant="helper" tone="sub" style={{ textAlign: 'center', marginTop: spacing.lg }}>
-              Henüz bir ödeme kaydın yok.
-            </Text>
+          {failed ? (
+            <ErrorNotice
+              message="Ödeme geçmişin alınamadı."
+              onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }}
+            />
+          ) : payments === undefined ? (
+            <ListSkeleton rows={2} avatar={false} />
+          ) : payments.length === 0 ? (
+            <EmptyState
+              icon="receipt-outline"
+              title="Henüz bir ödeme kaydın yok"
+              description="Ödemeni yaptıktan sonra buradan bildir; salon onayladığında geçmişinde görünecek."
+            />
           ) : (
             payments.map((p) => (
               <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surf, borderRadius: radius.md, padding: 12 }}>

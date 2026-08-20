@@ -3,7 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Snackbar } from '@/components/Snackbar';
 import { Text } from '@/components/Text';
@@ -43,7 +45,8 @@ export default function AdminMembers() {
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [requests, setRequests] = useState<TenantMembership[]>([]);
-  const [members, setMembers] = useState<TenantMembership[]>([]);
+  // undefined until the roster snapshot lands; [] means the gym really is empty.
+  const [members, setMembers] = useState<TenantMembership[] | undefined>(undefined);
   // No tenantId means there's nothing to load — start "loading" only when
   // there's actually a subscription about to kick off.
   const [loading, setLoading] = useState(() => !!tenantId);
@@ -156,9 +159,7 @@ export default function AdminMembers() {
       {failed ? (
         <ErrorNotice message="Onay listesi alınamadı." onRetry={retry} />
       ) : loading ? (
-        <Text variant="helper" tone="sub">
-          Yükleniyor…
-        </Text>
+        <ListSkeleton rows={2} />
       ) : requests.length === 0 ? (
         <View style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, padding: 12, alignItems: 'center' }}>
           <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
@@ -210,16 +211,18 @@ export default function AdminMembers() {
           looked empty. */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.md }}>
         <Text variant="h3">
-          Üyeler <Text variant="h3" style={{ color: colors.p }}>{members.length}</Text>
+          Üyeler <Text variant="h3" style={{ color: colors.p }}>{members?.length ?? 0}</Text>
         </Text>
       </View>
 
-      {members.length === 0 ? (
-        <View style={{ borderWidth: 1, borderStyle: 'dashed', borderColor: colors.line, borderRadius: radius.md, padding: 12, alignItems: 'center' }}>
-          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-            Henüz üye yok — resepsiyona QR asın, ilk üye 1 dakikada gelsin
-          </Text>
-        </View>
+      {failed ? null : members === undefined ? (
+        <ListSkeleton />
+      ) : members.length === 0 ? (
+        <EmptyState
+          icon="people-outline"
+          title="Henüz üye yok"
+          description="Salon kodunu resepsiyona asın — üyeler kodu girip katılım isteği gönderdiğinde burada onaya düşecek."
+        />
       ) : (
         <ListGroup>
           {members.map((m, i) => (

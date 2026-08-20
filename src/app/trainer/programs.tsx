@@ -4,7 +4,9 @@ import { ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -33,7 +35,8 @@ export default function TrainerPrograms() {
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
 
-  const [programs, setPrograms] = useState<Program[]>([]);
+  // undefined until the first snapshot lands; [] means there really are none.
+  const [programs, setPrograms] = useState<Program[] | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [filter, setFilter] = useState<Filter>('Tümü');
@@ -52,14 +55,16 @@ export default function TrainerPrograms() {
     return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
-  const activeCount = programs.filter((p) => p.status === 'active').length;
-  const draftCount = programs.filter((p) => p.status === 'draft').length;
+  const loading = programs === undefined;
+  const all = programs ?? [];
+  const activeCount = all.filter((p) => p.status === 'active').length;
+  const draftCount = all.filter((p) => p.status === 'draft').length;
   const visible =
-    filter === 'Aktif' ? programs.filter((p) => p.status === 'active')
-    : filter === 'Taslak' ? programs.filter((p) => p.status === 'draft')
-    : programs;
+    filter === 'Aktif' ? all.filter((p) => p.status === 'active')
+    : filter === 'Taslak' ? all.filter((p) => p.status === 'draft')
+    : all;
 
-  const countFor = (f: Filter) => (f === 'Aktif' ? activeCount : f === 'Taslak' ? draftCount : programs.length);
+  const countFor = (f: Filter) => (f === 'Aktif' ? activeCount : f === 'Taslak' ? draftCount : all.length);
 
   return (
     <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm }}>
@@ -73,16 +78,16 @@ export default function TrainerPrograms() {
 
       {failed ? (
         <ErrorNotice message="Program listesi alınamadı." onRetry={retry} />
+      ) : loading ? (
+        <ListSkeleton avatar={false} />
       ) : visible.length === 0 ? (
-        <View style={{ alignItems: 'center', gap: 6, marginTop: spacing.xl, paddingHorizontal: spacing.lg }}>
-          <Text style={{ fontSize: 24 }}>📋</Text>
-          <Text variant="body" weight="900" style={{ textAlign: 'center' }}>
-            {filter === 'Taslak' ? 'Taslak program yok' : filter === 'Aktif' ? 'Aktif program yok' : 'Henüz program yok'}
-          </Text>
-          <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-            Üyeler sekmesinden bir üye seçerek yeni program oluşturabilirsin.
-          </Text>
-        </View>
+        <EmptyState
+          icon="clipboard-outline"
+          title={filter === 'Taslak' ? 'Taslak program yok' : filter === 'Aktif' ? 'Aktif program yok' : 'Henüz program yok'}
+          description="Üyeler sekmesinden bir üye seçip ona program oluşturabilirsin."
+          actionLabel="Üyelere git"
+          onAction={() => router.replace('/trainer')}
+        />
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
           <ListGroup>
