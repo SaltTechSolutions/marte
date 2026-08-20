@@ -11,19 +11,24 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { bookClass, cancelBooking, watchClassesForTenant } from '@/data/firebase/classRepo';
+import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
 import { toGymClass } from '@/data/classDisplay';
-import { ClassSession, GymClass } from '@/data/types';
+import { ClassSession, GymClass, MemberEntitlementsCache } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
-function classButtonProps(status: GymClass['status']) {
-  switch (status) {
-    case 'booked':
-      return { label: 'İptal et', variant: 'ghost' as const };
-    case 'full':
-      return { label: 'Listeye gir', variant: 'secondary' as const };
-    default:
-      return { label: 'Katıl', variant: 'primary' as const };
-  }
+function classButtonProps(status: GymClass['status'], canJoin: boolean) {
+  if (status === 'booked') return { label: 'İptal et', variant: 'ghost' as const };
+  if (!canJoin) return { label: 'Kilitli', variant: 'secondary' as const };
+  return status === 'full' ? { label: 'Listeye gir', variant: 'secondary' as const } : { label: 'Katıl', variant: 'primary' as const };
+}
+
+/** PKG-4: only `{unlimited: true}` is bookable today — a quota'd allowance
+ *  needs a credit-consuming callable that doesn't exist yet (see the rule's
+ *  own comment on `canBookGroupClass`). `endsAt` is re-checked against "now"
+ *  here too, same reasoning as the rule: the cache only refreshes on write. */
+function canJoinGroupClass(cache: MemberEntitlementsCache | null | undefined): boolean {
+  if (!cache || cache.endsAt < new Date()) return false;
+  return cache.entitlements.groupClasses?.unlimited === true;
 }
 
 /** Class schedule — full/waitlist states included; cancel is undo-able, never a confirm dialog. */
@@ -35,6 +40,7 @@ export default function MemberClasses() {
   const [loading, setLoading] = useState(!!activeTenant);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [entitlements, setEntitlements] = useState<MemberEntitlementsCache | null | undefined>(undefined);
 
   // Opens on today, so "what's on now?" needs no interaction.
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
@@ -69,8 +75,24 @@ export default function MemberClasses() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTenant?.id, range]);
 
+  const tenantId = activeTenant?.id;
+  useEffect(() => {
+    if (!tenantId || !user) return;
+    return watchMemberEntitlements(tenantId, user.uid, setEntitlements);
+  }, [tenantId, user]);
+
+  const canJoin = canJoinGroupClass(entitlements);
+
   const onPressClass = async (session: ClassSession, status: GymClass['status']) => {
     if (!user) return;
+    // Cancelling is never gated — only the reservation itself is. A tap on a
+    // locked "Katıl"/"Listeye gir" explains why instead of hitting the rule
+    // and coming back as a raw permission error.
+    if (status !== 'booked' && !canJoin) {
+      const quotaOnly = entitlements?.entitlements.groupClasses != null;
+      toast.error(quotaOnly ? 'Kotalı grup dersi rezervasyonu yakında aktif olacak.' : 'Grup dersleri Gold ve üzeri paketlerde.');
+      return;
+    }
     setBusyId(session.id);
     try {
       if (status === 'booked') {
@@ -133,6 +155,16 @@ export default function MemberClasses() {
         )}
       </View>
 
+      {/* Told up front, not discovered by tapping a locked button — same
+          "explain before it fails" preference as the toast fallback below. */}
+      {entitlements !== undefined && !canJoin && (
+        <Text variant="label" tone="sub">
+          {entitlements?.entitlements.groupClasses != null
+            ? 'Kotalı grup dersi rezervasyonu yakında aktif olacak.'
+            : 'Grup dersleri Gold ve üzeri paketlerde — dersleri görebilirsin, katılmak için paketini yükselt.'}
+        </Text>
+      )}
+
       <MonthCalendar
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
@@ -183,7 +215,7 @@ export default function MemberClasses() {
                   </Text>
                 </View>
                 <Button
-                  {...classButtonProps(c.status)}
+                  {...classButtonProps(c.status, canJoin)}
                   compact
                   disabled={busyId === session.id}
                   onPress={() => onPressClass(session, c.status)}

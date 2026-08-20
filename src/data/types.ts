@@ -414,6 +414,30 @@ export interface MemberCredit {
   status: CreditStatus;
 }
 
+/**
+ * Denormalized snapshot of a member's *current* membership package's
+ * entitlements, at the deterministic id `{tenantId}_{memberId}` — kept in
+ * sync by the `syncMemberEntitlements` Cloud Function on every
+ * `member_packages` write.
+ *
+ * Exists purely so security rules can gate a self-service write (booking a
+ * group class) with a single `get()` — rules cannot run the query
+ * `watchMemberPackages` uses to find "the current one." `endsAt` is copied
+ * in for the same reason a `Timestamp` is copied everywhere else the rule
+ * needs to reason about "is this still current": the cache is only
+ * refreshed by a *write* to the source package, not by time passing, so a
+ * rule comparing `endsAt` against `request.time` is what keeps a lapsed
+ * membership from silently granting access forever.
+ */
+export interface MemberEntitlementsCache {
+  tenantId: string;
+  memberId: string;
+  packageId: string;
+  entitlements: PackageEntitlements;
+  endsAt: Date;
+  updatedAt: Date;
+}
+
 export type NotificationKind = 'class' | 'package' | 'approval' | 'waitlist';
 
 export interface AppNotification {

@@ -2,9 +2,14 @@ import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestam
 
 import { db } from '@/services/firebase';
 
-import { GymPackage, MemberCredit, MemberPackage } from '../types';
-import { memberCreditFromDoc, memberPackageFromDoc } from './convert';
-import { WatchErrorHandler, watchQuery } from './watch';
+import { GymPackage, MemberCredit, MemberEntitlementsCache, MemberPackage } from '../types';
+import { memberCreditFromDoc, memberEntitlementsFromDoc, memberPackageFromDoc } from './convert';
+import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
+
+/** Deterministic id security rules rely on to `get()` this cache in one read. */
+export function memberEntitlementsId(tenantId: string, memberId: string): string {
+  return `${tenantId}_${memberId}`;
+}
 
 function addDays(date: Date, days: number): Date {
   const d = new Date(date);
@@ -135,6 +140,27 @@ export async function getActiveMemberCredits(
   );
   const snap = await getDocs(q);
   return snap.docs.map(memberCreditFromDoc);
+}
+
+/**
+ * The same cache `classes` booking rules check, read here so the client can
+ * gate the UI *before* a write is attempted — a disabled button, not a
+ * failed request. Server-owned; see `MemberEntitlementsCache`'s doc comment
+ * for why `endsAt` has to be compared against "now" on read, not trusted.
+ */
+export function watchMemberEntitlements(
+  tenantId: string,
+  memberId: string,
+  onChange: (cache: MemberEntitlementsCache | null) => void,
+  onError?: WatchErrorHandler,
+) {
+  return watchDoc(
+    'Üye hakları',
+    doc(db, 'member_entitlements', memberEntitlementsId(tenantId, memberId)),
+    (snap) => (snap.exists() ? memberEntitlementsFromDoc(snap) : null),
+    onChange,
+    onError,
+  );
 }
 
 /** One member's package history — newest-ending first. Used by both the

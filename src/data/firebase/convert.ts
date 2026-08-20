@@ -6,6 +6,7 @@ import {
   GymPackage,
   MeasurementEntry,
   MemberCredit,
+  MemberEntitlementsCache,
   MemberPackage,
   Payment,
   Program,
@@ -223,6 +224,18 @@ export function memberPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnaps
     paymentId: data.paymentId,
     assignedAt: toDate(data.assignedAt) ?? new Date(),
     assignedBy: data.assignedBy,
+  };
+}
+
+export function memberEntitlementsFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): MemberEntitlementsCache {
+  const data = snap.data()!;
+  return {
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    packageId: data.packageId,
+    entitlements: data.entitlements,
+    endsAt: toDate(data.endsAt) ?? new Date(),
+    updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
 }
 
