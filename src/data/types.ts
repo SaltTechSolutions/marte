@@ -125,12 +125,20 @@ export interface ClassSession {
   waitlistUserIds: string[];
 }
 
+/**
+ * Why a check-in was let through (PKG-3). `'ok'` means an actual package
+ * covered today; every other value means staff overrode a warning ("Yine de
+ * kabul et") — kept so "kaç kişi paketsiz alındı" can be reported later.
+ */
+export type CheckInAccessReason = 'ok' | 'no-package' | 'no-session-today' | 'frozen';
+
 /** A single front-desk QR scan. Written by staff (isTenantAdmin), not self-service. */
 export interface CheckIn {
   id: string;
   tenantId: string;
   userId: string;
   membershipId: string;
+  accessReason: CheckInAccessReason;
   checkedInAt: Date;
 }
 

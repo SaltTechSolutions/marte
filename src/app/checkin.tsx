@@ -11,7 +11,13 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { canCheckIn, tenantIdIf } from '@/data/membership';
-import { checkInByMembershipId, checkInByShortCode } from '@/data/firebase/checkinRepo';
+import {
+  checkInByMembershipId,
+  checkInByShortCode,
+  confirmCheckInDespiteWarning,
+  CheckInWarnReason,
+  WARN_MESSAGE,
+} from '@/data/firebase/checkinRepo';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { hapticError, hapticSuccess } from '@/utils/haptics';
@@ -22,6 +28,11 @@ const REASON_MESSAGE: Record<string, string> = {
   inactive: 'Bu üyelik aktif değil.',
   'already-checked-in': 'Bu üye az önce zaten giriş yaptı.',
 };
+
+type ScreenResult =
+  | { kind: 'success'; message: string }
+  | { kind: 'warn'; name: string; packageLabel: string | null; warnReason: CheckInWarnReason; membershipDocId: string }
+  | { kind: 'denied'; message: string };
 
 /** Front-desk QR scanner — camera when available, manual code entry as a reliable fallback. */
 export default function AdminCheckin() {
@@ -34,7 +45,7 @@ export default function AdminCheckin() {
   const [scanning, setScanning] = useState(true);
   const [manualCode, setManualCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [result, setResult] = useState<ScreenResult | null>(null);
 
   // Cleared on unmount so an auto-return can't fire after the screen is gone.
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -42,17 +53,34 @@ export default function AdminCheckin() {
     if (resetTimer.current) clearTimeout(resetTimer.current);
   }, []);
 
-  const finishSubmit = (outcome: { ok: true; name: string } | { ok: false; reason: string }) => {
-    if (outcome.ok) {
-      hapticSuccess();
-      setResult({ ok: true, message: `${outcome.name} içeri girdi` });
-      // Back to scanning on its own: staff run a queue of people through and
-      // shouldn't have to dismiss a confirmation between each one.
-      resetTimer.current = setTimeout(scanAgain, 1600);
-    } else {
+  const scanAgain = () => {
+    setResult(null);
+    setScanning(true);
+  };
+
+  const finishSubmit = (
+    outcome:
+      | { ok: true; name: string; access: 'ok'; packageLabel: string | null }
+      | { ok: true; name: string; access: 'warn'; packageLabel: string | null; warnReason: CheckInWarnReason; membershipDocId: string }
+      | { ok: false; reason: string },
+  ) => {
+    if (!outcome.ok) {
       hapticError();
-      setResult({ ok: false, message: REASON_MESSAGE[outcome.reason] ?? 'Bir hata oluştu, tekrar dene.' });
+      setResult({ kind: 'denied', message: REASON_MESSAGE[outcome.reason] ?? 'Bir hata oluştu, tekrar dene.' });
+      return;
     }
+    if (outcome.access === 'warn') {
+      // Not written yet — staff decides. No auto-return: a silent pause here
+      // would look identical to the app hanging.
+      hapticError();
+      setResult({ kind: 'warn', name: outcome.name, packageLabel: outcome.packageLabel, warnReason: outcome.warnReason, membershipDocId: outcome.membershipDocId });
+      return;
+    }
+    hapticSuccess();
+    setResult({ kind: 'success', message: [outcome.name, outcome.packageLabel].filter(Boolean).join(' · ') });
+    // Back to scanning on its own: staff run a queue of people through and
+    // shouldn't have to dismiss a confirmation between each one.
+    resetTimer.current = setTimeout(scanAgain, 1600);
   };
 
   /** QR scan payload is the full membership id — unambiguous, never hand-typed. */
@@ -63,7 +91,7 @@ export default function AdminCheckin() {
     try {
       finishSubmit(await checkInByMembershipId(tenantId, data.trim()));
     } catch {
-      setResult({ ok: false, message: 'Bir hata oluştu, tekrar dene.' });
+      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
     } finally {
       setBusy(false);
     }
@@ -77,16 +105,32 @@ export default function AdminCheckin() {
     try {
       finishSubmit(await checkInByShortCode(tenantId, manualCode.trim()));
     } catch {
-      setResult({ ok: false, message: 'Bir hata oluştu, tekrar dene.' });
+      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
     } finally {
       setBusy(false);
       setManualCode('');
     }
   };
 
-  const scanAgain = () => {
-    setResult(null);
-    setScanning(true);
+  /** "Yine de kabul et" — staff overrides the warning. */
+  const admitDespiteWarning = async () => {
+    if (!tenantId || result?.kind !== 'warn' || busy) return;
+    setBusy(true);
+    try {
+      const outcome = await confirmCheckInDespiteWarning(tenantId, result.membershipDocId, result.warnReason);
+      if (outcome.ok) {
+        hapticSuccess();
+        setResult({ kind: 'success', message: [outcome.name, result.packageLabel].filter(Boolean).join(' · ') });
+        resetTimer.current = setTimeout(scanAgain, 1600);
+      } else {
+        hapticError();
+        setResult({ kind: 'denied', message: REASON_MESSAGE[outcome.reason] ?? 'Bir hata oluştu, tekrar dene.' });
+      }
+    } catch {
+      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (!tenantId) {
@@ -118,29 +162,62 @@ export default function AdminCheckin() {
           <Text variant="h3">Giriş kabul et</Text>
         </View>
 
-        {result ? (
+        {result?.kind === 'warn' ? (
           <View
             style={{
               alignItems: 'center',
               gap: 12,
-              backgroundColor: result.ok ? colors.p : colors.surf,
+              backgroundColor: colors.surf,
               borderRadius: radius.lg,
-              borderWidth: result.ok ? 0 : 1.5,
+              borderWidth: 2,
+              borderColor: colors.warn,
+              paddingVertical: spacing.xl,
+              paddingHorizontal: spacing.lg,
+            }}>
+            <Ionicons name="warning" size={56} color={colors.warn} />
+            <Text variant="h3" style={{ textAlign: 'center' }}>
+              {result.name}
+            </Text>
+            <Text variant="body" weight="700" style={{ textAlign: 'center', color: colors.warn }}>
+              {WARN_MESSAGE[result.warnReason]}
+            </Text>
+            {result.packageLabel && (
+              <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
+                {result.packageLabel}
+              </Text>
+            )}
+            <Button
+              label={busy ? '…' : 'Yine de kabul et'}
+              critical
+              disabled={busy}
+              onPress={admitDespiteWarning}
+              style={{ alignSelf: 'stretch' }}
+            />
+            <Button label="Vazgeç" variant="ghost" disabled={busy} onPress={scanAgain} style={{ alignSelf: 'stretch' }} />
+          </View>
+        ) : result ? (
+          <View
+            style={{
+              alignItems: 'center',
+              gap: 12,
+              backgroundColor: result.kind === 'success' ? colors.p : colors.surf,
+              borderRadius: radius.lg,
+              borderWidth: result.kind === 'success' ? 0 : 1.5,
               borderColor: colors.danger,
               paddingVertical: spacing.xl,
               paddingHorizontal: spacing.lg,
             }}>
             <Ionicons
-              name={result.ok ? 'checkmark-circle' : 'close-circle'}
+              name={result.kind === 'success' ? 'checkmark-circle' : 'close-circle'}
               size={56}
-              color={result.ok ? colors.onp : colors.danger}
+              color={result.kind === 'success' ? colors.onp : colors.danger}
             />
             <Text
               variant="h3"
-              style={{ textAlign: 'center', color: result.ok ? colors.onp : colors.txt }}>
+              style={{ textAlign: 'center', color: result.kind === 'success' ? colors.onp : colors.txt }}>
               {result.message}
             </Text>
-            {result.ok ? (
+            {result.kind === 'success' ? (
               <Text variant="label" style={{ color: colors.onp, opacity: 0.8 }}>
                 Sıradaki için hazırlanıyor…
               </Text>

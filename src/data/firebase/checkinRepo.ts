@@ -2,9 +2,11 @@ import { addDoc, collection, getDocs, query, serverTimestamp, Timestamp, where }
 
 import { db } from '@/services/firebase';
 
-import { TenantMembership } from '../types';
+import { CheckInAccessReason, TenantMembership } from '../types';
 import { membershipFromDoc } from './convert';
 import { getMembershipById } from './membershipRepo';
+import { getActiveMemberCredits, getMemberPackage, getMemberPackages } from './memberPackageRepo';
+import { hasSessionToday } from './ptSessionRepo';
 import { WatchErrorHandler, watchQuery } from './watch';
 
 function startOfToday(): Date {
@@ -35,37 +37,126 @@ export function watchTodayCheckinCount(
  */
 const DUPLICATE_WINDOW_MINUTES = 60;
 
-/**
- * Shared write path for both check-in routes. Refuses a second record for a
- * member who was already admitted recently — otherwise a double-scan
- * silently inflates the day's counter and the gym's attendance numbers.
- */
-async function recordCheckIn(
-  tenantId: string,
-  membership: TenantMembership,
-  membershipDocId: string,
-): Promise<{ ok: true; name: string } | { ok: false; reason: 'already-checked-in' }> {
-  const name = membership.userDisplayName || membership.userEmail || membership.userId;
-
+async function alreadyCheckedInRecently(tenantId: string, userId: string): Promise<boolean> {
   const cutoff = new Date(Date.now() - DUPLICATE_WINDOW_MINUTES * 60 * 1000);
   const recent = await getDocs(
     query(
       collection(db, 'checkins'),
       where('tenantId', '==', tenantId),
-      where('userId', '==', membership.userId),
+      where('userId', '==', userId),
       where('checkedInAt', '>=', Timestamp.fromDate(cutoff)),
     ),
   );
-  if (!recent.empty) return { ok: false, reason: 'already-checked-in' };
+  return !recent.empty;
+}
 
+/**
+ * PKG-3: does this member's package actually grant today's entry, and what
+ * should the screen say about it?
+ *
+ * Read directly against `member_packages`/`member_credits` every time —
+ * deliberately **not** denormalized onto `tenant_memberships`. A cached copy
+ * goes stale the moment a package expires and needs its own upkeep job to
+ * stay correct; front-desk check-in already budgets a few reads (this adds
+ * at most three: packages, credits, today's sessions), well inside the
+ * ≤5s friction budget.
+ */
+export type CheckInWarnReason = Exclude<CheckInAccessReason, 'ok'>;
+
+interface AccessResolution {
+  access: 'ok' | 'warn';
+  packageLabel: string | null;
+  warnReason: CheckInWarnReason | null;
+}
+
+async function resolveAccess(tenantId: string, userId: string): Promise<AccessResolution> {
+  const now = new Date();
+  const packages = await getMemberPackages(tenantId, userId);
+
+  // 1. A membership package that actually covers today.
+  const covering = packages.find(
+    (p) => p.kind === 'membership' && p.status === 'active' && p.entitlements.gymAccess && p.startsAt <= now && p.endsAt >= now,
+  );
+  if (covering) return { access: 'ok', packageLabel: covering.packageName, warnReason: null };
+
+  // 2/3. A usable lesson credit — access depends on whether today is a
+  // scheduled day, not on holding the credit alone.
+  const credits = await getActiveMemberCredits(tenantId, userId, 'ptLesson');
+  const usable = credits.find((c) => c.total - c.used > 0 && c.expiresAt >= now);
+  if (usable) {
+    const sourcePackage = packages.find((p) => p.id === usable.sourcePackageId) ?? (await getMemberPackage(usable.sourcePackageId));
+    const label = sourcePackage?.packageName ?? 'Ders paketi';
+    if (await hasSessionToday(tenantId, userId, now)) {
+      return { access: 'ok', packageLabel: `${label} · bugün randevulu`, warnReason: null };
+    }
+    return { access: 'warn', packageLabel: label, warnReason: 'no-session-today' };
+  }
+
+  // 4. Frozen (any kind) — a paused package still names itself in the warning.
+  const frozen = packages.find((p) => p.status === 'frozen' && p.endsAt >= now);
+  if (frozen) return { access: 'warn', packageLabel: frozen.packageName, warnReason: 'frozen' };
+
+  // 5. Nothing at all.
+  return { access: 'warn', packageLabel: null, warnReason: 'no-package' };
+}
+
+export const WARN_MESSAGE: Record<CheckInWarnReason, string> = {
+  'no-package': 'Üyelik paketi yok.',
+  'no-session-today': 'Bugün için randevusu yok.',
+  frozen: 'Üyeliği dondurulmuş.',
+};
+
+async function writeCheckIn(
+  tenantId: string,
+  membership: TenantMembership,
+  membershipDocId: string,
+  accessReason: CheckInAccessReason,
+): Promise<void> {
   await addDoc(collection(db, 'checkins'), {
     tenantId,
     userId: membership.userId,
     membershipId: membershipDocId,
+    accessReason,
     checkedInAt: serverTimestamp(),
   });
+}
 
-  return { ok: true, name };
+type CheckInOutcome =
+  | { ok: true; name: string; access: 'ok'; packageLabel: string | null }
+  | { ok: true; name: string; access: 'warn'; packageLabel: string | null; warnReason: CheckInWarnReason; membershipDocId: string }
+  | { ok: false; reason: 'not-found' | 'wrong-tenant' | 'inactive' | 'already-checked-in' };
+
+/**
+ * Shared resolve-and-maybe-write path for both check-in routes. An `ok`
+ * access writes immediately — no reason to slow down the common case. A
+ * `warn` access does **not** write; the screen shows staff the reason and,
+ * if they tap through, calls `confirmCheckInDespiteWarning` to actually
+ * record it. Denying is never silent and never automatic — a human decides.
+ */
+async function resolveAndCheckIn(
+  tenantId: string,
+  membership: TenantMembership,
+  membershipDocId: string,
+): Promise<CheckInOutcome> {
+  const name = membership.userDisplayName || membership.userEmail || membership.userId;
+
+  if (await alreadyCheckedInRecently(tenantId, membership.userId)) {
+    return { ok: false, reason: 'already-checked-in' };
+  }
+
+  const resolution = await resolveAccess(tenantId, membership.userId);
+  if (resolution.access === 'ok') {
+    await writeCheckIn(tenantId, membership, membershipDocId, 'ok');
+    return { ok: true, name, access: 'ok', packageLabel: resolution.packageLabel };
+  }
+  return {
+    ok: true,
+    name,
+    access: 'warn',
+    packageLabel: resolution.packageLabel,
+    warnReason: resolution.warnReason!,
+    membershipDocId,
+  };
 }
 
 /**
@@ -74,16 +165,13 @@ async function recordCheckIn(
  * the scanner can reject a code from the wrong gym or an inactive member
  * before writing anything.
  */
-export async function checkInByMembershipId(tenantId: string, membershipId: string): Promise<
-  | { ok: true; name: string }
-  | { ok: false; reason: 'not-found' | 'wrong-tenant' | 'inactive' | 'already-checked-in' }
-> {
+export async function checkInByMembershipId(tenantId: string, membershipId: string): Promise<CheckInOutcome> {
   const membership = await getMembershipById(membershipId);
   if (!membership) return { ok: false, reason: 'not-found' };
   if (membership.tenantId !== tenantId) return { ok: false, reason: 'wrong-tenant' };
   if (membership.status !== 'active') return { ok: false, reason: 'inactive' };
 
-  return recordCheckIn(tenantId, membership, membershipId);
+  return resolveAndCheckIn(tenantId, membership, membershipId);
 }
 
 /**
@@ -93,10 +181,7 @@ export async function checkInByMembershipId(tenantId: string, membershipId: stri
  * scoped to the current tenant, so a code from another gym naturally comes
  * back as "not-found" rather than leaking that it belongs elsewhere.
  */
-export async function checkInByShortCode(tenantId: string, shortCode: string): Promise<
-  | { ok: true; name: string }
-  | { ok: false; reason: 'not-found' | 'inactive' | 'already-checked-in' }
-> {
+export async function checkInByShortCode(tenantId: string, shortCode: string): Promise<CheckInOutcome> {
   const snap = await getDocs(
     query(collection(db, 'tenant_memberships'), where('tenantId', '==', tenantId), where('shortCode', '==', shortCode)),
   );
@@ -104,7 +189,29 @@ export async function checkInByShortCode(tenantId: string, shortCode: string): P
   const membership = membershipFromDoc(snap.docs[0]);
   if (membership.status !== 'active') return { ok: false, reason: 'inactive' };
 
-  return recordCheckIn(tenantId, membership, membership.id);
+  return resolveAndCheckIn(tenantId, membership, membership.id);
+}
+
+/**
+ * Staff overrides a `warn` outcome — "kapıda ödeme yapıyor olabilir; kararı
+ * personel verir." Re-checks the duplicate window (the pause between the
+ * warning and this tap is real time; someone else could have scanned the
+ * same member in the meantime) but does not re-resolve access — the reason
+ * shown is the reason recorded, even if it would compute differently a
+ * second later.
+ */
+export async function confirmCheckInDespiteWarning(
+  tenantId: string,
+  membershipDocId: string,
+  warnReason: CheckInWarnReason,
+): Promise<{ ok: true; name: string } | { ok: false; reason: 'already-checked-in' | 'not-found' }> {
+  const membership = await getMembershipById(membershipDocId);
+  if (!membership) return { ok: false, reason: 'not-found' };
+  if (await alreadyCheckedInRecently(tenantId, membership.userId)) {
+    return { ok: false, reason: 'already-checked-in' };
+  }
+  await writeCheckIn(tenantId, membership, membershipDocId, warnReason);
+  return { ok: true, name: membership.userDisplayName || membership.userEmail || membership.userId };
 }
 
 /**

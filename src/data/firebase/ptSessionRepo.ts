@@ -1,4 +1,4 @@
-import { collection, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
@@ -74,6 +74,29 @@ export function watchUpcomingSessionsForMember(
     limit(3),
   );
   return watchQuery('Randevularım', q, (snap) => snap.docs.map(ptSessionFromDoc), onChange, onError);
+}
+
+/**
+ * Whether a member has a non-cancelled PT session scheduled today —
+ * check-in's ders-paketi path (PKG-3) uses this to decide whether the
+ * whole day is open to them or their credit alone isn't enough.
+ */
+export async function hasSessionToday(tenantId: string, memberId: string, now: Date): Promise<boolean> {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const snap = await getDocs(
+    query(
+      collection(db, 'pt_sessions'),
+      where('tenantId', '==', tenantId),
+      where('memberId', '==', memberId),
+      where('date', '>=', Timestamp.fromDate(start)),
+      where('date', '<', Timestamp.fromDate(end)),
+    ),
+  );
+  return snap.docs.some((d) => d.data().status !== 'cancelled');
 }
 
 /** Every PT session in the tenant — admin oversight, e.g. to spot an absent trainer's day. */

@@ -1,4 +1,4 @@
-import { collection, doc, orderBy, query, serverTimestamp, Timestamp, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, Timestamp, where, writeBatch } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
@@ -94,6 +94,47 @@ export async function assignPackageToMember(params: {
   }
 
   await batch.commit();
+}
+
+/**
+ * One-shot version of `watchMemberPackages` — check-in is a single decision
+ * point, not a subscribed screen, so a live listener would outlive its use.
+ * `limit(10)`: a member realistically holds a handful of packages over
+ * time; the decision only ever needs the most recent ones.
+ */
+export async function getMemberPackages(tenantId: string, memberId: string): Promise<MemberPackage[]> {
+  const q = query(
+    collection(db, 'member_packages'),
+    where('tenantId', '==', tenantId),
+    where('memberId', '==', memberId),
+    orderBy('endsAt', 'desc'),
+    limit(10),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(memberPackageFromDoc);
+}
+
+export async function getMemberPackage(memberPackageId: string): Promise<MemberPackage | null> {
+  const snap = await getDoc(doc(db, 'member_packages', memberPackageId));
+  return snap.exists() ? memberPackageFromDoc(snap) : null;
+}
+
+/** One-shot version of `watchMemberCredits`, for the same reason as `getMemberPackages`. */
+export async function getActiveMemberCredits(
+  tenantId: string,
+  memberId: string,
+  kind: 'ptLesson' | 'groupClass',
+): Promise<MemberCredit[]> {
+  const q = query(
+    collection(db, 'member_credits'),
+    where('tenantId', '==', tenantId),
+    where('memberId', '==', memberId),
+    where('kind', '==', kind),
+    where('status', '==', 'active'),
+    orderBy('expiresAt', 'asc'),
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(memberCreditFromDoc);
 }
 
 /** One member's package history — newest-ending first. Used by both the
