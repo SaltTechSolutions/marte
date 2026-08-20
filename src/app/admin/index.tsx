@@ -129,15 +129,6 @@ export default function AdminPanel() {
           </Card>
         </Pressable>
       )}
-
-      <Card>
-        <Text variant="helper" tone="sub">
-          💳 <Text variant="helper" weight="700">2 gecikmiş ödeme</Text> · toplam 3.400₺ —{' '}
-          <Text variant="helper" weight="700" style={{ color: colors.p }}>
-            Hatırlat
-          </Text>
-        </Text>
-      </Card>
     </ScrollView>
   );
 }
