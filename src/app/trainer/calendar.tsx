@@ -9,11 +9,19 @@ import { dayKey, isSameDay, MonthCalendar, startOfDay } from '@/components/Month
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { watchSharesGrantedToMe } from '@/data/firebase/calendarShareRepo';
 import { canOverseeCalendars, isStaff } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
-import { createPtSession, reassignSession, setSessionStatus, watchSessionsForTenant, watchSessionsForTrainer } from '@/data/firebase/ptSessionRepo';
+import {
+  cancelPtSession,
+  createPtSession,
+  reassignSession,
+  setSessionStatus,
+  watchSessionsForTenant,
+  watchSessionsForTrainer,
+} from '@/data/firebase/ptSessionRepo';
 import { PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -46,6 +54,7 @@ export default function TrainerCalendar() {
  * dragging the admin into the trainer tab group. */
 export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: string; isAdmin: boolean; user: User }) {
   const { colors, spacing, radius } = useAppTheme();
+  const toast = useToast();
 
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [shares, setShares] = useState<{ ownerTrainerId: string; ownerTrainerName: string }[]>([]);
@@ -188,7 +197,22 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   const applyStatus = async (session: PtSession, status: 'completed' | 'cancelled') => {
     setBusyId(session.id);
     try {
-      await setSessionStatus(session.id, status);
+      if (status === 'cancelled') {
+        // A credit-linked session's cancellation has to decide whether the
+        // credit comes back — the rule refuses this as a direct write now
+        // (plan-eng-review Faz 1.9), so this always goes through the
+        // callable. Safe for a non-credit session too; it just cancels.
+        // A trainer/admin cancellation always refunds the credit (the
+        // member didn't cause it) — the time-gated "burns the credit" path
+        // in cancelPtSession only applies when the MEMBER is the caller,
+        // which this screen never is.
+        await cancelPtSession(session.id);
+        if (session.creditId) toast.success('Randevu iptal edildi, kredi iade edildi.');
+      } else {
+        await setSessionStatus(session.id, status);
+      }
+    } catch {
+      toast.error('İşlem tamamlanamadı, tekrar dene.');
     } finally {
       setBusyId(null);
     }

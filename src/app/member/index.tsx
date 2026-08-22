@@ -7,16 +7,18 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { toGymClass } from '@/data/classDisplay';
 import { watchMyCheckins } from '@/data/firebase/checkinRepo';
 import { watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
-import { watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
+import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
 import { GymClass, PackageChangeRequest, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { confirmDestructive } from '@/utils/confirm';
 
 const WEEKLY_TARGET = 4;
 
@@ -52,6 +54,8 @@ function formatSessionDate(d: Date): string {
 export default function MemberHome() {
   const router = useRouter();
   const { colors, spacing, tenantName } = useAppTheme();
+  const toast = useToast();
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const { user, activeMembership } = useAuth();
   const uid = user?.uid;
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
@@ -212,6 +216,38 @@ export default function MemberHome() {
               {nextSession.trainerName} · {nextSession.durationMinutes} dk
             </Text>
           </View>
+          <Pressable
+            hitSlop={8}
+            disabled={cancellingId === nextSession.id}
+            onPress={() => {
+              const session = nextSession;
+              confirmDestructive({
+                title: 'Randevuyu iptal et',
+                message: `${formatSessionDate(session.date)} ${session.trainerName} randevusu iptal edilecek. Randevuya 24 saatten az kaldıysa dersin iade edilmeyebilir.`,
+                confirmLabel: 'İptal et',
+                onConfirm: () => {
+                  const run = async () => {
+                    setCancellingId(session.id);
+                    try {
+                      const { refunded } = await cancelPtSession(session.id);
+                      if (session.creditId) {
+                        if (refunded) toast.success('Randevu iptal edildi, dersin iade edildi.');
+                        else toast.show({ message: 'Randevu iptal edildi, ders geç iptal nedeniyle iade edilmedi.', tone: 'info' });
+                      }
+                    } catch {
+                      toast.error('İptal edilemedi, tekrar dene.');
+                    } finally {
+                      setCancellingId(null);
+                    }
+                  };
+                  void run();
+                },
+              });
+            }}>
+            <Text variant="label" tone="sub" style={{ textDecorationLine: 'underline' }}>
+              İptal et
+            </Text>
+          </Pressable>
         </Card>
       )}
       <Pressable onPress={() => router.push('/member/trainers')}>

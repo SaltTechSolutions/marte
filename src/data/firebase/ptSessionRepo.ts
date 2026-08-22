@@ -157,3 +157,18 @@ export async function reassignSession(session: PtSession, newTrainerId: string, 
 export async function setSessionStatus(sessionId: string, status: PtSessionStatus): Promise<void> {
   await updateDoc(doc(db, 'pt_sessions', sessionId), { status, updatedAt: serverTimestamp() });
 }
+
+/**
+ * Cancels a session and decides whether the credit that paid for it comes
+ * back — has to be a callable rather than `setSessionStatus`: a credit-
+ * linked session's rule refuses the direct write entirely (see
+ * `firestore.rules`), because the refund decision needs `Date.now()`
+ * compared against the appointment, which rules cannot evaluate. Safe to
+ * call for a session with no `creditId` too (a trainer's own booking) —
+ * the server just skips the refund step and cancels.
+ */
+export async function cancelPtSession(sessionId: string): Promise<{ refunded: boolean }> {
+  const call = httpsCallable<{ sessionId: string }, { refunded: boolean }>(functions, 'cancelPtSession');
+  const { data } = await call({ sessionId });
+  return data;
+}
