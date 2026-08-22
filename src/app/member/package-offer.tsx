@@ -48,8 +48,16 @@ export default function MemberPackageOffer() {
     const act = async () => {
       setResponding(true);
       try {
-        await respondToPackageChangeRequest(requestId, approve);
-        toast.success(approve ? 'Teklifi onayladın' : 'Teklifi reddettin');
+        const outcome = await respondToPackageChangeRequest(requestId, approve);
+        if (outcome === 'promotion-expired') {
+          // Not a success: the server refused the whole swap because the
+          // promotion the member approved ran out in the meantime — stay on
+          // screen, the live subscription above already re-renders to the
+          // "süresi doldu" branch once the request's status lands.
+          toast.error('Bu tekliften vazgeçildi çünkü bağlı kampanyanın süresi doldu. Salonla iletişime geç.');
+          return;
+        }
+        toast.success(outcome === 'approved' ? 'Teklifi onayladın' : 'Teklifi reddettin');
         router.back();
       } catch {
         toast.error('İşlem tamamlanamadı, tekrar dene.');

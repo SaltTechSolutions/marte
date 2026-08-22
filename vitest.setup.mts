@@ -32,6 +32,16 @@ vi.mock('firebase/storage', () => ({
   getStorage: () => ({}),
 }));
 
+// Same reasoning as firebase/firestore below: repo files that call a Cloud
+// Function (bookPtSessions, approvePackageChange, ...) do it via a
+// module-scope `getFunctions(app, region)` call, which otherwise throws
+// outside a real Firebase app even when the test only wants an unrelated
+// pure export from the same file.
+vi.mock('firebase/functions', () => ({
+  getFunctions: () => ({}),
+  httpsCallable: () => () => Promise.resolve({ data: {} }),
+}));
+
 // firebase/firestore is imported for its named functions (collection, doc,
 // query, where, ...) throughout data/firebase/**. Tests only call the pure
 // functions in these files, never the Firestore calls themselves, so every

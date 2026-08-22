@@ -1,6 +1,7 @@
 import { addDoc, collection, doc, getDoc, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { db } from '@/services/firebase';
+import { app, db } from '@/services/firebase';
 
 import { GymPackage, MemberPackage, PackageChangeKind, PackageChangeRequest, Promotion } from '../types';
 import { applyPromotionEffect } from './memberPackageRepo';
@@ -156,19 +157,36 @@ export async function getPackageChangeRequest(requestId: string): Promise<Packag
   return snap.exists() ? packageChangeRequestFromDoc(snap) : null;
 }
 
+// Functions are deployed to europe-west1, same as the rest of the project.
+const functions = getFunctions(app, 'europe-west1');
+
+export type PackageChangeResponseOutcome = 'approved' | 'rejected' | 'promotion-expired';
+
 /**
- * The member's yes/no. A plain field update — rules let a member move only
- * their own request's `status` between `pending` and `approved`/`rejected`.
- * The actual package swap doesn't happen here: `applyPackageChange` (Cloud
- * Function) watches for the `pending` -> `approved` transition and performs
- * it with Admin SDK trust, because `member_packages` has no client update
- * path at all, this account included.
+ * The member's yes/no. Used to be a plain field update the member made
+ * directly (rules allowed moving their own request's `status` between
+ * `pending` and `approved`/`rejected`) with a Cloud Function trigger
+ * applying the swap afterwards. Moved to a callable (plan-eng-review Faz
+ * 1.6): the rule now refuses ANY client write to `status` at all, because
+ * the old two-step design let a member see "onaylandı" the instant their
+ * own write landed — before the swap (or its failure, or a promotion
+ * having expired since the offer was made) was actually known. Approving
+ * and applying are now the same transaction; `member_packages` still has
+ * no client write path at all, this account included.
+ *
+ * `'promotion-expired'` is a real, distinct outcome — not a success: the
+ * promotion the member approved ran out between the offer and this tap,
+ * so the server refused the whole swap rather than silently charging full
+ * price for something approved at a discount. The caller must not show
+ * this as "onaylandı".
  */
-export async function respondToPackageChangeRequest(requestId: string, approve: boolean): Promise<void> {
-  await updateDoc(doc(db, 'package_change_requests', requestId), {
-    status: approve ? 'approved' : 'rejected',
-    respondedAt: serverTimestamp(),
-  });
+export async function respondToPackageChangeRequest(requestId: string, approve: boolean): Promise<PackageChangeResponseOutcome> {
+  const call = httpsCallable<{ requestId: string; approve: boolean }, { status: PackageChangeResponseOutcome }>(
+    functions,
+    'approvePackageChange',
+  );
+  const { data } = await call({ requestId, approve });
+  return data.status;
 }
 
 /** Admin withdraws an offer before the member has responded to it. */
