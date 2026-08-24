@@ -8,6 +8,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import * as Sentry from '@sentry/react-native';
 
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/context/AuthContext';
@@ -18,7 +19,24 @@ import { ThemeSync } from '@/theme/ThemeSync';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+// plan-eng-review Faz 2.2 — GlitchTip speaks the Sentry event protocol, so
+// the stock @sentry/react-native SDK works unmodified against it, just
+// pointed at a different DSN host. No-op (never inits, `reportError`/
+// `errorMessage` in data/errors.ts fall back to their local no-Sentry path)
+// if the env var isn't set, so a contributor without a DSN still gets a
+// working app rather than a crash on startup.
+if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    // Sends stack traces without also recording user session replay/
+    // performance traces — this app doesn't need those, and every extra
+    // capture is more of the free tier's monthly event budget spent on
+    // something other than the errors it exists to catch.
+    tracesSampleRate: 0,
+  });
+}
+
+function RootLayout() {
   const [loaded, error] = useFonts({
     Inter_500Medium,
     Inter_600SemiBold,
@@ -60,3 +78,5 @@ export default function RootLayout() {
     </AppThemeProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

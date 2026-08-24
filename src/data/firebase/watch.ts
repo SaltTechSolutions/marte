@@ -6,6 +6,7 @@ import {
   Query,
   QuerySnapshot,
 } from 'firebase/firestore';
+import * as Sentry from '@sentry/react-native';
 
 /**
  * Optional error callback every `watch*` repo function accepts as its last
@@ -19,9 +20,15 @@ export type WatchErrorHandler = (error: FirestoreError) => void;
  * argument is the only way to learn that a subscription died — omit it and a
  * permission-denied or network failure leaves the screen stuck on its
  * initial empty state forever, with nothing in the logs either.
+ *
+ * Always reported to Sentry (plan-eng-review Faz 2.2), unlike
+ * `data/errors.ts`'s selective capture — a dropped subscription is never
+ * expected business behavior the way "yeterli kredin yok" is, so there's no
+ * "trusted, skip it" case here.
  */
 function report(context: string, error: FirestoreError, onError?: WatchErrorHandler) {
   console.warn(`[firestore] ${context} aboneliği düştü: ${error.code} — ${error.message}`);
+  Sentry.captureException(error, { tags: { watchContext: context } });
   onError?.(error);
 }
 

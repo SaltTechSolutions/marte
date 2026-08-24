@@ -1,8 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { errorMessage, reportError } from './errors';
+const captureException = vi.fn();
+vi.mock('@sentry/react-native', () => ({ captureException: (...args: unknown[]) => captureException(...args) }));
+
+const { errorMessage, reportError } = await import('./errors');
 
 const FALLBACK = 'Genel hata mesajı.';
+
+beforeEach(() => {
+  captureException.mockReset();
+});
 
 describe('reportError / errorMessage', () => {
   it.each(['functions/failed-precondition', 'functions/invalid-argument', 'functions/permission-denied', 'functions/not-found', 'functions/unauthenticated'])(
@@ -10,6 +17,9 @@ describe('reportError / errorMessage', () => {
     (code) => {
       const e = { code, message: 'Yeterli ders kredin yok — 2 kaldı, 3 gerekiyor.' };
       expect(errorMessage(e, FALLBACK)).toBe('Yeterli ders kredin yok — 2 kaldı, 3 gerekiyor.');
+      // Expected business-rule output, not a bug — must not spend the free
+      // tier's event budget on normal "insufficient credit" outcomes.
+      expect(captureException).not.toHaveBeenCalled();
     },
   );
 
@@ -20,29 +30,40 @@ describe('reportError / errorMessage', () => {
     () => {
       const e = { code: 'functions/internal', message: 'Failed to set admin claim.' };
       expect(errorMessage(e, FALLBACK)).toBe(FALLBACK);
+      // Untrusted (not a deliberate business-rule message) — this IS
+      // reported, unlike the trusted cases above.
+      expect(captureException).toHaveBeenCalledWith(e);
     },
   );
 
-  it('falls back for a raw Firestore SDK error (not one of our callables)', () => {
+  it('falls back for a raw Firestore SDK error (not one of our callables) and reports it', () => {
     const e = { code: 'permission-denied', message: 'Missing or insufficient permissions.' };
     expect(errorMessage(e, FALLBACK)).toBe(FALLBACK);
+    expect(captureException).toHaveBeenCalledWith(e);
   });
 
-  it('falls back for a plain thrown Error with no code', () => {
-    expect(errorMessage(new Error('network request failed'), FALLBACK)).toBe(FALLBACK);
+  it('falls back for a plain thrown Error with no code and reports it', () => {
+    const e = new Error('network request failed');
+    expect(errorMessage(e, FALLBACK)).toBe(FALLBACK);
+    expect(captureException).toHaveBeenCalledWith(e);
   });
 
-  it('falls back for non-object throws', () => {
+  it('falls back for non-object throws and reports them', () => {
     expect(errorMessage('boom', FALLBACK)).toBe(FALLBACK);
     expect(errorMessage(undefined, FALLBACK)).toBe(FALLBACK);
+    expect(captureException).toHaveBeenCalledWith('boom');
+    expect(captureException).toHaveBeenCalledWith(undefined);
   });
 
-  it('reportError calls sink.error with the resolved message', () => {
+  it('reportError calls sink.error with the resolved message and reports only the untrusted case', () => {
     const sink = { error: vi.fn() };
     reportError({ code: 'functions/failed-precondition', message: 'Bu antrenör artık salonda çalışmıyor.' }, sink, FALLBACK);
     expect(sink.error).toHaveBeenCalledWith('Bu antrenör artık salonda çalışmıyor.');
+    expect(captureException).not.toHaveBeenCalled();
 
-    reportError(new Error('boom'), sink, FALLBACK);
+    const networkError = new Error('boom');
+    reportError(networkError, sink, FALLBACK);
     expect(sink.error).toHaveBeenCalledWith(FALLBACK);
+    expect(captureException).toHaveBeenCalledWith(networkError);
   });
 });

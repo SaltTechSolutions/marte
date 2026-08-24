@@ -70,7 +70,8 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.171027427019-1rumv2f5nhlhush6ts0afgfvc54aguj9"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,

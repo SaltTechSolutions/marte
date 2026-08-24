@@ -19,6 +19,12 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {},
 }));
 
+vi.mock('@sentry/react-native', () => ({
+  init: () => {},
+  wrap: (component: unknown) => component,
+  captureException: () => {},
+}));
+
 vi.mock('firebase/app', () => ({
   initializeApp: () => ({}),
 }));

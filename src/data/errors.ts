@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react-native';
+
 /**
  * plan-eng-review Faz 2.1 (Q1). A Cloud Functions `httpsCallable` rejection
  * carries the exact Turkish sentence the server wrote — e.g.
@@ -36,12 +38,27 @@ interface ErrorSink {
 }
 
 /**
+ * plan-eng-review Faz 2.2. A trusted callable message (kredi yetersiz,
+ * yetkisiz antrenör, ...) is expected business-rule output, not a bug —
+ * reporting every one of those to Sentry would spend the free tier's
+ * monthly event budget on normal user behavior instead of actual failures.
+ * Only the *un*trusted path — a raw Firestore error, a network failure, an
+ * unhandled exception — is genuinely something nobody meant to happen, so
+ * only that gets captured.
+ */
+function maybeCapture(e: unknown, trusted: string | null): void {
+  if (trusted == null) Sentry.captureException(e);
+}
+
+/**
  * Drop-in replacement for `toast.error(fallback)` inside a `catch`. Shows
  * the server's own message when it's one of ours; otherwise the screen's
- * fallback, same as before.
+ * fallback, same as before. Reports the unexpected case to Sentry.
  */
 export function reportError(e: unknown, sink: ErrorSink, fallback: string): void {
-  sink.error(trustedCallableMessage(e) ?? fallback);
+  const trusted = trustedCallableMessage(e);
+  maybeCapture(e, trusted);
+  sink.error(trusted ?? fallback);
 }
 
 /**
@@ -49,5 +66,7 @@ export function reportError(e: unknown, sink: ErrorSink, fallback: string): void
  * instead of a toast (e.g. `checkin.tsx`'s scan result card).
  */
 export function errorMessage(e: unknown, fallback: string): string {
-  return trustedCallableMessage(e) ?? fallback;
+  const trusted = trustedCallableMessage(e);
+  maybeCapture(e, trusted);
+  return trusted ?? fallback;
 }
