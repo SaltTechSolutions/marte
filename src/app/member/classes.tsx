@@ -10,6 +10,7 @@ import { dayKey, isSameDay, MonthCalendar, startOfDay } from '@/components/Month
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { bookClass, cancelBooking, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
 import { toGymClass } from '@/data/classDisplay';
@@ -102,8 +103,8 @@ export default function MemberClasses() {
         const result = await bookClass(session.id, user.uid);
         toast.success(result === 'waitlisted' ? 'Bekleme listesine eklendin' : 'Derse katıldın');
       }
-    } catch {
-      toast.error('İşlem tamamlanamadı, tekrar dene.');
+    } catch (e) {
+      reportError(e, toast, 'İşlem tamamlanamadı, tekrar dene.');
     } finally {
       setBusyId(null);
     }

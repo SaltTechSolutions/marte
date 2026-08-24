@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { submitPaymentNotice, watchPaymentsForMember } from '@/data/firebase/paymentRepo';
 import { Payment, PaymentMethod } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -67,8 +68,8 @@ export default function MemberPayments() {
       setAmount('');
       setNote('');
       toast.success('Bildirimin salona iletildi, onay bekleniyor.');
-    } catch {
-      toast.error('Bildirim gönderilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Bildirim gönderilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }

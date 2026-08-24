@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { confirmPayment, rejectPayment, recordPayment, watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
@@ -90,8 +91,8 @@ export default function AdminPayments() {
       });
       resetForm();
       toast.success(`${amountNum} ₺ ödeme kaydedildi`);
-    } catch {
-      toast.error('Ödeme kaydedilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Ödeme kaydedilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }
@@ -101,8 +102,8 @@ export default function AdminPayments() {
     setBusyId(id);
     try {
       await confirmPayment(id);
-    } catch {
-      toast.error('Ödeme onaylanamadı, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Ödeme onaylanamadı, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
@@ -120,8 +121,8 @@ export default function AdminPayments() {
     setBusyId(id);
     try {
       await rejectPayment(id);
-    } catch {
-      toast.error('Ödeme reddedilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Ödeme reddedilemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

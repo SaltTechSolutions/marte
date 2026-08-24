@@ -16,6 +16,7 @@ import {
   watchActiveMembers,
   watchActiveTrainers,
 } from '@/data/firebase/membershipRepo';
+import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { MembershipRole, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -81,8 +82,8 @@ export default function AdminStaff() {
     try {
       const has = m.permissions.includes('checkin');
       await setMembershipPermissions(m.id, has ? [] : ['checkin']);
-    } catch {
-      toast.error('Yetki güncellenemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Yetki güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }
@@ -94,8 +95,8 @@ export default function AdminStaff() {
       const isTrainer = m.roles.includes('trainer');
       const next = isTrainer ? m.roles.filter((r) => r !== 'trainer') : ([...m.roles, 'trainer'] as MembershipRole[]);
       await setMembershipRoles(m.id, next);
-    } catch {
-      toast.error('Rol güncellenemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Rol güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

@@ -20,6 +20,7 @@ import {
   PackageDraft,
   updateGymPackage,
 } from '@/data/firebase/packageRepo';
+import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage, PackageKind } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -134,8 +135,8 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
         toast.success(`${draft.name} yeni sürüm olarak kaydedildi`);
       }
       router.back();
-    } catch {
-      toast.error('Paket kaydedilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Paket kaydedilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }

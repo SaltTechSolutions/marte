@@ -11,6 +11,7 @@ import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { errorMessage } from '@/data/errors';
 import { canCheckIn, tenantIdIf } from '@/data/membership';
 import {
   checkInByMembershipId,
@@ -91,8 +92,8 @@ export default function AdminCheckin() {
     setScanning(false);
     try {
       finishSubmit(await checkInByMembershipId(tenantId, data.trim()));
-    } catch {
-      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
+    } catch (e) {
+      setResult({ kind: 'denied', message: errorMessage(e, 'Bir hata oluştu, tekrar dene.') });
     } finally {
       setBusy(false);
     }
@@ -105,8 +106,8 @@ export default function AdminCheckin() {
     setScanning(false);
     try {
       finishSubmit(await checkInByShortCode(tenantId, manualCode.trim()));
-    } catch {
-      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
+    } catch (e) {
+      setResult({ kind: 'denied', message: errorMessage(e, 'Bir hata oluştu, tekrar dene.') });
     } finally {
       setBusy(false);
       setManualCode('');
@@ -127,8 +128,8 @@ export default function AdminCheckin() {
         hapticError();
         setResult({ kind: 'denied', message: REASON_MESSAGE[outcome.reason] ?? 'Bir hata oluştu, tekrar dene.' });
       }
-    } catch {
-      setResult({ kind: 'denied', message: 'Bir hata oluştu, tekrar dene.' });
+    } catch (e) {
+      setResult({ kind: 'denied', message: errorMessage(e, 'Bir hata oluştu, tekrar dene.') });
     } finally {
       setBusy(false);
     }

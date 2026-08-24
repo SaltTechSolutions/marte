@@ -16,6 +16,7 @@ import {
   watchActiveMembers,
   watchPendingRequests,
 } from '@/data/firebase/membershipRepo';
+import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAuth } from '@/context/AuthContext';
@@ -123,8 +124,8 @@ export default function AdminMembers() {
     try {
       await rejectMembership(r.id);
       toast.success(`${requesterLabel(r)} reddedildi`);
-    } catch {
-      toast.error('Reddedilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Reddedilemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

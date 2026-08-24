@@ -7,6 +7,7 @@ import { Chip } from '@/components/Chip';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
+import { reportError } from '@/data/errors';
 import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
 import { Program, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -88,8 +89,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
       await setProgramStatus(program.id, 'active');
       toast.success(`${program.memberName} için program aktif edildi`);
       safeBack(router, '/trainer');
-    } catch {
-      toast.error('Program aktif edilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Program aktif edilemedi, tekrar deneyin.');
     } finally {
       setAssigning(false);
     }

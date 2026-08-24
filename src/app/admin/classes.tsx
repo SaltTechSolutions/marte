@@ -14,6 +14,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { createClass, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { ClassSession } from '@/data/types';
@@ -84,8 +85,8 @@ export default function AdminClasses() {
       setTrainer('');
       setShowForm(false);
       toast.success('Ders eklendi');
-    } catch {
-      toast.error('Ders eklenemedi, tekrar dene.');
+    } catch (e) {
+      reportError(e, toast, 'Ders eklenemedi, tekrar dene.');
     } finally {
       setSubmitting(false);
     }

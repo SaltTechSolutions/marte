@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { grantCalendarShare, revokeCalendarShare, watchSharesGrantedToMe, watchSharesIGranted } from '@/data/firebase/calendarShareRepo';
 import { watchActiveMembers, watchActiveTrainers } from '@/data/firebase/membershipRepo';
@@ -136,8 +137,8 @@ export default function TrainerProfile() {
           viewerTrainerId: colleague.userId,
         });
       }
-    } catch {
-      toast.error('Takvim paylaşımı güncellenemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Takvim paylaşımı güncellenemedi, tekrar deneyin.');
     } finally {
       setBusyId(null);
     }

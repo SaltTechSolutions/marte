@@ -11,6 +11,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { watchPackagesForTenant } from '@/data/firebase/packageRepo';
 import { createPromotion, getPromotion, PromotionDraft, updatePromotion } from '@/data/firebase/promotionRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
@@ -127,8 +128,8 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
         toast.success(`${draft.name} eklendi`);
       }
       router.back();
-    } catch {
-      toast.error('Promosyon kaydedilemedi, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Promosyon kaydedilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
     }

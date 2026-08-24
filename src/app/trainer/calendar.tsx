@@ -11,6 +11,7 @@ import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { watchSharesGrantedToMe } from '@/data/firebase/calendarShareRepo';
 import { canOverseeCalendars, isStaff } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
@@ -211,8 +212,8 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
       } else {
         await setSessionStatus(session.id, status);
       }
-    } catch {
-      toast.error('İşlem tamamlanamadı, tekrar dene.');
+    } catch (e) {
+      reportError(e, toast, 'İşlem tamamlanamadı, tekrar dene.');
     } finally {
       setBusyId(null);
     }

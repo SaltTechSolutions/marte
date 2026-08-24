@@ -10,6 +10,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { toGymClass } from '@/data/classDisplay';
+import { reportError } from '@/data/errors';
 import { watchMyCheckins } from '@/data/firebase/checkinRepo';
 import { watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
@@ -234,8 +235,8 @@ export default function MemberHome() {
                         if (refunded) toast.success('Randevu iptal edildi, dersin iade edildi.');
                         else toast.show({ message: 'Randevu iptal edildi, ders geç iptal nedeniyle iade edilmedi.', tone: 'info' });
                       }
-                    } catch {
-                      toast.error('İptal edilemedi, tekrar dene.');
+                    } catch (e) {
+                      reportError(e, toast, 'İptal edilemedi, tekrar dene.');
                     } finally {
                       setCancellingId(null);
                     }

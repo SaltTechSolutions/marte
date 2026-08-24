@@ -10,6 +10,7 @@ import { isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { computeFreeSlots, hasAnyAvailability, watchTrainerAvailability, watchTrainerBusySlotsForDay } from '@/data/firebase/availabilityRepo';
 import { bookPtSessions } from '@/data/firebase/ptSessionRepo';
 import { watchMemberCredits } from '@/data/firebase/memberPackageRepo';
@@ -76,8 +77,8 @@ export default function BookSession() {
       await bookPtSessions({ tenantId, trainerId, slots: [effectiveSelectedSlot] });
       toast.success('Randevun oluşturuldu');
       router.back();
-    } catch {
-      toast.error('Randevu alınamadı, tekrar dene.');
+    } catch (e) {
+      reportError(e, toast, 'Randevu alınamadı, tekrar dene.');
     } finally {
       setBooking(false);
     }

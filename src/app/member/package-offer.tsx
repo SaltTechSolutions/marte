@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
+import { reportError } from '@/data/errors';
 import { respondToPackageChangeRequest, watchPackageChangeRequest } from '@/data/firebase/packageChangeRepo';
 import { entitlementRows } from '@/data/entitlementRows';
 import { PackageChangeRequest } from '@/data/types';
@@ -59,8 +60,8 @@ export default function MemberPackageOffer() {
         }
         toast.success(outcome === 'approved' ? 'Teklifi onayladın' : 'Teklifi reddettin');
         router.back();
-      } catch {
-        toast.error('İşlem tamamlanamadı, tekrar dene.');
+      } catch (e) {
+        reportError(e, toast, 'İşlem tamamlanamadı, tekrar dene.');
       } finally {
         setResponding(false);
       }

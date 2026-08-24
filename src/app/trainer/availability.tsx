@@ -7,6 +7,7 @@ import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { setTrainerAvailability, watchTrainerAvailability } from '@/data/firebase/availabilityRepo';
 import { TimeWindow, Weekday } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -85,8 +86,8 @@ export default function TrainerAvailability() {
       }
       await setTrainerAvailability({ tenantId, trainerId: user.uid, weekly, slotMinutes, exceptions: [] });
       toast.success('Çalışma saatlerin kaydedildi');
-    } catch {
-      toast.error('Kaydedilemedi, tekrar dene.');
+    } catch (e) {
+      reportError(e, toast, 'Kaydedilemedi, tekrar dene.');
     } finally {
       setSaving(false);
     }

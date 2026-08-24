@@ -7,6 +7,7 @@ import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { errorMessage } from '@/data/errors';
 import { requestJoin } from '@/data/firebase/membershipRepo';
 import { findTenantByCode } from '@/data/firebase/tenantRepo';
 import { Tenant } from '@/data/types';
@@ -39,8 +40,8 @@ export default function GymCodeScreen() {
         // way the app will re-skin itself once membership is active.
         applyTenantBranding(tenant.branding);
       }
-    } catch {
-      setError('Salon aranırken bir hata oluştu.');
+    } catch (e) {
+      setError(errorMessage(e, 'Salon aranırken bir hata oluştu.'));
     } finally {
       setSearching(false);
     }
@@ -63,8 +64,8 @@ export default function GymCodeScreen() {
         pathname: '/onboarding/pending',
         params: { tenantId: found.id, tenantName: found.name },
       });
-    } catch {
-      setError('İstek gönderilirken bir hata oluştu.');
+    } catch (e) {
+      setError(errorMessage(e, 'İstek gönderilirken bir hata oluştu.'));
     } finally {
       setSubmitting(false);
     }

@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
 import { applyPromotionEffect, getMemberPackage } from '@/data/firebase/memberPackageRepo';
 import { watchPackagesForTenant } from '@/data/firebase/packageRepo';
 import { createPackageChangeRequest } from '@/data/firebase/packageChangeRepo';
@@ -141,8 +142,8 @@ function ProposeChangeBody({
       });
       toast.success(`${memberName} için teklif gönderildi`);
       router.back();
-    } catch {
-      toast.error('Teklif oluşturulamadı, tekrar deneyin.');
+    } catch (e) {
+      reportError(e, toast, 'Teklif oluşturulamadı, tekrar deneyin.');
     } finally {
       setSubmitting(false);
     }
