@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -84,7 +85,13 @@ export default function BookSession() {
     }
   };
 
-  if (loading) return <View style={{ flex: 1 }} />;
+  if (loading) {
+    return (
+      <View style={{ padding: spacing.md }}>
+        <ListSkeleton rows={5} avatar={false} />
+      </View>
+    );
+  }
 
   if (!hasAnyAvailability(availability ?? null)) {
     return (

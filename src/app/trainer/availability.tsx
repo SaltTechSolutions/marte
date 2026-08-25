@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
@@ -71,7 +72,11 @@ export default function TrainerAvailability() {
   }, [tenantId, user]);
 
   if (!tenantId || !user) {
-    return <View style={{ flex: 1 }} />;
+    return (
+      <View style={{ padding: spacing.md }}>
+        <ListSkeleton rows={7} avatar={false} />
+      </View>
+    );
   }
 
   const setDay = (key: Weekday, window: DayState) => setDays((prev) => ({ ...prev, [key]: window }));
