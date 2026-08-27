@@ -23,7 +23,7 @@ export default function MemberTrainers() {
   const { colors, spacing } = useAppTheme();
   const { activeTenant } = useAuth();
   const [trainers, setTrainers] = useState<TenantMembership[]>([]);
-  const [loading, setLoading] = useState(!!activeTenant);
+  const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {

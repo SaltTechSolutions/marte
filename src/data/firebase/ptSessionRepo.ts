@@ -57,6 +57,31 @@ export function watchSessionsForTrainer(
 }
 
 /**
+ * A member's own PT sessions for one calendar month — the `classes.tsx`
+ * schedule screen only ever showed group classes; a member's 1:1 bookings
+ * were invisible there even though the Bugün card already surfaced the next
+ * one. Same range-windowed shape as `watchSessionsForTrainer` so the two
+ * calendars (trainer's, member's) share the same cost profile.
+ */
+export function watchSessionsForMember(
+  tenantId: string,
+  memberId: string,
+  range: { from: Date; to: Date },
+  onChange: (sessions: PtSession[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'pt_sessions'),
+    where('tenantId', '==', tenantId),
+    where('memberId', '==', memberId),
+    where('date', '>=', Timestamp.fromDate(range.from)),
+    where('date', '<', Timestamp.fromDate(range.to)),
+    orderBy('date', 'asc'),
+  );
+  return watchQuery('Randevu takvimim', q, (snap) => snap.docs.map(ptSessionFromDoc), onChange, onError);
+}
+
+/**
  * A member's own upcoming PT sessions.
  *
  * Security rules already allowed this (`memberId == request.auth.uid`); there

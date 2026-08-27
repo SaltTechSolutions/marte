@@ -51,9 +51,7 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     tenantCode: data.tenantCode,
     tenantName: data.tenantName,
     status: data.status,
-    // Backward compatible while the `role` → `roles` migration rolls out:
-    // documents written before it only carry the single `role` field.
-    roles: data.roles ?? (data.role ? [data.role] : []),
+    roles: data.roles ?? [],
     permissions: data.permissions ?? [],
     requestedAt: toDate(data.requestedAt) ?? new Date(),
     approvedAt: toDate(data.approvedAt),

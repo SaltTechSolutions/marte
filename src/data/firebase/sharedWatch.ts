@@ -25,6 +25,11 @@ interface Entry {
   /** Last value seen, replayed to late joiners so they don't flash empty. */
   last?: unknown;
   hasValue: boolean;
+  /** Last error seen, replayed to late joiners. A listener that has failed
+   *  never produces a value, so without this a screen mounting after the
+   *  failure would sit in its loading state forever: it neither starts its
+   *  own listener (one already exists) nor receives anything from this one. */
+  lastError?: unknown;
   teardown?: ReturnType<typeof setTimeout>;
 }
 
@@ -59,14 +64,18 @@ export function sharedWatch<T>(
       (value) => {
         current.last = value;
         current.hasValue = true;
+        current.lastError = undefined;
         current.subscribers.forEach((fn) => (fn as (v: T) => void)(value));
       },
       (error) => {
+        current.lastError = error;
         current.errorHandlers.forEach((fn) => fn(error));
       },
     );
   } else if (current.hasValue) {
     onChange(current.last as T);
+  } else if (current.lastError !== undefined) {
+    onError?.(current.lastError as Parameters<WatchErrorHandler>[0]);
   }
 
   return () => {

@@ -13,9 +13,11 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { bookClass, cancelBooking, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
+import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { toGymClass } from '@/data/classDisplay';
-import { ClassSession, GymClass, MemberEntitlementsCache } from '@/data/types';
+import { ClassSession, GymClass, MemberEntitlementsCache, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { confirmDestructive } from '@/utils/confirm';
 
 function classButtonProps(status: GymClass['status'], canJoin: boolean) {
   if (status === 'booked') return { label: 'İptal et', variant: 'ghost' as const };
@@ -42,6 +44,8 @@ export default function MemberClasses() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [entitlements, setEntitlements] = useState<MemberEntitlementsCache | null | undefined>(undefined);
+  const [ptSessions, setPtSessions] = useState<PtSession[]>([]);
+  const [cancellingPtId, setCancellingPtId] = useState<string | null>(null);
 
   // Opens on today, so "what's on now?" needs no interaction.
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
@@ -82,6 +86,11 @@ export default function MemberClasses() {
     return watchMemberEntitlements(tenantId, user.uid, setEntitlements);
   }, [tenantId, user]);
 
+  useEffect(() => {
+    if (!tenantId || !user) return;
+    return watchSessionsForMember(tenantId, user.uid, range, setPtSessions);
+  }, [tenantId, user, range]);
+
   const canJoin = canJoinGroupClass(entitlements);
 
   const onPressClass = async (session: ClassSession, status: GymClass['status']) => {
@@ -116,13 +125,50 @@ export default function MemberClasses() {
       const k = dayKey(s.date);
       map.set(k, (map.get(k) ?? 0) + 1);
     }
+    for (const s of ptSessions) {
+      if (s.status === 'cancelled') continue;
+      const k = dayKey(s.date);
+      map.set(k, (map.get(k) ?? 0) + 1);
+    }
     return map;
-  }, [sessions]);
+  }, [sessions, ptSessions]);
 
   const daySessions = useMemo(
     () => sessions.filter((s) => isSameDay(s.date, selectedDate)).sort((a, b) => a.date.getTime() - b.date.getTime()),
     [sessions, selectedDate],
   );
+
+  const dayPtSessions = useMemo(
+    () =>
+      ptSessions
+        .filter((s) => s.status !== 'cancelled' && isSameDay(s.date, selectedDate))
+        .sort((a, b) => a.date.getTime() - b.date.getTime()),
+    [ptSessions, selectedDate],
+  );
+
+  const cancelSession = (session: PtSession) =>
+    confirmDestructive({
+      title: 'Randevuyu iptal et',
+      message: `${session.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} ${session.trainerName} randevusu iptal edilecek. Randevuya 24 saatten az kaldıysa dersin iade edilmeyebilir.`,
+      confirmLabel: 'İptal et',
+      onConfirm: () => {
+        const run = async () => {
+          setCancellingPtId(session.id);
+          try {
+            const { refunded } = await cancelPtSession(session.id);
+            if (session.creditId) {
+              if (refunded) toast.success('Randevu iptal edildi, dersin iade edildi.');
+              else toast.show({ message: 'Randevu iptal edildi, ders geç iptal nedeniyle iade edilmedi.', tone: 'info' });
+            }
+          } catch (e) {
+            reportError(e, toast, 'İptal edilemedi, tekrar dene.');
+          } finally {
+            setCancellingPtId(null);
+          }
+        };
+        void run();
+      },
+    });
 
   if (!activeTenant) {
     return (
@@ -225,6 +271,40 @@ export default function MemberClasses() {
             );
           })}
         </ListGroup>
+      )}
+
+      {dayPtSessions.length > 0 && (
+        <>
+          <Text variant="label" tone="sub" style={{ marginTop: spacing.sm }}>
+            ÖZEL DERS
+          </Text>
+          <ListGroup>
+            {dayPtSessions.map((s, i) => (
+              <ListRow key={s.id} last={i === dayPtSessions.length - 1}>
+                <View style={{ alignItems: 'center', minWidth: 44 }}>
+                  <Text variant="helper" weight="900">
+                    {s.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  <Text variant="label" tone="sub">
+                    {s.durationMinutes} dk
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="helper" weight="700" numberOfLines={1}>
+                    {s.trainerName}
+                  </Text>
+                </View>
+                <Button
+                  label="İptal et"
+                  variant="ghost"
+                  compact
+                  disabled={cancellingPtId === s.id}
+                  onPress={() => cancelSession(s)}
+                />
+              </ListRow>
+            ))}
+          </ListGroup>
+        </>
       )}
     </ScrollView>
   );

@@ -56,7 +56,6 @@ export async function createTenantWithOwner(params: {
     tenantName: tenantData.name,
     status: 'active',
     roles: ['admin'],
-    role: 'admin',
     permissions: [],
     requestedAt: serverTimestamp(),
     approvedAt: serverTimestamp(),

@@ -75,10 +75,7 @@ export async function requestJoin(params: {
     tenantCode: params.tenantCode,
     tenantName: params.tenantName,
     status: 'pending',
-    // Both shapes during the role → roles migration: `roles` is what the app
-    // reads now, `role` keeps already-installed builds working.
     roles: ['member'],
-    role: 'member',
     permissions: [],
     requestedAt: serverTimestamp(),
     ...(params.userDisplayName ? { userDisplayName: params.userDisplayName } : {}),
@@ -185,20 +182,14 @@ export async function setMembershipPermissions(
 }
 
 /**
- * Assign roles. Writes the legacy single `role` alongside so an
- * already-installed older build still resolves the person correctly; the
- * most privileged role wins there.
+ * Assign roles. `roles` is the only shape — the legacy single `role` field
+ * was dropped once every document was backfilled.
  */
 export async function setMembershipRoles(
   membershipDocId: string,
   roles: MembershipRole[],
 ): Promise<void> {
-  const legacy: MembershipRole = roles.includes('admin')
-    ? 'admin'
-    : roles.includes('trainer')
-      ? 'trainer'
-      : 'member';
-  await updateDoc(doc(db, 'tenant_memberships', membershipDocId), { roles, role: legacy });
+  await updateDoc(doc(db, 'tenant_memberships', membershipDocId), { roles });
 }
 
 /**
