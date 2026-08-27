@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteField,
   doc,
   getCountFromServer,
   getDoc,
@@ -66,10 +67,33 @@ export async function requestJoin(params: {
   userEmail?: string | null;
 }): Promise<void> {
   const id = membershipId(params.tenantId, params.userId);
+  const ref = doc(db, 'tenant_memberships', id);
+
+  // The doc id is `{tenantId}_{uid}`, so anyone who was ever in this gym
+  // already owns it — a `create` would fail and lock a former member out of
+  // rejoining forever. Re-applying updates the existing row back to
+  // `pending` instead.
+  const existing = await getDoc(ref);
+  if (existing.exists()) {
+    // Reset to a plain member: a former trainer must not carry old roles or
+    // delegated permissions through a rejoin. `shortCode` is left untouched —
+    // assignMembershipShortCode only fires on create, so overwriting the doc
+    // would cost them their check-in code permanently.
+    await updateDoc(ref, {
+      status: 'pending',
+      roles: ['member'],
+      permissions: [],
+      requestedAt: serverTimestamp(),
+      leftAt: deleteField(),
+      approvedAt: deleteField(),
+    });
+    return;
+  }
+
   // shortCode is assigned server-side by the assignMembershipShortCode
   // trigger: the collision check needs to read memberships this user cannot
   // see yet, which fails with permission-denied from the client.
-  await setDoc(doc(db, 'tenant_memberships', id), {
+  await setDoc(ref, {
     userId: params.userId,
     tenantId: params.tenantId,
     tenantCode: params.tenantCode,
