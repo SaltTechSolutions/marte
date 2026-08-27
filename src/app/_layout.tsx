@@ -71,6 +71,10 @@ function RootLayout() {
             {/* Shared: check-in is a capability (canCheckIn), not an admin-only
                 screen, so it lives outside both role tab groups. */}
             <Stack.Screen name="checkin" />
+            {/* Shared: staff hold this up at the front desk, so it hangs off
+                both the admin and trainer account screens rather than living
+                inside either tab group. */}
+            <Stack.Screen name="gym-qr" options={{ presentation: 'modal' }} />
             <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
           </Stack>
         </AuthProvider>

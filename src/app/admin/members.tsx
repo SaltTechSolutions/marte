@@ -18,12 +18,11 @@ import {
 } from '@/data/firebase/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
+import { canActivateAnotherMember } from '@/data/seats';
 import { TenantMembership } from '@/data/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
-
-const FREE_MEMBER_LIMIT = 10;
 
 function requesterLabel(r: TenantMembership) {
   return r.userDisplayName || r.userEmail || r.userId;
@@ -39,7 +38,7 @@ export default function AdminMembers() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
-  const { activeMembership } = useAuth();
+  const { activeMembership, activeTenant } = useAuth();
 
   // Only a real signed-in tenant admin can act here. No fallback to a demo
   // tenant — approving/rejecting real membership docs isn't something a
@@ -89,7 +88,7 @@ export default function AdminMembers() {
     setBusyId(r.id);
     try {
       const activeCount = await countActiveMembers(tenantId);
-      if (activeCount >= FREE_MEMBER_LIMIT) {
+      if (!canActivateAnotherMember(activeTenant, activeCount)) {
         // The request stays pending on purpose — nobody is turned away, the
         // gym just has to lift its seat limit first. Say so, then show the
         // upgrade screen; silently returning left the admin tapping a button

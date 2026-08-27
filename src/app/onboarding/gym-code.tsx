@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -7,6 +8,7 @@ import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { decodeGymQr } from '@/app/gym-qr';
 import { errorMessage } from '@/data/errors';
 import { requestJoin } from '@/data/firebase/membershipRepo';
 import { findTenantByCode } from '@/data/firebase/tenantRepo';
@@ -24,14 +26,17 @@ export default function GymCodeScreen() {
   const [searching, setSearching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
 
-  const search = async () => {
-    if (!code.trim()) return;
+  const search = async (raw?: string) => {
+    const query = (raw ?? code).trim();
+    if (!query) return;
     setSearching(true);
     setError(null);
     setFound(null);
     try {
-      const tenant = await findTenantByCode(code);
+      const tenant = await findTenantByCode(query);
       if (!tenant) {
         setError('Geçersiz salon kodu. Lütfen kodunuzu kontrol ediniz.');
       } else {
@@ -45,6 +50,20 @@ export default function GymCodeScreen() {
     } finally {
       setSearching(false);
     }
+  };
+
+  /** The staff-facing card encodes `gymentra:gym:<CODE>`. Anything else is a
+   *  different QR entirely (most likely a member card) — say so rather than
+   *  searching for a gym that cannot exist. */
+  const onScan = (payload: string) => {
+    const scanned = decodeGymQr(payload);
+    setScanning(false);
+    if (!scanned) {
+      setError('Bu karekod bir salon kodu değil. Resepsiyondaki karekodu okut.');
+      return;
+    }
+    setCode(scanned);
+    void search(scanned);
   };
 
   const submit = async () => {
@@ -80,8 +99,20 @@ export default function GymCodeScreen() {
         </Text>
 
         <Pressable
+          onPress={async () => {
+            if (!permission?.granted) {
+              const res = await requestPermission();
+              if (!res.granted) {
+                setError('Kamera izni verilmedi. Salon kodunu elle girebilirsin.');
+                return;
+              }
+            }
+            setError(null);
+            setScanning((v) => !v);
+          }}
+          accessibilityRole="button"
           style={{
-            height: 120,
+            height: scanning ? 240 : 120,
             borderWidth: 2,
             borderStyle: 'dashed',
             borderColor: colors.p,
@@ -89,12 +120,23 @@ export default function GymCodeScreen() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 6,
-            opacity: 0.5,
+            overflow: 'hidden',
           }}>
-          <Ionicons name="qr-code-outline" size={26} color={colors.p} />
-          <Text variant="helper" weight="700" style={{ color: colors.p }}>
-            QR kodu tara (yakında)
-          </Text>
+          {scanning && permission?.granted ? (
+            <CameraView
+              style={{ width: '100%', height: '100%' }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={searching ? undefined : ({ data }) => onScan(data)}
+            />
+          ) : (
+            <>
+              <Ionicons name="qr-code-outline" size={26} color={colors.p} />
+              <Text variant="helper" weight="700" style={{ color: colors.p }}>
+                Karekodu tara
+              </Text>
+            </>
+          )}
         </Pressable>
 
         <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
@@ -112,7 +154,7 @@ export default function GymCodeScreen() {
             autoCapitalize="characters"
             style={{ flex: 1 }}
           />
-          <Button label={searching ? '…' : 'Ara'} onPress={search} disabled={searching || !code.trim()} compact />
+          <Button label={searching ? '…' : 'Ara'} onPress={() => void search()} disabled={searching || !code.trim()} compact />
         </View>
 
         {error && (

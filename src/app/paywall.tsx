@@ -7,11 +7,9 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
+import { FREE_MEMBER_LIMIT } from '@/data/seats';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
-
-/** Kept in step with `withinMemberLimit` in firestore.rules. */
-const FREE_MEMBER_LIMIT = 10;
 
 const PLANS = [
   { id: 'monthly', label: 'Aylık', price: '500 ₺', per: '/ay', note: null },

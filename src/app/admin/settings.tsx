@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
+import { GymCodeCard } from '@/components/GymCodeCard';
 import { Button } from '@/components/Button';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
@@ -117,6 +118,8 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
+      <GymCodeCard tenantName={tenant.name} code={tenant.code} showQrAction />
+
       <Text variant="h3">Salonunun görünümü</Text>
 
       <Pressable

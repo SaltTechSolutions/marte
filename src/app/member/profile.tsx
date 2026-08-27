@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
+import { GymCodeCard } from '@/components/GymCodeCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
@@ -32,7 +33,7 @@ import { confirmDestructive } from '@/utils/confirm';
 export default function MemberProfile() {
   const router = useRouter();
   const { colors, spacing, tenantName } = useAppTheme();
-  const { user, activeMembership } = useAuth();
+  const { user, activeMembership, activeTenant } = useAuth();
   const displayName = user?.displayName || user?.email || 'Üye';
 
   const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
@@ -84,6 +85,8 @@ export default function MemberProfile() {
           </Card>
         </Pressable>
       ))}
+
+      {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} />}
 
       <RoleSwitcher />
 

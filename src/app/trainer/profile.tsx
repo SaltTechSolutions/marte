@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { GymCodeCard } from '@/components/GymCodeCard';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { Text } from '@/components/Text';
@@ -50,7 +51,7 @@ export default function TrainerProfile() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
-  const { user, activeMembership } = useAuth();
+  const { user, activeMembership, activeTenant } = useAuth();
   const uid = user?.uid;
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
   const tenantName = activeMembership?.tenantName ?? '';
@@ -177,6 +178,8 @@ export default function TrainerProfile() {
           )}
         </View>
       </View>
+
+      {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} showQrAction />}
 
       {/* --- Workload --- */}
       <Card style={{ gap: 12 }}>
