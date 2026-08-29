@@ -7,12 +7,14 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import {
   approveMembership,
   countActiveMembers,
   rejectMembership,
+  removeMemberFromTenant,
   watchActiveMembers,
   watchPendingRequests,
 } from '@/data/firebase/membershipRepo';
@@ -130,6 +132,40 @@ export default function AdminMembers() {
     }
   };
 
+  /**
+   * Removal is destructive and wide: it takes the member's packages, credits,
+   * sessions, check-ins, programs, measurements and workout logs with them.
+   * So it asks twice — the first prompt says what will happen, the second
+   * makes the admin confirm they meant this specific person. A single tap
+   * behind a swipe is far too little friction for that.
+   */
+  const confirmRemove = (m: TenantMembership) =>
+    confirmDestructive({
+      title: 'Üyeyi sil',
+      message: `${requesterLabel(m)} salondan çıkarılacak. Paketleri, ders hakları, randevuları, ölçümleri ve antrenman kayıtları da silinecek. Bu işlem geri alınamaz.`,
+      confirmLabel: 'Devam et',
+      onConfirm: () =>
+        confirmDestructive({
+          title: 'Emin misin?',
+          message: `Son onay: ${requesterLabel(m)} ve tüm salon verisi kalıcı olarak silinecek.`,
+          confirmLabel: 'Evet, sil',
+          onConfirm: () => void doRemove(m),
+        }),
+    });
+
+  const doRemove = async (m: TenantMembership) => {
+    if (!tenantId) return;
+    setBusyId(m.id);
+    try {
+      await removeMemberFromTenant(tenantId, m.userId);
+      toast.success(`${requesterLabel(m)} silindi`);
+    } catch (e) {
+      reportError(e, toast, 'Silinemedi, tekrar deneyin.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   if (!tenantId) {
     return (
       <AccessGuard
@@ -226,8 +262,22 @@ export default function AdminMembers() {
       ) : (
         <ListGroup>
           {members.map((m, i) => (
-            <ListRow
+            <SwipeableRow
               key={m.id}
+              actions={[
+                {
+                  icon: 'create-outline',
+                  label: 'Düzenle',
+                  onPress: () => router.push({ pathname: '/admin/edit-member', params: { membershipId: m.id } }),
+                },
+                {
+                  icon: 'trash-outline',
+                  label: 'Sil',
+                  destructive: true,
+                  onPress: () => confirmRemove(m),
+                },
+              ]}>
+            <ListRow
               last={i === members.length - 1}
               onPress={() => router.push({ pathname: '/admin/member', params: { memberId: m.userId, memberName: requesterLabel(m) } })}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
@@ -245,6 +295,7 @@ export default function AdminMembers() {
               </View>
               <Text tone="sub">›</Text>
             </ListRow>
+            </SwipeableRow>
           ))}
         </ListGroup>
       )}

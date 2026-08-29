@@ -11,13 +11,17 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { db } from '@/services/firebase';
+import { app, db } from '@/services/firebase';
 
 import { MembershipPermission, MembershipRole, TenantMembership } from '../types';
 import { membershipFromDoc } from './convert';
 import { sharedWatch } from './sharedWatch';
 import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
+
+// Functions are deployed to europe-west1, same as the rest of the project.
+const functions = getFunctions(app, 'europe-west1');
 
 /**
  * tenant_memberships doc ids are deterministic: `${tenantId}_${userId}`.
@@ -214,6 +218,40 @@ export async function setMembershipRoles(
   roles: MembershipRole[],
 ): Promise<void> {
   await updateDoc(doc(db, 'tenant_memberships', membershipDocId), { roles });
+}
+
+/**
+ * An admin corrects a member's basic details. `undefined` fields are left
+ * alone rather than cleared — the edit sheet only sends what was touched.
+ */
+export async function updateMemberDetails(
+  membershipDocId: string,
+  details: { userDisplayName?: string; phone?: string; birthDate?: Date | null },
+): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (details.userDisplayName !== undefined) patch.userDisplayName = details.userDisplayName.trim();
+  if (details.phone !== undefined) patch.phone = details.phone.trim();
+  if (details.birthDate !== undefined && details.birthDate !== null) patch.birthDate = details.birthDate;
+  if (Object.keys(patch).length === 0) return;
+  await updateDoc(doc(db, 'tenant_memberships', membershipDocId), patch);
+}
+
+/**
+ * An admin removes a member from the gym, along with that member's data in
+ * it (packages, credits, sessions, check-ins, programs, measurements, logs).
+ *
+ * Server-side: rules keep `tenant_memberships` delete closed, and the cascade
+ * touches eight collections' documents belonging to someone else — authority
+ * no client should hold. Scoped to this one gym; the person's account and any
+ * other gym they belong to are untouched.
+ */
+export async function removeMemberFromTenant(tenantId: string, memberId: string): Promise<{ deleted: number }> {
+  const call = httpsCallable<{ tenantId: string; memberId: string }, { deleted: number }>(
+    functions,
+    'removeMemberFromTenant',
+  );
+  const { data } = await call({ tenantId, memberId });
+  return data;
 }
 
 /**

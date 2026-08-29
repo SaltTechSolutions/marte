@@ -9,6 +9,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import * as Sentry from '@sentry/react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/context/AuthContext';
@@ -54,6 +55,9 @@ function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
+    // Swipe-to-reveal rows (admin member list) need this at the very root —
+    // without it the gesture silently never fires.
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <AppThemeProvider>
       {/* Outside AuthProvider so a toast survives sign-out, and outside the
           navigator so it floats over every screen including the tab bar. */}
@@ -80,6 +84,7 @@ function RootLayout() {
         </AuthProvider>
       </ToastProvider>
     </AppThemeProvider>
+    </GestureHandlerRootView>
   );
 }
 
