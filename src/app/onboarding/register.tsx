@@ -160,11 +160,19 @@ export default function RegisterScreen() {
           style={{ marginTop: spacing.sm }}
         />
 
+        {/* The question stays quiet; the action carries the weight and the
+            brand colour. As one flat muted line the tappable half read as
+            body copy and people missed it. */}
         <Pressable
           onPress={() => setModeOverride(mode === 'signUp' ? 'signIn' : 'signUp')}
+          accessibilityRole="button"
+          accessibilityLabel={mode === 'signUp' ? 'Giriş yap' : 'Kayıt ol'}
           style={{ alignItems: 'center', paddingVertical: 13, minHeight: 44, justifyContent: 'center' }}>
           <Text variant="helper" tone="sub">
-            {mode === 'signUp' ? 'Zaten hesabın var mı? Giriş yap' : 'Hesabın yok mu? Kayıt ol'}
+            {mode === 'signUp' ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
+            <Text variant="helper" weight="900" style={{ color: colors.p }}>
+              {mode === 'signUp' ? 'Giriş yap' : 'Kayıt ol'}
+            </Text>
           </Text>
         </Pressable>
 
