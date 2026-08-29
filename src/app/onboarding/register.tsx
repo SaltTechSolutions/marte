@@ -10,6 +10,7 @@ import { Pressable, View } from 'react-native';
 
 import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
+import { AppleIcon } from '@/components/AppleIcon';
 import { GoogleIcon } from '@/components/GoogleIcon';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -186,8 +187,9 @@ export default function RegisterScreen() {
 
         {isAppleSignInAvailable() && (
           <Button
-            label={socialLoading === 'apple' ? '…' : ' Apple ile devam et'}
+            label={socialLoading === 'apple' ? '…' : 'Apple ile devam et'}
             variant="secondary"
+            leftIcon={<AppleIcon />}
             onPress={continueWithApple}
             disabled={socialLoading !== null}
           />
