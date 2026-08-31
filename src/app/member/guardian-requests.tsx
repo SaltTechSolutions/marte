@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -5,6 +6,7 @@ import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { InfoCard } from '@/components/InfoCard';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
@@ -46,6 +48,7 @@ export default function GuardianRequests() {
 
 function RequestList({ tenantId, guardianId }: { tenantId: string; guardianId: string }) {
   const { colors, spacing } = useAppTheme();
+  const router = useRouter();
   const toast = useToast();
 
   const [children, setChildren] = useState<TenantMembership[] | undefined>(undefined);
@@ -145,17 +148,23 @@ function RequestList({ tenantId, guardianId }: { tenantId: string; guardianId: s
             BAĞLI ÇOCUKLARIM
           </Text>
           {approved.map((child) => (
-            <Card key={child.id} style={{ gap: 3 }}>
-              <Text variant="helper" weight="700">
-                {childLabel(child)}
-              </Text>
-              <Text variant="label" tone="sub">
-                {child.status === 'active' ? 'Salon üyeliği aktif' : 'Salon onayı bekliyor'}
-                {child.guardianConsentAt
+            <InfoCard
+              key={child.id}
+              initials={childLabel(child).slice(0, 2).toUpperCase()}
+              title={childLabel(child)}
+              subtitle={`${child.status === 'active' ? 'Salon üyeliği aktif' : 'Salon onayı bekliyor'}${
+                child.guardianConsentAt
                   ? ` · onayın ${child.guardianConsentAt.toLocaleDateString('tr-TR')}`
-                  : ''}
-              </Text>
-            </Card>
+                  : ''
+              }`}
+              trailing
+              onPress={() =>
+                router.push({
+                  pathname: '/member/child',
+                  params: { childId: child.userId, childName: childLabel(child) },
+                })
+              }
+            />
           ))}
         </>
       )}

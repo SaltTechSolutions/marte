@@ -119,12 +119,23 @@ export function watchUpcomingSessionsForMember(
  * against a second device racing for the same slot. See `bookPtSessions` in
  * marte06/functions.
  */
-export async function bookPtSessions(params: { tenantId: string; trainerId: string; slots: Date[] }): Promise<{ booked: number }> {
-  const call = httpsCallable<{ tenantId: string; trainerId: string; slots: string[] }, { booked: number }>(functions, 'bookPtSessions');
+export async function bookPtSessions(params: {
+  tenantId: string;
+  trainerId: string;
+  slots: Date[];
+  /** MEMBER-5c: a parent booking for their approved child. Omit to book for
+   *  yourself — the callable defaults to the caller. */
+  memberId?: string;
+}): Promise<{ booked: number }> {
+  const call = httpsCallable<
+    { tenantId: string; trainerId: string; slots: string[]; memberId?: string },
+    { booked: number }
+  >(functions, 'bookPtSessions');
   const { data } = await call({
     tenantId: params.tenantId,
     trainerId: params.trainerId,
     slots: params.slots.map((s) => s.toISOString()),
+    ...(params.memberId ? { memberId: params.memberId } : {}),
   });
   return data;
 }
