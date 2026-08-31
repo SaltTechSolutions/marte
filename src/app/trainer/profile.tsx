@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { StatCard } from '@/components/StatCard';
 import { GymCodeCard } from '@/components/GymCodeCard';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
@@ -182,33 +183,14 @@ export default function TrainerProfile() {
       {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} showQrAction />}
 
       {/* --- Workload --- */}
-      <Card style={{ gap: 12 }}>
-        <Text variant="label" tone="sub">
-          RANDEVULARIM
-        </Text>
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{stats.today}</Text>
-            <Text variant="label" tone="sub">
-              bugün
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.line }} />
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{stats.thisWeek}</Text>
-            <Text variant="label" tone="sub">
-              bu hafta
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.line }} />
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{stats.completedThisMonth}</Text>
-            <Text variant="label" tone="sub">
-              bu ay tamamlanan
-            </Text>
-          </View>
-        </View>
-      </Card>
+      <StatCard
+        label="RANDEVULARIM"
+        stats={[
+          { value: stats.today, label: 'bugün' },
+          { value: stats.thisWeek, label: 'bu hafta' },
+          { value: stats.completedThisMonth, label: 'bu ay tamamlanan' },
+        ]}
+      />
 
       <Pressable onPress={() => router.push('/trainer/availability')}>
         <View
@@ -236,33 +218,14 @@ export default function TrainerProfile() {
       </Pressable>
 
       {/* --- Coaching load --- */}
-      <Card style={{ gap: 12 }}>
-        <Text variant="label" tone="sub">
-          ÜYE VE PROGRAMLAR
-        </Text>
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{members.length}</Text>
-            <Text variant="label" tone="sub">
-              salon üyesi
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.line }} />
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{activeProgramCount}</Text>
-            <Text variant="label" tone="sub">
-              aktif programım
-            </Text>
-          </View>
-          <View style={{ width: 1, backgroundColor: colors.line }} />
-          <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-            <Text variant="h3">{draftProgramCount}</Text>
-            <Text variant="label" tone="sub">
-              taslak
-            </Text>
-          </View>
-        </View>
-      </Card>
+      <StatCard
+        label="ÜYE VE PROGRAMLAR"
+        stats={[
+          { value: members.length, label: 'salon üyesi' },
+          { value: activeProgramCount, label: 'aktif programım' },
+          { value: draftProgramCount, label: 'taslak' },
+        ]}
+      />
 
       {/* --- Calendars shared with me --- */}
       {sharedToMe.length > 0 && (

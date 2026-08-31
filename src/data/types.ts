@@ -205,7 +205,12 @@ export interface MeasurementEntry {
   armCm?: number;
 }
 
-export type PaymentMethod = 'cash' | 'bank_transfer';
+/**
+ * How the gym took the money. This is a manual ledger — the app processes
+ * nothing itself, so `card` means "charged on the gym's own POS terminal and
+ * recorded here", not an in-app payment.
+ */
+export type PaymentMethod = 'cash' | 'bank_transfer' | 'card';
 export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
 /** Absent/`'charge'` on every pre-PKG-6 record — added so a downgrade's
  *  prorated refund (PKG-6) can share this ledger instead of a second one.

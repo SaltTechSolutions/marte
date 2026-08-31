@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { StatCard } from '@/components/StatCard';
 import { MiniBarChart } from '@/components/MiniBarChart';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
@@ -136,73 +137,27 @@ export default function MemberProgress() {
       <Text variant="h3">Gelişim</Text>
 
       {visits.length > 0 && (
-        <Card style={{ gap: 12 }}>
-          <Text variant="label" tone="sub">
-            SALONA GELİŞ
-          </Text>
-          <View style={{ flexDirection: 'row' }}>
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{visitsThisWeek}</Text>
-              <Text variant="label" tone="sub">
-                bu hafta
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: colors.line }} />
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{visitsThisMonth}</Text>
-              <Text variant="label" tone="sub">
-                bu ay
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: colors.line }} />
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{visits.length}</Text>
-              <Text variant="label" tone="sub">
-                son 12 hafta
-              </Text>
-            </View>
-          </View>
-          {lastVisit && (
-            <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
-              Son gelişin: {formatDate(lastVisit)}
-            </Text>
-          )}
-        </Card>
+        <StatCard
+          label="SALONA GELİŞ"
+          stats={[
+            { value: visitsThisWeek, label: 'bu hafta' },
+            { value: visitsThisMonth, label: 'bu ay' },
+            { value: visits.length, label: 'son 12 hafta' },
+          ]}
+          footnote={lastVisit ? `Son gelişin: ${formatDate(lastVisit)}` : undefined}
+        />
       )}
 
       {completedLogs.length > 0 && (
-        <Card style={{ gap: 12 }}>
-          <Text variant="label" tone="sub">
-            ANTRENMAN ÖZETİ
-          </Text>
-          <View style={{ flexDirection: 'row' }}>
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{completedLogs.length}</Text>
-              <Text variant="label" tone="sub">
-                toplam
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: colors.line }} />
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{thisMonthCount}</Text>
-              <Text variant="label" tone="sub">
-                bu ay
-              </Text>
-            </View>
-            <View style={{ width: 1, backgroundColor: colors.line }} />
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{formatDuration(totalSeconds)}</Text>
-              <Text variant="label" tone="sub">
-                toplam süre
-              </Text>
-            </View>
-          </View>
-          {avgSeconds > 0 && (
-            <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
-              Antrenman başına ortalama {formatDuration(avgSeconds)}
-            </Text>
-          )}
-        </Card>
+        <StatCard
+          label="ANTRENMAN ÖZETİ"
+          stats={[
+            { value: completedLogs.length, label: 'toplam' },
+            { value: thisMonthCount, label: 'bu ay' },
+            { value: formatDuration(totalSeconds), label: 'toplam süre' },
+          ]}
+          footnote={avgSeconds > 0 ? `Antrenman başına ortalama ${formatDuration(avgSeconds)}` : undefined}
+        />
       )}
 
       {!latest ? (

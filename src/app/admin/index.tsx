@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/Card';
+import { InfoCard } from '@/components/InfoCard';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
@@ -105,29 +106,22 @@ export default function AdminPanel() {
       </View>
 
       {requests.length > 0 && (
-        <Pressable onPress={() => router.push('/admin/members')}>
-          <Card outlineColor={colors.p} style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
-            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-              <Text variant="helper" weight="900" style={{ color: colors.p }}>
-                {(requests[0].userDisplayName || requests[0].userEmail || '?').slice(0, 2).toUpperCase()}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="helper" weight="700">
-                {requests.length} yeni katılım isteği
-              </Text>
-              <Text variant="label" tone="sub" numberOfLines={1}>
-                {requests[0].userDisplayName || requests[0].userEmail}
-                {requests.length > 1 ? ` ve ${requests.length - 1} kişi bekliyor` : ' bekliyor'}
-              </Text>
-            </View>
+        <InfoCard
+          outlined
+          onPress={() => router.push('/admin/members')}
+          initials={(requests[0].userDisplayName || requests[0].userEmail || '?').slice(0, 2).toUpperCase()}
+          title={`${requests.length} yeni katılım isteği`}
+          subtitle={`${requests[0].userDisplayName || requests[0].userEmail}${
+            requests.length > 1 ? ` ve ${requests.length - 1} kişi bekliyor` : ' bekliyor'
+          }`}
+          trailing={
             <View style={{ backgroundColor: colors.p, borderRadius: 11, paddingHorizontal: 13, paddingVertical: 9 }}>
               <Text variant="helper" weight="700" tone="onp">
                 İncele
               </Text>
             </View>
-          </Card>
-        </Pressable>
+          }
+        />
       )}
     </ScrollView>
   );

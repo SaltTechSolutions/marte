@@ -26,6 +26,7 @@ const LEAD = 38;
  */
 export function InfoCard({
   icon,
+  initials,
   lead,
   label,
   title,
@@ -37,6 +38,8 @@ export function InfoCard({
   children,
 }: {
   icon?: keyof typeof Ionicons.glyphMap;
+  /** Initials avatar for people — same circle as `icon`, drawn once here. */
+  initials?: string;
   lead?: React.ReactNode;
   /** Small caps heading above the row, e.g. "PAKETİM". */
   label?: string;
@@ -53,18 +56,26 @@ export function InfoCard({
 }) {
   const { colors, spacing } = useAppTheme();
 
+  const circle = {
+    width: LEAD,
+    height: LEAD,
+    borderRadius: LEAD / 2,
+    backgroundColor: colors.surf2,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  };
+
   const leading =
     lead ??
-    (icon ? (
+    (initials ? (
+      <View style={circle}>
+        <Text variant="helper" weight="900" style={{ color: colors.p }}>
+          {initials}
+        </Text>
+      </View>
+    ) : icon ? (
       <View
-        style={{
-          width: LEAD,
-          height: LEAD,
-          borderRadius: LEAD / 2,
-          backgroundColor: colors.surf2,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
+        style={circle}>
         <Ionicons name={icon} size={19} color={colors.p} />
       </View>
     ) : null);

@@ -21,7 +21,7 @@ import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
 
-const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi' };
+const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi', card: 'Kredi Kartı' };
 
 function formatAmount(n: number): string {
   return `₺${n.toLocaleString('tr-TR')}`;
@@ -234,6 +234,7 @@ export default function AdminPayments() {
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip label="Nakit" selected={method === 'cash'} onPress={() => setMethod('cash')} />
             <Chip label="Banka Transferi" selected={method === 'bank_transfer'} onPress={() => setMethod('bank_transfer')} />
+            <Chip label="Kredi Kartı" selected={method === 'card'} onPress={() => setMethod('card')} />
           </View>
           <TextField placeholder="Not (opsiyonel)" value={note} onChangeText={setNote} />
           <View style={{ flexDirection: 'row', gap: 8 }}>

@@ -18,7 +18,7 @@ import { Payment, PaymentMethod } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 
-const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi' };
+const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi', card: 'Kredi Kartı' };
 const STATUS_LABEL: Record<Payment['status'], string> = { pending: 'Onay bekliyor', confirmed: 'Onaylandı', rejected: 'Reddedildi' };
 
 function formatAmount(n: number): string {
@@ -94,6 +94,7 @@ export default function MemberPayments() {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Chip label="Nakit" selected={method === 'cash'} onPress={() => setMethod('cash')} />
                 <Chip label="Banka Transferi" selected={method === 'bank_transfer'} onPress={() => setMethod('bank_transfer')} />
+            <Chip label="Kredi Kartı" selected={method === 'card'} onPress={() => setMethod('card')} />
               </View>
               <TextField placeholder="Not (opsiyonel) — örn. dekont referansı" value={note} onChangeText={setNote} />
               <View style={{ flexDirection: 'row', gap: 8 }}>
