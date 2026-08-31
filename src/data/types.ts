@@ -299,6 +299,20 @@ export interface Payment {
   status: PaymentStatus;
   kind?: PaymentKind;
   note?: string;
+  /**
+   * Who actually handed over the money, when that is not the member the entry
+   * belongs to (MEMBER-5e). A parent pays for a child: `memberId` stays the
+   * child — the ledger has to stay right per child — and this records the
+   * parent. Absent means the member paid for themselves.
+   */
+  submittedBy?: string;
+  submittedByName?: string;
+  /**
+   * Shared by the entries that came from ONE act of paying. A parent pays 900₺
+   * for three children and the ledger holds three 300₺ rows; without this the
+   * gym cannot tell that from three separate payments.
+   */
+  paymentGroupId?: string;
   createdAt: Date;
   confirmedAt?: Date;
 }

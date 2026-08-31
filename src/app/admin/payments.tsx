@@ -178,8 +178,17 @@ export default function AdminPayments() {
               </View>
               <Text variant="label" tone="sub">
                 {METHOD_LABEL[p.method]}
+                {/* A parent paying for a child: the entry belongs to the
+                    child's ledger, so without this the admin sees a 300₺
+                    notice from a member who never walked in to pay it. */}
+                {p.submittedByName ? ` · ${p.submittedByName} ödedi` : ''}
                 {p.note ? ` · ${p.note}` : ''}
               </Text>
+              {p.paymentGroupId && (
+                <Text variant="label" style={{ color: colors.sub }}>
+                  Bu bildirim birden fazla çocuk için yapılan tek ödemenin parçası.
+                </Text>
+              )}
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Button label={busyId === p.id ? '…' : 'Onayla'} compact style={{ flex: 1 }} disabled={busyId === p.id} onPress={() => confirm(p.id)} />
                 <Button label="Reddet" variant="ghost" compact style={{ flex: 1 }} disabled={busyId === p.id} onPress={() => reject(p.id, p.memberName, p.amount)} />

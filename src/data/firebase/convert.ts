@@ -184,6 +184,9 @@ export function paymentFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     status: data.status,
     kind: data.kind ?? 'charge',
     note: data.note,
+    submittedBy: data.submittedBy,
+    submittedByName: data.submittedByName,
+    paymentGroupId: data.paymentGroupId,
     createdAt: toDate(data.createdAt) ?? new Date(),
     confirmedAt: toDate(data.confirmedAt),
   };

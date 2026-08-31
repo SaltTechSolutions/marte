@@ -1,6 +1,7 @@
-import { addDoc, collection, doc, limit, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, limit, orderBy, query, serverTimestamp, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
+import { splitAmount } from '@/utils/splitAmount';
 
 import { PaymentMethod } from '../types';
 import { paymentFromDoc } from './convert';
@@ -89,4 +90,54 @@ export function watchPaymentsForMember(
     limit(50),
   );
   return watchQuery('Ödemelerim', q, (snap) => snap.docs.map(paymentFromDoc), onChange, onError);
+}
+
+/**
+ * A parent files ONE payment for one or more children (MEMBER-5e, decision 7).
+ *
+ * Each child gets their own entry — `memberId` is the child, so the per-child
+ * ledger stays right — carrying `submittedBy` (who paid) and a shared
+ * `paymentGroupId` (that these came from one act of paying). Without the group
+ * id the gym sees three unrelated payments and cannot tell a 900₺ split from
+ * three coincidental 300₺ ones.
+ *
+ * A batch, not a loop: half-written is the worst outcome here. The parent
+ * would have paid 900₺ and be looking at a ledger showing 600₺, with no way to
+ * tell which child is missing.
+ */
+export async function submitGroupPaymentNotice(params: {
+  tenantId: string;
+  children: { memberId: string; memberName: string }[];
+  totalAmount: number;
+  method: PaymentMethod;
+  submittedBy: string;
+  submittedByName: string;
+  note?: string;
+}): Promise<{ shares: number[] }> {
+  if (params.children.length === 0) throw new Error('En az bir çocuk seçilmeli.');
+
+  const shares = splitAmount(params.totalAmount, params.children.length);
+  // The group id is generated client-side so every doc in the batch can carry
+  // it: a server-assigned id would only exist after the write it has to be in.
+  const paymentGroupId = doc(collection(db, 'payments')).id;
+
+  const batch = writeBatch(db);
+  params.children.forEach((child, i) => {
+    batch.set(doc(collection(db, 'payments')), {
+      tenantId: params.tenantId,
+      memberId: child.memberId,
+      memberName: child.memberName,
+      amount: shares[i],
+      method: params.method,
+      status: 'pending',
+      submittedBy: params.submittedBy,
+      submittedByName: params.submittedByName,
+      paymentGroupId,
+      ...(params.note ? { note: params.note } : {}),
+      createdAt: serverTimestamp(),
+    });
+  });
+  await batch.commit();
+
+  return { shares };
 }

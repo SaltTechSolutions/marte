@@ -13,8 +13,10 @@ import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { submitPaymentNotice, watchPaymentsForMember } from '@/data/firebase/paymentRepo';
-import { Payment, PaymentMethod } from '@/data/types';
+import { submitGroupPaymentNotice, submitPaymentNotice, watchPaymentsForMember } from '@/data/firebase/paymentRepo';
+import { watchMyChildren } from '@/data/firebase/membershipRepo';
+import { splitAmount } from '@/utils/splitAmount';
+import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 
@@ -41,6 +43,10 @@ export default function MemberPayments() {
   const [method, setMethod] = useState<PaymentMethod>('bank_transfer');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
+  // Which children this payment covers. Empty = paying for yourself, which is
+  // what the screen has always done and stays the default.
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
+  const [children, setChildren] = useState<TenantMembership[]>([]);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -49,25 +55,62 @@ export default function MemberPayments() {
     return watchPaymentsForMember(tenantId, uid, setPayments, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchMyChildren(tenantId, uid, setChildren);
+  }, [tenantId, uid]);
+
   if (!tenantId || !user) return <View style={{ flex: 1 }} />;
 
+  const payerName = user.displayName || user.email || 'Üye';
+  const linkedChildren = children.filter((c) => c.guardianStatus === 'approved');
+  const selectedChildren = linkedChildren.filter((c) => selectedChildIds.includes(c.userId));
+  const amountNum = Number(amount.replace(',', '.'));
+  // Previewed before sending, because "eşit bölünecek" is a promise about
+  // someone's money and the odd kuruş should not be a surprise afterwards.
+  const shares =
+    selectedChildren.length > 0 && amountNum > 0 ? splitAmount(amountNum, selectedChildren.length) : [];
+
+  const toggleChild = (childId: string) =>
+    setSelectedChildIds((ids) => (ids.includes(childId) ? ids.filter((i) => i !== childId) : [...ids, childId]));
+
   const submit = async () => {
-    const amountNum = Number(amount.replace(',', '.'));
     if (!amountNum || amountNum <= 0 || saving) return;
     setSaving(true);
     try {
-      await submitPaymentNotice({
-        tenantId,
-        memberId: user.uid,
-        memberName: user.displayName || user.email || 'Üye',
-        amount: amountNum,
-        method,
-        ...(note.trim() ? { note: note.trim() } : {}),
-      });
+      if (selectedChildren.length > 0) {
+        await submitGroupPaymentNotice({
+          tenantId,
+          children: selectedChildren.map((c) => ({
+            memberId: c.userId,
+            memberName: c.userDisplayName || c.userEmail || 'Üye',
+          })),
+          totalAmount: amountNum,
+          method,
+          submittedBy: user.uid,
+          submittedByName: payerName,
+          ...(note.trim() ? { note: note.trim() } : {}),
+        });
+        toast.success(
+          selectedChildren.length === 1
+            ? 'Bildirimin salona iletildi, onay bekleniyor.'
+            : `${selectedChildren.length} çocuk için ayrı ayrı kaydedildi, onay bekleniyor.`,
+        );
+      } else {
+        await submitPaymentNotice({
+          tenantId,
+          memberId: user.uid,
+          memberName: payerName,
+          amount: amountNum,
+          method,
+          ...(note.trim() ? { note: note.trim() } : {}),
+        });
+        toast.success('Bildirimin salona iletildi, onay bekleniyor.');
+      }
       setAdding(false);
       setAmount('');
       setNote('');
-      toast.success('Bildirimin salona iletildi, onay bekleniyor.');
+      setSelectedChildIds([]);
     } catch (e) {
       reportError(e, toast, 'Bildirim gönderilemedi, tekrar deneyin.');
     } finally {
@@ -96,6 +139,32 @@ export default function MemberPayments() {
                 <Chip label="Banka Transferi" selected={method === 'bank_transfer'} onPress={() => setMethod('bank_transfer')} />
             <Chip label="Kredi Kartı" selected={method === 'card'} onPress={() => setMethod('card')} />
               </View>
+              {linkedChildren.length > 0 && (
+                <>
+                  <Text variant="label" tone="sub">
+                    KİMİN İÇİN
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    {linkedChildren.map((c) => (
+                      <Chip
+                        key={c.userId}
+                        label={c.userDisplayName || c.userEmail || 'Üye'}
+                        selected={selectedChildIds.includes(c.userId)}
+                        onPress={() => toggleChild(c.userId)}
+                      />
+                    ))}
+                  </View>
+                  <Text variant="label" tone="sub">
+                    {selectedChildren.length === 0
+                      ? 'Hiçbiri seçili değil — ödeme kendi adına kaydedilir.'
+                      : shares.length > 0
+                        ? `Tutar eşit bölünüp ayrı ayrı kaydedilecek: ${shares
+                            .map((v, i) => `${selectedChildren[i].userDisplayName || 'Üye'} ${v.toFixed(2)}₺`)
+                            .join(' · ')}`
+                        : 'Tutarı gir, nasıl bölüneceğini burada göstereceğim.'}
+                  </Text>
+                </>
+              )}
               <TextField placeholder="Not (opsiyonel) — örn. dekont referansı" value={note} onChangeText={setNote} />
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} onPress={() => setAdding(false)} disabled={saving} />
