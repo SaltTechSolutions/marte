@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { MyPackageCard } from '@/components/MyPackageCard';
+import { InfoCard } from '@/components/InfoCard';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -168,22 +169,15 @@ export default function MemberHome() {
           on this screen with a real deadline (expiresAt) and a decision only
           this person can make. */}
       {packageOffers.map((offer) => (
-        <Pressable key={offer.id} onPress={() => router.push({ pathname: '/member/package-offer', params: { requestId: offer.id } })}>
-          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} outlineColor={colors.p}>
-            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="swap-horizontal-outline" size={19} color={colors.p} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text variant="helper" weight="700">
-                Paket teklifin var
-              </Text>
-              <Text variant="label" tone="sub" numberOfLines={1}>
-                {offer.proposedSummary.packageName} — incelemek için dokun
-              </Text>
-            </View>
-            <Text tone="sub">›</Text>
-          </Card>
-        </Pressable>
+        <InfoCard
+          key={offer.id}
+          icon="swap-horizontal-outline"
+          title="Paket teklifin var"
+          subtitle={`${offer.proposedSummary.packageName} — incelemek için dokun`}
+          trailing
+          outlined
+          onPress={() => router.push({ pathname: '/member/package-offer', params: { requestId: offer.id } })}
+        />
       ))}
 
       {/* --- Today's action --- */}
@@ -281,63 +275,48 @@ export default function MemberHome() {
           </Pressable>
         </Card>
       )}
-      <Pressable onPress={() => router.push('/member/trainers')}>
-        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="calendar-outline" size={18} color={colors.p} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text variant="helper" weight="700">
-              Randevu al
-            </Text>
-            <Text variant="label" tone="sub">
-              Bir antrenörden özel ders saati seç
-            </Text>
-          </View>
-          <Text tone="sub">›</Text>
-        </Card>
-      </Pressable>
+      <InfoCard
+        icon="calendar-outline"
+        title="Randevu al"
+        subtitle="Bir antrenörden özel ders saati seç"
+        trailing
+        onPress={() => router.push('/member/trainers')}
+      />
 
       {/* --- Status --- */}
       <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
         DURUMUM
       </Text>
 
-      <Card style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-        <ProgressRing percent={percent} label={`%${percent}`} sublabel="hedef" />
-        <View style={{ flex: 1 }}>
-          <Text variant="body" weight="900">
-            Haftada {completedThisWeek}/{WEEKLY_TARGET} antrenman
-          </Text>
-          <Text variant="helper" tone="sub" style={{ marginTop: 3 }}>
-            {completedThisWeek >= WEEKLY_TARGET ? 'Bu haftaki hedefini tamamladın 🎉' : `Hedefe ${WEEKLY_TARGET - completedThisWeek} antrenman kaldı`}
-          </Text>
-          <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
-            {visits.length > 0 ? `Bu hafta ${visits.length} kez salona geldin` : 'Bu hafta henüz salona gelmedin'}
-          </Text>
-        </View>
-      </Card>
+      {/* The ring is a genuinely different leading visual, so it goes through
+          `lead` rather than being hand-built alongside a second layout. */}
+      <InfoCard
+        lead={<ProgressRing percent={percent} label={`%${percent}`} sublabel="hedef" />}
+        title={`Haftada ${completedThisWeek}/${WEEKLY_TARGET} antrenman`}
+        subtitle={
+          completedThisWeek >= WEEKLY_TARGET
+            ? 'Bu haftaki hedefini tamamladın 🎉'
+            : `Hedefe ${WEEKLY_TARGET - completedThisWeek} antrenman kaldı · ${
+                visits.length > 0 ? `bu hafta ${visits.length} kez geldin` : 'bu hafta henüz gelmedin'
+              }`
+        }
+      />
 
-      <Pressable onPress={() => router.push('/member/payments')}>
-        <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="card-outline" size={19} color={pendingPayment ? colors.warn : colors.p} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text variant="helper" weight="700">
-              Ödemelerim
-            </Text>
-            <Text variant="label" tone="sub">
-              {pendingPayment
-                ? `${pendingPayment.amount} ₺ bildirimin onay bekliyor`
-                : lastConfirmed
-                  ? `Son ödeme: ${lastConfirmed.amount} ₺ · ${lastConfirmed.createdAt.toLocaleDateString('tr-TR')}`
-                  : 'Henüz ödeme kaydın yok'}
-            </Text>
-          </View>
-          <Text tone="sub">›</Text>
-        </Card>
-      </Pressable>
+      <InfoCard
+        icon="card-outline"
+        title="Ödemelerim"
+        subtitle={
+          pendingPayment
+            ? `${pendingPayment.amount} ₺ bildirimin onay bekliyor`
+            : lastConfirmed
+              ? `Son ödeme: ${lastConfirmed.amount} ₺ · ${lastConfirmed.createdAt.toLocaleDateString('tr-TR')}`
+              : 'Henüz ödeme kaydın yok'
+        }
+        // A pending notice is the one state the member may need to act on.
+        subtitleTone={pendingPayment ? 'warn' : 'sub'}
+        trailing
+        onPress={() => router.push('/member/payments')}
+      />
     </ScrollView>
   );
 }

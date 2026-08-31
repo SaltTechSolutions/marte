@@ -1,21 +1,45 @@
-import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
 
-import { Card } from './Card';
+import { InfoCard } from './InfoCard';
 import { Text } from './Text';
 
 import { MemberCredit, MemberPackage } from '@/data/types';
 
 function daysLeft(endsAt: Date): number {
-  const ms = endsAt.getTime() - Date.now();
-  return Math.ceil(ms / 86400000);
+  return Math.ceil((endsAt.getTime() - Date.now()) / 86400000);
 }
 
 function remaining(credits: MemberCredit[]): number {
   return credits.reduce((sum, c) => sum + (c.total - c.used), 0);
+}
+
+/** A count with its unit, sized to sit beside body text rather than tower
+ *  over it — a lone oversized digit in the middle of a card was what made
+ *  the first version look unbalanced. */
+function CreditPill({ value, label }: { value: string; label: string }) {
+  const { colors, radius } = useAppTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.surf2,
+        borderRadius: radius.pill,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+      }}>
+      <Text variant="helper" weight="900">
+        {value}
+      </Text>
+      <Text variant="label" tone="sub">
+        {label}
+      </Text>
+    </View>
+  );
 }
 
 /**
@@ -23,12 +47,11 @@ function remaining(credits: MemberCredit[]): number {
  *
  * The gym takes money for a package and, until this existed, the app never
  * showed it back: `watchMemberCredits` was called in exactly one place — the
- * booking screen's "do you have a lesson left" check — so nobody could see
- * their own package name, expiry or remaining lessons anywhere.
+ * booking screen's "do you have a lesson left" check.
  *
- * Expiry is stated in days rather than a date because that is the question
- * being asked ("do I need to renew?"), and the last week is coloured as a
- * warning so it reads before it is read.
+ * Built on `InfoCard` so it carries the same leading icon, spacing and
+ * typography as every other card on the home screen; the credits hang below
+ * the row as pills.
  */
 export function MyPackageCard({
   activePackage,
@@ -39,97 +62,40 @@ export function MyPackageCard({
   groupCredits: MemberCredit[];
   ptCredits: MemberCredit[];
 }) {
-  const { colors, spacing, radius } = useAppTheme();
+  const { spacing } = useAppTheme();
 
   if (!activePackage) {
     return (
-      <Card style={{ gap: 6 }}>
-        <Text variant="label" tone="sub">
-          PAKETİM
-        </Text>
-        <Text variant="helper" tone="sub">
-          Aktif paketin yok. Salon yöneticisi sana bir paket atadığında burada görünür.
-        </Text>
-      </Card>
+      <InfoCard
+        label="PAKETİM"
+        icon="ribbon-outline"
+        title="Aktif paketin yok"
+        subtitle="Salon yöneticisi sana bir paket atadığında burada görünür."
+      />
     );
   }
 
   const left = daysLeft(activePackage.endsAt);
-  const expiringSoon = left <= 7;
   const group = remaining(groupCredits);
   const pt = remaining(ptCredits);
   const unlimitedGroup = activePackage.entitlements.groupClasses?.unlimited === true;
+  const showPills = unlimitedGroup || group > 0 || pt > 0;
 
   return (
-    <Card style={{ gap: spacing.sm }}>
-      <Text variant="label" tone="sub">
-        PAKETİM
-      </Text>
-
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="ribbon-outline" size={19} color={colors.p} />
+    <InfoCard
+      label="PAKETİM"
+      icon="ribbon-outline"
+      title={activePackage.packageName}
+      // Days rather than a date: the question being asked is "do I need to
+      // renew?". The last week is coloured so it reads before it is read.
+      subtitle={`${left > 0 ? `${left} gün kaldı` : 'Süresi doldu'} · ${activePackage.endsAt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`}
+      subtitleTone={left <= 7 ? 'warn' : 'sub'}>
+      {showPills ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.xs }}>
+          {(unlimitedGroup || group > 0) && <CreditPill value={unlimitedGroup ? '∞' : String(group)} label="grup dersi" />}
+          {pt > 0 && <CreditPill value={String(pt)} label="özel ders" />}
         </View>
-        <View style={{ flex: 1 }}>
-          <Text variant="helper" weight="700" numberOfLines={1}>
-            {activePackage.packageName}
-          </Text>
-          <Text variant="label" style={{ color: expiringSoon ? colors.warn : colors.sub }}>
-            {left > 0 ? `${left} gün kaldı` : 'Süresi doldu'}
-            {' · '}
-            {activePackage.endsAt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}
-          </Text>
-        </View>
-      </View>
-
-      {(unlimitedGroup || group > 0 || pt > 0) && (
-        // Inline pills rather than big centred numbers: with only one credit
-        // type a full-width column left a single huge digit floating in the
-        // middle of the card, out of scale with the two lines above it.
-        // Pills keep the weight on the left edge with everything else and
-        // stay balanced at zero, one or two entries.
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(unlimitedGroup || group > 0) && (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: colors.surf2,
-                borderRadius: radius.pill,
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-              }}>
-              <Text variant="helper" weight="900">
-                {unlimitedGroup ? '∞' : group}
-              </Text>
-              <Text variant="label" tone="sub">
-                grup dersi
-              </Text>
-            </View>
-          )}
-          {pt > 0 && (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: colors.surf2,
-                borderRadius: radius.pill,
-                paddingHorizontal: 12,
-                paddingVertical: 7,
-              }}>
-              <Text variant="helper" weight="900">
-                {pt}
-              </Text>
-              <Text variant="label" tone="sub">
-                özel ders
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-    </Card>
+      ) : null}
+    </InfoCard>
   );
 }
