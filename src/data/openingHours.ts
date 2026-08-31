@@ -23,6 +23,12 @@ export function gymWindowFor(hours: OpeningHours | undefined, day: Weekday): Day
   return hours[WEEKDAY_TO_INDEX[day]] ?? null;
 }
 
+/** Same, for a concrete date — the class form picks a day, not a weekday. */
+export function gymWindowForDate(hours: OpeningHours | undefined, date: Date): DayHours | null | undefined {
+  if (!hours) return undefined;
+  return hours[String(date.getDay())] ?? null;
+}
+
 export function hasOpeningHours(hours: OpeningHours | undefined): boolean {
   return !!hours && Object.keys(hours).length > 0;
 }

@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { DateStepper, dateFromOffset, offsetFromDate } from '@/components/DateStepper';
-import { TimeStepper } from '@/components/TimeStepper';
+import { TimeStepper, toHHMM, toMinutes } from '@/components/TimeStepper';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Stepper } from '@/components/Stepper';
@@ -22,6 +22,7 @@ import { confirmDestructive } from '@/utils/confirm';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { createClass, deleteClass, updateClass, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
+import { gymWindowForDate } from '@/data/openingHours';
 import { ClassSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -35,9 +36,9 @@ function sessionDay(d: Date) {
 }
 
 export default function AdminClasses() {
-  const { spacing } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
   const toast = useToast();
-  const { activeMembership } = useAuth();
+  const { activeMembership, activeTenant } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [sessions, setSessions] = useState<ClassSession[]>([]);
@@ -110,6 +111,30 @@ export default function AdminClasses() {
    *  would create a class this screen could never show again. */
   const maxOffset = offsetFromDate(listWindow.to);
 
+  /**
+   * The gym's window on the chosen day, and the bounds the time stepper gets.
+   *
+   * `undefined` = this gym has never set opening hours, so nothing is clamped.
+   * `null` = the gym is shut that day; the class cannot be scheduled at all.
+   *
+   * The class has to *end* by closing time, not merely start before it, so the
+   * ceiling moves with the duration. A window shorter than the class leaves no
+   * legal start at all — the bound collapses onto the opening time and the
+   * warning below says why, rather than the stepper just refusing to move.
+   */
+  const gymWindow = gymWindowForDate(activeTenant?.openingHours, dateFromOffset(dayOffset));
+  const timeBounds = gymWindow
+    ? {
+        min: toHHMM(Math.min(toMinutes(gymWindow.open), toMinutes(time))),
+        max: toHHMM(Math.max(toMinutes(gymWindow.open), toMinutes(gymWindow.close) - duration)),
+      }
+    : undefined;
+  const gymClosedThatDay = gymWindow === null;
+  const outsideGymHours =
+    !!gymWindow &&
+    (toMinutes(time) < toMinutes(gymWindow.open) ||
+      toMinutes(time) + duration > toMinutes(gymWindow.close));
+
   const durationChoices = useMemo(
     () => (DURATION_PRESETS.includes(duration) ? DURATION_PRESETS : [...DURATION_PRESETS, duration]),
     [duration],
@@ -121,7 +146,7 @@ export default function AdminClasses() {
   }, [tenantId]);
 
   const submit = async () => {
-    if (!tenantId || !name.trim() || !trainer.trim()) return;
+    if (!tenantId || !name.trim() || !trainer.trim() || gymClosedThatDay) return;
     setSubmitting(true);
     try {
       const [hh, mm] = time.split(':').map(Number);
@@ -228,7 +253,27 @@ export default function AdminClasses() {
           <Text variant="label" tone="sub">
             SAAT
           </Text>
-          <TimeStepper value={time} onChange={setTime} />
+          {gymClosedThatDay ? (
+            <Text variant="helper" style={{ color: colors.warn }}>
+              Salon o gün kapalı. Ders eklemek için başka bir gün seç ya da
+              çalışma saatlerini güncelle.
+            </Text>
+          ) : (
+            <>
+              <TimeStepper
+                value={time}
+                onChange={setTime}
+                min={timeBounds?.min}
+                max={timeBounds?.max}
+                hint={gymWindow ? `başlangıç · salon ${gymWindow.open}–${gymWindow.close}` : undefined}
+              />
+              {outsideGymHours && (
+                <Text variant="label" style={{ color: colors.warn }}>
+                  Bu ders salonun {gymWindow!.open}–{gymWindow!.close} saatleri dışına taşıyor.
+                </Text>
+              )}
+            </>
+          )}
 
           <Text variant="label" tone="sub">
             SÜRE
@@ -247,7 +292,7 @@ export default function AdminClasses() {
           <Button
             label={submitting ? (editing ? 'Kaydediliyor…' : 'Ekleniyor…') : editing ? 'Değişikliği kaydet' : 'Dersi ekle'}
             critical
-            disabled={!name.trim() || !trainer.trim() || submitting}
+            disabled={!name.trim() || !trainer.trim() || submitting || gymClosedThatDay}
             onPress={submit}
           />
           {editing && editing.bookedUserIds.length > 0 && (
