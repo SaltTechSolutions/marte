@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { GymCodeCard } from '@/components/GymCodeCard';
 import { GymInfoCard } from '@/components/GymInfoCard';
+import { InfoCard } from '@/components/InfoCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
@@ -16,6 +17,7 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { getTenantContact } from '@/data/firebase/tenantRepo';
+import { formatBirthDate } from '@/utils/birthDate';
 import { PackageChangeRequest, TenantContact } from '@/data/types';
 import { signOutAndForget } from '@/services/signOut';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -85,6 +87,24 @@ export default function MemberProfile() {
         ) : null}
         {activeMembership?.status === 'active' && <StatusBadge label={`${tenantName} · Aktif üyelik`} tone="ok" />}
       </Card>
+
+      {activeMembership && (
+        <InfoCard
+          icon="person-outline"
+          title="Bilgilerim"
+          // A missing birth date is called out rather than left blank: the
+          // sign-up screen promised to ask later and never did, so most
+          // members have none and have no reason to suspect it is missing.
+          subtitle={
+            activeMembership.birthDate
+              ? `${activeMembership.phone ? `${activeMembership.phone} · ` : ''}${formatBirthDate(activeMembership.birthDate)}`
+              : 'Doğum tarihin eksik — eklemek için dokun'
+          }
+          subtitleTone={activeMembership.birthDate ? 'sub' : 'warn'}
+          trailing
+          onPress={() => router.push('/member/edit-profile')}
+        />
+      )}
 
       {packageOffers.map((offer) => (
         <Pressable key={offer.id} onPress={() => router.push({ pathname: '/member/package-offer', params: { requestId: offer.id } })}>
