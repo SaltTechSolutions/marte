@@ -269,3 +269,47 @@ export async function leaveTenant(membershipDocId: string): Promise<void> {
     leftAt: serverTimestamp(),
   });
 }
+
+/**
+ * A member nominates a parent by e-mail (MEMBER-5b).
+ *
+ * A callable, not a direct write: finding the parent means querying the roster
+ * by e-mail, which rules cannot do and which a plain member is deliberately
+ * not allowed to list. Returns the matched parent's name so the screen can
+ * confirm who was found rather than just saying "sent".
+ */
+export async function requestGuardian(tenantId: string, guardianEmail: string): Promise<string> {
+  const call = httpsCallable<{ tenantId: string; guardianEmail: string }, { guardianName: string }>(
+    functions,
+    'requestGuardian',
+  );
+  const result = await call({ tenantId, guardianEmail });
+  return result.data.guardianName;
+}
+
+/** The parent answers. Approving records the KVKK consent server-side. */
+export async function respondToGuardian(tenantId: string, childId: string, approve: boolean): Promise<void> {
+  const call = httpsCallable<{ tenantId: string; childId: string; approve: boolean }, { approved: boolean }>(
+    functions,
+    'respondToGuardian',
+  );
+  await call({ tenantId, childId, approve });
+}
+
+/**
+ * The children linked to this member — both the ones still asking and the ones
+ * already approved, because the parent needs to act on the first group.
+ */
+export function watchMyChildren(
+  tenantId: string,
+  guardianId: string,
+  onChange: (children: TenantMembership[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'tenant_memberships'),
+    where('tenantId', '==', tenantId),
+    where('guardianId', '==', guardianId),
+  );
+  return watchQuery('Bağlı çocuklar', q, (snap) => snap.docs.map(membershipFromDoc), onChange, onError);
+}

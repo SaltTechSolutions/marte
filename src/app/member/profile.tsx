@@ -15,10 +15,11 @@ import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
+import { watchMyChildren } from '@/data/firebase/membershipRepo';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { getTenantContact } from '@/data/firebase/tenantRepo';
 import { formatBirthDate } from '@/utils/birthDate';
-import { PackageChangeRequest, TenantContact } from '@/data/types';
+import { PackageChangeRequest, TenantContact, TenantMembership } from '@/data/types';
 import { signOutAndForget } from '@/services/signOut';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -47,6 +48,15 @@ export default function MemberProfile() {
     return watchPendingPackageChangeRequests(tenantId, user.uid, setPackageOffers);
   }, [tenantId, user]);
 
+  // Children linked to this member. The entry point only appears when there
+  // are any: a parent link is uncommon, and a permanently visible "Ebeveyn
+  // onayı" row would be a dead end for almost everyone.
+  const [children, setChildren] = useState<TenantMembership[]>([]);
+  useEffect(() => {
+    if (!tenantId || !user) return;
+    return watchMyChildren(tenantId, user.uid, setChildren);
+  }, [tenantId, user]);
+
   // Contact lives in a members-only subdocument, so it needs its own read.
   // Failing quietly is right here: the card simply omits the contact lines
   // rather than the profile screen reporting an error the member cannot act on.
@@ -61,6 +71,8 @@ export default function MemberProfile() {
       alive = false;
     };
   }, [tenantId]);
+
+  const pendingChildCount = children.filter((c) => c.guardianStatus === 'pending').length;
 
   const signOut = () =>
     confirmDestructive({
@@ -87,6 +99,22 @@ export default function MemberProfile() {
         ) : null}
         {activeMembership?.status === 'active' && <StatusBadge label={`${tenantName} · Aktif üyelik`} tone="ok" />}
       </Card>
+
+      {pendingChildCount > 0 || children.length > 0 ? (
+        <InfoCard
+          icon="people-outline"
+          outlined={pendingChildCount > 0}
+          title={pendingChildCount > 0 ? 'Ebeveyn onayı bekleniyor' : 'Bağlı çocuklarım'}
+          subtitle={
+            pendingChildCount > 0
+              ? `${pendingChildCount} istek senin onayını bekliyor`
+              : `${children.length} çocuk sana bağlı`
+          }
+          subtitleTone={pendingChildCount > 0 ? 'warn' : 'sub'}
+          trailing
+          onPress={() => router.push('/member/guardian-requests')}
+        />
+      ) : null}
 
       {activeMembership && (
         <InfoCard

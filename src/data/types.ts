@@ -79,6 +79,9 @@ export interface TenantSubscription {
   platform?: 'ios' | 'android';
 }
 
+/** The parent's own answer, separate from the gym's `MembershipStatus`. */
+export type GuardianStatus = 'pending' | 'approved' | 'rejected';
+
 export type MembershipRole = 'member' | 'trainer' | 'admin';
 /**
  * `suspended` is an admin action (disciplinary / unpaid); `left` is the
@@ -131,6 +134,29 @@ export interface TenantMembership {
    */
   phone?: string;
   birthDate?: Date;
+  /**
+   * Under-18 members are linked to a parent who is themselves a real member of
+   * the gym (decision 1) — the parent pays, books and cancels on the child's
+   * behalf, so free-text parent details would not have been enough.
+   *
+   * Two-sided: `guardianStatus` is the PARENT's answer and is a different axis
+   * from `status`, which is the GYM's. Collapsing them into one field leaves
+   * "which approval is missing?" unanswerable, and both are genuinely pending
+   * at the same time while a child signs up.
+   *
+   * Written only by the `requestGuardian` / `respondToGuardian` callables —
+   * rules forbid clients from touching these fields directly, because a child
+   * who could write `guardianStatus` would be approving their own consent.
+   */
+  guardianId?: string;
+  /** Denormalised for the child's screen; kept in step by the callable and by
+   *  `syncGuardianName`, the same problem `tenantName` has. */
+  guardianName?: string;
+  guardianStatus?: GuardianStatus;
+  /** KVKK: processing a minor's data needs the parent's consent, and the
+   *  consent has to be recorded — when, by whom, against which text. */
+  guardianConsentAt?: Date;
+  guardianConsentVersion?: string;
 }
 
 export interface GymClass {

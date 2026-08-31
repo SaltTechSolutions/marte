@@ -62,6 +62,11 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     shortCode: data.shortCode,
     phone: data.phone,
     birthDate: toDate(data.birthDate),
+    guardianId: data.guardianId,
+    guardianName: data.guardianName,
+    guardianStatus: data.guardianStatus,
+    guardianConsentAt: toDate(data.guardianConsentAt),
+    guardianConsentVersion: data.guardianConsentVersion,
   };
 }
 

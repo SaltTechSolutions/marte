@@ -9,10 +9,11 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { updateMemberDetails } from '@/data/firebase/membershipRepo';
+import { requestGuardian, updateMemberDetails } from '@/data/firebase/membershipRepo';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { ageFrom, formatBirthDate, parseBirthDate } from '@/utils/birthDate';
+import { Card } from '@/components/Card';
 
 /**
  * The member correcting their own details (MEMBER-2, and the precondition for
@@ -48,12 +49,36 @@ function EditForm({ membership }: { membership: TenantMembership }) {
   const [phone, setPhone] = useState(membership.phone ?? '');
   const [birthDate, setBirthDate] = useState(formatBirthDate(membership.birthDate));
   const [saving, setSaving] = useState(false);
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [linking, setLinking] = useState(false);
 
   const trimmedName = name.trim();
   const parsed = parseBirthDate(birthDate);
   // Optional, but a half-typed date must not save silently.
   const birthDateValid = birthDate.trim() === '' || parsed !== null;
   const canSave = trimmedName.length > 0 && birthDateValid && !saving;
+
+  // Derived from what is SAVED, not from the field being typed into.
+  const isMinor = !!membership.birthDate && ageFrom(membership.birthDate) < 18;
+  const needsGuardian = isMinor && membership.guardianStatus !== 'approved';
+
+  const linkGuardian = async () => {
+    if (linking) return;
+    setLinking(true);
+    try {
+      const name = await requestGuardian(membership.tenantId, guardianEmail);
+      toast.success(`${name} onaya davet edildi`);
+      setGuardianEmail('');
+    } catch (e) {
+      // The callable's own message is the useful one here — "no active member
+      // with that e-mail" tells the child exactly what to do next, where a
+      // generic failure would not.
+      const message = (e as { message?: string }).message;
+      reportError(e, toast, message || 'İstek gönderilemedi, tekrar dene.');
+    } finally {
+      setLinking(false);
+    }
+  };
 
   const save = async () => {
     if (!canSave) return;
@@ -104,6 +129,52 @@ function EditForm({ membership }: { membership: TenantMembership }) {
       ) : null}
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={!canSave} onPress={save} />
+
+      {/* Only once the birth date is SAVED, not merely typed: the guardian
+          flow writes to the server, and offering it against an unsaved date
+          would let someone link a parent to a record that still says nothing
+          about their age. */}
+      {isMinor && (
+        <Card style={{ gap: spacing.sm }} outlineColor={needsGuardian ? colors.warn : undefined}>
+          <Text variant="label" tone="sub">
+            EBEVEYN ONAYI
+          </Text>
+          {membership.guardianStatus === 'approved' ? (
+            <Text variant="helper">
+              {membership.guardianName} onayladı. Senin adına ödeme yapabilir ve randevu alabilir.
+            </Text>
+          ) : membership.guardianStatus === 'pending' ? (
+            <Text variant="helper" tone="sub">
+              {membership.guardianName} onayı bekleniyor. Onaylayana kadar salon üyeliğin
+              başlatılamaz.
+            </Text>
+          ) : (
+            <>
+              <Text variant="helper" tone="sub">
+                18 yaşından küçüksün, bu yüzden bir ebeveyninin onayı gerekiyor. Ebeveynin
+                salona zaten üye olmalı — e-postasını yaz.
+              </Text>
+              {membership.guardianStatus === 'rejected' && (
+                <Text variant="label" style={{ color: colors.warn }}>
+                  Önceki isteğin onaylanmadı. Başka bir ebeveyn seçebilirsin.
+                </Text>
+              )}
+              <TextField
+                placeholder="ebeveyn@ornek.com"
+                value={guardianEmail}
+                onChangeText={setGuardianEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <Button
+                label={linking ? '…' : 'Onay isteği gönder'}
+                disabled={!guardianEmail.trim() || linking}
+                onPress={linkGuardian}
+              />
+            </>
+          )}
+        </Card>
+      )}
     </KeyboardAwareScroll>
   );
 }
