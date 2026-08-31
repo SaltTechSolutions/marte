@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { MyPackageCard } from '@/components/MyPackageCard';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -13,11 +14,12 @@ import { toGymClass } from '@/data/classDisplay';
 import { reportError } from '@/data/errors';
 import { watchMyCheckins } from '@/data/firebase/checkinRepo';
 import { watchClassesForTenant } from '@/data/firebase/classRepo';
+import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
 import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
-import { GymClass, PackageChangeRequest, Payment, PtSession } from '@/data/types';
+import { GymClass, MemberCredit, MemberPackage, PackageChangeRequest, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
 
@@ -68,6 +70,9 @@ export default function MemberHome() {
   const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [visits, setVisits] = useState<Date[]>([]);
   const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
+  const [packages, setPackages] = useState<MemberPackage[]>([]);
+  const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
+  const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -103,6 +108,21 @@ export default function MemberHome() {
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchPendingPackageChangeRequests(tenantId, uid, setPackageOffers);
+  }, [tenantId, uid]);
+
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchMemberPackages(tenantId, uid, setPackages);
+  }, [tenantId, uid]);
+
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchMemberCredits(tenantId, uid, 'groupClass', setGroupCredits);
+  }, [tenantId, uid]);
+
+  useEffect(() => {
+    if (!tenantId || !uid) return;
+    return watchMemberCredits(tenantId, uid, 'ptLesson', setPtCredits);
   }, [tenantId, uid]);
 
   const weekStart = useMemo(() => startOfWeek(), []);
@@ -199,6 +219,16 @@ export default function MemberHome() {
           </Pressable>
         </>
       )}
+
+      {/* What the member bought comes before what they can do with it —
+          "kaç dersim kaldı" is the question they open the app with. */}
+      <View style={{ marginTop: 8 }}>
+        <MyPackageCard
+          activePackage={packages.find((p) => p.status === 'active') ?? null}
+          groupCredits={groupCredits}
+          ptCredits={ptCredits}
+        />
+      </View>
 
       {/* --- What's coming --- */}
       <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
