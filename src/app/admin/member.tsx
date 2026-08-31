@@ -109,6 +109,15 @@ export default function AdminMemberDetail() {
         onPress={() => router.push({ pathname: '/admin/assign-package', params: { memberId, memberName: name } })}
       />
 
+      {/* Recording a payment starts from the person, not from the ledger —
+          the admin is already looking at them, so the member-picking step
+          disappears entirely (ADMIN-6). */}
+      <Button
+        label="+ Ödeme ekle"
+        variant="secondary"
+        onPress={() => router.push({ pathname: '/admin/payments', params: { memberId } })}
+      />
+
       {(ptRemaining > 0 || groupRemaining > 0) && (
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {ptRemaining > 0 && (

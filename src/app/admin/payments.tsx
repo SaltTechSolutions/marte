@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
@@ -27,6 +28,10 @@ function formatAmount(n: number): string {
 }
 
 /** Manual payment ledger — admin enters what they received, confirms/rejects member-submitted notices. */
+function memberLabel(m: TenantMembership): string {
+  return m.userDisplayName || m.userEmail || 'Üye';
+}
+
 export default function AdminPayments() {
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
@@ -36,8 +41,16 @@ export default function AdminPayments() {
   // undefined until the first snapshot; [] means no payments were ever logged.
   const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [members, setMembers] = useState<TenantMembership[]>([]);
-  const [adding, setAdding] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<TenantMembership | null>(null);
+  // `null` = untouched, so the route param still decides. Derived rather
+  // than synced in an effect: the param is knowable at render time.
+  const [addingOverride, setAddingOverride] = useState<boolean | null>(null);
+  const [memberOverride, setMemberOverride] = useState<{ value: TenantMembership | null } | null>(null);
+  const [memberQuery, setMemberQuery] = useState('');
+
+  // Arriving from a member's detail screen: the person is already decided,
+  // so the form opens on them and the search never appears. This is the
+  // short path — picking a member out of a list is the step worth skipping.
+  const { memberId: presetMemberId } = useLocalSearchParams<{ memberId?: string }>();
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('cash');
   const [note, setNote] = useState('');
@@ -61,6 +74,22 @@ export default function AdminPayments() {
     setRetryKey((k) => k + 1);
   };
 
+  const presetMember = useMemo(
+    () => (presetMemberId ? (members.find((m) => m.userId === presetMemberId) ?? null) : null),
+    [members, presetMemberId],
+  );
+  // An explicit tap always wins; until then the route param stands.
+  const selectedMember = memberOverride ? memberOverride.value : presetMember;
+  const adding = addingOverride ?? !!presetMember;
+
+  /** Capped: an unfiltered or very loose query would rebuild the same wall
+   *  this search replaced. */
+  const memberMatches = useMemo(() => {
+    const q = memberQuery.trim().toLocaleLowerCase('tr');
+    if (!q) return [];
+    return members.filter((m) => memberLabel(m).toLocaleLowerCase('tr').includes(q)).slice(0, 6);
+  }, [members, memberQuery]);
+
   if (!tenantId) {
     return <AccessGuard title="Salon yönetici oturumu gerekli" />;
   }
@@ -69,8 +98,8 @@ export default function AdminPayments() {
   const history = (payments ?? []).filter((p) => p.status !== 'pending');
 
   const resetForm = () => {
-    setAdding(false);
-    setSelectedMember(null);
+    setAddingOverride(false);
+    setMemberOverride({ value: null });
     setAmount('');
     setMethod('cash');
     setNote('');
@@ -165,16 +194,42 @@ export default function AdminPayments() {
           <Text variant="helper" weight="700">
             Ödeme kaydı ekle
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {members.map((m) => (
-              <Chip
-                key={m.id}
-                label={m.userDisplayName || m.userEmail || 'Üye'}
-                selected={selectedMember?.id === m.id}
-                onPress={() => setSelectedMember(m)}
+          {/* Was every member as a wrapped chip — at 51 members that buried
+              the amount field under a wall the admin had to scroll past, and
+              it only got worse as the gym grew. Nothing is listed until
+              something is typed. */}
+          {selectedMember ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text variant="helper" weight="700" style={{ flex: 1 }} numberOfLines={1}>
+                {memberLabel(selectedMember)}
+              </Text>
+              <Button
+                label="Değiştir"
+                variant="ghost"
+                compact
+                onPress={() => {
+                  setMemberOverride({ value: null });
+                  setMemberQuery('');
+                }}
               />
-            ))}
-          </View>
+            </View>
+          ) : (
+            <>
+              <TextField placeholder="Üye ara (ad veya e-posta)" value={memberQuery} onChangeText={setMemberQuery} autoCapitalize="none" />
+              {memberQuery.trim().length > 0 &&
+                (memberMatches.length === 0 ? (
+                  <Text variant="label" tone="sub">
+                    Eşleşen üye yok.
+                  </Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {memberMatches.map((m) => (
+                      <Chip key={m.id} label={memberLabel(m)} onPress={() => setMemberOverride({ value: m })} />
+                    ))}
+                  </View>
+                ))}
+            </>
+          )}
           <TextField placeholder="Tutar (₺)" value={amount} onChangeText={setAmount} keyboardType="numeric" />
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Chip label="Nakit" selected={method === 'cash'} onPress={() => setMethod('cash')} />
@@ -187,7 +242,7 @@ export default function AdminPayments() {
           </View>
         </View>
       ) : (
-        <Button label="+ Ödeme ekle" critical onPress={() => setAdding(true)} />
+        <Button label="+ Ödeme ekle" critical onPress={() => setAddingOverride(true)} />
       )}
 
       <Text variant="label" tone="sub">
