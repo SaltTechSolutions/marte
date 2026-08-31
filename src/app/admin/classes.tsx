@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
+import { DateStepper, dateFromOffset, offsetFromDate } from '@/components/DateStepper';
 import { TimeStepper } from '@/components/TimeStepper';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
@@ -24,11 +25,6 @@ import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
 import { ClassSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
-const DAY_OFFSETS = [
-  { label: 'Bugün', days: 0 },
-  { label: 'Yarın', days: 1 },
-  { label: '2 gün sonra', days: 2 },
-];
 const DURATION_PRESETS = [30, 50, 60];
 
 function sessionTime(d: Date) {
@@ -59,25 +55,31 @@ export default function AdminClasses() {
   const [editing, setEditing] = useState<ClassSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!tenantId) return;
-    // From the start of this month onward — the admin schedules ahead and
-    // occasionally reviews the recent past, but never the whole history.
+  // From the start of this month onward — the admin schedules ahead and
+  // occasionally reviews the recent past, but never the whole history.
+  // Computed once per mount: a value that changes every render would tear
+  // the subscription down and rebuild it on each pass.
+  const [listWindow] = useState(() => {
     const from = new Date();
     from.setDate(1);
     from.setHours(0, 0, 0, 0);
     const to = new Date(from);
     to.setMonth(to.getMonth() + 3);
+    return { from, to };
+  });
+
+  useEffect(() => {
+    if (!tenantId) return;
     return watchClassesForTenant(
       tenantId,
-      { from, to },
+      listWindow,
       (s) => {
         setSessions(s);
         setLoading(false);
       },
       () => setLoading(false),
     );
-  }, [tenantId]);
+  }, [tenantId, listWindow]);
 
   const closeForm = () => {
     setShowForm(false);
@@ -86,9 +88,9 @@ export default function AdminClasses() {
     setTrainer('');
   };
 
-  /** Opens the shared form on an existing class. The day and time chips get
-   *  the class's own values appended when they are not among the presets,
-   *  otherwise reopening a 07:15 class would silently move it to 09:00. */
+  /** Opens the shared form on an existing class. Duration keeps the class's
+   *  own value appended when it is not among the presets, otherwise reopening
+   *  a 75-minute class would silently shorten it to 60. */
   const startEdit = (s: ClassSession) => {
     setEditing(s);
     setName(s.name);
@@ -96,24 +98,17 @@ export default function AdminClasses() {
     setDuration(s.durationMinutes);
     setCapacity(s.capacity);
     setTime(sessionTime(s.date));
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    const target = new Date(s.date);
-    target.setHours(0, 0, 0, 0);
-    setDayOffset(Math.round((target.getTime() - midnight.getTime()) / 86400000));
+    setDayOffset(offsetFromDate(s.date));
     setShowForm(true);
   };
 
-  /** Presets plus, while editing, the class's own day when it is not one of
-   *  them — a class next Tuesday must stay next Tuesday unless the admin
-   *  deliberately moves it. */
-  const dayChoices = useMemo(() => {
-    const base = DAY_OFFSETS.map((d) => ({ label: d.label, days: d.days }));
-    if (base.some((d) => d.days === dayOffset)) return base;
-    const d = new Date();
-    d.setDate(d.getDate() + dayOffset);
-    return [...base, { label: d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }), days: dayOffset }];
-  }, [dayOffset]);
+  /** New classes cannot start before today. An existing one already in the
+   *  past keeps its own date as the floor — editing yesterday's capacity must
+   *  not silently drag the class forward to today. */
+  const minOffset = editing ? Math.min(0, offsetFromDate(editing.date)) : 0;
+  /** The far edge of the window the list below watches. Scheduling past it
+   *  would create a class this screen could never show again. */
+  const maxOffset = offsetFromDate(listWindow.to);
 
   const durationChoices = useMemo(
     () => (DURATION_PRESETS.includes(duration) ? DURATION_PRESETS : [...DURATION_PRESETS, duration]),
@@ -130,8 +125,7 @@ export default function AdminClasses() {
     setSubmitting(true);
     try {
       const [hh, mm] = time.split(':').map(Number);
-      const date = new Date();
-      date.setDate(date.getDate() + dayOffset);
+      const date = dateFromOffset(dayOffset);
       date.setHours(hh, mm, 0, 0);
       if (editing) {
         await updateClass(editing.id, {
@@ -229,11 +223,7 @@ export default function AdminClasses() {
           <Text variant="label" tone="sub">
             GÜN
           </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {dayChoices.map((d) => (
-              <Chip key={d.days} label={d.label} selected={dayOffset === d.days} onPress={() => setDayOffset(d.days)} />
-            ))}
-          </View>
+          <DateStepper value={dayOffset} onChange={setDayOffset} min={minOffset} max={maxOffset} />
 
           <Text variant="label" tone="sub">
             SAAT
