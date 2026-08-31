@@ -38,6 +38,17 @@ export interface Tenant {
   updatedAt?: Date;
 }
 
+/**
+ * How members reach the gym. Lives at `tenants/{id}/private/contact`, not on
+ * the tenant doc: that doc is readable by every signed-in user so join-by-code
+ * works, and putting a phone number there would publish every gym's number to
+ * everyone with an account. Gated to tenant members by the rules.
+ */
+export interface TenantContact {
+  phone?: string;
+  email?: string;
+}
+
 export type SubscriptionStatus = 'active' | 'expired' | 'cancelled';
 
 export interface TenantSubscription {

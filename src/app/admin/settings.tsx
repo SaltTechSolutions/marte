@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
@@ -11,11 +11,20 @@ import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
+import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { updateTenantBranding, uploadTenantLogo } from '@/data/firebase/tenantRepo';
+import {
+  getTenantContact,
+  updateTenantBranding,
+  updateTenantContact,
+  updateTenantIdentity,
+  uploadTenantLogo,
+} from '@/data/firebase/tenantRepo';
 import { Tenant, TenantBranding } from '@/data/types';
+import { reportError } from '@/data/errors';
 import { shiftHue } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { ThemeMode } from '@/theme/tokens';
@@ -45,17 +54,46 @@ export default function AdminSettings() {
 function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Tenant }) {
   const router = useRouter();
   const { colors, spacing, radius, mode, setMode, applyTenantBranding } = useAppTheme();
+  const toast = useToast();
   const { refreshMembership } = useAuth();
 
-  const [appName] = useState(tenant.branding.appName);
+  // The gym's own name, not just its branding label — one field drives both.
+  // It used to be read-only (`const [appName] = useState`), so the name shown
+  // to every member could not be changed from anywhere in the app.
+  const [name, setName] = useState(tenant.branding.appName || tenant.name);
+  const [address, setAddress] = useState(tenant.address ?? '');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [primaryColor, setPrimaryColor] = useState(tenant.branding.primaryColor);
   const [logoUri, setLogoUri] = useState<string | undefined>(tenant.branding.logoUrl);
   const [pickedLocalUri, setPickedLocalUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [contactUnavailable, setContactUnavailable] = useState(false);
+
+  // Contact lives in a members-only subdocument, so it is a separate read.
+  // Loading (not deriving) state: there is nothing on screen to compute it
+  // from — it has to come back from Firestore before the fields can show it.
+  useEffect(() => {
+    let alive = true;
+    getTenantContact(tenantId)
+      .then((c) => {
+        if (!alive) return;
+        setPhone(c.phone ?? '');
+        setEmail(c.email ?? '');
+      })
+      .catch(() => {
+        // A failed read must not blank out a saved number: leaving the fields
+        // empty and then saving would wipe the contact details.
+        if (alive) setContactUnavailable(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tenantId]);
 
   const draftBranding = (color: string, themeMode: ThemeMode): TenantBranding => ({
-    appName,
+    appName: name,
     primaryColor: color,
     accentColor: shiftHue(color, 40),
     logoUrl: logoUri,
@@ -90,8 +128,17 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
     }
   };
 
+  const trimmedName = name.trim();
+
+  /** Any edit invalidates the "Kaydedildi ✓" label — otherwise the button
+   *  claims the change is saved while it is still only in the field. */
+  const edit = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setSaved(false);
+  };
+
   const save = async () => {
-    if (saving) return;
+    if (saving || !trimmedName) return;
     setSaving(true);
     try {
       let finalLogoUrl = logoUri;
@@ -99,18 +146,30 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         finalLogoUrl = await uploadTenantLogo(tenantId, pickedLocalUri);
       }
       const branding: TenantBranding = {
-        appName,
+        appName: trimmedName,
         primaryColor,
         accentColor: shiftHue(primaryColor, 40),
         themeMode: mode,
         ...(finalLogoUrl ? { logoUrl: finalLogoUrl } : {}),
       };
       await updateTenantBranding(tenantId, branding);
+      // The gym doc carries the name members join by and the roster shows;
+      // branding.appName alone would rename the header and nothing else.
+      await updateTenantIdentity(tenantId, { name: trimmedName, address });
+      // Skipped when the read failed — writing the empty fields would erase
+      // details we never managed to show.
+      if (!contactUnavailable) {
+        await updateTenantContact(tenantId, { phone, email });
+      }
       applyTenantBranding(branding);
       setLogoUri(finalLogoUrl);
       setPickedLocalUri(null);
       await refreshMembership();
       setSaved(true);
+    } catch (e) {
+      // Without this the admin taps Kaydet, the spinner stops, and nothing
+      // says the save never happened.
+      reportError(e, toast, 'Kaydedilemedi, tekrar dene.');
     } finally {
       setSaving(false);
     }
@@ -119,6 +178,39 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
       <GymCodeCard tenantName={tenant.name} code={tenant.code} showQrAction />
+
+      <Text variant="h3">Salon bilgileri</Text>
+
+      <Text variant="label" tone="sub">
+        SALON ADI
+      </Text>
+      <TextField placeholder="Salonun adı" value={name} onChangeText={edit(setName)} />
+
+      <Text variant="label" tone="sub">
+        ADRES
+      </Text>
+      <TextField placeholder="Sokak, mahalle, ilçe" value={address} onChangeText={edit(setAddress)} multiline />
+
+      <Text variant="label" tone="sub">
+        TELEFON
+      </Text>
+      <TextField placeholder="0212 000 00 00" value={phone} onChangeText={edit(setPhone)} keyboardType="phone-pad" />
+
+      <Text variant="label" tone="sub">
+        E-POSTA
+      </Text>
+      <TextField
+        placeholder="salon@ornek.com"
+        value={email}
+        onChangeText={edit(setEmail)}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      <Text variant="label" tone="sub">
+        {contactUnavailable
+          ? 'İletişim bilgileri okunamadı — kaydetsen de telefon ve e-posta değişmeyecek.'
+          : 'Telefon ve e-posta yalnızca salon üyelerine görünür.'}
+      </Text>
 
       <Text variant="h3">Salonunun görünümü</Text>
 
@@ -225,7 +317,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
             <View style={{ width: 20, height: 20, borderRadius: 6, backgroundColor: colors.p }} />
           )}
           <Text variant="label" weight="700">
-            {appName}
+            {name}
           </Text>
         </View>
         <View style={{ backgroundColor: colors.surf, borderRadius: 11, padding: 9, flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -249,7 +341,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
       <Button
         label={saving ? 'Kaydediliyor…' : saved ? 'Kaydedildi ✓' : 'Kaydet — üyeler yeni görünümü hemen alır'}
         onPress={save}
-        disabled={saving}
+        disabled={saving || !trimmedName}
         critical
       />
 

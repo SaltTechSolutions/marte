@@ -1,9 +1,9 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { db, storage } from '@/services/firebase';
 
-import { Tenant, TenantBranding } from '../types';
+import { Tenant, TenantBranding, TenantContact } from '../types';
 import { tenantFromDoc } from './convert';
 import { membershipId } from './membershipRepo';
 import { seedDefaultPackages } from './packageRepo';
@@ -71,6 +71,44 @@ export async function createTenantWithOwner(params: {
 /** Admin settings screen "Kaydet" — writes the tenant's live branding. */
 export async function updateTenantBranding(tenantId: string, branding: TenantBranding): Promise<void> {
   await updateDoc(doc(db, 'tenants', tenantId), { branding, updatedAt: serverTimestamp() });
+}
+
+/**
+ * The gym's public identity: the name members see and the address they walk to.
+ *
+ * `name` is denormalised onto every `tenant_memberships` doc, so it is NOT
+ * enough to write it here — the `syncTenantNameToMemberships` function fans the
+ * new name out. Without that the roster keeps showing the old name forever.
+ */
+export async function updateTenantIdentity(
+  tenantId: string,
+  identity: { name: string; address?: string },
+): Promise<void> {
+  await updateDoc(doc(db, 'tenants', tenantId), {
+    name: identity.name,
+    // Clearing the field is a real intent, so an empty address deletes it
+    // rather than being skipped and leaving the old one in place.
+    address: identity.address?.trim() || deleteField(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Contact details, from the members-only private subdocument. */
+export async function getTenantContact(tenantId: string): Promise<TenantContact> {
+  const snap = await getDoc(doc(db, 'tenants', tenantId, 'private', 'contact'));
+  return snap.exists() ? (snap.data() as TenantContact) : {};
+}
+
+export async function updateTenantContact(tenantId: string, contact: TenantContact): Promise<void> {
+  await setDoc(
+    doc(db, 'tenants', tenantId, 'private', 'contact'),
+    {
+      phone: contact.phone?.trim() || deleteField(),
+      email: contact.email?.trim() || deleteField(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 /**
