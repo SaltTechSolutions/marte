@@ -2,12 +2,16 @@ import { addDoc, collection, getDocs, query, serverTimestamp, Timestamp, where }
 
 import { db } from '@/services/firebase';
 
-import { CheckInAccessReason, TenantMembership } from '../types';
+import { CheckInAccessReason, CheckInWarnReason, TenantMembership } from '../types';
 import { membershipFromDoc } from './convert';
 import { getMembershipById } from './membershipRepo';
 import { getActiveMemberCredits, getMemberPackage, getMemberPackages } from './memberPackageRepo';
 import { hasSessionToday } from './ptSessionRepo';
 import { WatchErrorHandler, watchQuery } from './watch';
+
+// Re-exported so the check-in screen's existing import keeps working; the type
+// itself moved to types.ts when 'guardian' stopped being a warn reason.
+export type { CheckInWarnReason };
 
 function startOfToday(): Date {
   const d = new Date();
@@ -61,12 +65,61 @@ async function alreadyCheckedInRecently(tenantId: string, userId: string): Promi
  * at most three: packages, credits, today's sessions), well inside the
  * ≤5s friction budget.
  */
-export type CheckInWarnReason = Exclude<CheckInAccessReason, 'ok'>;
+
 
 interface AccessResolution {
   access: 'ok' | 'warn';
   packageLabel: string | null;
   warnReason: CheckInWarnReason | null;
+  /** Set when the entry rests on a child's package rather than this person's
+   *  own — recorded so the ledger can tell the two apart. */
+  reason?: CheckInAccessReason;
+}
+
+/**
+ * Any child of this member who currently holds an active membership package.
+ *
+ * Read by the scanning staff device, which is why this is a plain query: staff
+ * may read the roster and every member's packages. The member themselves could
+ * not run it — they cannot list the roster — but they are not the one scanning.
+ *
+ * Stops at the first match: decision 3 says "any one of their children", so a
+ * parent with four children needs one hit, not a tally.
+ */
+async function findChildWithActiveMembership(
+  tenantId: string,
+  guardianId: string,
+  now: Date,
+): Promise<{ childName: string; packageName: string } | null> {
+  const childSnap = await getDocs(
+    query(
+      collection(db, 'tenant_memberships'),
+      where('tenantId', '==', tenantId),
+      where('guardianId', '==', guardianId),
+    ),
+  );
+  const children = childSnap.docs
+    .map(membershipFromDoc)
+    .filter((c) => c.guardianStatus === 'approved' && c.status === 'active');
+
+  for (const child of children) {
+    const packages = await getMemberPackages(tenantId, child.userId);
+    const covering = packages.find(
+      (p) =>
+        p.kind === 'membership' &&
+        p.status === 'active' &&
+        p.entitlements.gymAccess &&
+        p.startsAt <= now &&
+        p.endsAt >= now,
+    );
+    if (covering) {
+      return {
+        childName: child.userDisplayName || child.userEmail || 'Çocuğu',
+        packageName: covering.packageName,
+      };
+    }
+  }
+  return null;
 }
 
 export async function resolveAccess(tenantId: string, userId: string): Promise<AccessResolution> {
@@ -103,7 +156,24 @@ export async function resolveAccess(tenantId: string, userId: string): Promise<A
   const frozen = packages.find((p) => p.status === 'frozen' && p.endsAt >= now);
   if (frozen) return { access: 'warn', packageLabel: frozen.packageName, warnReason: 'frozen' };
 
-  // 5. Nothing at all.
+  // 5. A parent whose child holds an active membership (MEMBER-5b decision 3).
+  // Checked last on purpose: someone with a package of their own is admitted
+  // on that package, and only a parent who has nothing falls through to here.
+  //
+  // Nothing is consumed. The child's credits and sessions are untouched —
+  // the parent is walking in on the fact that the child is a paying member,
+  // not on anything the child could otherwise spend.
+  const child = await findChildWithActiveMembership(tenantId, userId, now);
+  if (child) {
+    return {
+      access: 'ok',
+      packageLabel: `${child.childName} velisi · ${child.packageName}`,
+      warnReason: null,
+      reason: 'guardian',
+    };
+  }
+
+  // 6. Nothing at all.
   return { access: 'warn', packageLabel: null, warnReason: 'no-package' };
 }
 
@@ -153,7 +223,9 @@ async function resolveAndCheckIn(
 
   const resolution = await resolveAccess(tenantId, membership.userId);
   if (resolution.access === 'ok') {
-    await writeCheckIn(tenantId, membership, membershipDocId, 'ok');
+    // `reason` carries 'guardian' when the entry rests on a child's package;
+    // writing a flat 'ok' would lose that distinction in the ledger.
+    await writeCheckIn(tenantId, membership, membershipDocId, resolution.reason ?? 'ok');
     return { ok: true, name, access: 'ok', packageLabel: resolution.packageLabel };
   }
   return {

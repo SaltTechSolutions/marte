@@ -185,10 +185,17 @@ export interface ClassSession {
 
 /**
  * Why a check-in was let through (PKG-3). `'ok'` means an actual package
- * covered today; every other value means staff overrode a warning ("Yine de
+ * covered today; a warn reason means staff overrode a warning ("Yine de
  * kabul et") — kept so "kaç kişi paketsiz alındı" can be reported later.
+ *
+ * `'guardian'` is neither: the person was let in on a CHILD's package
+ * (MEMBER-5b decision 3, a parent who does not train themselves). It is its
+ * own value so the ledger can tell those entries apart — they are legitimate
+ * entries, not overrides, and they must not be counted as the child using
+ * anything.
  */
-export type CheckInAccessReason = 'ok' | 'no-package' | 'no-session-today' | 'frozen';
+export type CheckInWarnReason = 'no-package' | 'no-session-today' | 'frozen';
+export type CheckInAccessReason = 'ok' | 'guardian' | CheckInWarnReason;
 
 /** A single front-desk QR scan. Written by staff (isTenantAdmin), not self-service. */
 export interface CheckIn {
