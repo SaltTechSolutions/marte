@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
@@ -18,7 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { confirmDestructive } from '@/utils/confirm';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { createClass, deleteClass, watchClassesForTenant } from '@/data/firebase/classRepo';
+import { createClass, deleteClass, updateClass, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { ClassSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -52,6 +52,9 @@ export default function AdminClasses() {
   const [time, setTime] = useState(TIME_PRESETS[0]);
   const [duration, setDuration] = useState(DURATION_PRESETS[1]);
   const [capacity, setCapacity] = useState(10);
+  // Non-null while editing an existing class; the same form serves both so
+  // the two can never drift apart in fields or validation.
+  const [editing, setEditing] = useState<ClassSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -74,6 +77,52 @@ export default function AdminClasses() {
     );
   }, [tenantId]);
 
+  const closeForm = () => {
+    setShowForm(false);
+    setEditing(null);
+    setName('');
+    setTrainer('');
+  };
+
+  /** Opens the shared form on an existing class. The day and time chips get
+   *  the class's own values appended when they are not among the presets,
+   *  otherwise reopening a 07:15 class would silently move it to 09:00. */
+  const startEdit = (s: ClassSession) => {
+    setEditing(s);
+    setName(s.name);
+    setTrainer(s.trainerName);
+    setDuration(s.durationMinutes);
+    setCapacity(s.capacity);
+    setTime(sessionTime(s.date));
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    const target = new Date(s.date);
+    target.setHours(0, 0, 0, 0);
+    setDayOffset(Math.round((target.getTime() - midnight.getTime()) / 86400000));
+    setShowForm(true);
+  };
+
+  /** Presets plus, while editing, the class's own day when it is not one of
+   *  them — a class next Tuesday must stay next Tuesday unless the admin
+   *  deliberately moves it. */
+  const dayChoices = useMemo(() => {
+    const base = DAY_OFFSETS.map((d) => ({ label: d.label, days: d.days }));
+    if (base.some((d) => d.days === dayOffset)) return base;
+    const d = new Date();
+    d.setDate(d.getDate() + dayOffset);
+    return [...base, { label: d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }), days: dayOffset }];
+  }, [dayOffset]);
+
+  const timeChoices = useMemo(
+    () => (TIME_PRESETS.includes(time) ? TIME_PRESETS : [...TIME_PRESETS, time]),
+    [time],
+  );
+
+  const durationChoices = useMemo(
+    () => (DURATION_PRESETS.includes(duration) ? DURATION_PRESETS : [...DURATION_PRESETS, duration]),
+    [duration],
+  );
+
   const submit = async () => {
     if (!tenantId || !name.trim() || !trainer.trim()) return;
     setSubmitting(true);
@@ -82,13 +131,22 @@ export default function AdminClasses() {
       const date = new Date();
       date.setDate(date.getDate() + dayOffset);
       date.setHours(hh, mm, 0, 0);
-      await createClass({ tenantId, name: name.trim(), trainerName: trainer.trim(), date, durationMinutes: duration, capacity });
-      setName('');
-      setTrainer('');
-      setShowForm(false);
-      toast.success('Ders eklendi');
+      if (editing) {
+        await updateClass(editing.id, {
+          name: name.trim(),
+          trainerName: trainer.trim(),
+          date,
+          durationMinutes: duration,
+          capacity,
+        });
+        toast.success('Ders güncellendi');
+      } else {
+        await createClass({ tenantId, name: name.trim(), trainerName: trainer.trim(), date, durationMinutes: duration, capacity });
+        toast.success('Ders eklendi');
+      }
+      closeForm();
     } catch (e) {
-      reportError(e, toast, 'Ders eklenemedi, tekrar dene.');
+      reportError(e, toast, editing ? 'Güncellenemedi, tekrar dene.' : 'Ders eklenemedi, tekrar dene.');
     } finally {
       setSubmitting(false);
     }
@@ -136,7 +194,12 @@ export default function AdminClasses() {
     <KeyboardAwareScroll contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text variant="h3">Ders programı</Text>
-        <Button label={showForm ? 'Vazgeç' : '+ Ders ekle'} compact variant={showForm ? 'ghost' : 'primary'} onPress={() => setShowForm((v) => !v)} />
+        <Button
+          label={showForm ? 'Vazgeç' : '+ Ders ekle'}
+          compact
+          variant={showForm ? 'ghost' : 'primary'}
+          onPress={() => (showForm ? closeForm() : setShowForm(true))}
+        />
       </View>
 
       {showForm && (
@@ -148,7 +211,7 @@ export default function AdminClasses() {
             GÜN
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {DAY_OFFSETS.map((d) => (
+            {dayChoices.map((d) => (
               <Chip key={d.days} label={d.label} selected={dayOffset === d.days} onPress={() => setDayOffset(d.days)} />
             ))}
           </View>
@@ -157,7 +220,7 @@ export default function AdminClasses() {
             SAAT
           </Text>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {TIME_PRESETS.map((t) => (
+            {timeChoices.map((t) => (
               <Chip key={t} label={t} selected={time === t} onPress={() => setTime(t)} />
             ))}
           </View>
@@ -166,7 +229,7 @@ export default function AdminClasses() {
             SÜRE
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            {DURATION_PRESETS.map((d) => (
+            {durationChoices.map((d) => (
               <Chip key={d} label={`${d} dk`} selected={duration === d} onPress={() => setDuration(d)} />
             ))}
           </View>
@@ -176,7 +239,17 @@ export default function AdminClasses() {
           </Text>
           <Stepper value={capacity} unit="kişi" step={1} decimals={0} onChange={setCapacity} />
 
-          <Button label={submitting ? 'Ekleniyor…' : 'Dersi ekle'} critical disabled={!name.trim() || !trainer.trim() || submitting} onPress={submit} />
+          <Button
+            label={submitting ? (editing ? 'Kaydediliyor…' : 'Ekleniyor…') : editing ? 'Değişikliği kaydet' : 'Dersi ekle'}
+            critical
+            disabled={!name.trim() || !trainer.trim() || submitting}
+            onPress={submit}
+          />
+          {editing && editing.bookedUserIds.length > 0 && (
+            <Text variant="label" tone="sub">
+              {editing.bookedUserIds.length} kişi bu derse kayıtlı — saati değiştirirsen programlarında da değişir.
+            </Text>
+          )}
         </Card>
       )}
 
@@ -196,6 +269,7 @@ export default function AdminClasses() {
             <SwipeableRow
               key={s.id}
               actions={[
+                { icon: 'create-outline', label: 'Düzenle', onPress: () => startEdit(s) },
                 { icon: 'trash-outline', label: 'İptal et', destructive: true, onPress: () => confirmCancel(s) },
               ]}>
             <ListRow last={i === sessions.length - 1}>
