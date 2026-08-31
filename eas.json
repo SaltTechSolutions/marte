@@ -32,6 +32,10 @@
         "ascApiKeyId": "DLVPQCL56S",
         "ascApiKeyIssuerId": "8048df28-6b46-4f4f-a5b1-df5359ad2f4b",
         "ascAppId": "6802950274"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./secrets/play-service-account.json",
+        "track": "internal"
       }
     }
   }

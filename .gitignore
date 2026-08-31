@@ -42,3 +42,9 @@ example
 # generated native folders
 /ios
 /android
+
+# Store signing/submit credentials. `*.p8` above covers the App Store Connect
+# key; the Play Console service account is a .json, which nothing else here
+# would catch. Ignoring the whole directory means the next credential — of
+# whatever extension — is covered before anyone has to remember a rule.
+secrets/

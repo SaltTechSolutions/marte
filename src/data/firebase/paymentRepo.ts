@@ -101,6 +101,10 @@ export function watchPaymentsForMember(
  * id the gym sees three unrelated payments and cannot tell a 900₺ split from
  * three coincidental 300₺ ones.
  *
+ * `amounts` lets the parent set each share by hand — three children rarely owe
+ * the same thing, and an equal split is a convenience, not a rule. Omit it and
+ * the total is divided equally.
+ *
  * A batch, not a loop: half-written is the worst outcome here. The parent
  * would have paid 900₺ and be looking at a ledger showing 600₺, with no way to
  * tell which child is missing.
@@ -112,11 +116,26 @@ export async function submitGroupPaymentNotice(params: {
   method: PaymentMethod;
   submittedBy: string;
   submittedByName: string;
+  /** One amount per child, in the same order. Omit for an equal split. */
+  amounts?: number[];
   note?: string;
 }): Promise<{ shares: number[] }> {
   if (params.children.length === 0) throw new Error('En az bir çocuk seçilmeli.');
 
-  const shares = splitAmount(params.totalAmount, params.children.length);
+  const shares = params.amounts ?? splitAmount(params.totalAmount, params.children.length);
+  if (shares.length !== params.children.length) {
+    throw new Error('Her çocuk için bir tutar gerekiyor.');
+  }
+  // Compared in kuruş: summing lira in floating point is exactly the trap
+  // `splitAmount` exists to avoid, and letting a 1-kuruş drift through would
+  // put a total in the ledger that is not the amount the parent handed over.
+  const sumKurus = shares.reduce((acc, v) => acc + Math.round(v * 100), 0);
+  if (sumKurus !== Math.round(params.totalAmount * 100)) {
+    throw new Error('Girilen tutarların toplamı ödeme tutarına eşit değil.');
+  }
+  if (shares.some((v) => v <= 0)) {
+    throw new Error('Her tutar sıfırdan büyük olmalı.');
+  }
   // The group id is generated client-side so every doc in the batch can carry
   // it: a server-assigned id would only exist after the write it has to be in.
   const paymentGroupId = doc(collection(db, 'payments')).id;
