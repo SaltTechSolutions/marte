@@ -67,10 +67,13 @@ export function SwipeableRow({
     <ReanimatedSwipeable
       ref={ref}
       renderRightActions={renderActions}
-      // Enough resistance that a horizontal scroll or a sloppy tap doesn't
-      // open it, but not so much that the gesture feels stuck.
-      friction={2}
-      rightThreshold={40}
+      // friction 1 = the row tracks the finger 1:1, which is what iOS's own
+      // swipe rows do. At 2 the row lagged behind the finger and, on the way
+      // back, the buttons stayed visible after the gesture had clearly
+      // reversed — it read as unresponsive rather than as resistance.
+      friction={1}
+      // Low threshold so a short flick settles open instead of snapping shut.
+      rightThreshold={24}
       overshootRight={false}>
       {children}
     </ReanimatedSwipeable>

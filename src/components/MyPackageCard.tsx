@@ -39,7 +39,7 @@ export function MyPackageCard({
   groupCredits: MemberCredit[];
   ptCredits: MemberCredit[];
 }) {
-  const { colors, spacing } = useAppTheme();
+  const { colors, spacing, radius } = useAppTheme();
 
   if (!activePackage) {
     return (
@@ -83,26 +83,53 @@ export function MyPackageCard({
       </View>
 
       {(unlimitedGroup || group > 0 || pt > 0) && (
-        <View style={{ flexDirection: 'row' }}>
+        // Inline pills rather than big centred numbers: with only one credit
+        // type a full-width column left a single huge digit floating in the
+        // middle of the card, out of scale with the two lines above it.
+        // Pills keep the weight on the left edge with everything else and
+        // stay balanced at zero, one or two entries.
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {(unlimitedGroup || group > 0) && (
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{unlimitedGroup ? '∞' : group}</Text>
-              <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: colors.surf2,
+                borderRadius: radius.pill,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+              }}>
+              <Text variant="helper" weight="900">
+                {unlimitedGroup ? '∞' : group}
+              </Text>
+              <Text variant="label" tone="sub">
                 grup dersi
               </Text>
             </View>
           )}
-          {(unlimitedGroup || group > 0) && pt > 0 && <View style={{ width: 1, backgroundColor: colors.line }} />}
           {pt > 0 && (
-            <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-              <Text variant="h3">{pt}</Text>
-              <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: colors.surf2,
+                borderRadius: radius.pill,
+                paddingHorizontal: 12,
+                paddingVertical: 7,
+              }}>
+              <Text variant="helper" weight="900">
+                {pt}
+              </Text>
+              <Text variant="label" tone="sub">
                 özel ders
               </Text>
             </View>
           )}
         </View>
       )}
+
     </Card>
   );
 }

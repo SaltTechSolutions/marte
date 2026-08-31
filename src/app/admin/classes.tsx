@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
+import { TimeStepper } from '@/components/TimeStepper';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Stepper } from '@/components/Stepper';
@@ -19,7 +20,8 @@ import { reportError } from '@/data/errors';
 import { confirmDestructive } from '@/utils/confirm';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { createClass, deleteClass, updateClass, watchClassesForTenant } from '@/data/firebase/classRepo';
-import { ClassSession } from '@/data/types';
+import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
+import { ClassSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 const DAY_OFFSETS = [
@@ -27,7 +29,6 @@ const DAY_OFFSETS = [
   { label: 'Yarın', days: 1 },
   { label: '2 gün sonra', days: 2 },
 ];
-const TIME_PRESETS = ['09:00', '12:30', '18:30', '19:30'];
 const DURATION_PRESETS = [30, 50, 60];
 
 function sessionTime(d: Date) {
@@ -44,12 +45,13 @@ export default function AdminClasses() {
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [sessions, setSessions] = useState<ClassSession[]>([]);
+  const [trainers, setTrainers] = useState<TenantMembership[]>([]);
   const [loading, setLoading] = useState(!!tenantId);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [trainer, setTrainer] = useState('');
   const [dayOffset, setDayOffset] = useState(0);
-  const [time, setTime] = useState(TIME_PRESETS[0]);
+  const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState(DURATION_PRESETS[1]);
   const [capacity, setCapacity] = useState(10);
   // Non-null while editing an existing class; the same form serves both so
@@ -113,15 +115,15 @@ export default function AdminClasses() {
     return [...base, { label: d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }), days: dayOffset }];
   }, [dayOffset]);
 
-  const timeChoices = useMemo(
-    () => (TIME_PRESETS.includes(time) ? TIME_PRESETS : [...TIME_PRESETS, time]),
-    [time],
-  );
-
   const durationChoices = useMemo(
     () => (DURATION_PRESETS.includes(duration) ? DURATION_PRESETS : [...DURATION_PRESETS, duration]),
     [duration],
   );
+
+  useEffect(() => {
+    if (!tenantId) return;
+    return watchActiveTrainers(tenantId, setTrainers);
+  }, [tenantId]);
 
   const submit = async () => {
     if (!tenantId || !name.trim() || !trainer.trim()) return;
@@ -205,7 +207,24 @@ export default function AdminClasses() {
       {showForm && (
         <Card style={{ gap: 10 }}>
           <TextField placeholder="Ders adı (ör. HIIT Öğle)" value={name} onChangeText={setName} />
-          <TextField placeholder="Eğitmen" value={trainer} onChangeText={setTrainer} />
+          {/* Typed by hand this was a data-quality hole: "Mert", "mert kaya"
+              and "Mert Kaya" all became different coaches, and a typo'd name
+              matched nobody. The gym's own trainer list is the only correct
+              source. Free text stays as the fallback when a gym has not
+              added its trainers yet, so a class can still be scheduled. */}
+          <Text variant="label" tone="sub">
+            EĞİTMEN
+          </Text>
+          {trainers.length > 0 ? (
+            <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+              {trainers.map((t) => {
+                const label = t.userDisplayName || t.userEmail || 'Antrenör';
+                return <Chip key={t.id} label={label} selected={trainer === label} onPress={() => setTrainer(label)} />;
+              })}
+            </View>
+          ) : (
+            <TextField placeholder="Eğitmen adı" value={trainer} onChangeText={setTrainer} />
+          )}
 
           <Text variant="label" tone="sub">
             GÜN
@@ -219,11 +238,7 @@ export default function AdminClasses() {
           <Text variant="label" tone="sub">
             SAAT
           </Text>
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            {timeChoices.map((t) => (
-              <Chip key={t} label={t} selected={time === t} onPress={() => setTime(t)} />
-            ))}
-          </View>
+          <TimeStepper value={time} onChange={setTime} />
 
           <Text variant="label" tone="sub">
             SÜRE
