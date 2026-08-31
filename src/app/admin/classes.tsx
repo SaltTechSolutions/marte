@@ -9,14 +9,16 @@ import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { SwipeableRow } from '@/components/SwipeableRow';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
+import { confirmDestructive } from '@/utils/confirm';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { createClass, watchClassesForTenant } from '@/data/firebase/classRepo';
+import { createClass, deleteClass, watchClassesForTenant } from '@/data/firebase/classRepo';
 import { ClassSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -92,6 +94,35 @@ export default function AdminClasses() {
     }
   };
 
+
+  /**
+   * Cancelling takes the class off everyone's schedule, so the people who
+   * had booked it are named in the prompt — "3 kişi kayıtlı" is the whole
+   * reason an admin might hesitate, and it is the one fact the row itself
+   * already shows but a confirm dialog would otherwise drop.
+   */
+  const confirmCancel = (s: ClassSession) => {
+    const booked = s.bookedUserIds.length;
+    confirmDestructive({
+      title: 'Dersi iptal et',
+      message:
+        `${s.name} — ${sessionDay(s.date)} ${sessionTime(s.date)}` +
+        (booked > 0
+          ? `\n\n${booked} kişi bu derse kayıtlı. İptal edince ders programlarından kalkacak.`
+          : '\n\nHenüz kimse kayıtlı değil.'),
+      confirmLabel: 'Dersi iptal et',
+      onConfirm: () => void doCancel(s),
+    });
+  };
+
+  const doCancel = async (s: ClassSession) => {
+    try {
+      await deleteClass(s.id);
+      toast.success('Ders iptal edildi');
+    } catch (e) {
+      reportError(e, toast, 'İptal edilemedi, tekrar dene.');
+    }
+  };
   if (!tenantId) {
     return (
       <AccessGuard
@@ -162,7 +193,12 @@ export default function AdminClasses() {
       ) : (
         <ListGroup>
           {sessions.map((s, i) => (
-            <ListRow key={s.id} last={i === sessions.length - 1}>
+            <SwipeableRow
+              key={s.id}
+              actions={[
+                { icon: 'trash-outline', label: 'İptal et', destructive: true, onPress: () => confirmCancel(s) },
+              ]}>
+            <ListRow last={i === sessions.length - 1}>
               <View style={{ alignItems: 'center', minWidth: 56 }}>
                 <Text variant="helper" weight="900">
                   {sessionTime(s.date)}
@@ -181,6 +217,7 @@ export default function AdminClasses() {
                 </Text>
               </View>
             </ListRow>
+            </SwipeableRow>
           ))}
         </ListGroup>
       )}

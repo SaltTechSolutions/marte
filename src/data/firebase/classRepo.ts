@@ -9,6 +9,7 @@ import {
   query,
   limit,
   runTransaction,
+  deleteDoc,
   serverTimestamp,
   Timestamp,
   updateDoc,
@@ -60,6 +61,43 @@ export async function createClass(params: {
     waitlistUserIds: [],
     createdAt: serverTimestamp(),
   });
+}
+
+/**
+ * Edits a class the gym already published — the time moves, the coach
+ * changes, the room shrinks.
+ *
+ * Rules have always allowed a tenant admin to do this; there was simply no
+ * client function, so a class typed in wrong stayed wrong forever while
+ * members kept booking it.
+ *
+ * `bookedUserIds`/`waitlistUserIds` are deliberately NOT editable here: who
+ * is in a class is the members' doing, and rewriting those arrays wholesale
+ * would silently drop bookings made between read and write.
+ */
+export async function updateClass(
+  classId: string,
+  changes: { name?: string; trainerName?: string; date?: Date; durationMinutes?: number; capacity?: number },
+): Promise<void> {
+  const patch: Record<string, unknown> = {};
+  if (changes.name !== undefined) patch.name = changes.name.trim();
+  if (changes.trainerName !== undefined) patch.trainerName = changes.trainerName.trim();
+  if (changes.date !== undefined) patch.date = changes.date;
+  if (changes.durationMinutes !== undefined) patch.durationMinutes = changes.durationMinutes;
+  if (changes.capacity !== undefined) patch.capacity = changes.capacity;
+  if (Object.keys(patch).length === 0) return;
+  await updateDoc(doc(db, 'classes', classId), patch);
+}
+
+/**
+ * Cancels a class outright.
+ *
+ * A hard delete rather than a `cancelled` flag, matching what the rules
+ * already permit. The people who had booked it lose the row from their
+ * schedule — see the caller, which warns about that count before asking.
+ */
+export async function deleteClass(classId: string): Promise<void> {
+  await deleteDoc(doc(db, 'classes', classId));
 }
 
 /**
