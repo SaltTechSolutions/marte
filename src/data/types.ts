@@ -26,6 +26,8 @@ export interface Tenant {
    * `tenants/{id}/private/contact`, which is gated to tenant members.
    */
   address?: string;
+  /** See `OpeningHours`. */
+  openingHours?: OpeningHours;
   /**
    * Denormalised seat tally, maintained by the syncActiveMemberCount Cloud
    * Function. Security rules read it to enforce the free tier — rules cannot
@@ -37,6 +39,25 @@ export interface Tenant {
   createdAt: Date;
   updatedAt?: Date;
 }
+
+/** A single open window, "HH:MM"–"HH:MM". */
+export interface DayHours {
+  open: string;
+  close: string;
+}
+
+/**
+ * When the gym is open, keyed by JS `Date.getDay()` — '0' Sunday … '6'
+ * Saturday. A missing key or `null` means closed that day, which is why the
+ * value is nullable rather than the key simply being absent: "we set Sunday
+ * to closed" and "we never filled Sunday in" have to stay tellable apart.
+ *
+ * Trainer availability is clamped to this window: a trainer may work at any
+ * hour the gym is open, but cannot open a bookable slot while it is shut.
+ * A gym that has never set its hours is unconstrained — the field is optional
+ * and every existing gym starts without it.
+ */
+export type OpeningHours = Record<string, DayHours | null>;
 
 /**
  * How members reach the gym. Lives at `tenants/{id}/private/contact`, not on

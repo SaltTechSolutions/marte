@@ -33,6 +33,7 @@ export function tenantFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): T
     branding: data.branding,
     ownerUid: data.ownerUid,
     address: data.address,
+    openingHours: data.openingHours,
     activeMemberCount: data.activeMemberCount,
     subscription: data.subscription
       ? { ...data.subscription, expiresAt: toDate(data.subscription.expiresAt) }

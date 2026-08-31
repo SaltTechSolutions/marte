@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { GymCodeCard } from '@/components/GymCodeCard';
+import { GymInfoCard } from '@/components/GymInfoCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
@@ -14,7 +15,8 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
-import { PackageChangeRequest } from '@/data/types';
+import { getTenantContact } from '@/data/firebase/tenantRepo';
+import { PackageChangeRequest, TenantContact } from '@/data/types';
 import { signOutAndForget } from '@/services/signOut';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -42,6 +44,21 @@ export default function MemberProfile() {
     if (!tenantId || !user) return;
     return watchPendingPackageChangeRequests(tenantId, user.uid, setPackageOffers);
   }, [tenantId, user]);
+
+  // Contact lives in a members-only subdocument, so it needs its own read.
+  // Failing quietly is right here: the card simply omits the contact lines
+  // rather than the profile screen reporting an error the member cannot act on.
+  const [contact, setContact] = useState<TenantContact | undefined>(undefined);
+  useEffect(() => {
+    if (!tenantId) return;
+    let alive = true;
+    getTenantContact(tenantId)
+      .then((c) => alive && setContact(c))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [tenantId]);
 
   const signOut = () =>
     confirmDestructive({
@@ -87,6 +104,10 @@ export default function MemberProfile() {
       ))}
 
       {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} />}
+
+      {activeTenant && (
+        <GymInfoCard hours={activeTenant.openingHours} address={activeTenant.address} contact={contact} />
+      )}
 
       <RoleSwitcher />
 

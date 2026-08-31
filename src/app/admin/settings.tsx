@@ -345,6 +345,31 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         critical
       />
 
+      <Pressable onPress={() => router.push('/admin/hours')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name="time-outline" size={18} color={colors.txt} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Çalışma saatleri
+            </Text>
+            <Text variant="label" tone="sub">
+              Üyeler görür; antrenörler bu saatler içinde randevu açar
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
+
       <Pressable onPress={() => router.push('/admin/packages')}>
         <View
           style={{

@@ -28,24 +28,50 @@ export function toHHMM(minutes: number): string {
  * A stepper stays one control regardless of range, and matches the pattern
  * already used for weight and reps.
  *
- * Wraps at midnight rather than clamping: stepping back from 00:00 to reach
- * a late class is a normal thing to do, and a dead button would just look
- * broken.
+ * Wraps at midnight when unbounded: stepping back from 00:00 to reach a late
+ * class is a normal thing to do, and a dead button would just look broken.
+ * Given `min`/`max` it clamps instead — used where the range is a real rule
+ * (a trainer's hours inside the gym's), not merely a convenience.
  */
 export function TimeStepper({
   value,
   onChange,
   step = 15,
+  min,
+  max,
+  hint,
 }: {
   value: string;
   onChange: (hhmm: string) => void;
   step?: number;
+  /** "HH:MM" floor. Given together with `max`, the stepper clamps instead of
+   *  wrapping — a bounded range that wrapped would jump the far end. */
+  min?: string;
+  /** "HH:MM" ceiling. */
+  max?: string;
+  /** Replaces the default "başlangıç · ±N dk" line under the value. */
+  hint?: string;
 }) {
   const { colors, radius } = useAppTheme();
 
+  const current = toMinutes(value);
+  const lo = min !== undefined ? toMinutes(min) : undefined;
+  const hi = max !== undefined ? toMinutes(max) : undefined;
+  const atMin = lo !== undefined && current <= lo;
+  const atMax = hi !== undefined && current >= hi;
+
   const bump = (delta: number) => {
+    // Unbounded: wrap. Bounded: clamp, and refuse the step at the edge so the
+    // value never silently rolls past a limit that is a real rule.
+    if (lo === undefined && hi === undefined) {
+      hapticSelection();
+      onChange(toHHMM(current + delta));
+      return;
+    }
+    const next = current + delta;
+    if ((lo !== undefined && next < lo) || (hi !== undefined && next > hi)) return;
     hapticSelection();
-    onChange(toHHMM(toMinutes(value) + delta));
+    onChange(toHHMM(next));
   };
 
   return (
@@ -60,9 +86,19 @@ export function TimeStepper({
       }}>
       <Pressable
         onPress={() => bump(-step)}
+        disabled={atMin}
         accessibilityRole="button"
+        accessibilityState={{ disabled: atMin }}
         accessibilityLabel={`${step} dakika geri`}
-        style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.surf, alignItems: 'center', justifyContent: 'center' }}>
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: radius.md,
+          backgroundColor: colors.surf,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: atMin ? 0.35 : 1,
+        }}>
         <Text variant="h3" weight="900">
           −
         </Text>
@@ -72,14 +108,24 @@ export function TimeStepper({
           {value}
         </Text>
         <Text variant="label" tone="sub">
-          başlangıç · ±{step} dk
+          {hint ?? `başlangıç · ±${step} dk`}
         </Text>
       </View>
       <Pressable
         onPress={() => bump(step)}
+        disabled={atMax}
         accessibilityRole="button"
+        accessibilityState={{ disabled: atMax }}
         accessibilityLabel={`${step} dakika ileri`}
-        style={{ width: 48, height: 48, borderRadius: radius.md, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
+        style={{
+          width: 48,
+          height: 48,
+          borderRadius: radius.md,
+          backgroundColor: colors.p,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: atMax ? 0.35 : 1,
+        }}>
         <Text variant="h3" weight="900" tone="onp">
           +
         </Text>

@@ -3,7 +3,7 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 import { db, storage } from '@/services/firebase';
 
-import { Tenant, TenantBranding, TenantContact } from '../types';
+import { OpeningHours, Tenant, TenantBranding, TenantContact } from '../types';
 import { tenantFromDoc } from './convert';
 import { membershipId } from './membershipRepo';
 import { seedDefaultPackages } from './packageRepo';
@@ -91,6 +91,14 @@ export async function updateTenantIdentity(
     address: identity.address?.trim() || deleteField(),
     updatedAt: serverTimestamp(),
   });
+}
+
+/**
+ * Opening hours live on the tenant doc, not in `private/`: a member deciding
+ * whether to walk over needs them, and so does someone still choosing a gym.
+ */
+export async function updateTenantOpeningHours(tenantId: string, hours: OpeningHours): Promise<void> {
+  await updateDoc(doc(db, 'tenants', tenantId), { openingHours: hours, updatedAt: serverTimestamp() });
 }
 
 /** Contact details, from the members-only private subdocument. */

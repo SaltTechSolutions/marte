@@ -6,11 +6,13 @@ import { Chip } from '@/components/Chip';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
+import { TimeStepper, toHHMM, toMinutes } from '@/components/TimeStepper';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { setTrainerAvailability, watchTrainerAvailability } from '@/data/firebase/availabilityRepo';
-import { TimeWindow, Weekday } from '@/data/types';
+import { gymWindowFor } from '@/data/openingHours';
+import { DayHours, TimeWindow, Weekday } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 const DAYS: { key: Weekday; label: string }[] = [
@@ -23,15 +25,12 @@ const DAYS: { key: Weekday; label: string }[] = [
   { key: 'sun', label: 'Pazar' },
 ];
 
-// Whole hours only, gym-typical range — no free-form time input exists in
-// this app yet (same v1 simplification as PKG-5/6's dates). One window per
-// day: the data model (`TimeWindow[]`) allows more (e.g. a lunch-break
-// split), this screen just doesn't expose that yet.
-const HOURS = Array.from({ length: 17 }, (_, i) => 6 + i); // 06:00 .. 22:00
+// Fallback range for a gym that has never set its opening hours. Every gym
+// predates the field, so an unset one must stay usable rather than locked out.
+const FALLBACK: DayHours = { open: '06:00', close: '22:00' };
 
-function fmt(h: number): string {
-  return `${String(h).padStart(2, '0')}:00`;
-}
+// One window per day: the data model (`TimeWindow[]`) allows more (e.g. a
+// lunch-break split), this screen just doesn't expose that yet.
 
 type DayState = TimeWindow | null;
 
@@ -42,11 +41,18 @@ type DayState = TimeWindow | null;
  * yet," so leaving this screen untouched is the same as being closed every
  * day, on purpose (a silent "no slots" would land on the member, not the
  * trainer who forgot to fill this in).
+ *
+ * Bounded by the gym's own opening hours (UX-4): a trainer may work any hour
+ * the gym is open, but opening a bookable slot while it is shut sends the
+ * member to a locked door. Days the gym is closed cannot be opened at all.
+ *
+ * The two 17-chip walls this screen used to draw — start and end, per day —
+ * are gone for the same reason the class form's were.
  */
 export default function TrainerAvailability() {
-  const { spacing } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
   const toast = useToast();
-  const { user, activeMembership } = useAuth();
+  const { user, activeMembership, activeTenant } = useAuth();
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
 
   const [days, setDays] = useState<Record<Weekday, DayState>>({
@@ -80,6 +86,23 @@ export default function TrainerAvailability() {
   }
 
   const setDay = (key: Weekday, window: DayState) => setDays((prev) => ({ ...prev, [key]: window }));
+
+  /** What the gym allows on this day, and the bounds the steppers get.
+   *  A stored value already outside the window widens the bound on that side
+   *  only: the trainer keeps what they had and can walk it back in, rather
+   *  than the screen silently rewriting hours they never touched. */
+  const boundsFor = (key: Weekday, window: TimeWindow) => {
+    const gym = gymWindowFor(activeTenant?.openingHours, key);
+    const w = gym === undefined ? FALLBACK : gym;
+    if (!w) return null;
+    return {
+      gym: w,
+      startMin: toHHMM(Math.min(toMinutes(w.open), toMinutes(window.start))),
+      startMax: w.close,
+      endMin: window.start,
+      endMax: toHHMM(Math.max(toMinutes(w.close), toMinutes(window.end))),
+    };
+  };
 
   const save = async () => {
     if (saving) return;
@@ -120,6 +143,21 @@ export default function TrainerAvailability() {
       {DAYS.map(({ key, label }) => {
         const window = days[key];
         const isOpen = window !== null;
+        const bounds = boundsFor(key, window ?? { start: '09:00', end: '18:00' });
+        // The gym is shut this day: there is no window a trainer could open
+        // inside, so the toggle would only produce an unbookable slot.
+        if (!bounds) {
+          return (
+            <View key={key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text variant="helper" weight="700" tone="sub">
+                {label}
+              </Text>
+              <Text variant="label" tone="sub">
+                Salon kapalı
+              </Text>
+            </View>
+          );
+        }
         return (
           <View key={key} style={{ gap: 6 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -129,37 +167,41 @@ export default function TrainerAvailability() {
               <Chip
                 label={isOpen ? 'Açık' : 'Kapalı'}
                 selected={isOpen}
-                onPress={() => setDay(key, isOpen ? null : { start: '09:00', end: '18:00' })}
+                onPress={() => setDay(key, isOpen ? null : { start: bounds.gym.open, end: bounds.gym.close })}
               />
             </View>
             {isOpen && (
               <>
-                <Text variant="label" tone="sub">
-                  Başlangıç
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                  {HOURS.map((h) => (
-                    <Chip
-                      key={h}
-                      label={fmt(h)}
-                      selected={window!.start === fmt(h)}
-                      onPress={() => setDay(key, { ...window!, start: fmt(h) })}
-                    />
-                  ))}
-                </View>
-                <Text variant="label" tone="sub">
-                  Bitiş
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                  {HOURS.map((h) => (
-                    <Chip
-                      key={h}
-                      label={fmt(h)}
-                      selected={window!.end === fmt(h)}
-                      onPress={() => setDay(key, { ...window!, end: fmt(h) })}
-                    />
-                  ))}
-                </View>
+                <TimeStepper
+                  value={window!.start}
+                  step={30}
+                  min={bounds.startMin}
+                  max={bounds.startMax}
+                  hint={`başlangıç · salon ${bounds.gym.open}–${bounds.gym.close}`}
+                  onChange={(start) =>
+                    setDay(key, {
+                      start,
+                      // The end has to stay after the start; dragging the start
+                      // past it would otherwise leave a negative window that
+                      // silently produces no slots at all.
+                      end: toMinutes(window!.end) <= toMinutes(start) ? toHHMM(toMinutes(start) + 60) : window!.end,
+                    })
+                  }
+                />
+                <TimeStepper
+                  value={window!.end}
+                  step={30}
+                  min={bounds.endMin}
+                  max={bounds.endMax}
+                  hint="bitiş"
+                  onChange={(end) => setDay(key, { ...window!, end })}
+                />
+                {(toMinutes(window!.start) < toMinutes(bounds.gym.open) ||
+                  toMinutes(window!.end) > toMinutes(bounds.gym.close)) && (
+                  <Text variant="label" style={{ color: colors.warn }}>
+                    Bu aralık salonun {bounds.gym.open}–{bounds.gym.close} saatleri dışına taşıyor.
+                  </Text>
+                )}
               </>
             )}
           </View>
