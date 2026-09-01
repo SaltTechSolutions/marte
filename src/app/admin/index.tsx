@@ -8,6 +8,7 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { watchTodayCheckinCount } from '@/data/firebase/checkinRepo';
+import { sumPayments } from '@/utils/revenue';
 import { countActiveMembers, watchPendingRequests } from '@/data/firebase/membershipRepo';
 import { watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
 import { TenantMembership } from '@/data/types';
@@ -34,10 +35,10 @@ export default function AdminPanel() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     const unsubPayments = watchPaymentsForTenant(tenantId, (payments) => {
+      // Signed: a reversal or refund has to come OFF the month, not add to
+      // it. Summing raw amounts made correcting a mistake look like income.
       setMonthRevenue(
-        payments
-          .filter((p) => p.status === 'confirmed' && p.createdAt >= monthStart)
-          .reduce((sum, p) => sum + p.amount, 0),
+        sumPayments(payments.filter((p) => p.status === 'confirmed' && p.createdAt >= monthStart)),
       );
     });
     return () => {

@@ -3,7 +3,7 @@ import { addDoc, collection, doc, limit, orderBy, query, serverTimestamp, update
 import { db } from '@/services/firebase';
 import { splitAmount } from '@/utils/splitAmount';
 
-import { PaymentMethod } from '../types';
+import { Payment, PaymentMethod } from '../types';
 import { paymentFromDoc } from './convert';
 import { WatchErrorHandler, watchQuery } from './watch';
 
@@ -159,4 +159,55 @@ export async function submitGroupPaymentNotice(params: {
   await batch.commit();
 
   return { shares };
+}
+
+/**
+ * Cancels a wrongly recorded payment (ADMIN-4).
+ *
+ * The original row is never edited: its amount, method and date are what the
+ * admin originally believed, and overwriting them hides that a correction
+ * happened at all. Instead a `reversal` row of the same amount is written
+ * against it, and the original is flagged so the screens can strike it
+ * through. Totals come out right on their own because `sumPayments` reads
+ * the sign from `kind`.
+ *
+ * A batch: a reversal without its flag would let the same row be reversed
+ * twice, and a flag without its reversal would show a cancelled payment that
+ * still counts towards revenue.
+ */
+export async function reversePayment(params: {
+  payment: Payment;
+  reason: string;
+  reversedBy: string;
+}): Promise<void> {
+  const { payment, reason, reversedBy } = params;
+  if (payment.reversedAt) throw new Error('Bu ödeme zaten düzeltilmiş.');
+
+  const reversalRef = doc(collection(db, 'payments'));
+  const batch = writeBatch(db);
+
+  batch.set(reversalRef, {
+    tenantId: payment.tenantId,
+    memberId: payment.memberId,
+    memberName: payment.memberName,
+    amount: payment.amount,
+    method: payment.method,
+    kind: 'reversal',
+    // Confirmed straight away: an admin correcting their own books is not
+    // filing a notice for someone else to approve.
+    status: 'confirmed',
+    reversesPaymentId: payment.id,
+    reversalReason: reason,
+    reversedBy,
+    createdAt: serverTimestamp(),
+    confirmedAt: serverTimestamp(),
+  });
+
+  batch.update(doc(db, 'payments', payment.id), {
+    reversedAt: serverTimestamp(),
+    reversedByPaymentId: reversalRef.id,
+    reversalReason: reason,
+  });
+
+  await batch.commit();
 }

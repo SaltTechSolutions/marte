@@ -1,6 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
@@ -16,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
-import { confirmPayment, rejectPayment, recordPayment, watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
+import { confirmPayment, rejectPayment, recordPayment, reversePayment, watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
 import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -35,7 +36,7 @@ function memberLabel(m: TenantMembership): string {
 export default function AdminPayments() {
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
-  const { activeMembership } = useAuth();
+  const { activeMembership, user } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   // undefined until the first snapshot; [] means no payments were ever logged.
@@ -56,6 +57,11 @@ export default function AdminPayments() {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Correcting a payment asks for a reason rather than just confirming: the
+  // member is told about it, and "düzeltildi" with no explanation invites the
+  // phone call the notification was supposed to prevent.
+  const [reversing, setReversing] = useState<Payment | null>(null);
+  const [reversalReason, setReversalReason] = useState('');
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -124,6 +130,26 @@ export default function AdminPayments() {
       reportError(e, toast, 'Ödeme kaydedilemedi, tekrar deneyin.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const askReversalReason = (p: Payment) => {
+    setReversing(p);
+    setReversalReason('');
+  };
+
+  const doReverse = async () => {
+    if (!reversing || !reversalReason.trim() || !user) return;
+    setBusyId(reversing.id);
+    try {
+      await reversePayment({ payment: reversing, reason: reversalReason.trim(), reversedBy: user.uid });
+      toast.success('Düzeltme kaydedildi, üyeye bildirildi');
+      setReversing(null);
+      setReversalReason('');
+    } catch (e) {
+      reportError(e, toast, 'Düzeltilemedi, tekrar dene.');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -255,6 +281,32 @@ export default function AdminPayments() {
         <Button label="+ Ödeme ekle" critical onPress={() => setAddingOverride(true)} />
       )}
 
+      {reversing && (
+        <View style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.warn, borderRadius: radius.md, padding: 12, gap: 10 }}>
+          <Text variant="helper" weight="700">
+            Ödemeyi düzelt — {reversing.memberName}, {formatAmount(reversing.amount)}
+          </Text>
+          <Text variant="label" tone="sub">
+            Kayıt silinmez. Aynı tutarda bir düzeltme kaydı yazılır, orijinali üstü çizili
+            kalır ve ciro kendiliğinden düzelir. Üye bilgilendirilir.
+          </Text>
+          <TextField
+            placeholder="Gerekçe — örn. tutar yanlış girildi"
+            value={reversalReason}
+            onChangeText={setReversalReason}
+          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} onPress={() => setReversing(null)} disabled={busyId === reversing.id} />
+            <Button
+              label={busyId === reversing.id ? '…' : 'Düzeltmeyi kaydet'}
+              style={{ flex: 1 }}
+              disabled={!reversalReason.trim() || busyId === reversing.id}
+              onPress={doReverse}
+            />
+          </View>
+        </View>
+      )}
+
       <Text variant="label" tone="sub">
         GEÇMİŞ
       </Text>
@@ -277,13 +329,40 @@ export default function AdminPayments() {
                   {p.memberName}
                 </Text>
                 <Text variant="label" tone="sub">
-                  {METHOD_LABEL[p.method]}
+                  {p.kind === 'reversal' ? 'Düzeltme kaydı' : METHOD_LABEL[p.method]}
+                  {p.submittedByName ? ` · ${p.submittedByName} ödedi` : ''}
                   {p.note ? ` · ${p.note}` : ''}
                 </Text>
+                {p.reversalReason ? (
+                  <Text variant="label" style={{ color: colors.warn }}>
+                    {p.reversedAt ? 'Düzeltildi' : 'Gerekçe'}: {p.reversalReason}
+                  </Text>
+                ) : null}
               </View>
-              <Text variant="helper" weight="900">
+              <Text
+                variant="helper"
+                weight="900"
+                // A cancelled row keeps its original figure — struck through
+                // rather than rewritten, so the correction stays visible.
+                style={
+                  p.reversedAt
+                    ? { textDecorationLine: 'line-through', color: colors.sub }
+                    : p.kind === 'reversal'
+                      ? { color: colors.danger }
+                      : undefined
+                }>
+                {p.kind === 'reversal' ? '−' : ''}
                 {formatAmount(p.amount)}
               </Text>
+              {p.status === 'confirmed' && p.kind !== 'reversal' && !p.reversedAt && (
+                <Pressable
+                  onPress={() => askReversalReason(p)}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Bu ödemeyi düzelt">
+                  <Ionicons name="create-outline" size={17} color={colors.sub} />
+                </Pressable>
+              )}
               <View style={{ backgroundColor: colors.surf2, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
                 <Text variant="label" weight="600" style={{ color: p.status === 'confirmed' ? colors.ok : colors.danger }}>
                   {p.status === 'confirmed' ? 'Onaylandı' : 'Reddedildi'}

@@ -280,7 +280,17 @@ export type PaymentStatus = 'pending' | 'confirmed' | 'rejected';
 /** Absent/`'charge'` on every pre-PKG-6 record — added so a downgrade's
  *  prorated refund (PKG-6) can share this ledger instead of a second one.
  *  Amount is always positive; `kind` carries the direction. */
-export type PaymentKind = 'charge' | 'refund';
+/**
+ * What a ledger row means. `charge` money in, `refund` money back out,
+ * `reversal` a correction that cancels an earlier row.
+ *
+ * The ledger is append-only: a wrong entry is never edited or deleted, it is
+ * cancelled by a `reversal` that points at it and then re-entered correctly.
+ * That keeps a trail of what actually happened — an edited amount looks
+ * identical to a correctly entered one, and a gym owner reconciling against
+ * a bank statement needs to see that a correction took place.
+ */
+export type PaymentKind = 'charge' | 'refund' | 'reversal';
 
 /**
  * A manual payment record — no in-app purchase/subscription processing.
@@ -313,6 +323,14 @@ export interface Payment {
    * gym cannot tell that from three separate payments.
    */
   paymentGroupId?: string;
+  /** On a `reversal`: the row it cancels. */
+  reversesPaymentId?: string;
+  /** On the cancelled row: set when a reversal lands, so the UI can show it
+   *  struck through and refuse to reverse it twice. */
+  reversedAt?: Date;
+  reversedByPaymentId?: string;
+  /** Why the correction was made — the admin types it, both sides see it. */
+  reversalReason?: string;
   createdAt: Date;
   confirmedAt?: Date;
 }

@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -30,6 +30,7 @@ function formatAmount(n: number): string {
 /** Member's own payment history + "I sent this" notice for the admin to confirm. */
 export default function MemberPayments() {
   const router = useRouter();
+  const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
   const { user, activeMembership } = useAuth();
@@ -190,16 +191,42 @@ export default function MemberPayments() {
             />
           ) : (
             payments.map((p) => (
-              <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surf, borderRadius: radius.md, padding: 12 }}>
+              <View
+                key={p.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  backgroundColor: colors.surf,
+                  borderRadius: radius.md,
+                  padding: 12,
+                  // Arrived here from a notification about this exact row.
+                  ...(p.id === highlight ? { borderWidth: 1.5, borderColor: colors.p } : null),
+                }}>
                 <View style={{ flex: 1 }}>
                   <Text variant="helper" weight="700">
-                    {METHOD_LABEL[p.method]}
+                    {p.kind === 'reversal' ? 'Düzeltme kaydı' : METHOD_LABEL[p.method]}
                   </Text>
                   <Text variant="label" tone="sub">
                     {p.note || p.createdAt.toLocaleDateString('tr-TR')}
                   </Text>
+                  {p.reversalReason ? (
+                    <Text variant="label" style={{ color: colors.warn }}>
+                      {p.reversedAt ? 'Bu kayıt düzeltildi' : 'Gerekçe'}: {p.reversalReason}
+                    </Text>
+                  ) : null}
                 </View>
-                <Text variant="helper" weight="900">
+                <Text
+                  variant="helper"
+                  weight="900"
+                  style={
+                    p.reversedAt
+                      ? { textDecorationLine: 'line-through', color: colors.sub }
+                      : p.kind === 'reversal'
+                        ? { color: colors.danger }
+                        : undefined
+                  }>
+                  {p.kind === 'reversal' ? '−' : ''}
                   {formatAmount(p.amount)}
                 </Text>
                 <View

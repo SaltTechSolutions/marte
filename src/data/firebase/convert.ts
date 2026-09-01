@@ -187,6 +187,10 @@ export function paymentFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     submittedBy: data.submittedBy,
     submittedByName: data.submittedByName,
     paymentGroupId: data.paymentGroupId,
+    reversesPaymentId: data.reversesPaymentId,
+    reversedAt: toDate(data.reversedAt),
+    reversedByPaymentId: data.reversedByPaymentId,
+    reversalReason: data.reversalReason,
     createdAt: toDate(data.createdAt) ?? new Date(),
     confirmedAt: toDate(data.confirmedAt),
   };
