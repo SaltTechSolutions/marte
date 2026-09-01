@@ -252,6 +252,9 @@ export function memberPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnaps
     paymentId: data.paymentId,
     assignedAt: toDate(data.assignedAt) ?? new Date(),
     assignedBy: data.assignedBy,
+    cancelledAt: toDate(data.cancelledAt),
+    cancelledBy: data.cancelledBy,
+    cancellationReason: data.cancellationReason,
   };
 }
 

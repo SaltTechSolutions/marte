@@ -12,9 +12,12 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { getMembership } from '@/data/firebase/membershipRepo';
-import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
+import { cancelPackageAssignment, watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { MemberCredit, MemberPackage, TenantMembership } from '@/data/types';
+import { TextField } from '@/components/TextField';
+import { useToast } from '@/components/Toast';
+import { reportError } from '@/data/errors';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 function formatDate(d: Date): string {
@@ -51,7 +54,12 @@ export default function AdminMemberDetail() {
   const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
   const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
   const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
+  const toast = useToast();
   const [failed, setFailed] = useState(false);
+  // Undoing an assignment tells the member about it, so the admin says why.
+  const [cancelling, setCancelling] = useState<MemberPackage | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [busy, setBusy] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
@@ -83,6 +91,29 @@ export default function AdminMemberDetail() {
   const groupRemaining = groupCredits.reduce((sum, c) => sum + (c.total - c.used), 0);
   const soonestPt = ptCredits[0];
   const soonestGroup = groupCredits[0];
+
+  const askCancelReason = (p: MemberPackage) => {
+    setCancelling(p);
+    setCancelReason('');
+  };
+
+  const doCancelAssignment = async () => {
+    if (!cancelling || !cancelReason.trim()) return;
+    setBusy(true);
+    try {
+      await cancelPackageAssignment(cancelling.id, cancelReason.trim());
+      toast.success('Paket ataması geri alındı');
+      setCancelling(null);
+      setCancelReason('');
+    } catch (e) {
+      // The callable's own message is the useful one — it names how many
+      // upcoming appointments are blocking the undo.
+      const message = (e as { message?: string }).message;
+      reportError(e, toast, message || 'Geri alınamadı, tekrar dene.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
@@ -149,6 +180,32 @@ export default function AdminMemberDetail() {
         </View>
       )}
 
+      {cancelling && (
+        <Card style={{ gap: 10 }} outlineColor={colors.warn}>
+          <Text variant="helper" weight="700">
+            Paketi geri al — {cancelling.packageName}
+          </Text>
+          <Text variant="label" tone="sub">
+            Kayıt silinmez, iptal edildi olarak işaretlenir ve paketten gelen ders hakları
+            geri alınır. Kullanılmış dersler olduğu gibi kalır. Üyeye bildirilir.
+          </Text>
+          <TextField
+            placeholder="Gerekçe — örn. yanlış üyeye atandı"
+            value={cancelReason}
+            onChangeText={setCancelReason}
+          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} disabled={busy} onPress={() => setCancelling(null)} />
+            <Button
+              label={busy ? '…' : 'Geri al'}
+              style={{ flex: 1 }}
+              disabled={!cancelReason.trim() || busy}
+              onPress={doCancelAssignment}
+            />
+          </View>
+        </Card>
+      )}
+
       <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
         PAKETLER
       </Text>
@@ -175,12 +232,32 @@ export default function AdminMemberDetail() {
                 <Text variant="helper" tone="sub">
                   {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
                 </Text>
+                {p.cancellationReason ? (
+                  <Text variant="label" style={{ color: colors.warn }}>
+                    Geri alındı: {p.cancellationReason}
+                  </Text>
+                ) : null}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <StatusBadge label={STATUS_LABEL[p.status]} tone={statusTone(p.status)} />
                   {p.status === 'active' && (
-                    <Text variant="label" style={{ color: colors.p }}>
-                      Değiştir ›
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      {/* Undo sits next to Değiştir because they answer two
+                          different questions: "this member needs a different
+                          package" versus "this package should never have been
+                          assigned". Mixing them loses the distinction. */}
+                      <Pressable
+                        onPress={() => askCancelReason(p)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Bu paket atamasını geri al">
+                        <Text variant="label" style={{ color: colors.danger }}>
+                          Geri al
+                        </Text>
+                      </Pressable>
+                      <Text variant="label" style={{ color: colors.p }}>
+                        Değiştir ›
+                      </Text>
+                    </View>
                   )}
                 </View>
               </Card>

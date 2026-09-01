@@ -12,12 +12,15 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { db } from '@/services/firebase';
+import { app, db } from '@/services/firebase';
 
 import { GymPackage, MemberCredit, MemberEntitlementsCache, MemberPackage, Promotion } from '../types';
 import { memberCreditFromDoc, memberEntitlementsFromDoc, memberPackageFromDoc } from './convert';
 import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
+
+const functions = getFunctions(app, 'europe-west1');
 
 /** Deterministic id security rules rely on to `get()` this cache in one read. */
 export function memberEntitlementsId(tenantId: string, memberId: string): string {
@@ -277,4 +280,21 @@ export function watchMemberCredits(
     orderBy('expiresAt', 'asc'),
   );
   return watchQuery('Üyenin kredileri', q, (snap) => snap.docs.map(memberCreditFromDoc), onChange, onError);
+}
+
+/**
+ * Undoes a package assigned by mistake (ADMIN-4).
+ *
+ * Goes through a callable because revoking a quota has to be arbitrated
+ * against a booking racing for the same credit — `member_packages` stays
+ * closed to client writes. Throws with the server's own message when the
+ * package still has upcoming appointments booked against it; that message
+ * names the count and is the useful thing to show.
+ */
+export async function cancelPackageAssignment(assignmentId: string, reason: string): Promise<void> {
+  const call = httpsCallable<{ assignmentId: string; reason: string }, { revokedCredits: number }>(
+    functions,
+    'cancelPackageAssignment',
+  );
+  await call({ assignmentId, reason });
 }

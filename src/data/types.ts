@@ -494,11 +494,22 @@ export interface MemberPackage {
   paymentId?: string;
   assignedAt: Date;
   assignedBy: string;
+  /** Set when an admin undoes a wrong assignment (ADMIN-4). The row is never
+   *  deleted — the member's history has to show that it happened and was
+   *  taken back, the same reason payments are reversed rather than edited. */
+  cancelledAt?: Date;
+  cancelledBy?: string;
+  cancellationReason?: string;
 }
 
 export type CreditKind = 'ptLesson' | 'groupClass';
 export type CreditSource = 'purchase' | 'entitlement';
-export type CreditStatus = 'active' | 'exhausted' | 'expired';
+/**
+ * `revoked` is not the same as `expired`: the quota did not run out of time,
+ * the assignment it came from was undone. Kept distinct so a member asking
+ * "where did my lessons go" gets a true answer.
+ */
+export type CreditStatus = 'active' | 'exhausted' | 'expired' | 'revoked';
 
 /**
  * One quota balance — a purchased lesson bundle, or one period's worth of a
