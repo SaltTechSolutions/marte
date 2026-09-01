@@ -8,8 +8,8 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
-import { DateStepper, dateFromOffset, offsetFromDate } from '@/components/DateStepper';
-import { TimeStepper, toHHMM, toMinutes } from '@/components/TimeStepper';
+import { DateStepper } from '@/components/DateStepper';
+import { TimeStepper } from '@/components/TimeStepper';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Stepper } from '@/components/Stepper';
@@ -25,6 +25,7 @@ import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
 import { gymWindowForDate } from '@/data/openingHours';
 import { ClassSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { dateFromOffset, offsetFromDate, toHHMM, toMinutes } from '@/utils/time';
 
 const DURATION_PRESETS = [30, 50, 60];
 

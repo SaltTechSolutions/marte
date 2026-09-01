@@ -57,7 +57,10 @@ vi.mock('firebase/firestore', () => ({
   collection: () => ({}),
   doc: () => ({}),
   getDoc: () => ({}),
-  getDocs: () => ({}),
+  // An empty QuerySnapshot, not `{}`: code that legitimately reads `.docs`
+  // (the guardian check-in lookup, for one) crashed against the looser stub,
+  // which made a mock gap look like a production bug.
+  getDocs: () => ({ docs: [], empty: true, size: 0 }),
   addDoc: () => ({}),
   updateDoc: () => ({}),
   setDoc: () => ({}),

@@ -2,24 +2,10 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
+import { dateFromOffset } from '@/utils/time';
 import { hapticSelection } from '@/utils/haptics';
 
 import { Text } from './Text';
-
-/** Midnight today plus `offset` days. */
-export function dateFromOffset(offset: number): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + offset);
-  return d;
-}
-
-/** Whole days between midnight today and midnight of `date`. */
-export function offsetFromDate(date: Date): number {
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - dateFromOffset(0).getTime()) / 86400000);
-}
 
 /** "Bugün" / "Yarın" / "Ertesi gün" for the near days, a real date after that. */
 function offsetLabel(offset: number): string {

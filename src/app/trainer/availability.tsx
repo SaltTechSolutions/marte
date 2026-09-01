@@ -6,7 +6,7 @@ import { Chip } from '@/components/Chip';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
-import { TimeStepper, toHHMM, toMinutes } from '@/components/TimeStepper';
+import { TimeStepper } from '@/components/TimeStepper';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
@@ -14,6 +14,7 @@ import { setTrainerAvailability, watchTrainerAvailability } from '@/data/firebas
 import { gymWindowFor } from '@/data/openingHours';
 import { DayHours, TimeWindow, Weekday } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { toHHMM, toMinutes } from '@/utils/time';
 
 const DAYS: { key: Weekday; label: string }[] = [
   { key: 'mon', label: 'Pazartesi' },
