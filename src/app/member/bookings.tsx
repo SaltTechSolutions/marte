@@ -7,6 +7,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { InfoCard } from '@/components/InfoCard';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
+import { useRefreshControl } from '@/components/useRefreshControl';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
@@ -83,6 +84,8 @@ function BookingList({ tenantId, userId }: { tenantId: string; userId: string })
     [tenantId, userId, retryKey],
   );
 
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
   const retry = () => {
     setFailed(false);
     setRetryKey((k) => k + 1);
@@ -141,6 +144,7 @@ function BookingList({ tenantId, userId }: { tenantId: string; userId: string })
 
   return (
     <ScrollView
+      refreshControl={refreshControl}
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       {failed ? (
         <ErrorNotice message="Rezervasyonların alınamadı." onRetry={retry} />

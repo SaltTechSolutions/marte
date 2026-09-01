@@ -9,6 +9,7 @@ import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
+import { useRefreshControl } from '@/components/useRefreshControl';
 import { useToast } from '@/components/Toast';
 import {
   approveMembership,
@@ -78,6 +79,8 @@ export default function AdminMembers() {
     if (!tenantId) return;
     return watchActiveMembers(tenantId, setMembers, () => setFailed(true));
   }, [tenantId, retryKey]);
+
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   const retry = () => {
     setFailed(false);
@@ -178,6 +181,7 @@ export default function AdminMembers() {
   return (
     <ScrollView
       style={{ flex: 1 }}
+      refreshControl={refreshControl}
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text variant="h3">

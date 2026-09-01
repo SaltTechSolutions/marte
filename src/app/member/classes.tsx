@@ -17,6 +17,7 @@ import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessi
 import { toGymClass } from '@/data/classDisplay';
 import { ClassSession, GymClass, MemberEntitlementsCache, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 import { confirmDestructive } from '@/utils/confirm';
 
 function classButtonProps(status: GymClass['status'], canJoin: boolean) {
@@ -39,6 +40,11 @@ export default function MemberClasses() {
   const { colors, spacing } = useAppTheme();
   const toast = useToast();
   const { user, activeTenant } = useAuth();
+  // Aboneliği yeniden kurmak için — canlı dinleyici çevrimdışıyken
+  // düşerse kendiliğinden toparlamayabiliyor.
+  const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [loading, setLoading] = useState(!!activeTenant);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -84,7 +90,7 @@ export default function MemberClasses() {
   useEffect(() => {
     if (!tenantId || !user) return;
     return watchMemberEntitlements(tenantId, user.uid, setEntitlements);
-  }, [tenantId, user]);
+  }, [tenantId, user, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !user) return;
@@ -184,7 +190,9 @@ export default function MemberClasses() {
   const isViewingToday = isSameDay(selectedDate, startOfDay(new Date()));
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl}
+      contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text variant="h3">Dersler</Text>
         {!isViewingToday && (

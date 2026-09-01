@@ -22,6 +22,7 @@ import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
 import { GymClass, MemberCredit, MemberPackage, PackageChangeRequest, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 import { confirmDestructive } from '@/utils/confirm';
 
 const WEEKLY_TARGET = 4;
@@ -59,6 +60,11 @@ export default function MemberHome() {
   const router = useRouter();
   const { colors, spacing, tenantName } = useAppTheme();
   const toast = useToast();
+  // Aboneliği yeniden kurmak için — canlı dinleyici çevrimdışıyken
+  // düşerse kendiliğinden toparlamayabiliyor.
+  const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const { user, activeMembership } = useAuth();
   const uid = user?.uid;
@@ -89,42 +95,42 @@ export default function MemberHome() {
       const pick = bookedToday ?? todaySessions[0] ?? null;
       setTodayClass(pick ? toGymClass(pick, uid) : null);
     });
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchCompletedThisWeek(tenantId, uid, setCompletedThisWeek);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchUpcomingSessionsForMember(tenantId, uid, setSessions);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchPaymentsForMember(tenantId, uid, setPayments);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchPendingPackageChangeRequests(tenantId, uid, setPackageOffers);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchMemberPackages(tenantId, uid, setPackages);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchMemberCredits(tenantId, uid, 'groupClass', setGroupCredits);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchMemberCredits(tenantId, uid, 'ptLesson', setPtCredits);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   const weekStart = useMemo(() => startOfWeek(), []);
   useEffect(() => {
@@ -138,7 +144,9 @@ export default function MemberHome() {
   const lastConfirmed = payments?.find((p) => p.status === 'confirmed');
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl}
+      contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
         <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="helper" tone="onp" weight="900">

@@ -339,11 +339,16 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
       </View>
 
       <Button
-        label={saving ? 'Kaydediliyor…' : saved ? 'Kaydedildi ✓' : 'Kaydet — üyeler yeni görünümü hemen alır'}
+        label={saving ? 'Kaydediliyor…' : saved ? 'Kaydedildi ✓' : 'Kaydet'}
         onPress={save}
         disabled={saving || !trimmedName}
         critical
       />
+      {/* The consequence belongs under the button, not inside its label: a
+          button says what it does, not what happens afterwards. */}
+      <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+        Üyeler yeni görünümü hemen alır.
+      </Text>
 
       <Pressable onPress={() => router.push('/admin/hours')}>
         <View
