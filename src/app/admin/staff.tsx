@@ -20,6 +20,7 @@ import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { MembershipRole, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 
 function initialsOf(name: string): string {
   return name
@@ -62,6 +63,7 @@ export default function AdminStaff() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   useEffect(() => {
     if (!tenantId) return;
@@ -110,7 +112,8 @@ export default function AdminStaff() {
   const isSelf = (m: TenantMembership) => m.userId === user?.uid;
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">Ekip ve yetkiler</Text>
 
       {failed && <ErrorNotice message="Ekip listesi alınamadı." onRetry={retry} />}

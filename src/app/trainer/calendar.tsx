@@ -25,6 +25,7 @@ import {
 } from '@/data/firebase/ptSessionRepo';
 import { PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 import { confirmDestructive } from '@/utils/confirm';
 
 function formatTime(d: Date): string {
@@ -56,6 +57,11 @@ export default function TrainerCalendar() {
 export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: string; isAdmin: boolean; user: User }) {
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
+
+  // Yeniden abone olmak için — çevrimdışıyken düşen bir dinleyici
+  // her zaman kendiliğinden toparlamıyor.
+  const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [shares, setShares] = useState<{ ownerTrainerId: string; ownerTrainerName: string }[]>([]);
@@ -98,7 +104,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   useEffect(() => {
     if (isAdmin) return watchSessionsForTenant(tenantId, range, setAllSessions, () => setFailed(true));
     return watchSessionsForTrainer(tenantId, viewingTrainerId, range, setAllSessions, () => setFailed(true));
-  }, [tenantId, isAdmin, viewingTrainerId, range]);
+  }, [tenantId, isAdmin, viewingTrainerId, range, retryKey]);
 
   const trainerOptions = useMemo(() => {
     const mine = { id: user.uid, name: 'Ben' };
@@ -242,7 +248,8 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
         </View>
       )}
 
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg, gap: spacing.sm }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: spacing.lg, gap: spacing.sm }} showsVerticalScrollIndicator={false}>
         <View style={{ marginTop: spacing.sm }}>
           <MonthCalendar
             selectedDate={selectedDate}

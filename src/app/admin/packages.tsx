@@ -14,6 +14,7 @@ import { watchPackagesForTenant } from '@/data/firebase/packageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 
 function entitlementSummary(pkg: GymPackage): string {
   if (pkg.kind === 'lessons') {
@@ -42,6 +43,7 @@ export default function AdminPackages() {
   const [packages, setPackages] = useState<GymPackage[] | undefined>(undefined);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   useEffect(() => {
     if (!tenantId) return;
@@ -60,7 +62,8 @@ export default function AdminPackages() {
   });
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Button label="+ Paket ekle" onPress={() => router.push('/admin/package-form')} />
 
       {failed ? (

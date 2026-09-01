@@ -13,6 +13,7 @@ import { countActiveMembers, watchPendingRequests } from '@/data/firebase/member
 import { watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 
 /** Admin dashboard — "is my business okay?" answered in one glance. */
 export default function AdminPanel() {
@@ -20,6 +21,11 @@ export default function AdminPanel() {
   const { colors, spacing, tenantName } = useAppTheme();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
+
+  // Yeniden abone olmak için — çevrimdışıyken düşen bir dinleyici
+  // her zaman kendiliğinden toparlamıyor.
+  const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   const [checkinCount, setCheckinCount] = useState<number | null>(null);
   const [activeMembers, setActiveMembers] = useState<number | null>(null);
@@ -46,10 +52,11 @@ export default function AdminPanel() {
       unsubRequests();
       unsubPayments();
     };
-  }, [tenantId]);
+  }, [tenantId, retryKey]);
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
         <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="helper" tone="onp" weight="900">

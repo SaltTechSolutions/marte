@@ -13,6 +13,7 @@ import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { canCheckIn, tenantIdIf } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 
 function initialsOf(name: string): string {
   return name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join('');
@@ -38,6 +39,7 @@ export default function AdminToday() {
   const [members, setMembers] = useState<TenantMembership[]>([]);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   useEffect(() => {
     if (!tenantId) return;
@@ -59,7 +61,8 @@ export default function AdminToday() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">
         Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries?.length ?? 0}</Text>
       </Text>

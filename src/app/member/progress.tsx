@@ -14,6 +14,7 @@ import { addMeasurement, watchMeasurements } from '@/data/firebase/measurementRe
 import { watchWorkoutLogsForMember } from '@/data/firebase/workoutLogRepo';
 import { MeasurementEntry, WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { useRefreshControl } from '@/components/useRefreshControl';
 
 /** Active seconds in one workout — prefers the per-exercise timers, falling
  * back to wall-clock for logs recorded before those existed. */
@@ -47,6 +48,11 @@ export default function MemberProgress() {
   const uid = user?.uid;
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
 
+  // Yeniden abone olmak için — çevrimdışıyken düşen bir dinleyici
+  // her zaman kendiliğinden toparlamıyor.
+  const [retryKey, setRetryKey] = useState(0);
+  const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
   const [entries, setEntries] = useState<MeasurementEntry[] | undefined>(undefined);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [visits, setVisits] = useState<Date[]>([]);
@@ -60,12 +66,12 @@ export default function MemberProgress() {
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchMeasurements(tenantId, uid, setEntries);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
     return watchWorkoutLogsForMember(tenantId, uid, setLogs);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
@@ -75,7 +81,7 @@ export default function MemberProgress() {
     since.setDate(since.getDate() - 84);
     since.setHours(0, 0, 0, 0);
     return watchMyCheckins(tenantId, uid, since, setVisits);
-  }, [tenantId, uid]);
+  }, [tenantId, uid, retryKey]);
 
   const openForm = () => {
     if (entries?.[0]) {
@@ -133,7 +139,8 @@ export default function MemberProgress() {
   ];
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+    <ScrollView
+      refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">Gelişim</Text>
 
       {visits.length > 0 && (
