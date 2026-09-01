@@ -30,8 +30,16 @@ function remainingCredits(credits: MemberCredit[]): number {
  */
 export default function BookSession() {
   const router = useRouter();
-  const { trainerId, trainerName } = useLocalSearchParams<{ trainerId: string; trainerName: string }>();
-  const { spacing } = useAppTheme();
+  // `memberId` present = a parent booking for their child (MEMBER-5c). The
+  // whole screen then works against the CHILD: their credits are counted,
+  // their name is shown, and the callable books in their name.
+  const { trainerId, trainerName, memberId, memberName } = useLocalSearchParams<{
+    trainerId: string;
+    trainerName: string;
+    memberId?: string;
+    memberName?: string;
+  }>();
+  const { colors, spacing } = useAppTheme();
   const toast = useToast();
   const { user, activeTenant } = useAuth();
   const tenantId = activeTenant?.id;
@@ -58,10 +66,14 @@ export default function BookSession() {
   // changes underneath it — derived rather than reset via effect.
   const effectiveSelectedSlot = selectedSlot && isSameDay(selectedSlot, selectedDate) ? selectedSlot : null;
 
+  // Whose appointment this is. Defaults to the caller, which is every case
+  // except a guardian booking for a child.
+  const bookingForId = memberId || user?.uid;
+
   useEffect(() => {
-    if (!tenantId || !user) return;
-    return watchMemberCredits(tenantId, user.uid, 'ptLesson', setCredits);
-  }, [tenantId, user]);
+    if (!tenantId || !bookingForId) return;
+    return watchMemberCredits(tenantId, bookingForId, 'ptLesson', setCredits);
+  }, [tenantId, bookingForId]);
 
   const freeSlots = useMemo(() => {
     if (!availability) return [];
@@ -75,8 +87,13 @@ export default function BookSession() {
     if (!tenantId || !trainerId || !effectiveSelectedSlot || booking) return;
     setBooking(true);
     try {
-      await bookPtSessions({ tenantId, trainerId, slots: [effectiveSelectedSlot] });
-      toast.success('Randevun oluşturuldu');
+      await bookPtSessions({
+        tenantId,
+        trainerId,
+        slots: [effectiveSelectedSlot],
+        ...(memberId ? { memberId } : {}),
+      });
+      toast.success(memberId ? `${memberName ?? 'Çocuğun'} için randevu oluşturuldu` : 'Randevun oluşturuldu');
       router.back();
     } catch (e) {
       reportError(e, toast, 'Randevu alınamadı, tekrar dene.');
@@ -118,6 +135,14 @@ export default function BookSession() {
       <Text variant="label" tone="sub">
         {trainerName} · {remaining} hak kaldı
       </Text>
+      {/* Booking on someone else's behalf has to say so on the screen where
+          the credit is spent — it is the child's quota going down, not the
+          parent's, and there is no other cue that this is not their own. */}
+      {memberId ? (
+        <Text variant="helper" weight="700" style={{ color: colors.p }}>
+          {memberName ?? 'Çocuğun'} adına randevu alıyorsun
+        </Text>
+      ) : null}
 
       <MonthCalendar
         selectedDate={selectedDate}

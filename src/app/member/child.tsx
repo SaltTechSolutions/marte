@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -43,6 +43,7 @@ export default function ChildDetail() {
 
 function ChildView({ tenantId, childId, childName }: { tenantId: string; childId: string; childName: string }) {
   const { spacing } = useAppTheme();
+  const router = useRouter();
   const toast = useToast();
 
   const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
@@ -105,6 +106,16 @@ function ChildView({ tenantId, childId, childName }: { tenantId: string; childId
           description="Salon yöneticisi paket tanımladığında burada görünecek."
         />
       )}
+
+      <Button
+        label="Bu çocuk için randevu al"
+        onPress={() =>
+          router.push({
+            pathname: '/member/trainers',
+            params: { memberId: childId, memberName: childName },
+          })
+        }
+      />
 
       <Text variant="label" tone="sub" style={{ marginTop: spacing.sm }}>
         YAKLAŞAN RANDEVULARI

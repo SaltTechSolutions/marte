@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
@@ -19,6 +19,9 @@ import { useAppTheme } from '@/theme/ThemeContext';
  *  set still needs to be findable, otherwise "why can't I see my coach"
  *  reads as a bug. */
 export default function MemberTrainers() {
+  // Set when a parent picks a trainer for their child; passed straight on to
+  // the booking screen, which is where it actually changes anything.
+  const { memberId, memberName } = useLocalSearchParams<{ memberId?: string; memberName?: string }>();
   const router = useRouter();
   const { colors, spacing } = useAppTheme();
   const { activeTenant } = useAuth();
@@ -57,7 +60,13 @@ export default function MemberTrainers() {
             onPress={() =>
               router.push({
                 pathname: '/member/book-session',
-                params: { trainerId: t.userId, trainerName: t.userDisplayName ?? 'Antrenör' },
+                params: {
+                  trainerId: t.userId,
+                  trainerName: t.userDisplayName ?? 'Antrenör',
+                  // Carried straight through when a parent arrived here from
+                  // their child's screen (MEMBER-5c). Absent for everyone else.
+                  ...(memberId ? { memberId, memberName: memberName ?? '' } : {}),
+                },
               })
             }>
             <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
