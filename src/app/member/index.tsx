@@ -225,9 +225,19 @@ export default function MemberHome() {
       </View>
 
       {/* --- What's coming --- */}
-      <Text variant="label" tone="sub" style={{ marginTop: 8 }}>
-        YAKLAŞAN RANDEVU
-      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>
+        <Text variant="label" tone="sub">
+          YAKLAŞAN RANDEVU
+        </Text>
+        {/* This card shows only the NEXT one; everything else lives on the
+            bookings screen. Without a way in, a member with a class on
+            Thursday and a session on Friday has no place that shows both. */}
+        <Pressable onPress={() => router.push('/member/bookings')} hitSlop={8}>
+          <Text variant="label" weight="700" style={{ color: colors.p }}>
+            Tümü ›
+          </Text>
+        </Pressable>
+      </View>
       {nextSession && (
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>

@@ -136,3 +136,28 @@ export async function cancelBooking(classId: string, userId: string): Promise<vo
     await updateDoc(ref, { waitlistUserIds: arrayRemove(userId) });
   }
 }
+
+/**
+ * The group classes this member is booked into, from now on (MEMBER-3).
+ *
+ * `array-contains` on the booking list rather than a separate bookings
+ * collection: the uid lists already live on the class doc because that is
+ * what makes the single-uid-toggle booking rule expressible, and a parallel
+ * collection would be a second source of truth to keep in step.
+ */
+export function watchMyUpcomingClasses(
+  tenantId: string,
+  userId: string,
+  onChange: (classes: ClassSession[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'classes'),
+    where('tenantId', '==', tenantId),
+    where('bookedUserIds', 'array-contains', userId),
+    where('date', '>=', Timestamp.fromDate(new Date())),
+    orderBy('date', 'asc'),
+    limit(30),
+  );
+  return watchQuery('Rezervasyonlarım', q, (snap) => snap.docs.map(classSessionFromDoc), onChange, onError);
+}
