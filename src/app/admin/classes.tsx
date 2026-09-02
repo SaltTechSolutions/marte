@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
@@ -20,7 +20,13 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { confirmDestructive } from '@/utils/confirm';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { createClass, deleteClass, updateClass, watchClassesForTenant } from '@/data/firebase/classRepo';
+import {
+  createClassSeries,
+  deleteClass,
+  deleteClassSeriesFrom,
+  updateClass,
+  watchClassesForTenant,
+} from '@/data/firebase/classRepo';
 import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
 import { gymWindowForDate } from '@/data/openingHours';
 import { ClassSession, TenantMembership } from '@/data/types';
@@ -28,6 +34,13 @@ import { useAppTheme } from '@/theme/ThemeContext';
 import { dateFromOffset, offsetFromDate, toHHMM, toMinutes } from '@/utils/time';
 
 const DURATION_PRESETS = [30, 50, 60];
+/** Occurrences including the first — 1 is an ordinary one-off (PER-10). */
+const REPEAT_PRESETS: { weeks: number; label: string }[] = [
+  { weeks: 1, label: 'Tek sefer' },
+  { weeks: 4, label: '4 hafta' },
+  { weeks: 8, label: '8 hafta' },
+  { weeks: 12, label: '12 hafta' },
+];
 
 function sessionTime(d: Date) {
   return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
@@ -59,6 +72,7 @@ export default function AdminClasses() {
   // the two can never drift apart in fields or validation.
   const [editing, setEditing] = useState<ClassSession | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [repeatWeeks, setRepeatWeeks] = useState(1);
 
   // From the start of this month onward — the admin schedules ahead and
   // occasionally reviews the recent past, but never the whole history.
@@ -92,6 +106,7 @@ export default function AdminClasses() {
     setName('');
     setTrainer('');
     setTrainerId('');
+    setRepeatWeeks(1);
   };
 
   /** Opens the shared form on an existing class. Duration keeps the class's
@@ -106,6 +121,7 @@ export default function AdminClasses() {
     setCapacity(s.capacity);
     setTime(sessionTime(s.date));
     setDayOffset(offsetFromDate(s.date));
+    setRepeatWeeks(1);
     setShowForm(true);
   };
 
@@ -169,16 +185,19 @@ export default function AdminClasses() {
         });
         toast.success('Ders güncellendi');
       } else {
-        await createClass({
-          tenantId,
-          name: name.trim(),
-          ...(trainerId ? { trainerId } : {}),
-          trainerName: trainer.trim(),
-          date,
-          durationMinutes: duration,
-          capacity,
-        });
-        toast.success('Ders eklendi');
+        const { created } = await createClassSeries(
+          {
+            tenantId,
+            name: name.trim(),
+            ...(trainerId ? { trainerId } : {}),
+            trainerName: trainer.trim(),
+            date,
+            durationMinutes: duration,
+            capacity,
+          },
+          repeatWeeks,
+        );
+        toast.success(created > 1 ? `${created} hafta boyunca eklendi` : 'Ders eklendi');
       }
       closeForm();
     } catch (e) {
@@ -197,16 +216,48 @@ export default function AdminClasses() {
    */
   const confirmCancel = (s: ClassSession) => {
     const booked = s.bookedUserIds.length;
+    const who =
+      booked > 0
+        ? `\n\n${booked} kişi bu derse kayıtlı. İptal edince ders programlarından kalkacak.`
+        : '\n\nHenüz kimse kayıtlı değil.';
+
+    // A repeating class is almost never cancelled for one week only — but
+    // sometimes it is, so both stay on offer and neither is the default.
+    // Forward-only: past occurrences already ran, and deleting them would take
+    // their attendance with them.
+    if (s.seriesId) {
+      Alert.alert(
+        'Dersi iptal et',
+        `${s.name} — ${sessionDay(s.date)} ${sessionTime(s.date)}${who}`,
+        [
+          { text: 'Vazgeç', style: 'cancel' },
+          { text: 'Yalnızca bu ders', style: 'destructive', onPress: () => void doCancel(s) },
+          {
+            text: 'Bu ve sonrakiler',
+            style: 'destructive',
+            onPress: () => void doCancelSeries(s),
+          },
+        ],
+      );
+      return;
+    }
+
     confirmDestructive({
       title: 'Dersi iptal et',
-      message:
-        `${s.name} — ${sessionDay(s.date)} ${sessionTime(s.date)}` +
-        (booked > 0
-          ? `\n\n${booked} kişi bu derse kayıtlı. İptal edince ders programlarından kalkacak.`
-          : '\n\nHenüz kimse kayıtlı değil.'),
+      message: `${s.name} — ${sessionDay(s.date)} ${sessionTime(s.date)}${who}`,
       confirmLabel: 'Dersi iptal et',
       onConfirm: () => void doCancel(s),
     });
+  };
+
+  const doCancelSeries = async (s: ClassSession) => {
+    if (!tenantId || !s.seriesId) return;
+    try {
+      const { deleted } = await deleteClassSeriesFrom(tenantId, s.seriesId, s.date);
+      toast.success(`${deleted} ders iptal edildi`);
+    } catch (e) {
+      reportError(e, toast, 'İptal edilemedi, tekrar dene.');
+    }
   };
 
   const doCancel = async (s: ClassSession) => {
@@ -315,6 +366,29 @@ export default function AdminClasses() {
               <Chip key={d} label={`${d} dk`} selected={duration === d} onPress={() => setDuration(d)} />
             ))}
           </View>
+
+          {!editing && (
+            <>
+              <Text variant="label" tone="sub">
+                TEKRAR
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                {REPEAT_PRESETS.map((r) => (
+                  <Chip
+                    key={r.weeks}
+                    label={r.label}
+                    selected={repeatWeeks === r.weeks}
+                    onPress={() => setRepeatWeeks(r.weeks)}
+                  />
+                ))}
+              </View>
+              {repeatWeeks > 1 && (
+                <Text variant="label" tone="sub">
+                  Aynı gün ve saatte {repeatWeeks} hafta boyunca oluşturulur.
+                </Text>
+              )}
+            </>
+          )}
 
           <Text variant="label" tone="sub">
             KONTENJAN

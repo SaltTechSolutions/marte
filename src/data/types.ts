@@ -189,6 +189,16 @@ export interface ClassSession {
    */
   trainerId?: string;
   trainerName: string;
+  /**
+   * Ties the occurrences of a repeating class together (PER-10). Absent on a
+   * one-off, and on every class created before series existed.
+   *
+   * Occurrences stay separate documents rather than one recurring rule: a
+   * single week gets cancelled, moved or filled independently of the rest, and
+   * a rule-plus-exceptions model has to answer "is this week real?" on every
+   * read. The id only exists so "cancel the rest of the term" is expressible.
+   */
+  seriesId?: string;
   date: Date;
   durationMinutes: number;
   capacity: number;

@@ -78,6 +78,7 @@ export function classSessionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapsh
     name: data.name,
     ...(data.trainerId ? { trainerId: data.trainerId } : {}),
     trainerName: data.trainerName,
+    ...(data.seriesId ? { seriesId: data.seriesId } : {}),
     date: toDate(data.date) ?? new Date(),
     durationMinutes: data.durationMinutes,
     capacity: data.capacity,

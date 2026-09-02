@@ -11,6 +11,8 @@ import {
   runTransaction,
   deleteDoc,
   deleteField,
+  getDocs,
+  writeBatch,
   serverTimestamp,
   Timestamp,
   updateDoc,
@@ -258,4 +260,84 @@ export async function cancelGroupClassWithCredit(
   );
   const { data } = await call({ classId, ...(memberId ? { memberId } : {}) });
   return { refunded: data.refunded };
+}
+
+/**
+ * Creates a weekly repeat of the same class (PER-10 / PKG-9).
+ *
+ * A gym running twenty classes a week had to enter roughly 240 records to lay
+ * out a term, one at a time. `weeks` counts occurrences INCLUDING the first,
+ * so 1 is an ordinary single class and the caller needs no special case.
+ *
+ * One batch, so a term is all-or-nothing: half a series is worse than none —
+ * the members see a schedule with holes in it and nobody can tell whether the
+ * missing weeks were cancelled or never created. Rules still apply per write,
+ * so a trainer cannot batch their way past the ownership check.
+ */
+export async function createClassSeries(
+  params: {
+    tenantId: string;
+    name: string;
+    trainerId?: string;
+    trainerName: string;
+    date: Date;
+    durationMinutes: number;
+    capacity: number;
+  },
+  weeks: number,
+): Promise<{ created: number; seriesId?: string }> {
+  const count = Math.max(1, Math.floor(weeks));
+  if (count === 1) {
+    await createClass(params);
+    return { created: 1 };
+  }
+
+  const seriesId = doc(collection(db, 'classes')).id;
+  const batch = writeBatch(db);
+  for (let i = 0; i < count; i += 1) {
+    const date = new Date(params.date);
+    date.setDate(date.getDate() + i * 7);
+    batch.set(doc(collection(db, 'classes')), {
+      tenantId: params.tenantId,
+      name: params.name,
+      ...(params.trainerId ? { trainerId: params.trainerId } : {}),
+      trainerName: params.trainerName,
+      seriesId,
+      date,
+      durationMinutes: params.durationMinutes,
+      capacity: params.capacity,
+      bookedUserIds: [],
+      waitlistUserIds: [],
+      createdAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+  return { created: count, seriesId };
+}
+
+/**
+ * Cancels the rest of a repeating class, from `fromDate` onward.
+ *
+ * Deliberately forward-only. Past occurrences already happened — people
+ * attended them, and deleting the record of a class that ran would take its
+ * attendance with it.
+ */
+export async function deleteClassSeriesFrom(
+  tenantId: string,
+  seriesId: string,
+  fromDate: Date,
+): Promise<{ deleted: number }> {
+  const q = query(
+    collection(db, 'classes'),
+    where('tenantId', '==', tenantId),
+    where('seriesId', '==', seriesId),
+    where('date', '>=', Timestamp.fromDate(fromDate)),
+    limit(200),
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return { deleted: 0 };
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return { deleted: snap.size };
 }
