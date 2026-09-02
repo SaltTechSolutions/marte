@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 import { View } from 'react-native';
+import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
 
 import { Activation, BACK_PATHS, FRONT_PATHS, MuscleId } from '@/data/exerciseLibrary';
 import { mix } from '@/theme/deriveColor';
@@ -71,7 +71,11 @@ export function MuscleMap({
   );
 }
 
-/** Primer / sekonder / pasif key — the map is unreadable without it. */
+/**
+ * Primer / sekonder / pasif key. The map is three shades of one hue and
+ * nothing on it says which shade means what, so the chart is guesswork
+ * without this row.
+ */
 export function MuscleMapLegend() {
   const { colors } = useAppTheme();
   const secondaryColor = mix(colors.p, colors.surf, 0.52);
@@ -92,4 +96,3 @@ export function MuscleMapLegend() {
     </View>
   );
 }
-

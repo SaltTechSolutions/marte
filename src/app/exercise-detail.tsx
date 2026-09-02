@@ -11,7 +11,6 @@ import { Text } from '@/components/Text';
 import {
   Activation,
   Exercise,
-  MUSCLE_LABELS,
   MuscleId,
   POSE_ARCHETYPES,
   PoseFrame,
@@ -206,15 +205,6 @@ function Detail({ exercise }: { exercise: Exercise }) {
             <MuscleMap view={view} activation={activation} />
           </View>
           <MuscleMapLegend />
-
-          <View style={{ gap: 4, paddingTop: 4 }}>
-            {exercise.primary.map((m) => (
-              <MuscleRow key={m} muscle={m} level="Primer" color={colors.p} />
-            ))}
-            {exercise.secondary.map((m) => (
-              <MuscleRow key={m} muscle={m} level="Sekonder" color={colors.sub} />
-            ))}
-          </View>
         </Card>
 
         {/* --- How to --- */}
@@ -289,16 +279,3 @@ function BackButton() {
   );
 }
 
-function MuscleRow({ muscle, level, color }: { muscle: MuscleId; level: string; color: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color }} />
-      <Text variant="helper" style={{ flex: 1 }} numberOfLines={1}>
-        {MUSCLE_LABELS[muscle]}
-      </Text>
-      <Text variant="label" tone="sub">
-        {level}
-      </Text>
-    </View>
-  );
-}
