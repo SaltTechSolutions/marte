@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { EmptyState } from '@/components/EmptyState';
@@ -9,6 +10,7 @@ import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
 import { useRefreshControl } from '@/components/useRefreshControl';
 import { useToast } from '@/components/Toast';
 import {
@@ -25,6 +27,7 @@ import { canActivateAnotherMember } from '@/data/seats';
 import { TenantMembership } from '@/data/types';
 import { useAuth } from '@/context/AuthContext';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { compareTr, matchesTr } from '@/utils/search';
 import { confirmDestructive } from '@/utils/confirm';
 
 function requesterLabel(r: TenantMembership) {
@@ -56,6 +59,7 @@ export default function AdminMembers() {
   const [loading, setLoading] = useState(() => !!tenantId);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [query, setQuery] = useState('');
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -82,6 +86,18 @@ export default function AdminMembers() {
   }, [tenantId, retryKey]);
 
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
+  const trimmedQuery = query.trim();
+  /** Client-side because the roster is already loaded and a gym is hundreds of
+   *  members, not thousands. Server-side paging is the answer past that, and
+   *  belongs with the reporting work that also needs scoped queries. */
+  const visibleMembers = useMemo(() => {
+    const all = members ?? [];
+    const found = trimmedQuery
+      ? all.filter((m) => matchesTr(requesterLabel(m), trimmedQuery) || matchesTr(m.userEmail ?? '', trimmedQuery))
+      : all;
+    return [...found].sort((a, b) => compareTr(requesterLabel(a), requesterLabel(b)));
+  }, [members, trimmedQuery]);
 
   const retry = () => {
     setFailed(false);
@@ -301,9 +317,32 @@ export default function AdminMembers() {
           looked empty. */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.md }}>
         <Text variant="h3">
-          Üyeler <Text variant="h3" style={{ color: colors.p }}>{members?.length ?? 0}</Text>
+          Üyeler{' '}
+          <Text variant="h3" style={{ color: colors.p }}>
+            {trimmedQuery ? `${visibleMembers.length}/${members?.length ?? 0}` : (members?.length ?? 0)}
+          </Text>
         </Text>
       </View>
+
+      {/* PER-12. The trainer's roster has had search since it was written;
+          this one never did, so an owner with 120 members scrolled. Filters
+          (paketi biten / borclu) wait on the reporting work, which is where
+          those states get derived. */}
+      {(members?.length ?? 0) > 8 && (
+        <View style={{ justifyContent: 'center' }}>
+          <TextField
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Üye ara"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            returnKeyType="search"
+            style={{ paddingLeft: 40 }}
+          />
+          <Ionicons name="search" size={17} color={colors.sub} style={{ position: 'absolute', left: 14 }} />
+        </View>
+      )}
 
       {failed ? null : members === undefined ? (
         <ListSkeleton />
@@ -313,9 +352,17 @@ export default function AdminMembers() {
           title="Henüz üye yok"
           description="Salon kodunu resepsiyona asın — üyeler kodu girip katılım isteği gönderdiğinde burada onaya düşecek."
         />
+      ) : visibleMembers.length === 0 ? (
+        <EmptyState
+          icon="search-outline"
+          title="Eşleşen üye yok"
+          description={`"${trimmedQuery}" aramasına uyan kimse bulunamadı. Farklı bir yazım dene.`}
+          actionLabel="Aramayı temizle"
+          onAction={() => setQuery('')}
+        />
       ) : (
         <ListGroup>
-          {members.map((m, i) => (
+          {visibleMembers.map((m, i) => (
             <SwipeableRow
               key={m.id}
               actions={[
@@ -332,7 +379,7 @@ export default function AdminMembers() {
                 },
               ]}>
             <ListRow
-              last={i === members.length - 1}
+              last={i === visibleMembers.length - 1}
               onPress={() => router.push({ pathname: '/admin/member', params: { memberId: m.userId, memberName: requesterLabel(m) } })}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
                 <Text variant="helper" weight="900" style={{ color: colors.p }}>
