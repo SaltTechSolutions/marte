@@ -80,6 +80,9 @@ function RootLayout() {
                 inside either tab group. */}
             <Stack.Screen name="gym-qr" options={{ presentation: 'modal' }} />
             <Stack.Screen name="paywall" options={{ presentation: 'modal' }} />
+            {/* Shared: the member opens it mid-workout and the trainer while
+                writing a programme, so it sits outside both tab groups. */}
+            <Stack.Screen name="exercise-detail" />
           </Stack>
         </AuthProvider>
       </ToastProvider>

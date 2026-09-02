@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -9,12 +10,24 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
 import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
+import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { Program, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { confirmDestructive } from '@/utils/confirm';
 
-const EXERCISE_LIBRARY = ['Bench Press', 'Squat', 'Deadlift', 'Omuz Pres', 'Lat Pulldown', 'Biceps Curl', 'Triceps Pushdown', 'Leg Press', 'Plank', 'Mekik'];
+// PER-19: the picker used to be ten names typed into this file, which is why
+// a trainer who wanted a hip thrust had to type it by hand and no two
+// programmes spelled it the same way. It now reads the shared library, so a
+// picked exercise always resolves to an explainer page the member can open.
+const LIBRARY_GROUPS: { label: string; ids: string[] }[] = [
+  { label: 'ALT VÜCUT', ids: ['goblet-squat', 'back-squat', 'front-hack-squat', 'leg-press', 'rdl', 'deadlift', 'hip-thrust', 'bulgarian-split-squat', 'walking-lunge', 'reverse-lunge', 'step-up', 'leg-extension', 'leg-curl', 'calf-raise'] },
+  { label: 'İTİŞ', ids: ['bench-press', 'incline-press', 'machine-chest-press', 'shoulder-press'] },
+  { label: 'ÇEKİŞ', ids: ['barbell-row', 'single-arm-row', 'chest-supported-row', 'seated-cable-row', 'lat-pulldown', 'pullup', 'face-pull', 'reverse-fly'] },
+  { label: 'KOL · OMUZ', ids: ['lateral-raise', 'biceps-curl', 'triceps-pushdown', 'shrug'] },
+  { label: 'CORE', ids: ['plank', 'side-plank', 'dead-bug', 'bird-dog', 'mcgill-curl-up', 'pallof-press', 'ab-wheel-rollout', 'hanging-knee-raise', 'suitcase-carry', 'glute-bridge'] },
+  { label: 'ISINMA', ids: ['arm-circles', 'cat-cow', 'band-pull-apart', 'band-external-rotation', 'chin-tuck', 'worlds-greatest-stretch'] },
+];
 
 export default function ProgramBuilder() {
   const { programId } = useLocalSearchParams<{ programId: string }>();
@@ -133,6 +146,15 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     {ex.sets} set × {ex.reps} tekrar · {ex.targetWeightKg} kg
                   </Text>
                 </View>
+                {exerciseByName(ex.name) && (
+                  <Pressable
+                    onPress={() => router.push({ pathname: '/exercise-detail', params: { name: ex.name } })}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${ex.name} nasıl yapılır`}>
+                    <Ionicons name="information-circle-outline" size={19} color={colors.sub} />
+                  </Pressable>
+                )}
                 <Text tone="sub">{expanded ? '▾' : '›'}</Text>
               </Pressable>
 
@@ -169,11 +191,20 @@ function ProgramBuilderForm({ program }: { program: Program }) {
 
         {pickingFromLibrary ? (
           <View style={{ gap: 8 }}>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {EXERCISE_LIBRARY.map((name) => (
-                <Chip key={name} label={name} onPress={() => addFromLibrary(name)} />
-              ))}
-            </View>
+            {LIBRARY_GROUPS.map((group) => (
+              <View key={group.label} style={{ gap: 6 }}>
+                <Text variant="label" tone="sub">
+                  {group.label}
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {group.ids.map((id) => {
+                    const entry = exerciseById(id);
+                    if (!entry) return null;
+                    return <Chip key={id} label={entry.tr} onPress={() => addFromLibrary(entry.tr)} />;
+                  })}
+                </View>
+              </View>
+            ))}
             <Pressable onPress={() => setPickingFromLibrary(false)}>
               <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                 Vazgeç

@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { completeWorkoutLog, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
+import { exerciseByName } from '@/data/exerciseLibrary';
 import { WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
@@ -147,6 +148,7 @@ export default function WorkoutSession() {
         <View />
     );
 
+  const guide = exerciseByName(exercise.name);
   const progressPercent = Math.round(((exerciseIndex + 1) / log.exerciseLogs.length) * 100);
   const nextExercise = log.exerciseLogs[exerciseIndex + 1];
 
@@ -168,12 +170,46 @@ export default function WorkoutSession() {
 
       <View style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.lg, padding: 16, marginTop: 12, gap: 14 }}>
         <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-          <View style={{ width: 54, height: 54, borderRadius: 14, backgroundColor: colors.surf2 }} />
-          <View>
-            <Text variant="h3">{exercise.name}</Text>
+          {/* This was an empty grey square waiting for artwork. It is now the
+              way into the movement explainer — the one place mid-set where a
+              member actually asks "am I doing this right?". */}
+          <Pressable
+            onPress={() =>
+              guide && router.push({ pathname: '/exercise-detail', params: { name: exercise.name } })
+            }
+            disabled={!guide}
+            accessibilityRole={guide ? 'button' : undefined}
+            accessibilityLabel={guide ? `${exercise.name} nasıl yapılır` : undefined}
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 14,
+              backgroundColor: colors.surf2,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: guide ? 1.5 : 0,
+              borderColor: colors.p,
+            }}>
+            <Ionicons name={guide ? 'body-outline' : 'barbell-outline'} size={24} color={guide ? colors.p : colors.sub} />
+          </Pressable>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text variant="h3" numberOfLines={1}>
+              {exercise.name}
+            </Text>
             <Text variant="helper" tone="sub">
               {exercise.setsTarget} set hedefi
             </Text>
+            {guide && (
+              <Pressable
+                onPress={() => router.push({ pathname: '/exercise-detail', params: { name: exercise.name } })}
+                hitSlop={6}
+                accessibilityRole="button"
+                style={{ minHeight: 22, justifyContent: 'center' }}>
+                <Text variant="label" weight="700" style={{ color: colors.p }}>
+                  Nasıl yapılır? ›
+                </Text>
+              </Pressable>
+            )}
           </View>
         </View>
 

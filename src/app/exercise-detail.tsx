@@ -1,0 +1,304 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import { Card } from '@/components/Card';
+import { EmptyState } from '@/components/EmptyState';
+import { MuscleMap, MuscleMapLegend } from '@/components/MuscleMap';
+import { PoseDiagram } from '@/components/PoseDiagram';
+import { Screen } from '@/components/Screen';
+import { Text } from '@/components/Text';
+import {
+  Activation,
+  Exercise,
+  MUSCLE_LABELS,
+  MuscleId,
+  POSE_ARCHETYPES,
+  PoseFrame,
+  exerciseById,
+  exerciseByName,
+} from '@/data/exerciseLibrary';
+import { useAppTheme } from '@/theme/ThemeContext';
+import { safeBack } from '@/utils/navigation';
+
+/**
+ * How a movement is performed (PER-19) — muscle map, start/end frames, steps.
+ *
+ * A top-level route rather than a screen inside either tab group: the member
+ * opens it mid-workout and the trainer opens it while writing a programme, and
+ * pushing one role into the other's route group swaps the whole tab bar.
+ *
+ * Accepts either `exerciseId` (a library id, from the trainer's picker) or
+ * `name` (a programme line, from the workout screen) — the workout log stores
+ * the exercise's name, not a library reference, so name is the only handle
+ * that screen has until the PER-17 model change lands.
+ */
+export default function ExerciseDetail() {
+  const { exerciseId, name } = useLocalSearchParams<{ exerciseId?: string; name?: string }>();
+  const exercise = exerciseById(exerciseId) ?? exerciseByName(name);
+
+  if (!exercise) {
+    return (
+      <Screen>
+        <BackRow title={name || 'Hareket'} />
+        <EmptyState
+          icon="barbell-outline"
+          title="Bu hareketin anlatımı yok"
+          description={
+            name
+              ? `"${name}" kütüphanedeki tek tek hareketlerden biri değil — kardiyo blokları ve devre tarifleri anlatım sayfası taşımıyor.`
+              : 'Aradığın hareket kütüphanede bulunamadı.'
+          }
+        />
+      </Screen>
+    );
+  }
+
+  return <Detail exercise={exercise} />;
+}
+
+function BackRow({ title }: { title: string }) {
+  const router = useRouter();
+  const { colors, spacing } = useAppTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+      <Pressable
+        onPress={() => safeBack(router, '/')}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Geri"
+        style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 20, color: colors.txt }}>‹</Text>
+      </Pressable>
+      <Text variant="h3" numberOfLines={1} style={{ flex: 1 }}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function difficultyTone(difficulty: string, colors: ReturnType<typeof useAppTheme>['colors']): string {
+  if (difficulty === 'İLERİ') return colors.danger;
+  if (difficulty === 'ORTA-İLERİ') return colors.warn;
+  return colors.ok;
+}
+
+function Detail({ exercise }: { exercise: Exercise }) {
+  const { colors, spacing, radius } = useAppTheme();
+  const [view, setView] = useState<'front' | 'back'>('front');
+
+  const pose = POSE_ARCHETYPES[exercise.archetype];
+  const activation: Partial<Record<MuscleId, Activation>> = {};
+  exercise.secondary.forEach((m) => (activation[m] = 'secondary'));
+  exercise.primary.forEach((m) => (activation[m] = 'primary'));
+
+  const viewToggle = (target: 'front' | 'back', label: string) => {
+    const on = view === target;
+    return (
+      <Pressable
+        onPress={() => setView(target)}
+        accessibilityRole="button"
+        accessibilityState={{ selected: on }}
+        style={{
+          height: 32,
+          minWidth: 60,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 14,
+          borderRadius: 999,
+          backgroundColor: on ? colors.p : 'transparent',
+        }}>
+        <Text variant="helper" weight="700" tone={on ? 'onp' : 'sub'}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <Screen>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+          <BackButton />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text variant="h3" numberOfLines={1}>
+              {exercise.tr}
+            </Text>
+            <Text variant="label" tone="sub" numberOfLines={1}>
+              {exercise.en}
+            </Text>
+          </View>
+          <View style={{ backgroundColor: colors.surf2, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
+            <Text variant="label" weight="700" style={{ color: difficultyTone(exercise.difficulty, colors) }}>
+              {exercise.difficulty}
+            </Text>
+          </View>
+        </View>
+
+        {/* --- Movement frames --- */}
+        <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <Text variant="label" tone="sub">
+              HAREKET
+            </Text>
+            <Text variant="label" tone="sub">
+              {pose.end ? '2 kare' : 'sabit duruş'}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <PoseCard label="Başlangıç" step={1} pose={pose.start} showArrow />
+            {pose.end ? (
+              <PoseCard label="Bitiş" step={2} pose={pose.end} />
+            ) : (
+              <View style={{ flex: 1, backgroundColor: colors.bg1, borderRadius: radius.md, padding: 10, justifyContent: 'center' }}>
+                <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+                  İzometrik hareket — pozisyonu koru, tekrar yok.
+                </Text>
+              </View>
+            )}
+          </View>
+          {!exercise.poseReviewed && (
+            <Text variant="label" tone="sub">
+              ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
+            </Text>
+          )}
+        </Card>
+
+        {/* --- Dose + equipment --- */}
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: spacing.md, marginBottom: spacing.sm }}>
+          <Card style={{ flex: 1, gap: 3 }}>
+            <Text variant="label" tone="sub">
+              SET · TEKRAR
+            </Text>
+            <Text variant="body" weight="900">
+              {exercise.setsHint || '—'}
+            </Text>
+            <Text variant="label" tone="sub">
+              {exercise.restHint ? `Dinlenme ${exercise.restHint}` : 'Antrenörün belirler'}
+            </Text>
+          </Card>
+          <Card style={{ flex: 1, gap: 3 }}>
+            <Text variant="label" tone="sub">
+              EKİPMAN
+            </Text>
+            <Text variant="helper" weight="700">
+              {exercise.equipTr}
+            </Text>
+            <Text variant="label" tone="sub">
+              {exercise.equipEn}
+            </Text>
+          </Card>
+        </View>
+
+        {/* --- Muscles --- */}
+        <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text variant="label" tone="sub">
+              ÇALIŞAN KASLAR
+            </Text>
+            <View style={{ flexDirection: 'row', backgroundColor: colors.bg1, borderRadius: 999, padding: 3 }}>
+              {viewToggle('front', 'Ön')}
+              {viewToggle('back', 'Arka')}
+            </View>
+          </View>
+
+          <View style={{ alignItems: 'center' }}>
+            <MuscleMap view={view} activation={activation} />
+          </View>
+          <MuscleMapLegend />
+
+          <View style={{ gap: 4, paddingTop: 4 }}>
+            {exercise.primary.map((m) => (
+              <MuscleRow key={m} muscle={m} level="Primer" color={colors.p} />
+            ))}
+            {exercise.secondary.map((m) => (
+              <MuscleRow key={m} muscle={m} level="Sekonder" color={colors.sub} />
+            ))}
+          </View>
+        </Card>
+
+        {/* --- How to --- */}
+        {exercise.steps.length > 0 && (
+          <Card style={{ marginHorizontal: spacing.md, gap: 14 }}>
+            <Text variant="label" tone="sub">
+              NASIL YAPILIR
+            </Text>
+            {exercise.steps.map(([tr, en], i) => (
+              <View key={i} style={{ flexDirection: 'row', gap: 11 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text variant="label" weight="900">
+                    {i + 1}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text variant="helper">{tr}</Text>
+                  <Text variant="label" tone="sub" style={{ paddingTop: 3 }}>
+                    {en}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </Card>
+        )}
+      </ScrollView>
+    </Screen>
+  );
+}
+
+function PoseCard({
+  label,
+  step,
+  pose,
+  showArrow = false,
+}: {
+  label: string;
+  step: number;
+  pose: PoseFrame;
+  showArrow?: boolean;
+}) {
+  const { colors, radius } = useAppTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg1, borderRadius: radius.md, padding: 8, paddingBottom: 6 }}>
+      <PoseDiagram pose={pose} showArrow={showArrow} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4 }}>
+        <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
+          <Text variant="label" tone="onp" weight="900" style={{ fontSize: 10 }}>
+            {step}
+          </Text>
+        </View>
+        <Text variant="label" weight="700">
+          {label}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function BackButton() {
+  const router = useRouter();
+  const { colors } = useAppTheme();
+  return (
+    <Pressable
+      onPress={() => safeBack(router, '/')}
+      hitSlop={10}
+      accessibilityRole="button"
+      accessibilityLabel="Geri"
+      style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: 20, color: colors.txt }}>‹</Text>
+    </Pressable>
+  );
+}
+
+function MuscleRow({ muscle, level, color }: { muscle: MuscleId; level: string; color: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: color }} />
+      <Text variant="helper" style={{ flex: 1 }} numberOfLines={1}>
+        {MUSCLE_LABELS[muscle]}
+      </Text>
+      <Text variant="label" tone="sub">
+        {level}
+      </Text>
+    </View>
+  );
+}
