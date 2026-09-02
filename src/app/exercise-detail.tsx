@@ -350,7 +350,8 @@ function ReportProblem({ exercise }: { exercise: Exercise }) {
       </Text>
       <Text variant="label" tone="sub">
         Bu anlatım uygulamayla birlikte geliyor, salonun kendi içeriği değil.
-        Bildirimin geliştiricilere ulaşır; salonda kimseye görünmez.
+        Bildirimin kaydedilir ve anlatımı hazırlayan ekip inceler; salonda
+        kimseye görünmez.
       </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
