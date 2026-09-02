@@ -19,6 +19,16 @@ import { confirmDestructive } from '@/utils/confirm';
 
 
 export default function ProgramBuilder() {
+  return <ProgramBuilderScreen />;
+}
+
+/**
+ * Exported so the admin-side route can render the same builder without
+ * dragging the admin into the trainer route group — pushing them there swaps
+ * the whole tab bar mid-task, which is the bug `admin/calendar` was created
+ * to avoid.
+ */
+export function ProgramBuilderScreen() {
   const { programId } = useLocalSearchParams<{ programId: string }>();
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
 

@@ -187,11 +187,32 @@ export async function rejectMembership(id: string): Promise<void> {
 }
 
 /** Active member count for a tenant — freemium limit check on the approve path. */
+/**
+ * How many paying members the gym has.
+ *
+ * Must match `syncActiveMemberCount` in `marte06/functions/src/sync.ts`
+ * exactly — that function maintains `tenants.activeMemberCount`, which the
+ * security rule reads to enforce the free-tier seat limit. This is the
+ * client's own count of the same thing, and the two disagreeing is worse
+ * than either being wrong alone.
+ *
+ * The `roles array-contains 'member'` filter is the part that used to be
+ * missing, and it was not cosmetic: without it every admin and trainer
+ * counted as a member. The pilot gym read "55 aktif üye" on the panel and
+ * listed 50, and — the real damage — `admin/members` fed that inflated
+ * number to `canActivateAnotherMember`, so staff consumed paid seats. A gym
+ * with 8 members and 3 staff was bounced to the paywall while the rule,
+ * counting 8, would have allowed the approval. The client was stricter than
+ * the server, in the direction of asking for money.
+ *
+ * Same index as `watchActiveMembers`, which already filtered this way.
+ */
 export async function countActiveMembers(tenantId: string): Promise<number> {
   const q = query(
     collection(db, 'tenant_memberships'),
     where('tenantId', '==', tenantId),
     where('status', '==', 'active'),
+    where('roles', 'array-contains', 'member'),
   );
   const snap = await getCountFromServer(q);
   return snap.data().count;

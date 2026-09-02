@@ -342,7 +342,13 @@ function ReportProblem({ exercise }: { exercise: Exercise }) {
       />
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} disabled={sending} onPress={() => setOpen(false)} />
+        {/* Deliberately NOT disabled while sending. A write that never
+            settles (offline, or a server that never answers) leaves `sending`
+            stuck true, and disabling the way out along with the way forward
+            locks the member inside a form they cannot leave — AGENTS §2,
+            no locked flows. Closing mid-flight is safe: the write is already
+            queued and will land or fail on its own. */}
+        <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} onPress={() => setOpen(false)} />
         <Button label={sending ? '…' : 'Gönder'} style={{ flex: 1 }} disabled={sending} onPress={send} />
       </View>
     </Card>

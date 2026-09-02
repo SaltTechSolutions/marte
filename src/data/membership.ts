@@ -40,9 +40,27 @@ export function canCheckIn(m: Maybe): boolean {
   return hasRole(m, 'admin') || hasPermission(m, 'checkin');
 }
 
-/** Own PT calendar, own member roster, program authoring. */
+/**
+ * Own PT calendar, own member roster, program authoring.
+ *
+ * **An admin always coaches.** In most small studios the owner IS the coach,
+ * and a model where they are not could not explain why the person who runs
+ * the gym cannot write a member a programme. So this is a CAPABILITY the
+ * admin role carries, not a role they have to also be granted.
+ *
+ * That is separate from which SURFACES they see. Holding the capability does
+ * not put a trainer tab bar in an owner's navigation — that still follows the
+ * explicit `roles` array, which is why `RoleSwitcher` reads `roles` directly
+ * and `primaryRole` keeps admin and trainer distinct. An owner who does not
+ * coach should not carry a PT calendar around; an owner who wants to write a
+ * programme should not be told no.
+ *
+ * Guard with this, never with `hasRole(m, 'trainer')` — that comparison is
+ * how `trainer/index` once locked admins out of a tab `trainer/calendar`
+ * let them into.
+ */
 export function canCoach(m: Maybe): boolean {
-  return hasRole(m, 'trainer');
+  return hasRole(m, 'trainer') || hasRole(m, 'admin');
 }
 
 /**

@@ -109,6 +109,41 @@ src/theme/          Token'lar ve tema türetme.
 
 ---
 
+## 4b. Roller ve yetenekler
+
+**Yetenek soruları yalnızca `src/data/membership.ts` içinde cevaplanır.**
+Ekranda `roles.includes('trainer')` ya da `role === 'admin'` yazma; her
+zaman `canCoach` / `canManageGym` / `canCheckIn` / `canOverseeCalendars` /
+`isStaff` kullan. Ham karşılaştırmalar zamanla ayrışır — `trainer/index`'in
+bir zamanlar yöneticileri `trainer/calendar`'ın içeri aldığı bir sekmeden
+kilitlemesinin sebebi tam olarak buydu.
+
+**Yönetici her zaman antrenördür.** *(Karar: kullanıcı, 2 Eylül 2026.)*
+Küçük salonların çoğunda salonu işleten kişi aynı zamanda çalıştıran kişidir;
+salonun sahibinin bir üyeye program yazamamasını açıklayabilen bir model yok.
+Bu yüzden `canCoach` admin rolünde de `true` döner — ayrıca `trainer` rolü
+verilmesi **gerekmez**.
+
+**Ama yetenek ile yüzey aynı şey değil.** Yeteneğe sahip olmak bir yöneticiye
+antrenör sekme çubuğu vermez; navigasyon hâlâ açıkça verilmiş `roles`
+dizisini izler (`RoleSwitcher` ve `primaryRole` bu yüzden `roles`'u doğrudan
+okur). Çalıştırmayan bir sahip yanında PT takvimi taşımamalı; program yazmak
+isteyen bir sahibe de hayır denmemeli. İkisini karıştırma:
+
+| Soru | Nereye bakılır |
+|---|---|
+| Bu kişi bunu **yapabilir mi**? | `membership.ts` yetenek fonksiyonları |
+| Bu kişi bu **sekmeyi görür mü**? | `roles` dizisi (açık), `ROLE_HOME`, `RoleSwitcher` |
+
+Bir yöneticinin antrenör ekranına ihtiyacı olduğunda, onu antrenör route
+grubuna **itme** — sekme çubuğunu iş ortasında değiştirir. `admin/` altında
+ekranı render eden bir rota aç; `admin/calendar.tsx` ve `admin/builder.tsx`
+bu deseni izler.
+
+Kural tarafında karşılığı `isTenantStaff(tid)` = admin ∨ trainer.
+
+---
+
 ## 5. Firestore kuralları
 
 - **Her sorgu `tenantId` ile filtrelenir.** Çok kiracılı izolasyon hem sorguda

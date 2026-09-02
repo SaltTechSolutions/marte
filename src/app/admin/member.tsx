@@ -12,9 +12,10 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { getMembership } from '@/data/firebase/membershipRepo';
+import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
 import { cancelPackageAssignment, watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { MemberCredit, MemberPackage, TenantMembership } from '@/data/types';
+import { MemberCredit, MemberPackage, Program, TenantMembership } from '@/data/types';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
@@ -46,7 +47,7 @@ const STATUS_LABEL: Record<MemberPackage['status'], string> = {
 export default function AdminMemberDetail() {
   const router = useRouter();
   const { colors, spacing } = useAppTheme();
-  const { activeMembership } = useAuth();
+  const { user, activeMembership } = useAuth();
   const { memberId, memberName } = useLocalSearchParams<{ memberId: string; memberName: string }>();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
@@ -61,6 +62,8 @@ export default function AdminMemberDetail() {
   const [cancelReason, setCancelReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [program, setProgram] = useState<Program | null | undefined>(undefined);
+  const [openingProgram, setOpeningProgram] = useState(false);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
@@ -80,6 +83,11 @@ export default function AdminMemberDetail() {
   useEffect(() => {
     if (!tenantId || !memberId) return;
     return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits);
+  }, [tenantId, memberId]);
+
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchActiveProgramForMember(tenantId, memberId, setProgram);
   }, [tenantId, memberId]);
 
   if (!tenantId || !memberId) {
@@ -148,6 +156,51 @@ export default function AdminMemberDetail() {
         variant="secondary"
         onPress={() => router.push({ pathname: '/admin/payments', params: { memberId } })}
       />
+
+      {/* Writing a programme was a trainer-only screen, never a trainer-only
+          rule — in a small studio the owner is the coach. Reuses the same
+          find-or-create as the trainer's side, so tapping twice reopens the
+          existing draft instead of littering the list with empty ones. */}
+      <Button
+        label={
+          openingProgram
+            ? '…'
+            : program === undefined
+              ? 'Program yükleniyor…'
+              : program
+                ? 'Programı düzenle'
+                : '+ Program ata'
+        }
+        variant="secondary"
+        disabled={openingProgram || program === undefined}
+        onPress={() => {
+          if (!user || openingProgram) return;
+          const run = async () => {
+            setOpeningProgram(true);
+            try {
+              const programId =
+                program?.id ??
+                (await findOrCreateDraftProgram({ tenantId, trainerId: user.uid, memberId, memberName: name }));
+              router.push({ pathname: '/admin/builder', params: { programId } });
+            } catch (e) {
+              reportError(e, toast, 'Program açılamadı, tekrar dene.');
+            } finally {
+              setOpeningProgram(false);
+            }
+          };
+          void run();
+        }}
+      />
+
+      {program ? (
+        <Text variant="label" tone="sub">
+          Aktif program: {program.name} · {program.exercises.length} egzersiz
+        </Text>
+      ) : program === null ? (
+        <Text variant="label" tone="sub">
+          Bu üyenin aktif programı yok.
+        </Text>
+      ) : null}
 
       {(ptRemaining > 0 || groupRemaining > 0) && (
         <View style={{ flexDirection: 'row', gap: 8 }}>
