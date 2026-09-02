@@ -14,6 +14,7 @@ export async function startWorkoutLog(tenantId: string, memberId: string, progra
     exerciseId: e.id,
     name: e.name,
     setsTarget: e.sets,
+    repsTarget: e.reps,
     setsCompleted: 0,
     weightKg: e.targetWeightKg,
   }));

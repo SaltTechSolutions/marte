@@ -42,3 +42,38 @@ export function LegalLinks() {
     </View>
   );
 }
+
+/**
+ * The notice shown at sign-up (PER-3).
+ *
+ * KVKK md. 10 requires telling someone what is being collected AT the point
+ * of collection; the app previously only exposed the policy from the profile
+ * screen, which a new member reaches after handing over their details.
+ *
+ * A notice rather than a tick-box on purpose. Name and e-mail here are
+ * necessary to perform the contract (KVKK md. 5/2-c), which is a lawful basis
+ * on its own — a consent checkbox would misdescribe the basis, and spending a
+ * checkbox where none is needed devalues the one that will be needed when
+ * something genuinely optional (marketing) comes along. Apple 5.1.1 wants the
+ * terms reachable before sign-up, which this satisfies.
+ */
+export function LegalConsentNotice() {
+  const { colors, spacing } = useAppTheme();
+
+  const open = (path: string) => {
+    Linking.openURL(`${SITE}${path}`).catch(() => {});
+  };
+
+  const link = (label: string, path: string) => (
+    <Text variant="label" weight="700" style={{ color: colors.p }} onPress={() => open(path)}>
+      {label}
+    </Text>
+  );
+
+  return (
+    <Text variant="label" tone="sub" style={{ textAlign: 'center', lineHeight: 17, marginTop: spacing.xs }}>
+      Devam ederek {link('Kullanım Şartları', '/terms/')} ve{' '}
+      {link('Gizlilik Politikası', '/privacy/')}&rsquo;nı kabul etmiş olursun.
+    </Text>
+  );
+}

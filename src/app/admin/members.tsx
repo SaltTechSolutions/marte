@@ -55,6 +55,7 @@ export default function AdminMembers() {
   // there's actually a subscription about to kick off.
   const [loading, setLoading] = useState(() => !!tenantId);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
@@ -88,30 +89,79 @@ export default function AdminMembers() {
     setRetryKey((k) => k + 1);
   };
 
-  const approve = async (r: TenantMembership) => {
-    if (!tenantId) return;
-    setBusyId(r.id);
+  /**
+   * Approves one request. Returns whether the seat limit stopped it, so the
+   * bulk path can stop instead of hitting the same wall once per person.
+   */
+  const approveOne = async (r: TenantMembership): Promise<'ok' | 'limit' | 'error'> => {
+    if (!tenantId) return 'error';
     try {
       const activeCount = await countActiveMembers(tenantId);
       if (!canActivateAnotherMember(activeTenant, activeCount)) {
         // The request stays pending on purpose — nobody is turned away, the
-        // gym just has to lift its seat limit first. Say so, then show the
-        // upgrade screen; silently returning left the admin tapping a button
-        // that appeared to do nothing.
-        toast.error(`${requesterLabel(r)} sırada bekliyor — üye limitine ulaştın.`);
-        router.push('/paywall');
-        return;
+        // gym just has to lift its seat limit first.
+        return 'limit';
       }
       await approveMembership(r.id);
-      toast.success(`${requesterLabel(r)} onaylandı`);
+      return 'ok';
     } catch (e) {
       // The same limit is enforced in security rules, so a stale client-side
       // count still lands here rather than half-approving anyone.
-      const denied = (e as { code?: string }).code?.includes('permission-denied');
-      toast.error(denied ? 'Üye limitine ulaştın — yükseltmen gerekiyor.' : 'Onaylanamadı, tekrar deneyin.');
-      if (denied) router.push('/paywall');
+      return (e as { code?: string }).code?.includes('permission-denied') ? 'limit' : 'error';
+    }
+  };
+
+  const approve = async (r: TenantMembership) => {
+    setBusyId(r.id);
+    const outcome = await approveOne(r);
+    setBusyId(null);
+    if (outcome === 'ok') {
+      toast.success(`${requesterLabel(r)} onaylandı`);
+    } else if (outcome === 'limit') {
+      toast.error(`${requesterLabel(r)} sırada bekliyor — üye limitine ulaştın.`);
+      router.push('/paywall');
+    } else {
+      toast.error('Onaylanamadı, tekrar deneyin.');
+    }
+  };
+
+  /**
+   * PER-5. This was `requests.forEach((r) => approve(r))` — every request
+   * fired in parallel, each read the same pre-approval seat count, and each
+   * one that hit the limit raised its own toast and pushed the paywall. Five
+   * pending requests on a full free tier meant five error toasts and the
+   * paywall stacked five deep.
+   *
+   * Sequential, and it stops at the first refusal: once the gym is out of
+   * seats the next person cannot fit either, so continuing only produces
+   * noise. Whoever was approved before the wall stays approved.
+   */
+  const approveAll = async () => {
+    if (bulkBusy) return;
+    setBulkBusy(true);
+    let approved = 0;
+    try {
+      for (const r of requests) {
+        const outcome = await approveOne(r);
+        if (outcome === 'ok') {
+          approved += 1;
+          continue;
+        }
+        if (outcome === 'limit') {
+          toast.error(
+            approved > 0
+              ? `${approved} kişi onaylandı, kalanlar sırada — üye limitine ulaştın.`
+              : 'Üye limitine ulaştın, kimse onaylanamadı.',
+          );
+          router.push('/paywall');
+          return;
+        }
+        toast.error(`${requesterLabel(r)} onaylanamadı, tekrar deneyin.`);
+        return;
+      }
+      if (approved > 0) toast.success(`${approved} kişi onaylandı`);
     } finally {
-      setBusyId(null);
+      setBulkBusy(false);
     }
   };
 
@@ -188,9 +238,9 @@ export default function AdminMembers() {
           İstekler <Text variant="h3" style={{ color: colors.p }}>{requests.length}</Text>
         </Text>
         {requests.length > 0 && (
-          <Pressable onPress={() => requests.forEach((r) => approve(r))}>
-            <Text variant="helper" weight="700" style={{ color: colors.p }}>
-              Tümünü onayla
+          <Pressable onPress={() => void approveAll()} disabled={bulkBusy} accessibilityRole="button">
+            <Text variant="helper" weight="700" style={{ color: bulkBusy ? colors.sub : colors.p }}>
+              {bulkBusy ? 'Onaylanıyor…' : 'Tümünü onayla'}
             </Text>
           </Pressable>
         )}

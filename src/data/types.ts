@@ -238,6 +238,13 @@ export interface ExerciseLog {
   exerciseId: string;
   name: string;
   setsTarget: number;
+  /**
+   * Reps the programme asked for. Optional because logs written before
+   * PER-4 have none — `startWorkoutLog` copied the set count and silently
+   * dropped this, so the "12" in a trainer's "3×12" never reached the member
+   * doing the workout.
+   */
+  repsTarget?: number;
   setsCompleted: number;
   weightKg: number;
   /** Active seconds spent on this exercise (excludes time the workout was paused). */

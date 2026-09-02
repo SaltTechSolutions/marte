@@ -197,7 +197,9 @@ export default function WorkoutSession() {
               {exercise.name}
             </Text>
             <Text variant="helper" tone="sub">
-              {exercise.setsTarget} set hedefi
+              {exercise.repsTarget
+                ? `${exercise.setsTarget} set × ${exercise.repsTarget} tekrar`
+                : `${exercise.setsTarget} set hedefi`}
             </Text>
             {guide && (
               <Pressable

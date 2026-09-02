@@ -12,6 +12,7 @@ import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { AppleIcon } from '@/components/AppleIcon';
 import { GoogleIcon } from '@/components/GoogleIcon';
+import { LegalConsentNotice } from '@/components/LegalLinks';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { requestPasswordReset } from '@/data/firebase/authRepo';
@@ -201,6 +202,12 @@ export default function RegisterScreen() {
           disabled={!canSubmit || loading}
           style={{ marginTop: spacing.sm }}
         />
+
+        {/* Sign-up only: this is the moment data is first collected, and the
+            notice sits under the action it qualifies so it is read before the
+            tap, not after. It also covers the social buttons further down —
+            those create an account too. */}
+        {mode === 'signUp' && <LegalConsentNotice />}
 
         {/* The question stays quiet; the action carries the weight and the
             brand colour. As one flat muted line the tappable half read as
