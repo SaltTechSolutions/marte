@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -268,7 +269,7 @@ const REASONS: { key: ExerciseReportReason; label: string }[] = [
  * a control you can never use is noise.
  */
 function ReportProblem({ exercise }: { exercise: Exercise }) {
-  const { colors, spacing } = useAppTheme();
+  const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
   const { user, activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
@@ -305,14 +306,39 @@ function ReportProblem({ exercise }: { exercise: Exercise }) {
   };
 
   if (!open) {
+    // Quiet, but not a footnote. As bare muted text after the last card it
+    // read as a caption and was easy to miss entirely; as a filled button it
+    // would compete with the content on every view for something used maybe
+    // once a month. A bordered row with an icon is the app's own treatment
+    // for "secondary but findable" — same shape as the settings rows.
     return (
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center', marginHorizontal: spacing.md, marginTop: spacing.sm }}>
-        <Text variant="helper" weight="700" tone="sub">
-          Bu hareketle ilgili sorun bildir
-        </Text>
+        accessibilityLabel={`${exercise.tr} için sorun bildir`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          marginHorizontal: spacing.md,
+          marginTop: spacing.sm,
+          minHeight: 48,
+          paddingHorizontal: 13,
+          backgroundColor: colors.surf,
+          borderWidth: 1,
+          borderColor: colors.line,
+          borderRadius: radius.md,
+        }}>
+        <Ionicons name="flag-outline" size={18} color={colors.warn} />
+        <View style={{ flex: 1 }}>
+          <Text variant="helper" weight="700">
+            Sorun bildir
+          </Text>
+          <Text variant="label" tone="sub">
+            Çizim, kaslar veya anlatım yanlışsa bize ulaştır
+          </Text>
+        </View>
+        <Text tone="sub">›</Text>
       </Pressable>
     );
   }
