@@ -87,7 +87,18 @@ export default function RegisterScreen() {
     setError(null);
     setResetting(true);
     try {
-      await requestPasswordReset(address);
+      const { retryAfterSeconds } = await requestPasswordReset(address);
+      if (retryAfterSeconds && retryAfterSeconds > 0) {
+        const minutes = Math.ceil(retryAfterSeconds / 60);
+        toast.show({
+          message:
+            minutes <= 1
+              ? 'Az önce istedin. Bir dakika sonra tekrar deneyebilirsin.'
+              : `Az önce istedin. ${minutes} dakika sonra tekrar deneyebilirsin.`,
+          tone: 'info',
+        });
+        return;
+      }
       toast.success('Bu adres kayıtlıysa sıfırlama bağlantısı gönderildi.');
     } catch {
       setError('Şu an gönderilemedi. Biraz sonra tekrar dene.');
