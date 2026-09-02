@@ -11,7 +11,13 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { bookClass, cancelBooking, watchClassesForTenant } from '@/data/firebase/classRepo';
+import {
+  bookClass,
+  bookGroupClassWithCredit,
+  cancelBooking,
+  cancelGroupClassWithCredit,
+  watchClassesForTenant,
+} from '@/data/firebase/classRepo';
 import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
 import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { toGymClass } from '@/data/classDisplay';
@@ -26,13 +32,25 @@ function classButtonProps(status: GymClass['status'], canJoin: boolean) {
   return status === 'full' ? { label: 'Listeye gir', variant: 'secondary' as const } : { label: 'Katıl', variant: 'primary' as const };
 }
 
-/** PKG-4: only `{unlimited: true}` is bookable today — a quota'd allowance
- *  needs a credit-consuming callable that doesn't exist yet (see the rule's
- *  own comment on `canBookGroupClass`). `endsAt` is re-checked against "now"
- *  here too, same reasoning as the rule: the cache only refreshes on write. */
-function canJoinGroupClass(cache: MemberEntitlementsCache | null | undefined): boolean {
-  if (!cache || cache.endsAt < new Date()) return false;
-  return cache.entitlements.groupClasses?.unlimited === true;
+/**
+ * Whether this member may reserve a group class, and by which route.
+ *
+ * `endsAt` is re-checked against "now" here, same reasoning as the rule: the
+ * cache only refreshes on write, so a package that lapsed since the last one
+ * still looks live in the document.
+ *
+ * PKG-4 shipped only the unlimited half. A quota'd allowance now goes through
+ * `bookGroupClass`, which spends the credit and takes the place atomically
+ * (PER-9) — before that a gym could sell "ayda 8 grup dersi" and the member
+ * holding it saw a locked button reading "yakında aktif olacak".
+ */
+type BookingRoute = 'none' | 'unlimited' | 'quota';
+
+function bookingRoute(cache: MemberEntitlementsCache | null | undefined): BookingRoute {
+  if (!cache || cache.endsAt < new Date()) return 'none';
+  const gc = cache.entitlements.groupClasses;
+  if (!gc) return 'none';
+  return gc.unlimited === true ? 'unlimited' : 'quota';
 }
 
 /** Class schedule — full/waitlist states included; cancel is undo-able, never a confirm dialog. */
@@ -97,7 +115,8 @@ export default function MemberClasses() {
     return watchSessionsForMember(tenantId, user.uid, range, setPtSessions);
   }, [tenantId, user, range]);
 
-  const canJoin = canJoinGroupClass(entitlements);
+  const route = bookingRoute(entitlements);
+  const canJoin = route !== 'none';
 
   const onPressClass = async (session: ClassSession, status: GymClass['status']) => {
     if (!user) return;
@@ -105,15 +124,29 @@ export default function MemberClasses() {
     // locked "Katıl"/"Listeye gir" explains why instead of hitting the rule
     // and coming back as a raw permission error.
     if (status !== 'booked' && !canJoin) {
-      const quotaOnly = entitlements?.entitlements.groupClasses != null;
-      toast.error(quotaOnly ? 'Kotalı grup dersi rezervasyonu yakında aktif olacak.' : 'Grup dersleri Gold ve üzeri paketlerde.');
+      toast.error('Grup dersleri Gold ve üzeri paketlerde.');
       return;
     }
     setBusyId(session.id);
     try {
       if (status === 'booked') {
-        await cancelBooking(session.id, user.uid);
-        toast.success('Rezervasyonun iptal edildi');
+        if (route === 'quota') {
+          // The server decides the refund against the gym's own
+          // cancellationHours, so the screen reports what happened rather
+          // than promising it up front.
+          const { refunded } = await cancelGroupClassWithCredit(session.id);
+          toast.success(
+            refunded
+              ? 'İptal edildi, ders hakkın iade edildi'
+              : 'İptal edildi, geç iptal nedeniyle hak iade edilmedi',
+          );
+        } else {
+          await cancelBooking(session.id, user.uid);
+          toast.success('Rezervasyonun iptal edildi');
+        }
+      } else if (route === 'quota') {
+        const result = await bookGroupClassWithCredit(session.id);
+        toast.success(result === 'waitlisted' ? 'Bekleme listesine eklendin' : 'Derse katıldın');
       } else {
         const result = await bookClass(session.id, user.uid);
         toast.success(result === 'waitlisted' ? 'Bekleme listesine eklendin' : 'Derse katıldın');
@@ -214,9 +247,7 @@ export default function MemberClasses() {
           "explain before it fails" preference as the toast fallback below. */}
       {entitlements !== undefined && !canJoin && (
         <Text variant="label" tone="sub">
-          {entitlements?.entitlements.groupClasses != null
-            ? 'Kotalı grup dersi rezervasyonu yakında aktif olacak.'
-            : 'Grup dersleri Gold ve üzeri paketlerde — dersleri görebilirsin, katılmak için paketini yükselt.'}
+          Grup dersleri Gold ve üzeri paketlerde — dersleri görebilirsin, katılmak için paketini yükselt.
         </Text>
       )}
 

@@ -17,7 +17,9 @@ import {
   where,
 } from 'firebase/firestore';
 
-import { db } from '@/services/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
+import { app, db } from '@/services/firebase';
 
 import { ClassSession } from '../types';
 import { classSessionFromDoc } from './convert';
@@ -217,4 +219,43 @@ export async function setClassAttendance(
   await updateDoc(doc(db, 'classes', classId), {
     [`attendance.${userId}`]: value === null ? deleteField() : value,
   });
+}
+
+// Functions are deployed to europe-west1, same as the rest of the project.
+const functions = getFunctions(app, 'europe-west1');
+
+export type GroupBookingResult = 'booked' | 'waitlisted' | 'already-booked' | 'already-waitlisted';
+
+/**
+ * Books a place using a QUOTA'd group-class allowance (PER-9).
+ *
+ * Goes through a callable because spending a credit and taking the place have
+ * to happen together, and rules cannot do arithmetic — the same reason
+ * `bookPtSessions` exists. Members with an unlimited entitlement keep the
+ * existing direct write in `bookClass`: that path is in production and works,
+ * and rerouting it unverified would risk a working flow to tidy a seam.
+ */
+export async function bookGroupClassWithCredit(
+  classId: string,
+  memberId?: string,
+): Promise<GroupBookingResult> {
+  const call = httpsCallable<{ classId: string; memberId?: string }, { status: GroupBookingResult }>(
+    functions,
+    'bookGroupClass',
+  );
+  const { data } = await call({ classId, ...(memberId ? { memberId } : {}) });
+  return data.status;
+}
+
+/** Cancels a quota-paid booking; the server decides whether the credit returns. */
+export async function cancelGroupClassWithCredit(
+  classId: string,
+  memberId?: string,
+): Promise<{ refunded: boolean }> {
+  const call = httpsCallable<{ classId: string; memberId?: string }, { refunded: boolean }>(
+    functions,
+    'cancelGroupClassBooking',
+  );
+  const { data } = await call({ classId, ...(memberId ? { memberId } : {}) });
+  return { refunded: data.refunded };
 }
