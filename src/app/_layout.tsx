@@ -83,6 +83,7 @@ function RootLayout() {
             {/* Shared: the member opens it mid-workout and the trainer while
                 writing a programme, so it sits outside both tab groups. */}
             <Stack.Screen name="exercise-detail" />
+            <Stack.Screen name="exercise-library" />
           </Stack>
         </AuthProvider>
       </ToastProvider>

@@ -40,6 +40,8 @@ export function MuscleMap({
   // read as "this works too", quiet enough that primary still wins the eye.
   const secondaryColor = useMemo(() => mix(colors.p, colors.surf, 0.52), [colors.p, colors.surf]);
   const restingColor = useMemo(() => mix(colors.surf2, colors.txt, 0.14), [colors.surf2, colors.txt]);
+  // NOT `colors.line`: that token is an rgba() string and `mix` reads hex.
+  const outline = useMemo(() => mix(colors.surf2, colors.txt, 0.34), [colors.surf2, colors.txt]);
 
   const fillFor = (muscle: string | null) => {
     if (!muscle) return restingColor;
@@ -50,7 +52,7 @@ export function MuscleMap({
   };
 
   const half = paths.map((p, i) => (
-    <Path key={i} d={p.d} fill={fillFor(p.muscle)} stroke={mix(colors.line, colors.txt, 0.25)} strokeWidth={0.7} />
+    <Path key={i} d={p.d} fill={fillFor(p.muscle)} stroke={outline} strokeWidth={0.7} />
   ));
 
   return (

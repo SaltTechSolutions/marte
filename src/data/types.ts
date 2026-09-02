@@ -335,6 +335,29 @@ export interface Payment {
   confirmedAt?: Date;
 }
 
+/** What is wrong with a bundled movement explainer (PER-19). */
+export type ExerciseReportReason = 'pose' | 'muscles' | 'text' | 'other';
+
+/**
+ * Staff flagging something wrong with an explainer we ship.
+ *
+ * The explainers are the app's own content, not the gym's, so this is a
+ * message to the developers — there is no in-app inbox and the rules make the
+ * collection write-only from a client. Append-only: a report records what
+ * someone saw at a point in time, so there is nothing to edit.
+ */
+export interface ExerciseReport {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  tenantId: string;
+  reportedBy: string;
+  reportedByName?: string;
+  reason: ExerciseReportReason;
+  note: string;
+  createdAt: Date;
+}
+
 export type PtSessionStatus = 'scheduled' | 'completed' | 'cancelled';
 
 /**

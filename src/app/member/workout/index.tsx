@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Text } from '@/components/Text';
@@ -74,6 +74,22 @@ export default function WorkoutOverview() {
           onPress={start}
         />
       </View>
+
+      <Pressable
+        onPress={() => router.push({ pathname: '/exercise-library', params: { scope: 'program' } })}
+        accessibilityRole="button"
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 13 }}>
+        <Ionicons name="body-outline" size={18} color={colors.txt} />
+        <View style={{ flex: 1 }}>
+          <Text variant="helper" weight="700">
+            Programımdaki hareketler
+          </Text>
+          <Text variant="label" tone="sub">
+            Çalışan kaslar ve nasıl yapıldığı
+          </Text>
+        </View>
+        <Text tone="sub">›</Text>
+      </Pressable>
     </View>
   );
 }

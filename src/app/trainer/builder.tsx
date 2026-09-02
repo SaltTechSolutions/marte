@@ -11,23 +11,12 @@ import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
 import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
+import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
 import { Program, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { confirmDestructive } from '@/utils/confirm';
 
-// PER-19: the picker used to be ten names typed into this file, which is why
-// a trainer who wanted a hip thrust had to type it by hand and no two
-// programmes spelled it the same way. It now reads the shared library, so a
-// picked exercise always resolves to an explainer page the member can open.
-const LIBRARY_GROUPS: { label: string; ids: string[] }[] = [
-  { label: 'ALT VÜCUT', ids: ['goblet-squat', 'back-squat', 'front-hack-squat', 'leg-press', 'rdl', 'deadlift', 'hip-thrust', 'bulgarian-split-squat', 'walking-lunge', 'reverse-lunge', 'step-up', 'leg-extension', 'leg-curl', 'calf-raise'] },
-  { label: 'İTİŞ', ids: ['bench-press', 'incline-press', 'machine-chest-press', 'shoulder-press'] },
-  { label: 'ÇEKİŞ', ids: ['barbell-row', 'single-arm-row', 'chest-supported-row', 'seated-cable-row', 'lat-pulldown', 'pullup', 'face-pull', 'reverse-fly'] },
-  { label: 'KOL · OMUZ', ids: ['lateral-raise', 'biceps-curl', 'triceps-pushdown', 'shrug'] },
-  { label: 'CORE', ids: ['plank', 'side-plank', 'dead-bug', 'bird-dog', 'mcgill-curl-up', 'pallof-press', 'ab-wheel-rollout', 'hanging-knee-raise', 'suitcase-carry', 'glute-bridge'] },
-  { label: 'ISINMA', ids: ['arm-circles', 'cat-cow', 'band-pull-apart', 'band-external-rotation', 'chin-tuck', 'worlds-greatest-stretch'] },
-];
 
 export default function ProgramBuilder() {
   const { programId } = useLocalSearchParams<{ programId: string }>();

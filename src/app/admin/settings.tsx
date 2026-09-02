@@ -461,6 +461,31 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         </View>
       </Pressable>
 
+      <Pressable onPress={() => router.push('/exercise-library')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name="body-outline" size={18} color={colors.txt} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Hareket kütüphanesi
+            </Text>
+            <Text variant="label" tone="sub">
+              46 hareket — çalışan kaslar, anlatım, sorun bildirme
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
+
       <Pressable onPress={() => router.push('/admin/staff')}>
         <View
           style={{

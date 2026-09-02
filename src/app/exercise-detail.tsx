@@ -2,6 +2,16 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
+import { TextField } from '@/components/TextField';
+import { useToast } from '@/components/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { reportError } from '@/data/errors';
+import { reportExercise } from '@/data/firebase/exerciseReportRepo';
+import { isStaff, tenantIdIf } from '@/data/membership';
+import { ExerciseReportReason } from '@/data/types';
+
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { MuscleMap, MuscleMapLegend } from '@/components/MuscleMap';
@@ -230,8 +240,112 @@ function Detail({ exercise }: { exercise: Exercise }) {
             ))}
           </Card>
         )}
+
+        <ReportProblem exercise={exercise} />
       </ScrollView>
     </Screen>
+  );
+}
+
+const REASONS: { key: ExerciseReportReason; label: string }[] = [
+  { key: 'pose', label: 'Çizim yanlış' },
+  { key: 'muscles', label: 'Kaslar yanlış' },
+  { key: 'text', label: 'Anlatım yanlış' },
+  { key: 'other', label: 'Başka' },
+];
+
+/**
+ * Staff flagging an explainer that is wrong (PER-19).
+ *
+ * The pose frames are archetype-derived and unreviewed, so some of them WILL
+ * be wrong in ways only a coach spots. Waiting for one big review pass means
+ * those errors sit in front of members until it happens; this turns the
+ * correction into something the people who notice can send in the moment.
+ *
+ * Staff only, and not because members are untrusted: judging whether a pose
+ * misrepresents a lift is a coaching call, and an open report button is a
+ * spam target. Hidden entirely for a member rather than shown disabled —
+ * a control you can never use is noise.
+ */
+function ReportProblem({ exercise }: { exercise: Exercise }) {
+  const { colors, spacing } = useAppTheme();
+  const toast = useToast();
+  const { user, activeMembership } = useAuth();
+  const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
+
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState<ExerciseReportReason>('pose');
+  const [note, setNote] = useState('');
+  const [sending, setSending] = useState(false);
+
+  if (!tenantId || !user) return null;
+
+  const send = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await reportExercise({
+        exerciseId: exercise.id,
+        exerciseName: exercise.tr,
+        tenantId,
+        reportedBy: user.uid,
+        ...(user.displayName ? { reportedByName: user.displayName } : {}),
+        reason,
+        note,
+      });
+      toast.success('Bildirimin iletildi, teşekkürler.');
+      setOpen(false);
+      setNote('');
+      setReason('pose');
+    } catch (e) {
+      reportError(e, toast, 'Bildirim gönderilemedi, tekrar dene.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        style={{ minHeight: 44, justifyContent: 'center', alignItems: 'center', marginHorizontal: spacing.md, marginTop: spacing.sm }}>
+        <Text variant="helper" weight="700" tone="sub">
+          Bu hareketle ilgili sorun bildir
+        </Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <Card style={{ marginHorizontal: spacing.md, marginTop: spacing.sm, gap: 10 }} outlineColor={colors.warn}>
+      <Text variant="helper" weight="700">
+        Sorun bildir — {exercise.tr}
+      </Text>
+      <Text variant="label" tone="sub">
+        Bu anlatım uygulamayla birlikte geliyor, salonun kendi içeriği değil.
+        Bildirimin geliştiricilere ulaşır; salonda kimseye görünmez.
+      </Text>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {REASONS.map((r) => (
+          <Chip key={r.key} label={r.label} selected={reason === r.key} onPress={() => setReason(r.key)} />
+        ))}
+      </View>
+
+      <TextField
+        placeholder="Ne yanlış? (ör. bitiş karesinde diz açısı)"
+        value={note}
+        onChangeText={setNote}
+        multiline
+        maxLength={500}
+      />
+
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} disabled={sending} onPress={() => setOpen(false)} />
+        <Button label={sending ? '…' : 'Gönder'} style={{ flex: 1 }} disabled={sending} onPress={send} />
+      </View>
+    </Card>
   );
 }
 

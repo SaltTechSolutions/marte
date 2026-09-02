@@ -23,6 +23,8 @@ export function PoseDiagram({ pose, showArrow = false }: { pose: PoseFrame; show
   // or shading, so on a dark card the raw token left it barely visible.
   const limb = mix(colors.surf2, colors.txt, 0.24);
   const propFill = mix(colors.surf2, colors.txt, 0.08);
+  // NOT `colors.line`: that token is an rgba() string and `mix` reads hex.
+  const outline = mix(colors.surf2, colors.txt, 0.3);
 
   const seg = (a: [number, number], b: [number, number], w: number, key: string) => (
     <Line
@@ -77,10 +79,10 @@ export function PoseDiagram({ pose, showArrow = false }: { pose: PoseFrame; show
           height={r.h}
           rx={r.r ?? 3}
           fill={propFill}
-          stroke={mix(colors.line, colors.txt, 0.2)}
+          stroke={outline}
         />
       ))}
-      <Line x1={16} y1={207} x2={304} y2={207} stroke={mix(colors.line, colors.txt, 0.3)} strokeWidth={2} />
+      <Line x1={16} y1={207} x2={304} y2={207} stroke={outline} strokeWidth={2} />
 
       {pose.bar && (
         <>
