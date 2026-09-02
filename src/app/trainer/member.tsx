@@ -9,11 +9,41 @@ import { StatCard } from '@/components/StatCard';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchMeasurements } from '@/data/firebase/measurementRepo';
+import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
 import { watchWorkoutLogsForMember } from '@/data/firebase/workoutLogRepo';
 import { isStaff, tenantIdIf } from '@/data/membership';
-import { MeasurementEntry, Program, WorkoutLog } from '@/data/types';
+import { MeasurementEntry, MemberCredit, MemberPackage, Program, WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+
+/** Whole days from now until `d`. Module scope so the render body stays pure
+ *  — the compiler's rule, and the same shape `MyPackageCard` uses. */
+function daysUntil(d: Date): number {
+  return Math.ceil((d.getTime() - Date.now()) / 86400000);
+}
+
+function CreditPill({ value, label }: { value: number; label: string }) {
+  const { colors, radius } = useAppTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.surf2,
+        borderRadius: radius.pill,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+      }}>
+      <Text variant="helper" weight="900">
+        {value}
+      </Text>
+      <Text variant="label" tone="sub">
+        {label}
+      </Text>
+    </View>
+  );
+}
 
 function initialsOf(name: string): string {
   return name
@@ -66,6 +96,9 @@ export default function TrainerMemberDetail() {
   const [entries, setEntries] = useState<MeasurementEntry[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [creating, setCreating] = useState(false);
+  const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
+  const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
+  const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
@@ -82,6 +115,25 @@ export default function TrainerMemberDetail() {
     return watchWorkoutLogsForMember(tenantId, memberId, setLogs);
   }, [tenantId, memberId]);
 
+  // PER-7. Rules already allowed this — `member_packages` and `member_credits`
+  // are readable by any tenant staff — the screen simply never asked, so the
+  // trainer could not answer the question they are asked most: "kaç dersim
+  // kaldı?". Read-only here; assigning a package stays an admin action.
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchMemberPackages(tenantId, memberId, setPackages);
+  }, [tenantId, memberId]);
+
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchMemberCredits(tenantId, memberId, 'ptLesson', setPtCredits);
+  }, [tenantId, memberId]);
+
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits);
+  }, [tenantId, memberId]);
+
   if (!tenantId || !memberId) {
     return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
@@ -90,6 +142,13 @@ export default function TrainerMemberDetail() {
   const completedLogs = logs.filter((l) => l.completedAt != null);
   const totalSeconds = completedLogs.reduce((sum, l) => sum + logActiveSeconds(l), 0);
   const lastWorkout = completedLogs.length > 0 ? completedLogs[completedLogs.length - 1] : null;
+
+  const activePackage = packages?.find((p) => p.status === 'active') ?? null;
+  const remaining = (credits: MemberCredit[]) =>
+    credits.reduce((sum, c) => sum + Math.max(0, c.total - c.used), 0);
+  const ptLeft = remaining(ptCredits);
+  const groupLeft = remaining(groupCredits);
+  const daysLeft = activePackage ? daysUntil(activePackage.endsAt) : 0;
 
   const latest = entries[0];
   const first = entries.length > 1 ? entries[entries.length - 1] : undefined;
@@ -122,6 +181,45 @@ export default function TrainerMemberDetail() {
           </Text>
         </View>
       </View>
+
+      {/* --- What they bought (PER-7) --- */}
+      <Card style={{ gap: 8 }}>
+        <Text variant="label" tone="sub">
+          PAKETİ
+        </Text>
+        {packages === undefined ? (
+          <Text variant="helper" tone="sub">
+            Yükleniyor…
+          </Text>
+        ) : activePackage ? (
+          <>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text variant="body" weight="900" numberOfLines={1} style={{ flex: 1 }}>
+                {activePackage.packageName}
+              </Text>
+              {/* Days, not a date: the trainer is deciding whether it is worth
+                  writing an eight-week programme for someone with ten days left. */}
+              <Text variant="helper" weight="700" style={{ color: daysLeft <= 7 ? colors.warn : colors.sub }}>
+                {daysLeft > 0 ? `${daysLeft} gün kaldı` : 'süresi doldu'}
+              </Text>
+            </View>
+            <Text variant="label" tone="sub">
+              {formatDate(activePackage.endsAt)} tarihinde bitiyor
+            </Text>
+          </>
+        ) : (
+          <Text variant="helper" tone="sub">
+            Aktif paketi yok — yönetici atadığında burada görünür.
+          </Text>
+        )}
+
+        {(ptLeft > 0 || groupLeft > 0) && (
+          <View style={{ flexDirection: 'row', gap: 8, paddingTop: 2 }}>
+            {ptLeft > 0 && <CreditPill value={ptLeft} label="özel ders" />}
+            {groupLeft > 0 && <CreditPill value={groupLeft} label="grup dersi" />}
+          </View>
+        )}
+      </Card>
 
       {/* --- Programme --- */}
       <Card style={{ gap: 10 }}>
