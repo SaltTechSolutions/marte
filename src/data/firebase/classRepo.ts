@@ -10,6 +10,7 @@ import {
   limit,
   runTransaction,
   deleteDoc,
+  deleteField,
   serverTimestamp,
   Timestamp,
   updateDoc,
@@ -45,6 +46,9 @@ export function watchClassesForTenant(
 export async function createClass(params: {
   tenantId: string;
   name: string;
+  /** Omitted only when the gym has not added its trainers yet and the name
+   *  was typed by hand — see `ClassSession.trainerId`. */
+  trainerId?: string;
   trainerName: string;
   date: Date;
   durationMinutes: number;
@@ -53,6 +57,7 @@ export async function createClass(params: {
   await addDoc(collection(db, 'classes'), {
     tenantId: params.tenantId,
     name: params.name,
+    ...(params.trainerId ? { trainerId: params.trainerId } : {}),
     trainerName: params.trainerName,
     date: params.date,
     durationMinutes: params.durationMinutes,
@@ -77,10 +82,18 @@ export async function createClass(params: {
  */
 export async function updateClass(
   classId: string,
-  changes: { name?: string; trainerName?: string; date?: Date; durationMinutes?: number; capacity?: number },
+  changes: {
+    name?: string;
+    trainerId?: string;
+    trainerName?: string;
+    date?: Date;
+    durationMinutes?: number;
+    capacity?: number;
+  },
 ): Promise<void> {
   const patch: Record<string, unknown> = {};
   if (changes.name !== undefined) patch.name = changes.name.trim();
+  if (changes.trainerId !== undefined) patch.trainerId = changes.trainerId;
   if (changes.trainerName !== undefined) patch.trainerName = changes.trainerName.trim();
   if (changes.date !== undefined) patch.date = changes.date;
   if (changes.durationMinutes !== undefined) patch.durationMinutes = changes.durationMinutes;
@@ -160,4 +173,48 @@ export function watchMyUpcomingClasses(
     limit(30),
   );
   return watchQuery('Rezervasyonlarım', q, (snap) => snap.docs.map(classSessionFromDoc), onChange, onError);
+}
+
+/**
+ * The classes one coach runs, in a window (PER-8).
+ *
+ * Needs `trainerId` — the whole reason the field exists. Before it, "benim
+ * derslerim" could only be answered by loading every class in the gym and
+ * string-matching a free-text name.
+ */
+export function watchClassesForTrainer(
+  tenantId: string,
+  trainerId: string,
+  range: { from: Date; to: Date },
+  onChange: (sessions: ClassSession[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'classes'),
+    where('tenantId', '==', tenantId),
+    where('trainerId', '==', trainerId),
+    where('date', '>=', Timestamp.fromDate(range.from)),
+    where('date', '<', Timestamp.fromDate(range.to)),
+    orderBy('date', 'asc'),
+    limit(200),
+  );
+  return watchQuery('Derslerim', q, (snap) => snap.docs.map(classSessionFromDoc), onChange, onError);
+}
+
+/**
+ * Marks one person present or absent, or clears the mark.
+ *
+ * Clearing writes `deleteField()` rather than a third state: "nobody took the
+ * register" and "they did not come" have to stay tellable apart, and a report
+ * that treats an unmarked class as a room full of absentees would be lying
+ * about every class nobody remembered to mark.
+ */
+export async function setClassAttendance(
+  classId: string,
+  userId: string,
+  value: 'present' | 'absent' | null,
+): Promise<void> {
+  await updateDoc(doc(db, 'classes', classId), {
+    [`attendance.${userId}`]: value === null ? deleteField() : value,
+  });
 }

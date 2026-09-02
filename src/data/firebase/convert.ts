@@ -76,12 +76,14 @@ export function classSessionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapsh
     id: snap.id,
     tenantId: data.tenantId,
     name: data.name,
+    ...(data.trainerId ? { trainerId: data.trainerId } : {}),
     trainerName: data.trainerName,
     date: toDate(data.date) ?? new Date(),
     durationMinutes: data.durationMinutes,
     capacity: data.capacity,
     bookedUserIds: data.bookedUserIds ?? [],
     waitlistUserIds: data.waitlistUserIds ?? [],
+    ...(data.attendance ? { attendance: data.attendance } : {}),
   };
 }
 

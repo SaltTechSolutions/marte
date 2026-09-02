@@ -170,17 +170,40 @@ export interface GymClass {
   status: 'open' | 'almostFull' | 'booked' | 'full';
 }
 
+/** Who showed up. Absent from a class nobody has marked yet. */
+export type ClassAttendance = Record<string, 'present' | 'absent'>;
+
 /** Real Firestore doc shape for a single class occurrence (not a recurring series). */
 export interface ClassSession {
   id: string;
   tenantId: string;
   name: string;
+  /**
+   * The coach who runs it (PER-8). Optional because every class created
+   * before this field existed has only `trainerName`, and because a gym that
+   * has not added its trainers yet still schedules classes with a typed name.
+   *
+   * `trainerName` alone could not answer "which classes are mine?" — it is
+   * free text, so "Mert", "mert kaya" and "Mert Kaya" were three coaches, and
+   * no query could tie a class to the person teaching it.
+   */
+  trainerId?: string;
   trainerName: string;
   date: Date;
   durationMinutes: number;
   capacity: number;
   bookedUserIds: string[];
   waitlistUserIds: string[];
+  /**
+   * Register for this class, keyed by member uid (PER-8). Embedded rather
+   * than a subcollection for the same reason as `bookedUserIds`: bounded by
+   * capacity, and always read and written with the class itself.
+   *
+   * A missing entry means "not marked", which is deliberately different from
+   * `'absent'` — "nobody took the register" and "they did not come" are not
+   * the same fact, and a report that conflates them lies.
+   */
+  attendance?: ClassAttendance;
 }
 
 /**

@@ -48,6 +48,9 @@ export default function AdminClasses() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [trainer, setTrainer] = useState('');
+  // PER-8: the uid behind the chosen name. Empty when the gym has no trainers
+  // added and the name was typed by hand — that class stays admin-owned.
+  const [trainerId, setTrainerId] = useState('');
   const [dayOffset, setDayOffset] = useState(0);
   const [time, setTime] = useState('09:00');
   const [duration, setDuration] = useState(DURATION_PRESETS[1]);
@@ -88,6 +91,7 @@ export default function AdminClasses() {
     setEditing(null);
     setName('');
     setTrainer('');
+    setTrainerId('');
   };
 
   /** Opens the shared form on an existing class. Duration keeps the class's
@@ -97,6 +101,7 @@ export default function AdminClasses() {
     setEditing(s);
     setName(s.name);
     setTrainer(s.trainerName);
+    setTrainerId(s.trainerId ?? '');
     setDuration(s.durationMinutes);
     setCapacity(s.capacity);
     setTime(sessionTime(s.date));
@@ -156,6 +161,7 @@ export default function AdminClasses() {
       if (editing) {
         await updateClass(editing.id, {
           name: name.trim(),
+          ...(trainerId ? { trainerId } : {}),
           trainerName: trainer.trim(),
           date,
           durationMinutes: duration,
@@ -163,7 +169,15 @@ export default function AdminClasses() {
         });
         toast.success('Ders güncellendi');
       } else {
-        await createClass({ tenantId, name: name.trim(), trainerName: trainer.trim(), date, durationMinutes: duration, capacity });
+        await createClass({
+          tenantId,
+          name: name.trim(),
+          ...(trainerId ? { trainerId } : {}),
+          trainerName: trainer.trim(),
+          date,
+          durationMinutes: duration,
+          capacity,
+        });
         toast.success('Ders eklendi');
       }
       closeForm();
@@ -239,11 +253,28 @@ export default function AdminClasses() {
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               {trainers.map((t) => {
                 const label = t.userDisplayName || t.userEmail || 'Antrenör';
-                return <Chip key={t.id} label={label} selected={trainer === label} onPress={() => setTrainer(label)} />;
+                return (
+                  <Chip
+                    key={t.id}
+                    label={label}
+                    selected={trainerId === t.userId}
+                    onPress={() => {
+                      setTrainer(label);
+                      setTrainerId(t.userId);
+                    }}
+                  />
+                );
               })}
             </View>
           ) : (
-            <TextField placeholder="Eğitmen adı" value={trainer} onChangeText={setTrainer} />
+            <TextField
+              placeholder="Eğitmen adı"
+              value={trainer}
+              onChangeText={(v) => {
+                setTrainer(v);
+                setTrainerId('');
+              }}
+            />
           )}
 
           <Text variant="label" tone="sub">
