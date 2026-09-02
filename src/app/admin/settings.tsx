@@ -16,6 +16,7 @@ import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
+import { FREE_MEMBER_LIMIT } from '@/data/seats';
 import {
   getTenantContact,
   updateTenantBranding,
@@ -127,6 +128,8 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
       setSaved(false);
     }
   };
+
+  const isPro = tenant.subscription?.status === 'active';
 
   const trimmedName = name.trim();
 
@@ -349,6 +352,39 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
       <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
         Üyeler yeni görünümü hemen alır.
       </Text>
+
+      {/* Subscription. The paywall used to be reachable only by hitting the
+          member limit while approving someone, so an owner who simply wanted
+          to pay had no way to — and an App Review tester had no way to find
+          the purchase at all, which is a Guideline 2.1 rejection. */}
+      <Pressable onPress={() => router.push('/paywall')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: isPro ? colors.ok : colors.p,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name={isPro ? 'star' : 'star-outline'} size={18} color={isPro ? colors.ok : colors.p} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              {isPro ? 'GymEntra Pro — aktif' : 'GymEntra Pro'}
+            </Text>
+            <Text variant="label" tone="sub">
+              {isPro
+                ? tenant.subscription?.expiresAt
+                  ? `${tenant.subscription.expiresAt.toLocaleDateString('tr-TR')} tarihine kadar · sınırsız üye`
+                  : 'Sınırsız üye'
+                : `Ücretsiz plan ${FREE_MEMBER_LIMIT} aktif üyeye kadar — sınırsız üye için yükselt`}
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
 
       <Pressable onPress={() => router.push('/admin/hours')}>
         <View
