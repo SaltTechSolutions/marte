@@ -14,10 +14,12 @@ import { AppleIcon } from '@/components/AppleIcon';
 import { GoogleIcon } from '@/components/GoogleIcon';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
+import { requestPasswordReset } from '@/data/firebase/authRepo';
 import { getActiveMembership } from '@/data/firebase/membershipRepo';
 import { primaryRole, ROLE_HOME } from '@/data/membership';
 import { auth } from '@/services/firebase';
 import { isAppleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/socialAuth';
+import { useToast } from '@/components/Toast';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 function authErrorMessage(code: string): string {
@@ -65,6 +67,34 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const toast = useToast();
+
+  /**
+   * PER-2. Uses whatever is already typed in the e-mail field rather than
+   * opening a second screen to ask for it again — someone tapping this has
+   * just failed to sign in, so the address is nearly always right there.
+   *
+   * The confirmation is deliberately the same whether or not an account
+   * exists. Saying "no such account" would let anyone probe addresses.
+   */
+  const forgotPassword = async () => {
+    const address = email.trim();
+    if (!address.includes('@')) {
+      setError('Önce e-posta adresini yaz, sonra sıfırlama bağlantısı gönderelim.');
+      return;
+    }
+    setError(null);
+    setResetting(true);
+    try {
+      await requestPasswordReset(address);
+      toast.success('Bu adres kayıtlıysa sıfırlama bağlantısı gönderildi.');
+    } catch {
+      setError('Şu an gönderilemedi. Biraz sonra tekrar dene.');
+    } finally {
+      setResetting(false);
+    }
+  };
 
   const submit = async () => {
     setError(null);
@@ -164,6 +194,18 @@ export default function RegisterScreen() {
         {/* The question stays quiet; the action carries the weight and the
             brand colour. As one flat muted line the tappable half read as
             body copy and people missed it. */}
+        {mode === 'signIn' && (
+          <Pressable
+            onPress={forgotPassword}
+            disabled={resetting}
+            accessibilityRole="button"
+            style={{ alignItems: 'center', paddingVertical: 11, minHeight: 44, justifyContent: 'center' }}>
+            <Text variant="helper" tone="sub">
+              {resetting ? 'Gönderiliyor…' : 'Şifremi unuttum'}
+            </Text>
+          </Pressable>
+        )}
+
         <Pressable
           onPress={() => setModeOverride(mode === 'signUp' ? 'signIn' : 'signUp')}
           accessibilityRole="button"
