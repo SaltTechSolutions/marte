@@ -259,6 +259,7 @@ export function memberPackageFromDoc(snap: QueryDocumentSnapshot | DocumentSnaps
     cancelledAt: toDate(data.cancelledAt),
     cancelledBy: data.cancelledBy,
     cancellationReason: data.cancellationReason,
+    cancellationAccess: data.cancellationAccess,
   };
 }
 

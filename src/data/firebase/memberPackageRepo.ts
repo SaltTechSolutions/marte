@@ -318,10 +318,22 @@ export function watchMemberCredits(
  * package still has upcoming appointments booked against it; that message
  * names the count and is the useful thing to show.
  */
-export async function cancelPackageAssignment(assignmentId: string, reason: string): Promise<void> {
-  const call = httpsCallable<{ assignmentId: string; reason: string }, { revokedCredits: number }>(
-    functions,
-    'cancelPackageAssignment',
-  );
-  await call({ assignmentId, reason });
+export type CancellationAccess = 'immediate' | 'until-end';
+
+export async function cancelPackageAssignment(
+  assignmentId: string,
+  reason: string,
+  /**
+   * What happens at the door. `'until-end'` keeps the member in until the
+   * period they paid for runs out and leaves their remaining lessons and
+   * booked appointments alone; `'immediate'` shuts access now and revokes
+   * the quota, which is the right answer for an assignment made by mistake.
+   */
+  access: CancellationAccess,
+): Promise<void> {
+  const call = httpsCallable<
+    { assignmentId: string; reason: string; access: CancellationAccess },
+    { revokedCredits: number }
+  >(functions, 'cancelPackageAssignment');
+  await call({ assignmentId, reason, access });
 }

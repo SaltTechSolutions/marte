@@ -13,7 +13,12 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { getMembership } from '@/data/firebase/membershipRepo';
 import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
-import { cancelPackageAssignment, watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
+import {
+  CancellationAccess,
+  cancelPackageAssignment,
+  watchMemberCredits,
+  watchMemberPackages,
+} from '@/data/firebase/memberPackageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { MemberCredit, MemberPackage, Program, TenantMembership } from '@/data/types';
 import { TextField } from '@/components/TextField';
@@ -46,7 +51,7 @@ const STATUS_LABEL: Record<MemberPackage['status'], string> = {
  */
 export default function AdminMemberDetail() {
   const router = useRouter();
-  const { colors, spacing } = useAppTheme();
+  const { colors, spacing, radius } = useAppTheme();
   const { user, activeMembership } = useAuth();
   const { memberId, memberName } = useLocalSearchParams<{ memberId: string; memberName: string }>();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
@@ -60,6 +65,9 @@ export default function AdminMemberDetail() {
   // Undoing an assignment tells the member about it, so the admin says why.
   const [cancelling, setCancelling] = useState<MemberPackage | null>(null);
   const [cancelReason, setCancelReason] = useState('');
+  // Varsayılan "bitişe kadar": üye o dönemin parasını ödemiş. Kapıyı hemen
+  // kapatmak yalnızca yanlış atamada doğru ve bilinçli seçilmeli.
+  const [cancelAccess, setCancelAccess] = useState<CancellationAccess>('until-end');
   const [busy, setBusy] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
@@ -103,14 +111,19 @@ export default function AdminMemberDetail() {
   const askCancelReason = (p: MemberPackage) => {
     setCancelling(p);
     setCancelReason('');
+    setCancelAccess('until-end');
   };
 
   const doCancelAssignment = async () => {
     if (!cancelling || !cancelReason.trim()) return;
     setBusy(true);
     try {
-      await cancelPackageAssignment(cancelling.id, cancelReason.trim());
-      toast.success('Paket ataması geri alındı');
+      await cancelPackageAssignment(cancelling.id, cancelReason.trim(), cancelAccess);
+      toast.success(
+        cancelAccess === 'until-end'
+          ? `Paket ${cancelling.endsAt.toLocaleDateString('tr-TR')} tarihinde bitecek, yenilenmeyecek`
+          : 'Paket geri alındı, giriş kapatıldı',
+      );
       setCancelling(null);
       setCancelReason('');
     } catch (e) {
@@ -236,12 +249,51 @@ export default function AdminMemberDetail() {
       {cancelling && (
         <Card style={{ gap: 10 }} outlineColor={colors.warn}>
           <Text variant="helper" weight="700">
-            Paketi geri al — {cancelling.packageName}
+            Paketi sonlandır — {cancelling.packageName}
           </Text>
           <Text variant="label" tone="sub">
-            Kayıt silinmez, iptal edildi olarak işaretlenir ve paketten gelen ders hakları
-            geri alınır. Kullanılmış dersler olduğu gibi kalır. Üyeye bildirilir.
+            Kayıt silinmez, sonlandırıldı olarak işaretlenir ve üyeye bildirilir.
+            Uygulama para iadesi yapmaz — ücret salon ile üye arasında konuşulur.
           </Text>
+
+          <View style={{ gap: 6 }}>
+            <Text variant="label" tone="sub">
+              GİRİŞ NE ZAMAN BİTSİN?
+            </Text>
+            {(
+              [
+                {
+                  value: 'until-end' as const,
+                  title: `${cancelling.endsAt.toLocaleDateString('tr-TR')} tarihine kadar girsin`,
+                  detail: 'Kalan ders hakları ve alınmış randevular geçerli kalır. Paket yalnızca yenilenmez.',
+                },
+                {
+                  value: 'immediate' as const,
+                  title: 'Girişi hemen bitsin',
+                  detail: 'Ders hakları geri alınır. Yaklaşan randevusu varsa önce onlar iptal edilmeli.',
+                },
+              ]
+            ).map((opt) => (
+              <Pressable
+                key={opt.value}
+                onPress={() => setCancelAccess(opt.value)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: cancelAccess === opt.value ? colors.p : colors.line,
+                  borderRadius: radius.md,
+                  padding: 11,
+                  gap: 2,
+                }}>
+                <Text variant="helper" weight="700" style={cancelAccess === opt.value ? { color: colors.p } : undefined}>
+                  {opt.title}
+                </Text>
+                <Text variant="label" tone="sub">
+                  {opt.detail}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
           <TextField
             placeholder="Gerekçe — örn. yanlış üyeye atandı"
             value={cancelReason}
@@ -250,7 +302,7 @@ export default function AdminMemberDetail() {
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} disabled={busy} onPress={() => setCancelling(null)} />
             <Button
-              label={busy ? '…' : 'Geri al'}
+              label={busy ? '…' : 'Sonlandır'}
               style={{ flex: 1 }}
               disabled={!cancelReason.trim() || busy}
               onPress={doCancelAssignment}
@@ -287,12 +339,25 @@ export default function AdminMemberDetail() {
                 </Text>
                 {p.cancellationReason ? (
                   <Text variant="label" style={{ color: colors.warn }}>
-                    Geri alındı: {p.cancellationReason}
+                    {p.cancellationAccess === 'until-end'
+                      ? `Sonlandırıldı, ${formatDate(p.endsAt)} tarihine kadar geçerli: ${p.cancellationReason}`
+                      : `Geri alındı: ${p.cancellationReason}`}
                   </Text>
                 ) : null}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <StatusBadge label={STATUS_LABEL[p.status]} tone={statusTone(p.status)} />
-                  {p.status === 'active' && (
+                  {/* Sonlandırılmış ama süresi dolmamış paket hâlâ `active`:
+                      rozet "Aktif" derse yönetici iptalin işlemediğini sanar,
+                      "İptal" derse üyenin girişinin kapandığını sanar. İkisi
+                      de yanlış; durum tek kelimeyle anlatılamıyor. */}
+                  <StatusBadge
+                    label={
+                      p.status === 'active' && p.cancelledAt
+                        ? 'Yenilenmeyecek'
+                        : STATUS_LABEL[p.status]
+                    }
+                    tone={p.status === 'active' && p.cancelledAt ? 'warn' : statusTone(p.status)}
+                  />
+                  {p.status === 'active' && !p.cancelledAt && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                       {/* Undo sits next to Değiştir because they answer two
                           different questions: "this member needs a different

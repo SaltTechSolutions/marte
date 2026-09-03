@@ -564,6 +564,16 @@ export interface MemberPackage {
   endsAt: Date;
   frozenDays: number;
   freezes: PackageFreeze[];
+  /**
+   * Whether ending the package also shut the door.
+   *
+   * `'until-end'` leaves `status: 'active'` — the member keeps access, their
+   * lessons and their booked appointments until `endsAt`, and only renewal
+   * stops. So a package can be both cancelled and currently valid, and any
+   * screen reporting "is this live" must keep reading `status` + `endsAt`
+   * rather than treating `cancelledAt` as an off switch.
+   */
+  cancellationAccess?: 'immediate' | 'until-end';
   status: MemberPackageStatus;
   paymentId?: string;
   assignedAt: Date;
