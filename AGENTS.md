@@ -201,6 +201,22 @@ npx tsc --noEmit && npx expo lint
   körlemesine tıklama yapma — kullanıcıdan doğrulama iste.
 - Test hesabı şifresi: `48162026` (tüm test hesapları).
 
+**İki salon, iki amaç — karıştırma.**
+
+| Salon | Kod | Ne için |
+|---|---|---|
+| GymEntra Salonu | `TARABYA-01` | **Test.** Gerçek kişilerin verisi var. Buradan ekran görüntüsü alınmaz. |
+| Supergym | `SUPERGYM-88` | **Tanıtım.** Tamamen uydurma veri. Ekran görüntüleri, mağaza görselleri ve demolar buradan. |
+
+Supergym-88'in içeriğini `marte06/scripts/seed_supergym_demo.cjs` üretir:
+20 üye, 5 antrenör, dersler, programlar, ödemeler, ölçümler. Script
+deterministik ve tekrar çalıştırılabilir. Demo giriş bilgileri
+`marte06/scripts/README-supergym-demo.md` içinde.
+
+Bir ekranı tanıtım görselinde boş bırakmamak için oraya veri gerekiyorsa,
+elle Firestore'a yazmak yerine seed script'ine ekle — yoksa bir sonraki
+`--purge` temizliğinde kaybolur.
+
 ---
 
 ## 8. Kod stili
