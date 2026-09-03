@@ -31,7 +31,26 @@ import { useAppTheme } from '@/theme/ThemeContext';
 import { ThemeMode } from '@/theme/tokens';
 import { signOutAndForget } from '@/services/signOut';
 
-const SWATCHES = ['#10B981', '#F97316', '#8B5CF6', '#EF4444', '#0EA5E9'];
+/**
+ * Marka rengi seçenekleri, tayf sırasıyla — satır bir renk çemberi gibi
+ * okunsun diye hue'ya göre dizildi, popülerliğe göre değil.
+ *
+ * Hepsi güvenli: `onColorFor` ana rengin üstündeki metni parlaklığa göre
+ * seçiyor ve açık temada `derivePalette` ana rengi l≤0.42'ye indiriyor, bu
+ * yüzden sarı ve limon da beyaz zeminde okunur kalıyor.
+ */
+const SWATCHES = [
+  '#EF4444', // kırmızı
+  '#F97316', // turuncu
+  '#EAB308', // sarı
+  '#84CC16', // limon
+  '#10B981', // zümrüt (varsayılan)
+  '#14B8A6', // turkuaz
+  '#0EA5E9', // gök
+  '#6366F1', // çivit
+  '#8B5CF6', // mor
+  '#EC4899', // pembe
+];
 
 /** Branding settings — the white-label magic moment: live preview of what members see. */
 export default function AdminSettings() {
@@ -259,21 +278,33 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
       <Text variant="label" tone="sub">
         MARKA RENGİN
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {SWATCHES.map((sw) => (
-          <Pressable
-            key={sw}
-            onPress={() => selectColor(sw)}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 17,
-              backgroundColor: sw,
-              borderWidth: sw.toLowerCase() === primaryColor.toLowerCase() ? 2 : 0,
-              borderColor: colors.bg0,
-            }}
-          />
-        ))}
+      {/* Sabit genişlik on renge yetmiyordu (10×34 + boşluklar ekranı aşıyor).
+          `flex: 1` + `aspectRatio: 1` kalan genişliği eşit bölüyor ve daireyi
+          kendi ölçüsünde tutuyor, yani her ekran boyutunda tek satır. */}
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {SWATCHES.map((sw) => {
+          const selected = sw.toLowerCase() === primaryColor.toLowerCase();
+          return (
+            <Pressable
+              key={sw}
+              onPress={() => selectColor(sw)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              style={{
+                flex: 1,
+                aspectRatio: 1,
+                borderRadius: 999,
+                padding: 2,
+                // Seçili olan dışarıdan bir halka alıyor. Eski hâlindeki
+                // zemin renginde ince iç kenarlık, küçülen dairede
+                // seçiliyi seçilmeyenden ayırt edilemez hâle getiriyordu.
+                borderWidth: 2,
+                borderColor: selected ? colors.txt : 'transparent',
+              }}>
+              <View style={{ flex: 1, borderRadius: 999, backgroundColor: sw }} />
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
