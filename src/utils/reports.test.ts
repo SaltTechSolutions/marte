@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { ClassSession, MemberPackage, Payment, TenantMembership } from '@/data/types';
+import { ClassSession, MemberPackage, Payment, PtSession, TenantMembership } from '@/data/types';
 
 import {
   attendanceStats,
+  burnedCredits,
   daysUntil,
   expiringPackages,
   lapsedMembers,
@@ -204,5 +205,73 @@ describe('memberGrowth', () => {
 describe('daysUntil', () => {
   it('gün içindeki kalanı 1 sayar, 0 değil', () => {
     expect(daysUntil(new Date(2026, 8, 3, 23, 0), NOW)).toBe(1);
+  });
+});
+
+function pt(p: Partial<PtSession>): PtSession {
+  return {
+    id: 's', tenantId: 't', trainerId: 'tr', trainerName: 'Antrenör',
+    memberId: 'm', memberName: 'Üye', date: new Date(2026, 8, 1),
+    durationMinutes: 60, status: 'completed',
+    createdAt: NOW, updatedAt: NOW, ...p,
+  } as PtSession;
+}
+
+describe('burnedCredits', () => {
+  const SINCE = new Date(2026, 7, 1);
+
+  it('gelmeyeni ve geç iptali ayrı sayar', () => {
+    const out = burnedCredits(
+      [
+        pt({ id: 'a', status: 'no-show', creditId: 'c' }),
+        pt({ id: 'b', status: 'cancelled', creditId: 'c', creditRefunded: false, cancelledByRole: 'member' }),
+      ],
+      SINCE, NOW,
+    );
+    expect(out.noShows).toBe(1);
+    expect(out.lateCancels).toBe(1);
+    expect(out.rows).toHaveLength(2);
+  });
+
+  it('hakkı iade edilmiş iptali yanmış saymaz', () => {
+    const out = burnedCredits(
+      [pt({ status: 'cancelled', creditId: 'c', creditRefunded: true, cancelledByRole: 'member' })],
+      SINCE, NOW,
+    );
+    expect(out.lateCancels).toBe(0);
+    expect(out.rows).toHaveLength(0);
+  });
+
+  it('salonun iptalini ayrı tutar — o iade etti, başka bir soru', () => {
+    const out = burnedCredits(
+      [pt({ status: 'cancelled', creditId: 'c', creditRefunded: true, cancelledByRole: 'trainer' })],
+      SINCE, NOW,
+    );
+    expect(out.gymCancels).toBe(1);
+    expect(out.lateCancels).toBe(0);
+  });
+
+  it('kredisiz randevuda yanacak hak yok', () => {
+    const out = burnedCredits([pt({ status: 'no-show' })], SINCE, NOW);
+    expect(out.noShows).toBe(0);
+  });
+
+  it('pencere dışını almaz', () => {
+    const out = burnedCredits(
+      [pt({ status: 'no-show', creditId: 'c', date: new Date(2026, 5, 1) })],
+      SINCE, NOW,
+    );
+    expect(out.noShows).toBe(0);
+  });
+
+  it('en yeni satır başta', () => {
+    const out = burnedCredits(
+      [
+        pt({ id: 'eski', status: 'no-show', creditId: 'c', date: new Date(2026, 7, 5) }),
+        pt({ id: 'yeni', status: 'no-show', creditId: 'c', date: new Date(2026, 8, 2) }),
+      ],
+      SINCE, NOW,
+    );
+    expect(out.rows.map((r) => r.session.id)).toEqual(['yeni', 'eski']);
   });
 });

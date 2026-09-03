@@ -1,4 +1,4 @@
-import { ClassSession, MemberPackage, Payment, TenantMembership } from '@/data/types';
+import { ClassSession, MemberPackage, Payment, PtSession, TenantMembership } from '@/data/types';
 
 import { sumPayments } from './revenue';
 
@@ -219,6 +219,49 @@ export function memberGrowth(members: TenantMembership[], months: number, now: D
       total: byMonth.get(monthKey(d)) ?? 0,
     });
   }
+  return out;
+}
+
+export interface BurnedCredits {
+  /** Üye gelmedi, hak harcanmış kaldı. */
+  noShows: number;
+  /** Son tarihten sonra iptal edildi, hak yandı. */
+  lateCancels: number;
+  /** Salonun kendi iptal ettiği, hakkın iade edildiği randevular. */
+  gymCancels: number;
+  /** En yenisi başta — üye itiraz ettiğinde bakılacak satırlar. */
+  rows: { session: PtSession; reason: 'no-show' | 'late-cancel' }[];
+}
+
+/**
+ * Lessons the member paid for and did not get back, over a window.
+ *
+ * This is the report half of the no-show policy, and it exists for one
+ * conversation: "ben gelmedim, hakkım neden gitti". It counts only sessions
+ * that actually cost a credit — a trainer's own package-independent booking
+ * has nothing to burn — and it keeps the gym's own cancellations in a
+ * separate figure, because those refunded and belong to a different
+ * question ("how often do we cancel on members?").
+ */
+export function burnedCredits(sessions: PtSession[], since: Date, until: Date): BurnedCredits {
+  const out: BurnedCredits = { noShows: 0, lateCancels: 0, gymCancels: 0, rows: [] };
+  for (const s of sessions) {
+    if (s.date < since || s.date > until) continue;
+    const byGym = s.cancelledByRole === 'trainer' || s.cancelledByRole === 'admin';
+    if (s.status === 'cancelled' && byGym) {
+      out.gymCancels++;
+      continue;
+    }
+    if (!s.creditId) continue; // harcanacak bir hak yoktu
+    if (s.status === 'no-show') {
+      out.noShows++;
+      out.rows.push({ session: s, reason: 'no-show' });
+    } else if (s.status === 'cancelled' && s.creditRefunded === false) {
+      out.lateCancels++;
+      out.rows.push({ session: s, reason: 'late-cancel' });
+    }
+  }
+  out.rows.sort((a, b) => b.session.date.getTime() - a.session.date.getTime());
   return out;
 }
 

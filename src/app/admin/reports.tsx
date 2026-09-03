@@ -14,11 +14,13 @@ import { watchClassesForTenant } from '@/data/firebase/classRepo';
 import { watchTenantMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import { watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
+import { watchSessionsForTenant } from '@/data/firebase/ptSessionRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { ClassSession, MemberPackage, Payment, TenantMembership } from '@/data/types';
+import { ClassSession, MemberPackage, Payment, PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import {
   attendanceStats,
+  burnedCredits,
   expiringPackages,
   lapsedMembers,
   memberGrowth,
@@ -91,6 +93,7 @@ export default function AdminReports() {
   const [packages, setPackages] = useState<MemberPackage[] | null>(null);
   const [members, setMembers] = useState<TenantMembership[] | null>(null);
   const [classes, setClasses] = useState<ClassSession[] | null>(null);
+  const [sessions, setSessions] = useState<PtSession[] | null>(null);
   // Düşen bir dinleyici sessizce sonsuz "yükleniyor" bırakıyordu — kart
   // bozuk olduğunu söyleyemiyordu. İlk hata yeter: sayfa tek bir uyarı
   // gösterip yeniden denemeyi teklif ediyor.
@@ -102,17 +105,25 @@ export default function AdminReports() {
     const unsubPayments = watchPaymentsForTenant(tenantId, setPayments, fail('Ödemeler'));
     const unsubPackages = watchTenantMemberPackages(tenantId, setPackages, fail('Paketler'));
     const unsubMembers = watchActiveMembers(tenantId, setMembers, fail('Üye listesi'));
+    const windowStart = new Date(now.getTime() - ATTENDANCE_WINDOW_DAYS * 86400000);
     const unsubClasses = watchClassesForTenant(
       tenantId,
-      { from: new Date(now.getTime() - ATTENDANCE_WINDOW_DAYS * 86400000), to: now },
+      { from: windowStart, to: now },
       setClasses,
       fail('Dersler'),
+    );
+    const unsubSessions = watchSessionsForTenant(
+      tenantId,
+      { from: windowStart, to: now },
+      setSessions,
+      fail('Randevular'),
     );
     return () => {
       unsubPayments();
       unsubPackages();
       unsubMembers();
       unsubClasses();
+      unsubSessions();
     };
   }, [tenantId, now]);
 
@@ -128,6 +139,10 @@ export default function AdminReports() {
   const revenue = useMemo(() => monthlyRevenue(payments ?? [], TREND_MONTHS, now), [payments, now]);
   const growth = useMemo(() => memberGrowth(members ?? [], TREND_MONTHS, now), [members, now]);
   const attendance = useMemo(() => attendanceStats(classes ?? [], now), [classes, now]);
+  const burned = useMemo(
+    () => burnedCredits(sessions ?? [], new Date(now.getTime() - ATTENDANCE_WINDOW_DAYS * 86400000), now),
+    [sessions, now],
+  );
 
   // Her kart kendi verisini bekler. Tek bir genel "yükleniyor" bayrağı
   // yetmiyordu: ödemeler henüz gelmemişken kart "Bekleyen ödeme yok" diyor,
@@ -336,6 +351,43 @@ export default function AdminReports() {
           Aya düşen katılım sayısı. Ayrılanlar kayıt altına alınmadığı için bu
           bir toplam üye eğrisi değil.
         </Text>
+      </Card>
+
+      <Card style={{ gap: 6 }}>
+        <Text variant="label" tone="sub">
+          Yanan ders hakkı · son {ATTENDANCE_WINDOW_DAYS} gün
+        </Text>
+        {sessions === null ? (
+          <Text variant="body" tone="sub">
+            Yükleniyor…
+          </Text>
+        ) : burned.noShows + burned.lateCancels === 0 ? (
+          <Text variant="helper" tone="sub">
+            Bu aralıkta yanan hak yok.
+            {burned.gymCancels > 0 ? ` Salonun iptal ettiği ${burned.gymCancels} randevuda hak iade edildi.` : ''}
+          </Text>
+        ) : (
+          <>
+            <Text variant="h2">{burned.noShows + burned.lateCancels}</Text>
+            <Text variant="helper" tone="sub">
+              {burned.noShows} gelmedi, {burned.lateCancels} geç iptal.
+              {burned.gymCancels > 0 ? ` Salonun iptal ettiği ${burned.gymCancels} randevuda hak iade edildi.` : ''}
+            </Text>
+            {/* Üye "hakkım neden gitti" dediğinde bakılacak satırlar. Tarih ve
+                sebep birlikte duruyor; ikisinden biri eksikse cevap değil. */}
+            {burned.rows.slice(0, PREVIEW_ROWS).map(({ session, reason }) => (
+              <Text key={session.id} variant="label" tone="sub">
+                {session.date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })} ·{' '}
+                {session.memberName} · {reason === 'no-show' ? 'gelmedi' : 'geç iptal'}
+              </Text>
+            ))}
+            {burned.rows.length > PREVIEW_ROWS ? (
+              <Text variant="label" tone="sub">
+                ve {burned.rows.length - PREVIEW_ROWS} kayıt daha
+              </Text>
+            ) : null}
+          </>
+        )}
       </Card>
 
       <Card style={{ gap: 6 }}>
