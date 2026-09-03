@@ -125,9 +125,16 @@ export default function AdminStaff() {
   const setAdminRole = async (m: TenantMembership, grant: boolean) => {
     setBusyId(m.id);
     try {
+      // Taking admin away from someone whose ONLY role was admin must not
+      // leave them roleless: a membership with `roles: []` shows up in no
+      // list on this screen and cannot be reached again. They stay in the
+      // gym as a member — that is what "no longer an admin" means here.
+      const without = m.roles.filter((r) => r !== 'admin');
       const next = grant
-        ? ([...m.roles.filter((r) => r !== 'admin'), 'admin'] as MembershipRole[])
-        : m.roles.filter((r) => r !== 'admin');
+        ? ([...without, 'admin'] as MembershipRole[])
+        : without.length > 0
+          ? without
+          : (['member'] as MembershipRole[]);
       await setMembershipRoles(m.id, next);
     } catch (e) {
       const code = (e as { code?: string }).code;
