@@ -262,6 +262,33 @@ export function watchMemberPackages(
   return watchQuery('Üyenin paketleri', q, (snap) => snap.docs.map(memberPackageFromDoc), onChange, onError);
 }
 
+/**
+ * Every assignment in the gym, latest-ending first — the reporting screen's
+ * source for "whose package runs out this week" and "who has nothing live".
+ *
+ * Deliberately unfiltered by `status`: PKG-12's daily sweep does not exist
+ * yet, so a package that ended in July can still read `active`. Filtering on
+ * the field here would hide exactly the rows the report is looking for; the
+ * caller compares `endsAt` instead.
+ *
+ * Capped rather than paged. A gym of a few hundred members fits well inside
+ * this; a chain that does not has outgrown a phone-sized report and needs the
+ * aggregate queries this screen deliberately does not do yet.
+ */
+export function watchTenantMemberPackages(
+  tenantId: string,
+  onChange: (packages: MemberPackage[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  const q = query(
+    collection(db, 'member_packages'),
+    where('tenantId', '==', tenantId),
+    orderBy('endsAt', 'desc'),
+    limit(1000),
+  );
+  return watchQuery('Salonun paketleri', q, (snap) => snap.docs.map(memberPackageFromDoc), onChange, onError);
+}
+
 /** One member's quota balances of a given kind, soonest-expiring first —
  *  the order PKG-8 will spend them in. */
 export function watchMemberCredits(

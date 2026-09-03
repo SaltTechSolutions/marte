@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -112,6 +113,16 @@ export default function AdminPanel() {
           </Card>
         </Pressable>
       </View>
+
+      <Pressable onPress={() => router.push('/admin/reports')}>
+        <InfoCard
+          outlined
+          icon="bar-chart-outline"
+          title="Raporlar"
+          subtitle="Bekleyen ödemeler, biten paketler, gelir ve katılım"
+          trailing={<Ionicons name="chevron-forward" size={18} color={colors.sub} />}
+        />
+      </Pressable>
 
       {requests.length > 0 && (
         <InfoCard

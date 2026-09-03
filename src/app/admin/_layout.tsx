@@ -46,6 +46,7 @@ export default function AdminLayout() {
           <Stack.Screen name="settings" options={{ title: 'Salon' }} />
           <Stack.Screen name="hours" options={{ ...detail, title: 'Çalışma saatleri' }} />
           <Stack.Screen name="today" options={{ ...detail, title: 'Bugün girenler' }} />
+          <Stack.Screen name="reports" options={{ ...detail, title: 'Raporlar' }} />
           <Stack.Screen name="staff" options={{ ...detail, title: 'Ekip ve yetkiler' }} />
           <Stack.Screen name="calendar" options={{ ...detail, title: 'Antrenör takvimleri' }} />
           <Stack.Screen name="packages" options={{ ...detail, title: 'Paketler' }} />
