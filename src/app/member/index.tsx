@@ -227,7 +227,14 @@ export default function MemberHome() {
           "kaç dersim kaldı" is the question they open the app with. */}
       <View style={{ marginTop: 8 }}>
         <MyPackageCard
-          activePackage={packages.find((p) => p.status === 'active') ?? null}
+          // Donmuş paket de gösteriliyor: yalnızca 'active' arayınca
+          // dondurulmuş üye "aktif paketin yok" görüyordu, ki bu paketini
+          // kaybettiği anlamına geliyor — kart donmuş hâli kendi anlatıyor.
+          activePackage={
+            packages.find((p) => p.status === 'active') ??
+            packages.find((p) => p.status === 'frozen') ??
+            null
+          }
           groupCredits={groupCredits}
           ptCredits={ptCredits}
         />

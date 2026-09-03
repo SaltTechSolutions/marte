@@ -318,6 +318,25 @@ export function watchMemberCredits(
  * package still has upcoming appointments booked against it; that message
  * names the count and is the useful thing to show.
  */
+/**
+ * Pauses a membership (PKG-10). Days are added to `endsAt` and to every
+ * credit this package produced — the member keeps what they paid for, it just
+ * moves. Throws with the server's own message when the gym's own quota or
+ * minimum length refuses it; that message names the limit, which is the
+ * useful thing to show.
+ */
+export async function freezeMemberPackage(
+  assignmentId: string,
+  days: number,
+): Promise<{ resumesAt: Date }> {
+  const call = httpsCallable<{ assignmentId: string; days: number }, { resumesAt: string }>(
+    functions,
+    'freezeMemberPackage',
+  );
+  const res = await call({ assignmentId, days });
+  return { resumesAt: new Date(res.data.resumesAt) };
+}
+
 export type CancellationAccess = 'immediate' | 'until-end';
 
 export async function cancelPackageAssignment(

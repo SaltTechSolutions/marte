@@ -69,6 +69,19 @@ export default function AdminPackageForm() {
   return <PackageFormBody tenantId={tenantId} existing={existing} />;
 }
 
+/**
+ * Süreye göre önerilen dondurma hakkı sayısı.
+ *
+ * Altı aydan kısa üyelikte dondurma yok: bir aylık pakette 15 günlük bir
+ * duraklatma paketin yarısı demek ve satılan şeyin ne olduğunu belirsizleştirir.
+ */
+function suggestFreezeCount(durationDays: number): number {
+  if (durationDays >= 730) return 4;
+  if (durationDays >= 365) return 2;
+  if (durationDays >= 180) return 1;
+  return 0;
+}
+
 function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: GymPackage | null }) {
   const router = useRouter();
   const { colors, spacing } = useAppTheme();
@@ -94,6 +107,19 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
   const [freezeAllowed, setFreezeAllowed] = useState(existing?.freezePolicy != null);
   const [freezeMinDays, setFreezeMinDays] = useState(existing?.freezePolicy?.minDays ?? 15);
   const [freezeMaxCount, setFreezeMaxCount] = useState(existing?.freezePolicy?.maxCount ?? 1);
+  /**
+   * Süre değişince dondurma kotasını da öner.
+   *
+   * Efekt yerine burada: kota bir türetme değil, sürenin değişmesine verilen
+   * bir cevap. Efektle yazmak salonun elle girdiği sayıyı sonraki her
+   * render'da geri alma riskini de taşırdı.
+   *
+   * Satılmış pakete dokunulmuyor — oradaki sayı bilinçli konmuş.
+   */
+  const changeDuration = (days: number) => {
+    setDurationDays(days);
+    if (!existing) setFreezeMaxCount(suggestFreezeCount(days));
+  };
 
   const [saving, setSaving] = useState(false);
 
@@ -202,10 +228,10 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
             </Text>
             <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
               {DURATION_PRESETS.map((p) => (
-                <Chip key={p.days} label={p.label} selected={durationDays === p.days} onPress={() => setDurationDays(p.days)} />
+                <Chip key={p.days} label={p.label} selected={durationDays === p.days} onPress={() => changeDuration(p.days)} />
               ))}
             </View>
-            <Stepper value={durationDays} unit="gün" step={1} decimals={0} onChange={setDurationDays} />
+            <Stepper value={durationDays} unit="gün" step={1} decimals={0} onChange={changeDuration} />
           </View>
 
           <View style={{ gap: 6 }}>

@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { StatusBadge } from '@/components/StatusBadge';
+import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { getMembership } from '@/data/firebase/membershipRepo';
@@ -16,6 +17,7 @@ import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/fi
 import {
   CancellationAccess,
   cancelPackageAssignment,
+  freezeMemberPackage,
   watchMemberCredits,
   watchMemberPackages,
 } from '@/data/firebase/memberPackageRepo';
@@ -68,6 +70,8 @@ export default function AdminMemberDetail() {
   // Varsayılan "bitişe kadar": üye o dönemin parasını ödemiş. Kapıyı hemen
   // kapatmak yalnızca yanlış atamada doğru ve bilinçli seçilmeli.
   const [cancelAccess, setCancelAccess] = useState<CancellationAccess>('until-end');
+  const [freezing, setFreezing] = useState<MemberPackage | null>(null);
+  const [freezeDays, setFreezeDays] = useState(15);
   const [busy, setBusy] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
@@ -112,6 +116,29 @@ export default function AdminMemberDetail() {
     setCancelling(p);
     setCancelReason('');
     setCancelAccess('until-end');
+  };
+
+  const askFreeze = (p: MemberPackage) => {
+    setFreezing(p);
+    // Salonun kendi asgarisiyle başlıyor — altına inilemeyecek bir sayıdan
+    // aşağı saydırmak kullanıcıyı sunucunun reddedeceği yere götürürdü.
+    setFreezeDays(p.freezePolicy?.minDays ?? 15);
+  };
+
+  const doFreeze = async () => {
+    if (!freezing) return;
+    setBusy(true);
+    try {
+      const { resumesAt } = await freezeMemberPackage(freezing.id, freezeDays);
+      toast.success(`Donduruldu · ${resumesAt.toLocaleDateString('tr-TR')} tarihinde devam edecek`);
+      setFreezing(null);
+    } catch (e) {
+      // Sunucunun mesajı kotayı ve asgari süreyi adıyla söylüyor.
+      const message = (e as { message?: string }).message;
+      reportError(e, toast, message || 'Dondurulamadı, tekrar dene.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const doCancelAssignment = async () => {
@@ -246,6 +273,36 @@ export default function AdminMemberDetail() {
         </View>
       )}
 
+      {freezing && (
+        <Card style={{ gap: 10 }} outlineColor={colors.warn}>
+          <Text variant="helper" weight="700">
+            Üyeliği dondur — {freezing.packageName}
+          </Text>
+          <Text variant="label" tone="sub">
+            Gün sayısı bitiş tarihine eklenir; üye gününü kaybetmez, erteler.
+            Paketten gelen ders haklarının son kullanma tarihi de aynı kadar
+            ötelenir. Dondurma bugün başlar.
+          </Text>
+          <Stepper value={freezeDays} unit="gün" step={1} decimals={0} onChange={setFreezeDays} />
+          <Text variant="label" tone="sub">
+            {freezing.freezePolicy
+              ? `Bu pakette en az ${freezing.freezePolicy.minDays} gün, en fazla ${freezing.freezePolicy.maxCount} kez. ${
+                  freezing.freezes.length
+                } kez kullanılmış.`
+              : 'Bu pakette dondurma hakkı tanımlı değil.'}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Button label="Vazgeç" variant="ghost" style={{ flex: 1 }} disabled={busy} onPress={() => setFreezing(null)} />
+            <Button
+              label={busy ? '…' : 'Dondur'}
+              style={{ flex: 1 }}
+              disabled={busy || !freezing.freezePolicy}
+              onPress={doFreeze}
+            />
+          </View>
+        </Card>
+      )}
+
       {cancelling && (
         <Card style={{ gap: 10 }} outlineColor={colors.warn}>
           <Text variant="helper" weight="700">
@@ -337,6 +394,11 @@ export default function AdminMemberDetail() {
                 <Text variant="helper" tone="sub">
                   {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
                 </Text>
+                {p.status === 'frozen' && p.freezes.length > 0 ? (
+                  <Text variant="label" style={{ color: colors.warn }}>
+                    {formatDate(p.freezes[p.freezes.length - 1].endsAt)} tarihinde devam edecek
+                  </Text>
+                ) : null}
                 {p.cancellationReason ? (
                   <Text variant="label" style={{ color: colors.warn }}>
                     {p.cancellationAccess === 'until-end'
@@ -363,13 +425,27 @@ export default function AdminMemberDetail() {
                           different questions: "this member needs a different
                           package" versus "this package should never have been
                           assigned". Mixing them loses the distinction. */}
+                      {/* Yalnızca dondurma hakkı satılmış üyelik paketinde.
+                          Hakkı olmayanda düğmeyi gösterip sunucuya
+                          reddettirmek kullanıcıyı boşuna yürütmek olurdu. */}
+                      {p.freezePolicy && p.kind === 'membership' && (
+                        <Pressable
+                          onPress={() => askFreeze(p)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel="Bu üyeliği dondur">
+                          <Text variant="label" style={{ color: colors.warn }}>
+                            Dondur
+                          </Text>
+                        </Pressable>
+                      )}
                       <Pressable
                         onPress={() => askCancelReason(p)}
                         hitSlop={8}
                         accessibilityRole="button"
                         accessibilityLabel="Bu paket atamasını geri al">
                         <Text variant="label" style={{ color: colors.danger }}>
-                          Geri al
+                          Sonlandır
                         </Text>
                       </Pressable>
                       <Text variant="label" style={{ color: colors.p }}>

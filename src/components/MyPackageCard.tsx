@@ -75,6 +75,13 @@ export function MyPackageCard({
     );
   }
 
+  // Donmuş pakette "42 gün kaldı" doğru ama yanıltıcı: üye o günlerde
+  // giremiyor. Sayaç yerine ne zaman devam edeceği söyleniyor.
+  const frozenUntil =
+    activePackage.status === 'frozen' && activePackage.freezes.length > 0
+      ? activePackage.freezes[activePackage.freezes.length - 1].endsAt
+      : null;
+
   const left = daysLeft(activePackage.endsAt);
   const group = remaining(groupCredits);
   const pt = remaining(ptCredits);
@@ -88,8 +95,12 @@ export function MyPackageCard({
       title={activePackage.packageName}
       // Days rather than a date: the question being asked is "do I need to
       // renew?". The last week is coloured so it reads before it is read.
-      subtitle={`${left > 0 ? `${left} gün kaldı` : 'Süresi doldu'} · ${activePackage.endsAt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`}
-      subtitleTone={left <= 7 ? 'warn' : 'sub'}>
+      subtitle={
+        frozenUntil
+          ? `Donduruldu · ${frozenUntil.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihinde devam edecek`
+          : `${left > 0 ? `${left} gün kaldı` : 'Süresi doldu'} · ${activePackage.endsAt.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}`
+      }
+      subtitleTone={frozenUntil || left <= 7 ? 'warn' : 'sub'}>
       {showPills ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.xs }}>
           {(unlimitedGroup || group > 0) && <CreditPill value={unlimitedGroup ? '∞' : String(group)} label="grup dersi" />}
