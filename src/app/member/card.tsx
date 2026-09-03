@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { QRCode } from '@/components/QRCode';
+import { GymLogo } from '@/components/GymLogo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -54,11 +55,9 @@ export default function MemberCard() {
       )}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: membershipFromCache ? 12 : 26 }}>
-        <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" tone="onp" weight="900">
-            {tenantName[0]}
-          </Text>
-        </View>
+        {/* Bigger than the home-screen mark: this screen stands in for a
+            physical membership card, and the card carries the gym's logo. */}
+        <GymLogo size={44} radius={11} />
         <Text variant="h3">{tenantName}</Text>
       </View>
 

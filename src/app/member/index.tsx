@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { GymLogo } from '@/components/GymLogo';
 import { MyPackageCard } from '@/components/MyPackageCard';
 import { InfoCard } from '@/components/InfoCard';
 import { ProgressRing } from '@/components/ProgressRing';
@@ -149,11 +150,7 @@ export default function MemberHome() {
       refreshControl={refreshControl}
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
-        <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" tone="onp" weight="900">
-            {tenantName[0]}
-          </Text>
-        </View>
+        <GymLogo size={32} radius={9} />
         <View style={{ flex: 1 }}>
           <Text variant="helper" weight="700">
             {tenantName}

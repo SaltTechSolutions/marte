@@ -3,6 +3,7 @@ import React from 'react';
 import { Pressable, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
+import { GymLogo } from '@/components/GymLogo';
 import { QRCode } from '@/components/QRCode';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
@@ -48,7 +49,10 @@ export default function GymQr() {
   return (
     <Screen>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl, gap: spacing.lg }}>
-        <View style={{ alignItems: 'center', gap: 6 }}>
+        <View style={{ alignItems: 'center', gap: 10 }}>
+          {/* The screen held out to a prospective member — the logo is what
+              tells them the phone in front of them belongs to this gym. */}
+          <GymLogo size={56} radius={14} logoUrl={activeTenant.branding.logoUrl} name={activeTenant.name} />
           <Text variant="h3">{activeTenant.name}</Text>
           <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
             Yeni üye, GymEntra&rsquo;yı açıp bu karekodu okutsun.

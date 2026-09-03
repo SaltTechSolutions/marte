@@ -1,13 +1,15 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 
 import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Text } from '@/components/Text';
+import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
-import { createTenantWithOwner } from '@/data/firebase/tenantRepo';
+import { createTenantWithOwner, updateTenantBranding, uploadTenantLogo } from '@/data/firebase/tenantRepo';
 import { auth } from '@/services/firebase';
 import { onColorFor } from '@/theme/contrast';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -30,12 +32,27 @@ export default function CreateGymScreen() {
   const router = useRouter();
   const { colors, spacing, radius } = useAppTheme();
   const { refreshMembership } = useAuth();
+  const toast = useToast();
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [color, setColor] = useState(SWATCHES[0]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Held locally until the gym exists: the upload callable authorises by
+  // membership, and the creator only becomes an admin once the tenant and
+  // their membership are written.
+  const [logoUri, setLogoUri] = useState<string | null>(null);
+
+  const pickLogo = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (!res.canceled && res.assets[0]) setLogoUri(res.assets[0].uri);
+  };
 
   const onNameChange = (v: string) => {
     setName(v);
@@ -47,17 +64,33 @@ export default function CreateGymScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await createTenantWithOwner({
+      const branding = {
+        appName: name.trim(),
+        primaryColor: color,
+        accentColor: shiftHue(color, 40),
+        themeMode: 'dark' as const,
+      };
+      const tenant = await createTenantWithOwner({
         name: name.trim(),
         code,
-        branding: {
-          appName: name.trim(),
-          primaryColor: color,
-          accentColor: shiftHue(color, 40),
-          themeMode: 'dark',
-        },
+        branding,
         ownerUid: auth.currentUser.uid,
       });
+      // The gym exists now. The logo is an extra on top of it, never a
+      // condition for it: a failed upload must not turn a created gym into
+      // an error screen, so it is caught here and the owner is told to try
+      // again from settings.
+      if (logoUri) {
+        try {
+          const logoUrl = await uploadTenantLogo(tenant.id, logoUri);
+          await updateTenantBranding(tenant.id, { ...branding, logoUrl });
+        } catch {
+          toast.show({
+            message: 'Salon kuruldu, logo yüklenemedi — Salon ayarlarından tekrar dene.',
+            tone: 'info',
+          });
+        }
+      }
       await refreshMembership();
       router.replace('/admin');
     } catch (e) {
@@ -105,16 +138,29 @@ export default function CreateGymScreen() {
           ))}
         </View>
 
-        <View style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-            <Text variant="helper" weight="900" style={{ color: onColorFor(color) }}>
-              {name.trim()[0]?.toUpperCase() ?? 'G'}
+        <Pressable
+          onPress={pickLogo}
+          accessibilityRole="button"
+          accessibilityLabel={logoUri ? 'Logoyu değiştir' : 'Logo seç'}
+          style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          {logoUri ? (
+            <Image source={{ uri: logoUri }} style={{ width: 38, height: 38, borderRadius: 10 }} />
+          ) : (
+            <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
+              <Text variant="helper" weight="900" style={{ color: onColorFor(color) }}>
+                {name.trim()[0]?.toUpperCase() ?? 'G'}
+              </Text>
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              {logoUri ? 'Logoyu değiştir' : 'Logo seç'}
+            </Text>
+            <Text variant="label" tone="sub">
+              {logoUri ? 'Üyelerin göreceği işaret bu.' : 'İstersen sonra Salon ayarlarından da yükleyebilirsin.'}
             </Text>
           </View>
-          <Text variant="helper" tone="sub" style={{ flex: 1 }}>
-            Üyelerin göreceği önizleme — logo yükleme sonra
-          </Text>
-        </View>
+        </Pressable>
 
         {error && (
           <Text variant="helper" style={{ color: '#F87171' }}>

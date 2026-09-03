@@ -28,3 +28,19 @@ export function canActivateAnotherMember(tenant: Tenant | null | undefined, acti
   if (tenant?.subscription?.status === 'active') return true;
   return activeCount < FREE_MEMBER_LIMIT;
 }
+
+/**
+ * How many people may hold the `admin` role in one gym. Mirrors
+ * `withinAdminLimit` in `marte06/firestore.rules` — the rule is the gate,
+ * this is what lets the screen say "3/3" before the write is refused.
+ */
+export const ADMIN_SEAT_LIMIT = 3;
+
+/**
+ * Whether one more admin may be granted. A tenant with no counter yet reads
+ * as under the limit, exactly as the rule does — an old gym that predates
+ * the counter must not be locked out of promoting anyone.
+ */
+export function canAddAdmin(tenant: Tenant | null | undefined): boolean {
+  return (tenant?.activeAdminCount ?? 0) < ADMIN_SEAT_LIMIT;
+}

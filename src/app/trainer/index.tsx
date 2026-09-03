@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListRow } from '@/components/ListRow';
+import { GymLogo } from '@/components/GymLogo';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -46,7 +47,7 @@ function joinedAt(m: TenantMembership): number {
 /** Client list — built for interrupted, repeated glances. */
 export default function TrainerClients() {
   const router = useRouter();
-  const { colors, spacing, radius } = useAppTheme();
+  const { colors, spacing, radius, tenantName } = useAppTheme();
   const { activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
 
@@ -114,6 +115,14 @@ export default function TrainerClients() {
 
   return (
     <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm }}>
+      {/* The trainer's home was the one role surface with no gym mark at
+          all — the same header row the member and admin homes use. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <GymLogo size={30} radius={8} />
+        <Text variant="helper" weight="700" tone="sub" style={{ flex: 1 }} numberOfLines={1}>
+          {tenantName}
+        </Text>
+      </View>
       <Text variant="h3">Üyelerim</Text>
 
       {/* Only for staff the owner has put on the door. Front-desk check-in is

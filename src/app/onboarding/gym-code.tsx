@@ -6,6 +6,7 @@ import { Pressable, View } from 'react-native';
 
 import { FormScreen } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
+import { GymLogo } from '@/components/GymLogo';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { decodeGymQr } from '@/app/gym-qr';
@@ -175,19 +176,10 @@ export default function GymCodeScreen() {
               borderRadius: radius.md,
               padding: 11,
             }}>
-            <View
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: 8,
-                backgroundColor: colors.p,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-              <Text tone="onp" weight="900" variant="helper">
-                {found.name[0]}
-              </Text>
-            </View>
+            {/* Overrides, not the theme: the viewer has not joined this gym,
+                so the theme may still be the previous one. "Is this the
+                right gym?" is answered by the logo more than by a letter. */}
+            <GymLogo size={30} radius={8} logoUrl={found.branding.logoUrl} name={found.name} />
             <View style={{ flex: 1 }}>
               <Text variant="helper" weight="700">
                 {found.name}

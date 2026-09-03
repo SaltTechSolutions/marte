@@ -8,6 +8,9 @@ import { derivePalette, Palette, Radius, Spacing, TenantId, ThemeMode, Type, the
 export interface AppTheme {
   tenantId: TenantId;
   tenantName: string;
+  /** The gym's uploaded mark, from the same branding the palette comes from.
+   *  Undefined for a gym that never uploaded one — `GymLogo` falls back. */
+  logoUrl?: string;
   mode: ThemeMode;
   colors: Palette & { onp: string };
   type: typeof Type;
@@ -41,6 +44,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return {
       tenantId,
       tenantName,
+      logoUrl: customBranding?.logoUrl,
       mode,
       colors: { ...palette, onp: onColorFor(palette.p) },
       type: Type,

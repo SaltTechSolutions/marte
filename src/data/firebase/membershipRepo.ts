@@ -164,6 +164,34 @@ export function watchActiveTrainers(
   );
 }
 
+/**
+ * Live active admins of a tenant — the Ekip screen's first section.
+ *
+ * Needed because `watchActiveMembers` filters on the `member` role: someone
+ * holding only `['admin']` appeared in no list at all, which made it
+ * impossible to ever take their admin role away.
+ */
+export function watchActiveAdmins(
+  tenantId: string,
+  onChange: (admins: TenantMembership[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  return sharedWatch(
+    `activeAdmins:${tenantId}`,
+    (change, err) => {
+      const q = query(
+        collection(db, 'tenant_memberships'),
+        where('tenantId', '==', tenantId),
+        where('status', '==', 'active'),
+        where('roles', 'array-contains', 'admin'),
+      );
+      return watchQuery('Yönetici listesi', q, (snap) => snap.docs.map(membershipFromDoc), change, err);
+    },
+    onChange,
+    onError,
+  );
+}
+
 /** Live pending join requests for a tenant — admin approvals screen. */
 export function watchPendingRequests(
   tenantId: string,

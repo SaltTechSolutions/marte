@@ -13,14 +13,17 @@ import { useAuth } from '@/context/AuthContext';
 import {
   setMembershipPermissions,
   setMembershipRoles,
+  watchActiveAdmins,
   watchActiveMembers,
   watchActiveTrainers,
 } from '@/data/firebase/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
+import { ADMIN_SEAT_LIMIT, canAddAdmin } from '@/data/seats';
 import { MembershipRole, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';
+import { confirmDestructive } from '@/utils/confirm';
 
 function initialsOf(name: string): string {
   return name
@@ -54,9 +57,10 @@ function rolesLabel(roles: MembershipRole[]): string {
 export default function AdminStaff() {
   const { colors, spacing } = useAppTheme();
   const toast = useToast();
-  const { user, activeMembership } = useAuth();
+  const { user, activeMembership, activeTenant } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
+  const [admins, setAdmins] = useState<TenantMembership[]>([]);
   const [trainers, setTrainers] = useState<TenantMembership[]>([]);
   // undefined until the roster snapshot lands.
   const [members, setMembers] = useState<TenantMembership[] | undefined>(undefined);
@@ -64,6 +68,11 @@ export default function AdminStaff() {
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
+
+  useEffect(() => {
+    if (!tenantId) return;
+    return watchActiveAdmins(tenantId, setAdmins, () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -104,6 +113,44 @@ export default function AdminStaff() {
     }
   };
 
+  /**
+   * Grant or revoke the admin role. Other roles are kept — someone who
+   * trains and manages stays `['trainer','admin']`, the same way the trainer
+   * toggle leaves `member` alone.
+   *
+   * The three-seat cap is checked here only to disable the button and say
+   * why; the rule is the gate. If the counter is stale and the rule refuses,
+   * the refusal is shown in the same words instead of "tekrar dene".
+   */
+  const setAdminRole = async (m: TenantMembership, grant: boolean) => {
+    setBusyId(m.id);
+    try {
+      const next = grant
+        ? ([...m.roles.filter((r) => r !== 'admin'), 'admin'] as MembershipRole[])
+        : m.roles.filter((r) => r !== 'admin');
+      await setMembershipRoles(m.id, next);
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      reportError(
+        e,
+        toast,
+        grant && code === 'permission-denied'
+          ? `Yönetici sınırı dolu (${ADMIN_SEAT_LIMIT}). Önce birinin yöneticiliğini al.`
+          : 'Rol güncellenemedi, tekrar deneyin.',
+      );
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const askMakeAdmin = (m: TenantMembership) =>
+    confirmDestructive({
+      title: 'Yönetici yap',
+      message: `${nameOf(m)} salonun tüm ayarlarını değiştirebilecek, üye kabul edip paket atayabilecek ve ödeme defterini görebilecek. Geri alınabilir.`,
+      confirmLabel: 'Yönetici yap',
+      onConfirm: () => void setAdminRole(m, true),
+    });
+
   const retry = () => {
     setFailed(false);
     setRetryKey((k) => k + 1);
@@ -130,6 +177,48 @@ export default function AdminStaff() {
       </Card>
 
       <Text variant="label" tone="sub">
+        YÖNETİCİLER · {admins.length}/{ADMIN_SEAT_LIMIT}
+      </Text>
+      <Text variant="helper" tone="sub">
+        Yönetici her şeyi görür ve değiştirir. Salon başına en fazla {ADMIN_SEAT_LIMIT} yönetici.
+        Kendi yöneticiliğini alamazsın — salon yöneticisiz kalmasın.
+      </Text>
+      {failed ? null : members === undefined ? (
+        <ListSkeleton rows={1} />
+      ) : (
+        admins.map((m) => (
+          <Card key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View
+              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+              <Text variant="label" weight="900" style={{ color: colors.p }}>
+                {initialsOf(nameOf(m))}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text variant="helper" weight="700" numberOfLines={1}>
+                {nameOf(m)}
+                {isSelf(m) ? ' (sen)' : ''}
+              </Text>
+              <Text variant="label" tone="sub" numberOfLines={1}>
+                {rolesLabel(m.roles)}
+              </Text>
+            </View>
+            {/* Not on your own row: the rule refuses it anyway, and a button
+                that always fails is worse than no button. */}
+            {isSelf(m) ? null : (
+              <Button
+                label={busyId === m.id ? '…' : 'Yöneticiliği al'}
+                variant="ghost"
+                compact
+                disabled={busyId === m.id}
+                onPress={() => setAdminRole(m, false)}
+              />
+            )}
+          </Card>
+        ))
+      )}
+
+      <Text variant="label" tone="sub" style={{ marginTop: spacing.sm }}>
         ANTRENÖRLER
       </Text>
       {failed ? null : members === undefined ? (
@@ -169,13 +258,27 @@ export default function AdminStaff() {
                   Yönetici olduğu için üye kabulü zaten açık.
                 </Text>
               ) : (
-                <Button
-                  label={busyId === m.id ? '…' : canCheckIn ? 'Üye kabulünü kaldır' : 'Üye kabulü ver'}
-                  variant={canCheckIn ? 'ghost' : 'secondary'}
-                  compact
-                  disabled={busyId === m.id}
-                  onPress={() => toggleCheckin(m)}
-                />
+                <View style={{ gap: 8 }}>
+                  <Button
+                    label={busyId === m.id ? '…' : canCheckIn ? 'Üye kabulünü kaldır' : 'Üye kabulü ver'}
+                    variant={canCheckIn ? 'ghost' : 'secondary'}
+                    compact
+                    disabled={busyId === m.id}
+                    onPress={() => toggleCheckin(m)}
+                  />
+                  <Button
+                    label={busyId === m.id ? '…' : 'Yönetici yap'}
+                    variant="secondary"
+                    compact
+                    disabled={busyId === m.id || !canAddAdmin(activeTenant)}
+                    onPress={() => askMakeAdmin(m)}
+                  />
+                  {canAddAdmin(activeTenant) ? null : (
+                    <Text variant="label" tone="sub">
+                      Yönetici sınırı dolu ({ADMIN_SEAT_LIMIT}/{ADMIN_SEAT_LIMIT}). Önce birinin yöneticiliğini al.
+                    </Text>
+                  )}
+                </View>
               )}
             </Card>
           );
@@ -186,8 +289,8 @@ export default function AdminStaff() {
         ÜYELER
       </Text>
       <Text variant="helper" tone="sub">
-        Bir üyeyi antrenör yapabilirsin. Küçük salonlarda aynı kişi hem
-        çalıştırıp hem üye olabilir — roller birbirini dışlamaz.
+        Bir üyeyi antrenör ya da yönetici yapabilirsin. Küçük salonlarda aynı
+        kişi hem çalıştırıp hem üye olabilir — roller birbirini dışlamaz.
       </Text>
       {failed ? null : members === undefined ? (
         <ListSkeleton rows={3} />
@@ -215,13 +318,24 @@ export default function AdminStaff() {
                 {rolesLabel(m.roles)}
               </Text>
             </View>
-            <Button
-              label={busyId === m.id ? '…' : m.roles.includes('trainer') ? 'Antrenörlüğü al' : 'Antrenör yap'}
-              variant={m.roles.includes('trainer') ? 'ghost' : 'secondary'}
-              compact
-              disabled={busyId === m.id}
-              onPress={() => toggleTrainerRole(m)}
-            />
+            <View style={{ gap: 6, alignItems: 'flex-end' }}>
+              <Button
+                label={busyId === m.id ? '…' : m.roles.includes('trainer') ? 'Antrenörlüğü al' : 'Antrenör yap'}
+                variant={m.roles.includes('trainer') ? 'ghost' : 'secondary'}
+                compact
+                disabled={busyId === m.id}
+                onPress={() => toggleTrainerRole(m)}
+              />
+              {m.roles.includes('admin') ? null : (
+                <Button
+                  label={busyId === m.id ? '…' : 'Yönetici yap'}
+                  variant="secondary"
+                  compact
+                  disabled={busyId === m.id || !canAddAdmin(activeTenant)}
+                  onPress={() => askMakeAdmin(m)}
+                />
+              )}
+            </View>
           </Card>
         ))
       )}

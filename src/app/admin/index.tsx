@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/Card';
+import { GymLogo } from '@/components/GymLogo';
 import { InfoCard } from '@/components/InfoCard';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -59,11 +60,7 @@ export default function AdminPanel() {
     <ScrollView
       refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
-        <View style={{ width: 30, height: 30, borderRadius: 8, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" tone="onp" weight="900">
-            {tenantName[0]}
-          </Text>
-        </View>
+        <GymLogo size={30} radius={8} />
         <Text variant="h3">{tenantName}</Text>
       </View>
 

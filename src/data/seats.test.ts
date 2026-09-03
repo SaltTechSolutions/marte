@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import { canActivateAnotherMember, FREE_MEMBER_LIMIT } from './seats';
+import { ADMIN_SEAT_LIMIT, canAddAdmin, canActivateAnotherMember, FREE_MEMBER_LIMIT } from './seats';
 import { Tenant } from './types';
 
 function tenant(subscription?: Tenant['subscription']): Tenant {
@@ -48,5 +48,19 @@ describe('canActivateAnotherMember', () => {
   test('a missing tenant falls back to the count alone', () => {
     expect(canActivateAnotherMember(null, 3)).toBe(true);
     expect(canActivateAnotherMember(null, FREE_MEMBER_LIMIT)).toBe(false);
+  });
+});
+
+describe('canAddAdmin', () => {
+  const base = { id: 't', code: 'T', name: 'T', branding: { primaryColor: '#000', accentColor: '#000', themeMode: 'dark', appName: 'T' }, createdAt: new Date() } as const;
+
+  test('sayaç yokken sınırın altında sayar — eski salon kilitlenmez', () => {
+    expect(canAddAdmin({ ...base })).toBe(true);
+    expect(canAddAdmin(null)).toBe(true);
+  });
+
+  test('sınıra ulaşınca reddeder, altındayken izin verir', () => {
+    expect(canAddAdmin({ ...base, activeAdminCount: ADMIN_SEAT_LIMIT - 1 })).toBe(true);
+    expect(canAddAdmin({ ...base, activeAdminCount: ADMIN_SEAT_LIMIT })).toBe(false);
   });
 });

@@ -34,6 +34,9 @@ export interface Tenant {
    * count documents themselves. **Server-owned: never written by the client.**
    */
   activeMemberCount?: number;
+  /** Active holders of the `admin` role. Same trigger, same ownership rules
+   *  as `activeMemberCount`; read by the rules to cap admins at three. */
+  activeAdminCount?: number;
   /** Set from verified store receipts, server-side only. */
   subscription?: TenantSubscription;
   /**

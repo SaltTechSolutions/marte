@@ -6,6 +6,7 @@ import { Pressable, View } from 'react-native';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 import { Card } from './Card';
+import { GymLogo } from './GymLogo';
 import { Text } from './Text';
 
 /**
@@ -41,9 +42,12 @@ export function GymCodeCard({
         SALONUM
       </Text>
 
-      <Text variant="helper" weight="700" numberOfLines={1}>
-        {tenantName}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <GymLogo size={36} />
+        <Text variant="helper" weight="700" numberOfLines={1} style={{ flex: 1 }}>
+          {tenantName}
+        </Text>
+      </View>
 
       <View
         style={{
