@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
+import { cancellationConsequence } from '@/utils/cancellation';
 import { MemberCredit, MemberPackage, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -42,6 +43,7 @@ export default function ChildDetail() {
 }
 
 function ChildView({ tenantId, childId, childName }: { tenantId: string; childId: string; childName: string }) {
+  const { activeTenant } = useAuth();
   const { spacing } = useAppTheme();
   const router = useRouter();
   const toast = useToast();
@@ -61,7 +63,14 @@ function ChildView({ tenantId, childId, childName }: { tenantId: string; childId
   const confirmCancel = (session: PtSession) =>
     confirmDestructive({
       title: 'Randevuyu iptal et',
-      message: `${childName} için ${formatWhen(session.date)} randevusu iptal edilecek. Salonun iptal süresi geçmediyse ders hakkı iade edilir.`,
+      message: `${childName} için ${formatWhen(session.date)} randevusu iptal edilecek. ${cancellationConsequence(
+        {
+          sessionDate: session.date,
+          now: new Date(),
+          hoursSetting: activeTenant?.cancellationHours,
+          hasCredit: Boolean(session.creditId),
+        },
+      )}`,
       confirmLabel: 'İptal et',
       onConfirm: () => void cancel(session),
     });

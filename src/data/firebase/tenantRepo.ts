@@ -94,6 +94,18 @@ export async function updateTenantIdentity(
 }
 
 /**
+ * The gym's own refund window (PKG-11). Lives on the tenant doc rather than
+ * in `private/` because the member has to be told the rule before they book —
+ * a cancellation policy the member cannot read is not a policy.
+ */
+export async function updateTenantCancellationHours(tenantId: string, hours: number): Promise<void> {
+  await updateDoc(doc(db, 'tenants', tenantId), {
+    cancellationHours: hours,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
  * Opening hours live on the tenant doc, not in `private/`: a member deciding
  * whether to walk over needs them, and so does someone still choosing a gym.
  */

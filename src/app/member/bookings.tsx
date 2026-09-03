@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { cancelBooking, watchMyUpcomingClasses } from '@/data/firebase/classRepo';
 import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
+import { cancellationConsequence } from '@/utils/cancellation';
 import { ClassSession, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -66,6 +67,7 @@ export default function MemberBookings() {
 }
 
 function BookingList({ tenantId, userId }: { tenantId: string; userId: string }) {
+  const { activeTenant } = useAuth();
   const { colors, spacing } = useAppTheme();
   const toast = useToast();
 
@@ -119,7 +121,12 @@ function BookingList({ tenantId, userId }: { tenantId: string; userId: string })
       title: b.kind === 'pt' ? 'Randevuyu iptal et' : 'Rezervasyonu iptal et',
       message:
         b.kind === 'pt'
-          ? `${dayLabel(b.date)} ${timeLabel(b.date)} randevun iptal edilecek. Salonun iptal süresi geçmediyse ders hakkın iade edilir.`
+          ? `${dayLabel(b.date)} ${timeLabel(b.date)} randevun iptal edilecek. ${cancellationConsequence({
+              sessionDate: b.date,
+              now: new Date(),
+              hoursSetting: activeTenant?.cancellationHours,
+              hasCredit: Boolean(b.session?.creditId),
+            })}`
           : `${b.title} dersindeki yerin bırakılacak.`,
       confirmLabel: 'İptal et',
       onConfirm: () => void doCancel(b),

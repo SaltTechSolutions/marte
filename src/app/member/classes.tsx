@@ -20,6 +20,7 @@ import {
 } from '@/data/firebase/classRepo';
 import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
 import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessionRepo';
+import { cancellationConsequence } from '@/utils/cancellation';
 import { toGymClass } from '@/data/classDisplay';
 import { ClassSession, GymClass, MemberEntitlementsCache, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -188,7 +189,14 @@ export default function MemberClasses() {
   const cancelSession = (session: PtSession) =>
     confirmDestructive({
       title: 'Randevuyu iptal et',
-      message: `${session.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} ${session.trainerName} randevusu iptal edilecek. Randevuya 24 saatten az kaldıysa dersin iade edilmeyebilir.`,
+      message: `${session.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })} ${session.trainerName} randevusu iptal edilecek. ${cancellationConsequence(
+        {
+          sessionDate: session.date,
+          now: new Date(),
+          hoursSetting: activeTenant?.cancellationHours,
+          hasCredit: Boolean(session.creditId),
+        },
+      )}`,
       confirmLabel: 'İptal et',
       onConfirm: () => {
         const run = async () => {

@@ -36,9 +36,20 @@ export interface Tenant {
   activeMemberCount?: number;
   /** Set from verified store receipts, server-side only. */
   subscription?: TenantSubscription;
+  /**
+   * How many hours before a PT session or group class a member may cancel and
+   * still get the credit back (PKG-11). Absent means the 24-hour default —
+   * both `cancelPtSession` and `cancelGroupClassBooking` fall back to it, and
+   * the client texts must fall back the same way or they promise a rule the
+   * server does not apply.
+   */
+  cancellationHours?: number;
   createdAt: Date;
   updatedAt?: Date;
 }
+
+/** The refund window used whenever the gym has not set its own (PKG-11). */
+export const DEFAULT_CANCELLATION_HOURS = 24;
 
 /** A single open window, "HH:MM"–"HH:MM". */
 export interface DayHours {

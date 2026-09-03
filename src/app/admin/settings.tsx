@@ -7,6 +7,7 @@ import { Image, Pressable, ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { GymCodeCard } from '@/components/GymCodeCard';
 import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { ProgressRing } from '@/components/ProgressRing';
@@ -21,10 +22,11 @@ import {
   getTenantContact,
   updateTenantBranding,
   updateTenantContact,
+  updateTenantCancellationHours,
   updateTenantIdentity,
   uploadTenantLogo,
 } from '@/data/firebase/tenantRepo';
-import { Tenant, TenantBranding } from '@/data/types';
+import { DEFAULT_CANCELLATION_HOURS, Tenant, TenantBranding } from '@/data/types';
 import { reportError } from '@/data/errors';
 import { shiftHue } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -39,6 +41,10 @@ import { signOutAndForget } from '@/services/signOut';
  * seçiyor ve açık temada `derivePalette` ana rengi l≤0.42'ye indiriyor, bu
  * yüzden sarı ve limon da beyaz zeminde okunur kalıyor.
  */
+/** Salonların gerçekte kullandığı eşikler. Ara değerler bir politika değil,
+ *  ince ayar; kimse iptal süresini 19 saat yapmıyor. */
+const CANCEL_HOUR_OPTIONS = [6, 12, 24, 48];
+
 const SWATCHES = [
   '#EF4444', // kırmızı
   '#F97316', // turuncu
@@ -85,6 +91,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [primaryColor, setPrimaryColor] = useState(tenant.branding.primaryColor);
+  const [cancelHours, setCancelHours] = useState(tenant.cancellationHours ?? DEFAULT_CANCELLATION_HOURS);
   const [logoUri, setLogoUri] = useState<string | undefined>(tenant.branding.logoUrl);
   const [pickedLocalUri, setPickedLocalUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -157,6 +164,21 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
   const edit = <T,>(set: (v: T) => void) => (v: T) => {
     set(v);
     setSaved(false);
+  };
+
+  /** Tek dokunuş = tek yazım. Saat sayısını serbest bir sayaçla girdirmek
+   *  her adımda bir yazım demek olurdu; salon zaten bir sayı ince ayarlamıyor,
+   *  bir politika seçiyor. */
+  const selectCancelHours = async (hours: number) => {
+    const previous = cancelHours;
+    setCancelHours(hours);
+    try {
+      await updateTenantCancellationHours(tenant.id, hours);
+      toast.success(`İptal süresi ${hours} saat oldu`);
+    } catch (e) {
+      setCancelHours(previous);
+      reportError(e, toast, 'İptal süresi kaydedilemedi.');
+    }
   };
 
   const save = async () => {
@@ -441,6 +463,29 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
           <Text tone="sub">›</Text>
         </View>
       </Pressable>
+
+      <View style={{ gap: 8 }}>
+        <View style={{ gap: 2 }}>
+          <Text variant="label" tone="sub">
+            İPTAL VE İADE
+          </Text>
+          <Text variant="helper" tone="sub">
+            Üye randevusunu bu süreden önce iptal ederse hakkı geri verilir,
+            daha geç iptal ederse yanar. Antrenör veya yönetici iptalinde hak
+            her zaman iade edilir.
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {CANCEL_HOUR_OPTIONS.map((h) => (
+            <Chip
+              key={h}
+              label={`${h} saat`}
+              selected={cancelHours === h}
+              onPress={() => selectCancelHours(h)}
+            />
+          ))}
+        </View>
+      </View>
 
       <Pressable onPress={() => router.push('/admin/packages')}>
         <View

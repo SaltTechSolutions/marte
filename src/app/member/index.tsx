@@ -19,6 +19,7 @@ import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberP
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
 import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
+import { cancellationConsequence } from '@/utils/cancellation';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
 import { GymClass, MemberCredit, MemberPackage, PackageChangeRequest, Payment, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -66,7 +67,7 @@ export default function MemberHome() {
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const { user, activeMembership } = useAuth();
+  const { user, activeMembership, activeTenant } = useAuth();
   const uid = user?.uid;
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
   const displayName = user?.displayName?.split(' ')[0] || 'Üye';
@@ -266,7 +267,14 @@ export default function MemberHome() {
               const session = nextSession;
               confirmDestructive({
                 title: 'Randevuyu iptal et',
-                message: `${formatSessionDate(session.date)} ${session.trainerName} randevusu iptal edilecek. Randevuya 24 saatten az kaldıysa dersin iade edilmeyebilir.`,
+                message: `${formatSessionDate(session.date)} ${session.trainerName} randevusu iptal edilecek. ${cancellationConsequence(
+                  {
+                    sessionDate: session.date,
+                    now: new Date(),
+                    hoursSetting: activeTenant?.cancellationHours,
+                    hasCredit: Boolean(session.creditId),
+                  },
+                )}`,
                 confirmLabel: 'İptal et',
                 onConfirm: () => {
                   const run = async () => {
