@@ -10,6 +10,7 @@ import { StatCard } from '@/components/StatCard';
 import { GymCodeCard } from '@/components/GymCodeCard';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
@@ -335,7 +336,8 @@ export default function TrainerProfile() {
 
       <RoleSwitcher />
 
-      <LegalLinks />
+      <NotificationPreferences />
+<LegalLinks />
       <DeleteAccountButton />
     </ScrollView>
   );

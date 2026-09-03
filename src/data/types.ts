@@ -823,3 +823,26 @@ export interface AppNotification {
   body: string;
   time: string;
 }
+
+/**
+ * What a push notification is about, so a person can silence the kinds they
+ * do not want (P4-3). Mirrors `functions/src/push.ts` — the server is the one
+ * that enforces it; this copy exists so the settings screen can name them.
+ */
+export type NotificationCategory = 'bookings' | 'packages' | 'payments' | 'programs';
+
+export interface UserSettings {
+  /** Missing key = on. Only categories the person has switched off are stored. */
+  push: Record<string, boolean>;
+}
+
+export const NOTIFICATION_CATEGORIES: { key: NotificationCategory; title: string; detail: string }[] = [
+  {
+    key: 'bookings',
+    title: 'Ders ve randevu',
+    detail: 'Hatırlatıcı, iptal, bekleme listesinden yer açılması',
+  },
+  { key: 'packages', title: 'Paket', detail: 'Teklif, bitiş uyarısı, dondurma' },
+  { key: 'payments', title: 'Ödeme', detail: 'Onaylanan ve düzeltilen kayıtlar' },
+  { key: 'programs', title: 'Antrenman programı', detail: 'Antrenörün yazdığı yeni program' },
+];

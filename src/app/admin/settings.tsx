@@ -10,6 +10,7 @@ import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -623,6 +624,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
 
       <RoleSwitcher />
 
+      <NotificationPreferences />
       <LegalLinks />
       <DeleteAccountButton />
     </ScrollView>

@@ -11,6 +11,7 @@ import { GymInfoCard } from '@/components/GymInfoCard';
 import { InfoCard } from '@/components/InfoCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
 import { LegalLinks } from '@/components/LegalLinks';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
@@ -163,6 +164,7 @@ export default function MemberProfile() {
 
       <View style={{ marginTop: spacing.md }}>
         <LeaveGymButton />
+        <NotificationPreferences />
         <LegalLinks />
         <DeleteAccountButton />
       </View>
