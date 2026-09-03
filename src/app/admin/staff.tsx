@@ -19,7 +19,7 @@ import {
 } from '@/data/firebase/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { ADMIN_SEAT_LIMIT, canAddAdmin } from '@/data/seats';
+import { ADMIN_SEAT_LIMIT } from '@/data/seats';
 import { MembershipRole, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';
@@ -57,7 +57,7 @@ function rolesLabel(roles: MembershipRole[]): string {
 export default function AdminStaff() {
   const { colors, spacing } = useAppTheme();
   const toast = useToast();
-  const { user, activeMembership, activeTenant } = useAuth();
+  const { user, activeMembership } = useAuth();
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [admins, setAdmins] = useState<TenantMembership[]>([]);
@@ -157,6 +157,12 @@ export default function AdminStaff() {
   };
 
   const isSelf = (m: TenantMembership) => m.userId === user?.uid;
+  // Gate on the live admin list, not on the tenant doc's counter: the tenant
+  // is loaded once per session, so after taking someone's admin role away
+  // the button stayed disabled saying 3/3 while the list above it already
+  // said 2/3. The list is what this screen shows; the counter is the rule's
+  // copy of the same fact, and the rule still has the final say.
+  const seatFree = admins.length < ADMIN_SEAT_LIMIT;
 
   return (
     <ScrollView
@@ -270,10 +276,10 @@ export default function AdminStaff() {
                     label={busyId === m.id ? '…' : 'Yönetici yap'}
                     variant="secondary"
                     compact
-                    disabled={busyId === m.id || !canAddAdmin(activeTenant)}
+                    disabled={busyId === m.id || !seatFree}
                     onPress={() => askMakeAdmin(m)}
                   />
-                  {canAddAdmin(activeTenant) ? null : (
+                  {seatFree ? null : (
                     <Text variant="label" tone="sub">
                       Yönetici sınırı dolu ({ADMIN_SEAT_LIMIT}/{ADMIN_SEAT_LIMIT}). Önce birinin yöneticiliğini al.
                     </Text>
@@ -331,7 +337,7 @@ export default function AdminStaff() {
                   label={busyId === m.id ? '…' : 'Yönetici yap'}
                   variant="secondary"
                   compact
-                  disabled={busyId === m.id || !canAddAdmin(activeTenant)}
+                  disabled={busyId === m.id || !seatFree}
                   onPress={() => askMakeAdmin(m)}
                 />
               )}
