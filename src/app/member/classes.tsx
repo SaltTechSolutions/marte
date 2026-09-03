@@ -20,7 +20,7 @@ import {
 } from '@/data/firebase/classRepo';
 import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
 import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessionRepo';
-import { cancellationConsequence } from '@/utils/cancellation';
+import { cancellationConsequence, formatDeadline, sessionOutcome } from '@/utils/cancellation';
 import { toGymClass } from '@/data/classDisplay';
 import { ClassSession, GymClass, MemberEntitlementsCache, PtSession } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -181,7 +181,10 @@ export default function MemberClasses() {
   const dayPtSessions = useMemo(
     () =>
       ptSessions
-        .filter((s) => s.status !== 'cancelled' && isSameDay(s.date, selectedDate))
+        // İptal edilenler de listede: üyenin "hakkım neden gitti" sorusunun
+        // cevabı tam olarak o satırda duruyor. Gizlemek soruyu yok etmiyor,
+        // yalnızca cevabı ulaşılmaz kılıyor.
+        .filter((s) => isSameDay(s.date, selectedDate))
         .sort((a, b) => a.date.getTime() - b.date.getTime()),
     [ptSessions, selectedDate],
   );
@@ -326,7 +329,9 @@ export default function MemberClasses() {
             ÖZEL DERS
           </Text>
           <ListGroup>
-            {dayPtSessions.map((s, i) => (
+            {dayPtSessions.map((s, i) => {
+              const outcome = sessionOutcome(s);
+              return (
               <ListRow key={s.id} last={i === dayPtSessions.length - 1}>
                 <View style={{ alignItems: 'center', minWidth: 44 }}>
                   <Text variant="helper" weight="900">
@@ -340,16 +345,33 @@ export default function MemberClasses() {
                   <Text variant="helper" weight="700" numberOfLines={1}>
                     {s.trainerName}
                   </Text>
+                  {s.status === 'scheduled' && s.cancellationDeadlineAt && s.creditId ? (
+                    // Son tarih iptale kalkışınca değil, en baştan görünüyor.
+                    // Kuralı ancak çiğnerken öğrenilen bir politika tuzaktır.
+                    <Text variant="label" tone="sub">
+                      Son iptal: {formatDeadline(s.cancellationDeadlineAt)}
+                    </Text>
+                  ) : null}
+                  {outcome ? (
+                    <Text
+                      variant="label"
+                      style={{ color: s.status === 'completed' ? colors.ok : colors.warn }}>
+                      {outcome}
+                    </Text>
+                  ) : null}
                 </View>
-                <Button
-                  label="İptal et"
-                  variant="ghost"
-                  compact
-                  disabled={cancellingPtId === s.id}
-                  onPress={() => cancelSession(s)}
-                />
+                {s.status === 'scheduled' ? (
+                  <Button
+                    label="İptal et"
+                    variant="ghost"
+                    compact
+                    disabled={cancellingPtId === s.id}
+                    onPress={() => cancelSession(s)}
+                  />
+                ) : null}
               </ListRow>
-            ))}
+              );
+            })}
           </ListGroup>
         </>
       )}

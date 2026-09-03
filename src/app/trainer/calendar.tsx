@@ -188,7 +188,18 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
     }
   };
 
-  const setStatus = (session: PtSession, status: 'completed' | 'cancelled') => {
+  const setStatus = (session: PtSession, status: 'completed' | 'cancelled' | 'no-show') => {
+    if (status === 'no-show') {
+      confirmDestructive({
+        title: 'Gelmedi olarak işaretle',
+        message: `${session.memberName} bu randevuya gelmemiş sayılacak ve ders hakkı iade edilmeyecek.${
+          session.creditId ? '' : ' Bu randevu bir ders hakkından düşmemişti.'
+        }`,
+        confirmLabel: 'Gelmedi',
+        onConfirm: () => void applyStatus(session, status),
+      });
+      return;
+    }
     if (status !== 'cancelled') {
       void applyStatus(session, status);
       return;
@@ -201,7 +212,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
     });
   };
 
-  const applyStatus = async (session: PtSession, status: 'completed' | 'cancelled') => {
+  const applyStatus = async (session: PtSession, status: 'completed' | 'cancelled' | 'no-show') => {
     setBusyId(session.id);
     try {
       if (status === 'cancelled') {
@@ -293,6 +304,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
               const expanded = expandedId === s.id;
               const cancelled = s.status === 'cancelled';
               const completed = s.status === 'completed';
+              const noShow = s.status === 'no-show';
               return (
                 <View key={s.id} style={{ borderBottomWidth: i === daySessions.length - 1 ? 0 : 1, borderBottomColor: colors.line }}>
                   <Pressable
@@ -320,9 +332,12 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
                         {s.originalTrainerId && s.originalTrainerId !== s.trainerId ? ' · devralındı' : ''}
                       </Text>
                     </View>
-                    {(completed || cancelled) && (
-                      <Text variant="label" weight="600" style={{ color: completed ? colors.ok : colors.sub }}>
-                        {completed ? '✓' : 'İptal'}
+                    {(completed || cancelled || noShow) && (
+                      <Text
+                        variant="label"
+                        weight="600"
+                        style={{ color: completed ? colors.ok : noShow ? colors.warn : colors.sub }}>
+                        {completed ? '✓' : noShow ? 'Gelmedi' : 'İptal'}
                       </Text>
                     )}
                     <Text tone="sub">{expanded ? '▾' : '›'}</Text>
@@ -334,9 +349,16 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
                         <Button label={busyId === s.id ? '…' : 'Devral'} compact onPress={() => takeOver(s)} disabled={busyId === s.id} />
                       )}
                       {canManageStatus && (
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                          <Button label="Tamamla" compact style={{ flex: 1 }} disabled={busyId === s.id} onPress={() => setStatus(s, 'completed')} />
-                          <Button label="İptal et" variant="ghost" compact style={{ flex: 1 }} disabled={busyId === s.id} onPress={() => setStatus(s, 'cancelled')} />
+                        <View style={{ gap: 8 }}>
+                          <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <Button label="Tamamla" compact style={{ flex: 1 }} disabled={busyId === s.id} onPress={() => setStatus(s, 'completed')} />
+                            {/* Üçüncü seçenek: üye gelmedi. Öncesinde antrenör
+                                ya "Tamamla" (üyenin geçmişinde göreceği bir
+                                yalan) ya "İptal et" (hak iade edilir, salon
+                                zarar eder) demek zorundaydı. */}
+                            <Button label="Gelmedi" variant="secondary" compact style={{ flex: 1 }} disabled={busyId === s.id} onPress={() => setStatus(s, 'no-show')} />
+                          </View>
+                          <Button label="İptal et" variant="ghost" compact disabled={busyId === s.id} onPress={() => setStatus(s, 'cancelled')} />
                         </View>
                       )}
                       {isAdmin && knownTrainers.length > 0 && (

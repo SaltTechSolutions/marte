@@ -409,7 +409,20 @@ export interface ExerciseReport {
   createdAt: Date;
 }
 
-export type PtSessionStatus = 'scheduled' | 'completed' | 'cancelled';
+/**
+ * `no-show` is not a flavour of `cancelled` and not a flavour of `completed`.
+ *
+ * The credit is spent at booking, so a member who simply does not turn up has
+ * already paid for the hour and the trainer really did hold it. Until this
+ * existed the trainer had to pick between "Tamamla" — a lie the member can
+ * see in their own history — and "İptal et", which refunds the credit and
+ * makes the gym eat a no-show. Neither records what happened.
+ *
+ * It needs no callable: nothing has to be arbitrated, because the correct
+ * arithmetic is *no* arithmetic. The credit stays spent, which is the whole
+ * point.
+ */
+export type PtSessionStatus = 'scheduled' | 'completed' | 'cancelled' | 'no-show';
 
 /**
  * A trainer's 1:1 appointment with a member — distinct from group `classes`.
@@ -431,6 +444,21 @@ export interface PtSession {
    *  package-independent booking (PKG-8's addition; existing behavior for
    *  a trainer-created session is unchanged, `creditId` just never applies). */
   creditId?: string;
+  /**
+   * The moment after which cancelling no longer returns the lesson, frozen
+   * when the session was booked so a later change to the gym's policy cannot
+   * move the line under a booking that already exists.
+   *
+   * Absent on sessions booked before this was recorded, and on ones a trainer
+   * created directly (no credit, nothing to lose) — callers must fall back
+   * rather than print an empty deadline.
+   */
+  cancellationDeadlineAt?: Date;
+  /** Written by `cancelPtSession` so the member can see what happened to
+   *  their lesson, not just that the appointment is gone. */
+  cancelledAt?: Date;
+  cancelledByRole?: 'member' | 'guardian' | 'trainer' | 'admin';
+  creditRefunded?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

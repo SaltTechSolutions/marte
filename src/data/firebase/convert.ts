@@ -147,6 +147,10 @@ export function ptSessionFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot)
     durationMinutes: data.durationMinutes,
     status: data.status,
     creditId: data.creditId,
+    cancellationDeadlineAt: toDate(data.cancellationDeadlineAt),
+    cancelledAt: toDate(data.cancelledAt),
+    cancelledByRole: data.cancelledByRole,
+    creditRefunded: data.creditRefunded,
     createdAt: toDate(data.createdAt) ?? new Date(),
     updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
