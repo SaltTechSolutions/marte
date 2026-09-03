@@ -1,12 +1,19 @@
 import { collection, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
-import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { db, storage } from '@/services/firebase';
+import { app, db } from '@/services/firebase';
 
 import { OpeningHours, Tenant, TenantBranding, TenantContact } from '../types';
 import { tenantFromDoc } from './convert';
 import { membershipId } from './membershipRepo';
 import { seedDefaultPackages } from './packageRepo';
+
+const functions = getFunctions(app, 'europe-west1');
+
+/** Anything larger is bytes nobody renders — a logo is a list avatar. */
+const LOGO_SIZE = 512;
 
 /** Look up a gym by its join code (e.g. "TARABYA-01"). Case-insensitive. */
 export async function findTenantByCode(code: string): Promise<Tenant | null> {
@@ -132,14 +139,34 @@ export async function updateTenantContact(tenantId: string, contact: TenantConta
 }
 
 /**
- * Uploads a picked logo image to Storage and returns its public download URL.
- * Path is deterministic (`tenant-logos/{tenantId}`) so re-uploading replaces
- * the previous logo instead of accumulating orphaned files.
+ * Uploads a picked logo.
+ *
+ * Downscaled to 512×512 JPEG before it leaves the phone: the picker hands
+ * back the full camera frame (3–5 MB), and nothing in the app ever renders a
+ * logo larger than a list avatar. That also keeps the payload well inside
+ * what a callable will carry.
+ *
+ * The bytes go through the `uploadTenantLogo` callable rather than straight
+ * to Storage — see that function for why the direct-write rule was the wrong
+ * foundation. The temporary file the resize produces is deleted afterwards;
+ * the picker's own cached copy is left to the OS, which owns that cache.
  */
 export async function uploadTenantLogo(tenantId: string, localUri: string): Promise<string> {
-  const response = await fetch(localUri);
-  const blob = await response.blob();
-  const logoRef = ref(storage, `tenant-logos/${tenantId}`);
-  await uploadBytes(logoRef, blob, { contentType: blob.type || 'image/jpeg' });
-  return getDownloadURL(logoRef);
+  const resized = await ImageManipulator.manipulateAsync(
+    localUri,
+    [{ resize: { width: LOGO_SIZE, height: LOGO_SIZE } }],
+    { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+  );
+  try {
+    if (!resized.base64) throw new Error('Görsel dönüştürülemedi.');
+    const call = httpsCallable<
+      { tenantId: string; base64: string; contentType: string },
+      { url: string }
+    >(functions, 'uploadTenantLogo');
+    const res = await call({ tenantId, base64: resized.base64, contentType: 'image/jpeg' });
+    return res.data.url;
+  } finally {
+    // Küçültülmüş kopya yüklendikten sonra cihazda durmasın.
+    await FileSystem.deleteAsync(resized.uri, { idempotent: true }).catch(() => {});
+  }
 }
