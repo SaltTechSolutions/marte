@@ -21,6 +21,7 @@ import {
   footDirFor,
   footPath,
   frontPoints,
+  frontTrunk,
   lerpP,
   poseAt,
   skeleton,
@@ -290,6 +291,7 @@ function FrontBody({
 }) {
   const F = frontPoints(rig, p, S);
   const cx = F.cx;
+  const trunk = frontTrunk(F);
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number) => (
     <Path key={key} d={capsule(a, b, wa, wb)} fill={c.skin} stroke={c.line} strokeWidth={1} />
   );
@@ -349,14 +351,7 @@ function FrontBody({
       <G key="trunk">
         <Ellipse cx={cx} cy={F.pelvis[1] + 8} rx={38} ry={25} fill={c.skin} stroke={c.line} />
         {seg('waist', F.pelvis, F.lumbar, 66, 56)}
-        <Ellipse
-          cx={cx}
-          cy={lerpP(F.lumbar, F.thorax, 0.5)[1]}
-          rx={45}
-          ry={(F.thorax[1] - F.lumbar[1]) / 2 + 10}
-          fill={c.skin}
-          stroke={c.line}
-        />
+        <Ellipse cx={cx} cy={trunk.cy} rx={trunk.rx} ry={trunk.ry} fill={c.skin} stroke={c.line} />
         {seg('neck', F.thorax, F.neck, 27, 24)}
       </G>
       <G key="head">

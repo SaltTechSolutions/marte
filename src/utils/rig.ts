@@ -492,6 +492,22 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
 }
 
 /**
+ * Önden görünümde gövde elipsi.
+ *
+ * Yarıçap bel ile göğüs arasındaki MESAFEDEN çıkar; işaretli farktan değil.
+ * Ayakta duran figürde göğüs belin üstünde olduğu için fark negatif geliyordu
+ * ve SVG negatif yarıçaplı elipsi hiç çizmiyordu — önden bakışta gövde
+ * boştu.
+ */
+export function frontTrunk(F: FrontPoints): { cy: number; rx: number; ry: number } {
+  return {
+    cy: (F.lumbar[1] + F.thorax[1]) / 2,
+    rx: 45,
+    ry: Math.abs(F.thorax[1] - F.lumbar[1]) / 2 + 10,
+  };
+}
+
+/**
  * Tüm tekrar boyunca figürün kapladığı alan.
  *
  * Kare başına yeniden hesaplanan bir viewBox figürü hareket boyunca

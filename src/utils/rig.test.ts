@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EXERCISES } from '@/data/exerciseLibrary';
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, GROUND, Skeleton, Vec, angleOf, boundsFor, ik, poseAt, skeleton } from './rig';
+import { B, GROUND, Skeleton, Vec, angleOf, boundsFor, frontPoints, frontTrunk, ik, poseAt, skeleton } from './rig';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const entries = Object.entries(RIG_ARCHETYPES);
@@ -201,6 +201,19 @@ describe('rig hareket denetimi', () => {
         expect(RIG_ARCHETYPES[key].view, `${key} düzlem`).toBe('front');
       },
     );
+  });
+
+  it('önden görünümde gövde elipsi çizilebilir ölçüde', () => {
+    // Yarıçap işaretli farktan hesaplanıyordu: ayakta duran figürde göğüs
+    // belin ÜSTÜNDE olduğu için değer negatife düşüyor ve SVG elipsi hiç
+    // çizmiyordu — önden bakışta gövde boş kalıyordu.
+    entries.forEach(([key, ex]) => {
+      frames(key).forEach(({ S, p, at }) => {
+        const trunk = frontTrunk(frontPoints(ex, p, S));
+        expect(trunk.ry, `${at} gövde yarıçapı`).toBeGreaterThan(0);
+        expect(trunk.rx, `${key} gövde genişliği`).toBeGreaterThan(0);
+      });
+    });
   });
 
   it('yanal hareketlerde el gerçekten yana açılır', () => {
