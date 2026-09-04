@@ -92,6 +92,10 @@ export function RigFigure({
 
   const { p, phase } = poseAt(rig, t);
   const S = useMemo(() => skeleton(rig, p), [rig, p]);
+  // Sahne (zemin, sehpa, basamak, bar) ilk karenin iskeletinden çizilir ve
+  // hareket boyunca yerinde kalır. Bunları her karenin eklemlerinden çizmek
+  // sehpayı ve yeri figürle birlikte kaydırıyordu.
+  const S0 = useMemo(() => skeleton(rig, poseAt(rig, 0).p), [rig]);
   const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
@@ -140,30 +144,30 @@ export function RigFigure({
       <>
         <G key="floor">
           <Ellipse cx={(S.ankle[0] + S.ankleF[0]) / 2 + 6} cy={GROUND + 4} rx={92} ry={12} fill={floorC} opacity={0.25} />
-          <Line x1={S.pelvis[0] - 190} y1={GROUND} x2={S.pelvis[0] + 250} y2={GROUND} stroke={floorC} strokeWidth={2} />
+          <Line x1={S0.pelvis[0] - 220} y1={GROUND} x2={S0.pelvis[0] + 280} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
         {rig.prop === 'bench' && rig.mode === 'bench' && (
           <G key="bench">
-            <Rect x={S.pelvis[0] - 110} y={S.pelvis[1] + 22} width={360} height={20} rx={10} fill={colors.surf2} stroke={line} />
-            <Rect x={S.pelvis[0] - 96} y={S.pelvis[1] + 40} width={16} height={GROUND - S.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
-            <Rect x={S.pelvis[0] + 130} y={S.pelvis[1] + 40} width={16} height={GROUND - S.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] - 110} y={S0.pelvis[1] + 22} width={360} height={20} rx={10} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] - 96} y={S0.pelvis[1] + 40} width={16} height={GROUND - S0.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] + 130} y={S0.pelvis[1] + 40} width={16} height={GROUND - S0.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
           </G>
         )}
         {/* Bulgar split squat: arka ayağın bastığı sehpa, ayağın altına çizilir. */}
         {rig.prop === 'bench' && rig.mode !== 'bench' && (
           <G key="rearbench">
-            <Rect x={S.ankleF[0] - 70} y={S.ankleF[1] + 16} width={150} height={16} rx={8} fill={colors.surf2} stroke={line} />
-            <Rect x={S.ankleF[0] - 56} y={S.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.ankleF[0] - 70} y={S0.ankleF[1] + 16} width={150} height={16} rx={8} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.ankleF[0] - 56} y={S0.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S0.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
           </G>
         )}
         {/* Step-up: ayağın çıktığı basamak. */}
         {rig.prop === 'box' && (
           <Rect
             key="box"
-            x={S.ankle[0] - 62}
-            y={S.ankle[1] + 12}
+            x={S0.ankle[0] - 62}
+            y={S0.ankle[1] + 12}
             width={150}
-            height={Math.max(0, GROUND - S.ankle[1] - 12)}
+            height={Math.max(0, GROUND - S0.ankle[1] - 12)}
             rx={6}
             fill={colors.surf2}
             stroke={line}
@@ -172,9 +176,9 @@ export function RigFigure({
         {/* Barfiks barı: figür buna asılı, bu yüzden figürden ÖNCE çizilir. */}
         {rig.prop === 'bar' && (
           <G key="pullbar">
-            <Rect x={S.hand[0] - 150} y={BAR_Y - 6} width={300} height={12} rx={6} fill={metal} stroke={line} />
-            <Rect x={S.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
-            <Rect x={S.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
+            <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={300} height={12} rx={6} fill={metal} stroke={line} />
+            <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
+            <Rect x={S0.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
           </G>
         )}
         <G key="far" opacity={0.95}>

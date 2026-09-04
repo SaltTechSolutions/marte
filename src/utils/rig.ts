@@ -292,7 +292,51 @@ const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
  * sabit), diğerlerinde kalçadan kurulup en alçak temas noktası yere
  * oturtulur. Bu son adım olmadan plank'ın ayakları havada kalıyordu.
  */
+/**
+ * Kadraj kaydırması, harekete BİR KEZ hesaplanır.
+ *
+ * Kare başına hesaplanan bir kaydırma figürü ortalar ama sahnenin geri
+ * kalanını — zemin çizgisini, sehpayı, basamağı — figürle birlikte
+ * sürükler: bar yukarı çıkarken yer yana kayıyordu. Dünya sabit durmalı,
+ * içinde insan hareket etmeli.
+ */
+const SHIFT = new WeakMap<RigExercise, number>();
+
+function centeringShift(ex: RigExercise): number {
+  const cached = SHIFT.get(ex);
+  if (cached !== undefined) return cached;
+  if (ex.mode === 'hang') {
+    SHIFT.set(ex, 0);
+    return 0;
+  }
+  let sum = 0;
+  const N = 12;
+  for (let i = 0; i < N; i++) {
+    const { p } = poseAt(ex, i / N);
+    const S = build(ex, p);
+    const anchor = S.bar ? (S.bar[0] + S.pelvis[0] * 1.4) / 2.4 : S.pelvis[0];
+    sum += CENTER_X - anchor;
+  }
+  const dx = sum / N;
+  SHIFT.set(ex, dx);
+  return dx;
+}
+
 export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
+  const S = build(ex, p);
+  const dx = centeringShift(ex);
+  // Yere oturtma kare başına kalır: temas noktası zeminde durmalı, zemin
+  // değil figür yer değiştirir.
+  const contacts = CONTACTS[ex.mode];
+  const dy = contacts.length ? GROUND - 8 - Math.max(...contacts.map((k) => (S[k] as Vec)[1])) : 0;
+  (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
+    const v = S[k];
+    if (v) (S[k] as Vec) = [v[0] + dx, v[1] + dy];
+  });
+  return S;
+}
+
+function build(ex: RigExercise, p: RigPose): Skeleton {
   let pelvis: Vec;
   let ankle: Vec;
   let knee: Vec;
@@ -360,23 +404,6 @@ export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
     sh, elbow: elbow!, hand: hand!, shF, elbowF, handF, bar,
   };
 
-  // Yere oturt: en alçak temas noktası zemine gelsin. Plank'ın ayakları,
-  // dört ayak duruşunun dizleri bu adım olmadan havada kalıyordu.
-  const contacts = CONTACTS[ex.mode];
-  let dy = 0;
-  if (contacts.length) {
-    const lowest = Math.max(...contacts.map((k) => (S[k] as Vec)[1]));
-    dy = GROUND - 8 - lowest;
-  }
-
-  // Bar taşıyan hareketlerde kadraj barın da ağırlığını sayar, yoksa figür
-  // tepe noktasında çerçevenin dışına taşıyor.
-  const anchor = bar ? (bar[0] + pelvis[0] * 1.4) / 2.4 : pelvis[0];
-  const dx = ex.mode === 'hang' ? 0 : CENTER_X - anchor;
-  (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
-    const v = S[k];
-    if (v) (S[k] as Vec) = [v[0] + dx, v[1] + dy];
-  });
   return S;
 }
 

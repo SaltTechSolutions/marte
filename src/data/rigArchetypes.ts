@@ -267,14 +267,14 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
       { t: 1, tr: 'Duruş', p: { thighA: 239, shinA: 239, torso: 74, thoraxA: 74, neckA: 78, hx: 0 } },
     ],
   },
-  // Yan plank yandan bakışta düz bir gövde çizgisi olarak okunur; tek kol
-  // destekte, bacaklar üst üste (uzak taraf yakınla aynı açıda).
+  // Yan plank: destek kol yerde, üst kol tavana; bacaklar üst üste (uzak
+  // bacak yakınla AYNI açıda, yoksa iki ayrı bacak gibi açılıyor).
   side_plank: {
-    mode: 'quad', arm: 'floor', bar: null, bend: 1, dur: 5000,
+    mode: 'quad', arm: 'angles', bar: null, bend: 1, dur: 5000,
     kf: [
-      { t: 0, tr: 'Duruş', p: { thighA: 239, shinA: 239, torso: 74, thoraxA: 74, neckA: 74, hx: -6, thighF: 239, shinF: 239 } },
-      { t: 0.5, tr: 'Duruş', p: { thighA: 240, shinA: 240, torso: 75, thoraxA: 75, neckA: 75, hx: -6, thighF: 240, shinF: 240 } },
-      { t: 1, tr: 'Duruş', p: { thighA: 239, shinA: 239, torso: 74, thoraxA: 74, neckA: 74, hx: -6, thighF: 239, shinF: 239 } },
+      { t: 0, tr: 'Duruş', p: { thighA: 239, shinA: 239, torso: 74, thoraxA: 74, neckA: 76, upperA: 178, foreA: 182, thighF: 239, shinF: 239, upperF: 2, foreF: 0 } },
+      { t: 0.5, tr: 'Duruş', p: { thighA: 240, shinA: 240, torso: 75, thoraxA: 75, neckA: 77, upperA: 178, foreA: 182, thighF: 240, shinF: 240, upperF: 2, foreF: 0 } },
+      { t: 1, tr: 'Duruş', p: { thighA: 239, shinA: 239, torso: 74, thoraxA: 74, neckA: 76, upperA: 178, foreA: 182, thighF: 239, shinF: 239, upperF: 2, foreF: 0 } },
     ],
   },
   quadruped_spine: {
@@ -338,13 +338,15 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
       { t: 1, tr: 'Göğüste', p: { shinA: 178, thighA: 182, torso: 4, thoraxA: 2, neckA: 2, hx: 22, hy: 40 } },
     ],
   },
-  // Taşıma: yük yanda, gövde dik, adımla hafif salınım.
+  // Taşıma: gövde dik, yük yanda, adım. Basan bacak dik durur, diğeri önden
+  // arkaya salınır ve HER İKİ ucta da ayak yere yakın kalır — havada
+  // yürüyen bir figür yerine gerçek bir adım.
   carry: {
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3600,
     kf: [
-      { t: 0, tr: 'Adım', p: { shinA: 178, thighA: 186, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 172, shinF: 186 } },
-      { t: 0.5, tr: 'Adım', p: { shinA: 178, thighA: 174, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 190, shinF: 170 } },
-      { t: 1, tr: 'Adım', p: { shinA: 178, thighA: 186, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 172, shinF: 186 } },
+      { t: 0, tr: 'Adım', p: { shinA: 178, thighA: 183, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 160, shinF: 190 } },
+      { t: 0.5, tr: 'Adım', p: { shinA: 178, thighA: 183, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 200, shinF: 170 } },
+      { t: 1, tr: 'Adım', p: { shinA: 178, thighA: 183, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 160, shinF: 190 } },
     ],
   },
   // Yalnızca boyun: çene içeri, gövde kımıldamaz.
