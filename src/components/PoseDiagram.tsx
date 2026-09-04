@@ -3,10 +3,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, LayoutChangeEvent, Pressable, View } from 'react-native';
 import Svg, { Circle, Ellipse, Line, Path, Polygon, Rect } from 'react-native-svg';
 
-import { PoseFrame } from '@/data/exerciseLibrary';
+import { PoseArchetype, PoseFace, PoseFrame } from '@/data/exerciseLibrary';
 import { mix } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
-import { DrawFrame, easeInOutCubic, facing, interpolate, repPhase } from '@/utils/pose';
+import { DrawFrame, easeInOutCubic, facing, interpolate, mirrorX, repPhase } from '@/utils/pose';
 
 import { Text } from './Text';
 
@@ -25,7 +25,19 @@ import { Text } from './Text';
  * "which way does my body fold, where is the weight, which leg is which", not
  * exact angles the data cannot promise.
  */
-export function PoseFigure({ frame, arrow, height = 132 }: { frame: DrawFrame; arrow?: PoseFrame['arrow']; height?: number }) {
+export function PoseFigure({
+  frame,
+  arrow,
+  height = 132,
+  view = 'side',
+  face,
+}: {
+  frame: DrawFrame;
+  arrow?: PoseFrame['arrow'];
+  height?: number;
+  view?: 'side' | 'front';
+  face?: PoseFace;
+}) {
   const { colors } = useAppTheme();
   const near = mix(colors.surf2, colors.txt, 0.55);
   const far = mix(colors.surf2, colors.txt, 0.14);
@@ -33,7 +45,8 @@ export function PoseFigure({ frame, arrow, height = 132 }: { frame: DrawFrame; a
   const propFill = mix(colors.surf2, colors.txt, 0.08);
   const outline = mix(colors.surf2, colors.txt, 0.3);
   const f = frame;
-  const [fx, fy] = facing(f);
+  const look = view === 'front' ? 'front' : facing(f, face);
+  const [fx, fy] = look === 'front' ? [0, 0] : look;
 
   const seg = (a: [number, number], b: [number, number], w: number, stroke: string, key: string) => (
     <Line key={key} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={stroke} strokeWidth={w} strokeLinecap="round" />
@@ -73,19 +86,33 @@ export function PoseFigure({ frame, arrow, height = 132 }: { frame: DrawFrame; a
         <Rect key={`prop${i}`} x={p.x} y={p.y} width={p.w} height={p.h} rx={p.r ?? 3} fill={propFill} stroke={outline} />
       ))}
       <Line x1={16} y1={207} x2={304} y2={207} stroke={outline} strokeWidth={2} />
-      <Ellipse cx={(f.ankle[0] + f.toe[0]) / 2} cy={208} rx={34} ry={4} fill={outline} opacity={0.35} />
+      <Ellipse cx={view === 'front' ? f.hip[0] : (f.ankle[0] + f.toe[0]) / 2} cy={208} rx={34} ry={4} fill={outline} opacity={0.35} />
 
-      {/* far limbs — behind everything, faded */}
-      {seg(f.hip, f.farKnee, 17, far, 'farThigh')}
-      {seg(f.farKnee, f.farAnkle, 14, far, 'farShin')}
-      {seg(f.farAnkle, f.farToe, 9, far, 'farFoot')}
-      {seg(f.shoulder, f.farElbow, 12, far, 'farUpperArm')}
-      {seg(f.farElbow, f.farWrist, 10, far, 'farForearm')}
+      {view === 'front' ? (
+        // The other side is this side mirrored across the body's centre —
+        // same depth, same colour; a front view has no far limb.
+        <>
+          {seg(f.hip, mirrorX(f.knee, f.hip[0]), 21, near, 'mirThigh')}
+          {seg(mirrorX(f.knee, f.hip[0]), mirrorX(f.ankle, f.hip[0]), 17, near, 'mirShin')}
+          {seg(mirrorX(f.ankle, f.hip[0]), mirrorX(f.toe, f.hip[0]), 11, near, 'mirFoot')}
+          {seg(f.shoulder, mirrorX(f.elbow, f.shoulder[0]), 15, near, 'mirUpperArm')}
+          {seg(mirrorX(f.elbow, f.shoulder[0]), mirrorX(f.wrist, f.shoulder[0]), 13, near, 'mirForearm')}
+          {f.bar && <Circle cx={mirrorX(f.bar, f.shoulder[0])[0]} cy={f.bar[1]} r={12} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />}
+        </>
+      ) : (
+        <>
+          {seg(f.hip, f.farKnee, 17, far, 'farThigh')}
+          {seg(f.farKnee, f.farAnkle, 14, far, 'farShin')}
+          {seg(f.farAnkle, f.farToe, 9, far, 'farFoot')}
+          {seg(f.shoulder, f.farElbow, 12, far, 'farUpperArm')}
+          {seg(f.farElbow, f.farWrist, 10, far, 'farForearm')}
+        </>
+      )}
 
       {f.bar && (
         <>
-          <Circle cx={f.bar[0]} cy={f.bar[1]} r={21} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />
-          <Circle cx={f.bar[0]} cy={f.bar[1]} r={5} fill={colors.p} />
+          <Circle cx={f.bar[0]} cy={f.bar[1]} r={view === 'front' ? 12 : 21} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />
+          <Circle cx={f.bar[0]} cy={f.bar[1]} r={view === 'front' ? 3 : 5} fill={colors.p} />
         </>
       )}
 
@@ -95,8 +122,20 @@ export function PoseFigure({ frame, arrow, height = 132 }: { frame: DrawFrame; a
       {nearSegs.map(([a, b, w, k]) => seg(a, b, w, near, k))}
       <Path d={chest} stroke={near} strokeWidth={30} fill="none" strokeLinecap="round" />
       <Circle cx={hx} cy={hy} r={r} fill={near} />
-      <Polygon points={wedge} fill={near} strokeLinejoin="round" />
-      <Circle cx={hx + fx * 6 - fy * 4} cy={hy + fy * 6 + fx * 4} r={2.2} fill={colors.bg1} />
+      {look === 'front' ? (
+        <>
+          {/* the face as a glyph — two eyes, a nose, a mouth — so "toward you" cannot be misread */}
+          <Circle cx={hx - 5} cy={hy - 3} r={2} fill={colors.bg1} />
+          <Circle cx={hx + 5} cy={hy - 3} r={2} fill={colors.bg1} />
+          <Line x1={hx} y1={hy - 1} x2={hx} y2={hy + 4} stroke={colors.bg1} strokeWidth={1.6} strokeLinecap="round" />
+          <Line x1={hx - 4} y1={hy + 8} x2={hx + 4} y2={hy + 8} stroke={colors.bg1} strokeWidth={1.6} strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <Polygon points={wedge} fill={near} strokeLinejoin="round" />
+          <Circle cx={hx + fx * 6 - fy * 4} cy={hy + fy * 6 + fx * 4} r={2.2} fill={colors.bg1} />
+        </>
+      )}
       {[f.hip, f.knee, f.elbow].map((j, i) => (
         <Circle key={`j${i}`} cx={j[0]} cy={j[1]} r={3.2} fill={colors.p} />
       ))}
@@ -124,7 +163,8 @@ const FRAME_MS = 33;
  * OS "reduce motion" setting on, it opens paused on the start frame and the
  * play button still works: the person chose less motion, not none.
  */
-export function PoseMotion({ start, end, showArrow = true }: { start: PoseFrame; end: PoseFrame | null; showArrow?: boolean }) {
+export function PoseMotion({ pose, showArrow = true }: { pose: PoseArchetype; showArrow?: boolean }) {
+  const { start, end, view, face } = pose;
   const { colors, radius } = useAppTheme();
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -169,7 +209,7 @@ export function PoseMotion({ start, end, showArrow = true }: { start: PoseFrame;
 
   return (
     <View style={{ backgroundColor: colors.bg1, borderRadius: radius.md, padding: 8, gap: 6 }}>
-      <PoseFigure frame={frame} arrow={showArrow && t < 0.02 ? start.arrow : undefined} />
+      <PoseFigure frame={frame} arrow={showArrow && t < 0.02 ? start.arrow : undefined} view={view} face={face} />
       {isHold ? (
         <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
           İzometrik hareket — pozisyonu koru, tekrar yok.

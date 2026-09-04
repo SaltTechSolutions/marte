@@ -154,7 +154,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
               {pose.end ? 'canlı' : 'sabit duruş'}
             </Text>
           </View>
-          <PoseMotion start={pose.start} end={pose.end} />
+          <PoseMotion pose={pose} />
           {!exercise.poseReviewed && (
             <Text variant="label" tone="sub">
               ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.

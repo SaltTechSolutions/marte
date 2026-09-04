@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { PoseFrame } from '@/data/exerciseLibrary';
 
-import { easeInOutCubic, facing, farJoint, interpolate, repPhase } from './pose';
+import { easeInOutCubic, facing, farJoint, interpolate, mirrorX, repPhase } from './pose';
 
 const A: PoseFrame = { head: [150, 46], shoulder: [150, 70], elbow: [134, 96], wrist: [138, 68], hip: [152, 134], knee: [152, 172], ankle: [150, 206], toe: [174, 206], bar: [146, 66] };
 const B: PoseFrame = { ...A, hip: [130, 166], knee: [170, 176], bar: [142, 96], farKnee: [108, 190], farAnkle: [90, 204], farToe: [76, 200] };
@@ -32,8 +32,19 @@ describe('facing', () => {
     expect(facing(A)).toEqual([1, 0]);
     expect(facing({ ...A, toe: [126, 206] })).toEqual([-1, 0]);
   });
-  test('yatan figür yukarı bakar', () => {
-    expect(facing({ shoulder: [120, 144], hip: [198, 148], ankle: [230, 204], toe: [248, 204] })).toEqual([0, -1]);
+  test('sırtüstü (eller havada) yukarı bakar — bench press', () => {
+    expect(facing({ head: [100, 138], shoulder: [120, 144], hip: [198, 148], wrist: [118, 90], ankle: [230, 204], toe: [248, 204] })).toEqual([0, -1]);
+  });
+  test('yüzüstü / dört ayak (eller yerde) başın olduğu yöne bakar — cat-cow ters bakmasın', () => {
+    // parmak uçları geride (132 < 150) ama baş sağda: yön sağ olmalı
+    expect(facing({ head: [248, 120], shoulder: [216, 138], hip: [150, 148], wrist: [216, 204], ankle: [150, 204], toe: [132, 206] })).toEqual([1, 0]);
+  });
+  test('açık yön iskeleti ezer — hip thrust kolları aşağıda ama sırtüstü', () => {
+    expect(facing({ head: [70, 150], shoulder: [92, 152], hip: [132, 180], wrist: [92, 196], ankle: [168, 206], toe: [190, 206] }, 'up')).toEqual([0, -1]);
+    expect(facing({ ...A }, 'front')).toBe('front');
+  });
+  test('ayna', () => {
+    expect(mirrorX([176, 102], 150)).toEqual([124, 102]);
   });
 });
 

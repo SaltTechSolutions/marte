@@ -42,15 +42,38 @@ export function interpolate(a: PoseFrame, b: PoseFrame | null, t: number): DrawF
   return out;
 }
 
+export type Facing = Pt | 'front';
+
 /**
- * Which way the figure faces, as a unit vector. Upright figures face the way
- * the toes point; a lying figure (bench press, dead bug) faces up. Derived,
- * not stored — no frame needs a new field for the face to be right.
+ * Which way the head looks.
+ *
+ * Upright figures look the way the toes point. A horizontal figure is prone
+ * or supine: with the hands on the floor (wrist below the shoulder) it is
+ * prone and looks the way the head lies from the hip — cat-cow, plank,
+ * bird-dog, rollout; with the hands in the air it is supine and looks up —
+ * bench press, dead bug. The first version derived everything from the
+ * toes, which put every quadruped face on backwards. `override` is for the
+ * few frames the skeleton cannot decide (hip thrust: arms down but supine).
  */
-export function facing(f: { shoulder: Pt; hip: Pt; ankle: Pt; toe: Pt }): Pt {
+export function facing(
+  f: { head: Pt; shoulder: Pt; hip: Pt; wrist: Pt; ankle: Pt; toe: Pt },
+  override?: 'left' | 'right' | 'up' | 'down' | 'front',
+): Facing {
+  if (override === 'front') return 'front';
+  if (override === 'up') return [0, -1];
+  if (override === 'down') return [0, 1];
+  if (override === 'left') return [-1, 0];
+  if (override === 'right') return [1, 0];
   const horizontal = Math.abs(f.shoulder[1] - f.hip[1]) < Math.abs(f.shoulder[0] - f.hip[0]);
-  if (horizontal) return [0, -1];
-  return [Math.sign(f.toe[0] - f.ankle[0]) || 1, 0];
+  if (!horizontal) return [Math.sign(f.toe[0] - f.ankle[0]) || 1, 0];
+  const handsOnFloor = f.wrist[1] > f.shoulder[1];
+  if (!handsOnFloor) return [0, -1];
+  return [Math.sign(f.head[0] - f.hip[0]) || 1, 0];
+}
+
+/** Mirror a point across a vertical line — the front view draws the second limb this way. */
+export function mirrorX(p: Pt, cx: number): Pt {
+  return [2 * cx - p[0], p[1]];
 }
 
 /**
