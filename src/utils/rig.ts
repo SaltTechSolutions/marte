@@ -92,8 +92,8 @@ export interface RigKeyframe {
 
 export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang';
 export type RigArm = 'angles' | 'ik' | 'floor';
-export type RigBar = 'back' | 'hands' | null;
-export type RigProp = 'bench' | 'box' | 'bar' | null;
+export type RigBar = 'back' | 'hands' | 'hips' | null;
+export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | null;
 
 export interface RigExercise {
   mode: RigMode;
@@ -397,7 +397,15 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
   }
 
   const bar: Vec | null =
-    ex.bar === 'back' ? add(thorax, D(p.thoraxA + 201), 18) : ex.bar === 'hands' ? [hand![0], hand![1]] : null;
+    ex.bar === 'back'
+      ? add(thorax, D(p.thoraxA + 201), 18)
+      : ex.bar === 'hands'
+        ? [hand![0], hand![1]]
+        : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte
+          // yükselir — hip thrust'ın bütün hikâyesi bu.
+          ex.bar === 'hips'
+          ? add(pelvis, D(p.torso + 180), 26)
+          : null;
 
   const S: Skeleton = {
     pelvis, knee, ankle, hipF, kneeF, ankleF, lumbar, thorax, neck, head,
@@ -546,13 +554,24 @@ export function capsule(a: Vec, b: Vec, wa: number, wb: number): string {
  * yükselebilir — topuk kalkışında ve basamağa çıkışta ayak havada kalır,
  * tabanı zemine yapıştırmak yanlış olur.
  */
-export function footPath(ankle: Vec, dir: number): string {
+/**
+ * Ayak.
+ *
+ * `pinToe`: topuk kalkarken parmak ucu yerde kalır ve ayak parmak ucu
+ * etrafında döner — topuk kalkışının tanımı bu. Yükseklik ayağın boyuyla
+ * sınırlı: taban zeminden koparsa figür havada yürür.
+ *
+ * `pinToe` olmadan taban ayak bileğine bağlı kalır; havadaki ayak (hamlenin
+ * arka ayağı, asılı bacak) zemine kadar uzayan bir kama çizmez.
+ */
+export function footPath(ankle: Vec, dir: number, pinToe = false): string {
   const d = D(dir);
   const heel = add(ankle, d, -16);
   const toe = add(ankle, d, B.foot - 16);
   const sx = d[0] < 0 ? -1 : 1;
-  const sole = Math.min(GROUND, ankle[1] + 12);
-  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(sole - 6, toe[1])} L ${toe[0] + 6 * sx} ${Math.min(GROUND, toe[1] + 12)} L ${heel[0] - 4 * sx} ${sole} Z`;
+  const heelBottom = Math.min(GROUND, ankle[1] + 12);
+  const toeBottom = pinToe ? GROUND : Math.min(GROUND, toe[1] + 12);
+  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(toeBottom - 6, toe[1])} L ${toe[0] + 6 * sx} ${toeBottom} L ${heel[0] - 4 * sx} ${heelBottom} Z`;
 }
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);

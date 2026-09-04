@@ -90,12 +90,12 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   },
   // Sırt sehpada, ayaklar yerde: kalça yerden yukarı, dizler ~90°'de sabit.
   hip_thrust: {
-    mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3400,
+    mode: 'stand', arm: 'angles', bar: 'hips', bend: 1, dur: 3400, prop: 'hipbench',
     kf: [
-      { t: 0, tr: 'Alt', p: { shinA: 172, thighA: 62, torso: 296, thoraxA: 292, neckA: 286, upperA: 250, foreA: 248 } },
-      { t: 0.42, tr: 'Kilit', p: { shinA: 178, thighA: 92, torso: 285, thoraxA: 282, neckA: 278, upperA: 250, foreA: 248 } },
-      { t: 0.56, tr: 'Kilit', p: { shinA: 178, thighA: 92, torso: 285, thoraxA: 282, neckA: 278, upperA: 250, foreA: 248 } },
-      { t: 1, tr: 'Alt', p: { shinA: 172, thighA: 62, torso: 296, thoraxA: 292, neckA: 286, upperA: 250, foreA: 248 } },
+      { t: 0, tr: 'Alt', p: { shinA: 172, thighA: 62, torso: 296, thoraxA: 292, neckA: 286, upperA: 262, foreA: 292 } },
+      { t: 0.42, tr: 'Kilit', p: { shinA: 178, thighA: 92, torso: 275, thoraxA: 273, neckA: 270, upperA: 262, foreA: 292 } },
+      { t: 0.56, tr: 'Kilit', p: { shinA: 178, thighA: 92, torso: 275, thoraxA: 273, neckA: 270, upperA: 262, foreA: 292 } },
+      { t: 1, tr: 'Alt', p: { shinA: 172, thighA: 62, torso: 296, thoraxA: 292, neckA: 286, upperA: 262, foreA: 292 } },
     ],
   },
   // Omuzlar yerde: kalça kalkarken omuz yerde kalır, gövde açısı buna göre açılır.
@@ -103,8 +103,8 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3400,
     kf: [
       { t: 0, tr: 'Alt', p: { shinA: 170, thighA: 50, torso: 272, thoraxA: 270, neckA: 268, upperA: 250, foreA: 250 } },
-      { t: 0.42, tr: 'Kilit', p: { shinA: 178, thighA: 88, torso: 240, thoraxA: 246, neckA: 252, upperA: 250, foreA: 250 } },
-      { t: 0.56, tr: 'Kilit', p: { shinA: 178, thighA: 88, torso: 240, thoraxA: 246, neckA: 252, upperA: 250, foreA: 250 } },
+      { t: 0.42, tr: 'Kilit', p: { shinA: 178, thighA: 88, torso: 245, thoraxA: 250, neckA: 255, upperA: 250, foreA: 250 } },
+      { t: 0.56, tr: 'Kilit', p: { shinA: 178, thighA: 88, torso: 245, thoraxA: 250, neckA: 255, upperA: 250, foreA: 250 } },
       { t: 1, tr: 'Alt', p: { shinA: 170, thighA: 50, torso: 272, thoraxA: 270, neckA: 268, upperA: 250, foreA: 250 } },
     ],
   },
@@ -112,8 +112,8 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 2600,
     kf: [
       { t: 0, tr: 'Topuk yerde', p: { ankleLift: 0, shinA: 178, thighA: 182, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
-      { t: 0.4, tr: 'Tepe', p: { ankleLift: 42, shinA: 174, thighA: 181, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
-      { t: 0.55, tr: 'Tepe', p: { ankleLift: 42, shinA: 174, thighA: 181, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
+      { t: 0.4, tr: 'Tepe', p: { ankleLift: 38, shinA: 174, thighA: 181, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
+      { t: 0.55, tr: 'Tepe', p: { ankleLift: 38, shinA: 174, thighA: 181, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
       { t: 1, tr: 'Topuk yerde', p: { ankleLift: 0, shinA: 178, thighA: 182, torso: 4, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180 } },
     ],
   },
@@ -158,25 +158,6 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
       { t: 0.42, tr: 'Çekiş', p: { shinA: 188, thighA: 150, torso: 64, thoraxA: 60, neckA: 48, hx: -8, hy: 34 } },
       { t: 0.56, tr: 'Çekiş', p: { shinA: 188, thighA: 150, torso: 64, thoraxA: 60, neckA: 48, hx: -8, hy: 34 } },
       { t: 1, tr: 'Uzanma', p: { shinA: 188, thighA: 150, torso: 66, thoraxA: 62, neckA: 50, hx: 6, hy: 96 } },
-    ],
-  },
-  chest_supported_row: {
-    mode: 'bench', arm: 'ik', bar: null, bend: 1, dur: 3200, prop: 'bench',
-    kf: [
-      { t: 0, tr: 'Uzanma', p: { thighA: 250, shinA: 150, torso: 66, thoraxA: 70, neckA: 74, hx: 14, hy: 104 } },
-      { t: 0.42, tr: 'Çekiş', p: { thighA: 250, shinA: 150, torso: 66, thoraxA: 70, neckA: 74, hx: -4, hy: 40 } },
-      { t: 0.56, tr: 'Çekiş', p: { thighA: 250, shinA: 150, torso: 66, thoraxA: 70, neckA: 74, hx: -4, hy: 40 } },
-      { t: 1, tr: 'Uzanma', p: { thighA: 250, shinA: 150, torso: 66, thoraxA: 70, neckA: 74, hx: 14, hy: 104 } },
-    ],
-  },
-  // Barda asılı: eller bara sabit, gövde YUKARI gelir. Zincir elden aşağı kurulur.
-  pullup: {
-    mode: 'hang', arm: 'angles', bar: null, bend: 1, dur: 3600, prop: 'bar',
-    kf: [
-      { t: 0, tr: 'Asılı', p: { upperA: 6, foreA: 4, torso: 2, thoraxA: 2, neckA: 4, thighA: 184, shinA: 212 } },
-      { t: 0.42, tr: 'Tepe', p: { upperA: 118, foreA: 8, torso: 352, thoraxA: 354, neckA: 358, thighA: 196, shinA: 226 } },
-      { t: 0.55, tr: 'Tepe', p: { upperA: 118, foreA: 8, torso: 352, thoraxA: 354, neckA: 358, thighA: 196, shinA: 226 } },
-      { t: 1, tr: 'Asılı', p: { upperA: 6, foreA: 4, torso: 2, thoraxA: 2, neckA: 4, thighA: 184, shinA: 212 } },
     ],
   },
   hanging_knee_raise: {
@@ -306,26 +287,6 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
       { t: 0.45, tr: 'Uzanma', p: { thighA: 200, shinA: 268, torso: 86, thoraxA: 84, neckA: 80, hx: 120 } },
       { t: 0.58, tr: 'Uzanma', p: { thighA: 200, shinA: 268, torso: 86, thoraxA: 84, neckA: 80, hx: 120 } },
       { t: 1, tr: 'Diz üstü', p: { thighA: 200, shinA: 268, torso: 62, thoraxA: 62, neckA: 66, hx: 10 } },
-    ],
-  },
-  // Sırtüstü, kollar ve bacaklar havada; çapraz uzanır, bel yerde kalır.
-  floor_core_supine: {
-    mode: 'supine', arm: 'angles', bar: null, bend: 1, dur: 4200,
-    kf: [
-      { t: 0, tr: 'Masa üstü', p: { torso: 88, thoraxA: 90, neckA: 90, thighA: 10, shinA: 100, upperA: 2, foreA: -2, thighF: 14, shinF: 104, upperF: 2, foreF: -2 } },
-      { t: 0.42, tr: 'Uzanma', p: { torso: 88, thoraxA: 90, neckA: 90, thighA: 10, shinA: 100, upperA: -44, foreA: -46, thighF: 66, shinF: 92, upperF: 2, foreF: -2 } },
-      { t: 0.56, tr: 'Uzanma', p: { torso: 88, thoraxA: 90, neckA: 90, thighA: 10, shinA: 100, upperA: -44, foreA: -46, thighF: 66, shinF: 92, upperF: 2, foreF: -2 } },
-      { t: 1, tr: 'Masa üstü', p: { torso: 88, thoraxA: 90, neckA: 90, thighA: 10, shinA: 100, upperA: 2, foreA: 358, thighF: 14, shinF: 104, upperF: 2, foreF: -2 } },
-    ],
-  },
-  // Mekik: kalça yerde kalır, yalnızca üst sırt yerden kalkar.
-  curl_up_supine: {
-    mode: 'supine', arm: 'angles', bar: null, bend: 1, dur: 3400,
-    kf: [
-      { t: 0, tr: 'Yerde', p: { torso: 88, thoraxA: 90, neckA: 92, thighA: 45, shinA: 140, upperA: 282, foreA: 330 } },
-      { t: 0.42, tr: 'Kalkış', p: { torso: 86, thoraxA: 58, neckA: 62, thighA: 45, shinA: 140, upperA: 282, foreA: 330 } },
-      { t: 0.56, tr: 'Kalkış', p: { torso: 86, thoraxA: 58, neckA: 62, thighA: 45, shinA: 140, upperA: 282, foreA: 330 } },
-      { t: 1, tr: 'Yerde', p: { torso: 88, thoraxA: 90, neckA: 92, thighA: 45, shinA: 140, upperA: 282, foreA: 330 } },
     ],
   },
   // Pallof: eller göğüsten öne uzanır, gövde dönmeye direnir (açı sabit).

@@ -178,6 +178,23 @@ describe('rig hareket denetimi', () => {
     });
   });
 
+  it('desteğe yaslanan hareketlerde omuz yerinde kalır', () => {
+    // Hip thrust ve köprüde kalça yükselir, omuz sehpada/yerde kalır. Gövde
+    // açısı buna göre açılmazsa figür desteğinden kopup havaya kalkıyor.
+    (['hip_thrust', 'glute_bridge'] as const).forEach((key) => {
+      const ys = frames(key).map(({ S }) => S.thorax[1]);
+      expect(Math.max(...ys) - Math.min(...ys), `${key} omuz kayması`).toBeLessThan(12);
+      const hips = frames(key).map(({ S }) => S.pelvis[1]);
+      expect(Math.max(...hips) - Math.min(...hips), `${key} kalça yükselmesi`).toBeGreaterThan(30);
+    });
+  });
+
+  it('topuk kalkışında ayak boyunu aşmaz', () => {
+    const lifts = frames('calf_raise').map(({ p }) => p.ankleLift);
+    expect(Math.max(...lifts), 'topuk yüksekliği').toBeGreaterThan(20);
+    expect(Math.max(...lifts), 'topuk ayak boyunu aşmamalı').toBeLessThanOrEqual(B.foot);
+  });
+
   it('yanal düzlem hareketleri önden okunur', () => {
     ['lateral_raise_front', 'arm_circles_front', 'band_pull_apart_front', 'band_ext_rotation_front', 'shrug_front', 'hinged_fly'].forEach(
       (key) => {

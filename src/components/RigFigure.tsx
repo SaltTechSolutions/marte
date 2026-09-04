@@ -96,6 +96,11 @@ export function RigFigure({
   // hareket boyunca yerinde kalır. Bunları her karenin eklemlerinden çizmek
   // sehpayı ve yeri figürle birlikte kaydırıyordu.
   const S0 = useMemo(() => skeleton(rig, poseAt(rig, 0).p), [rig]);
+  // Sehpanın eğimi gövdenin ekseninden okunur (SVG'de saat yönü, +x'ten).
+  const t0 = poseAt(rig, 0).p.torso;
+  const benchDeg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
+  // Topuk kalkışında ayak parmak ucu etrafında döner; basamakta ayak düz basar.
+  const pinToe = rig.prop !== 'box' && p.ankleLift > 0;
   const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
@@ -146,11 +151,27 @@ export function RigFigure({
           <Ellipse cx={(S.ankle[0] + S.ankleF[0]) / 2 + 6} cy={GROUND + 4} rx={92} ry={12} fill={floorC} opacity={0.25} />
           <Line x1={S0.pelvis[0] - 220} y1={GROUND} x2={S0.pelvis[0] + 280} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
+        {/* Sehpa gövdenin ekseni boyunca, sırtın hemen altında çizilir: düz
+            bench'te yatay, eğimli bench'te eğimli. Sabit yatay bir sehpa
+            eğimli press'te sırtı boşlukta bırakıyordu. */}
         {rig.prop === 'bench' && rig.mode === 'bench' && (
-          <G key="bench">
-            <Rect x={S0.pelvis[0] - 110} y={S0.pelvis[1] + 22} width={360} height={20} rx={10} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.pelvis[0] - 96} y={S0.pelvis[1] + 40} width={16} height={GROUND - S0.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.pelvis[0] + 130} y={S0.pelvis[1] + 40} width={16} height={GROUND - S0.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
+          <G key="bench" transform={`rotate(${benchDeg} ${S0.pelvis[0]} ${S0.pelvis[1]})`}>
+            <Rect x={S0.pelvis[0] - 70} y={S0.pelvis[1] + 24} width={330} height={20} rx={10} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {rig.prop === 'bench' && rig.mode === 'bench' && (
+          <G key="benchlegs">
+            <Rect x={S0.pelvis[0] - 56} y={S0.pelvis[1] + 44} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 44)} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.thorax[0] + 40} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {/* Hip thrust: omuzların dayandığı sehpa. Çizilmeyince figürün neye
+            yaslandığı belirsiz kalıyordu. */}
+        {rig.prop === 'hipbench' && (
+          <G key="hipbench">
+            <Rect x={S0.thorax[0] - 96} y={S0.thorax[1] + 26} width={210} height={18} rx={8} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.thorax[0] - 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.thorax[0] + 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
           </G>
         )}
         {/* Bulgar split squat: arka ayağın bastığı sehpa, ayağın altına çizilir. */}
@@ -182,7 +203,7 @@ export function RigFigure({
           </G>
         )}
         <G key="far" opacity={0.95}>
-          <Path d={footPath(S.ankleF, footDirFor(rig.mode))} fill={skinFar} stroke={line} />
+          <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe)} fill={skinFar} stroke={line} />
           {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true)}
           {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true)}
           {ball('fk', S.kneeF, 12, true)}
@@ -200,7 +221,7 @@ export function RigFigure({
           {ball('delt', S.sh, 17)}
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirFor(rig.mode))} fill={skin} stroke={line} />
+          <Path d={footPath(S.ankle, footDirFor(rig.mode), pinToe)} fill={skin} stroke={line} />
           {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42)}
           {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34)}
           {ball('k', S.knee, 13)}
