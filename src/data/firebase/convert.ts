@@ -16,6 +16,7 @@ import {
   PtSession,
   Tenant,
   TenantMembership,
+  MemberNote,
   WorkoutLog,
 } from '../types';
 
@@ -348,5 +349,18 @@ export function memberCreditFromDoc(snap: QueryDocumentSnapshot | DocumentSnapsh
     startsAt: toDate(data.startsAt) ?? new Date(),
     expiresAt: toDate(data.expiresAt) ?? new Date(),
     status: data.status,
+  };
+}
+
+export function memberNoteFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): MemberNote | null {
+  const data = snap.data();
+  if (!data) return null;
+  return {
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    text: data.text ?? '',
+    updatedBy: data.updatedBy,
+    updatedByName: data.updatedByName,
+    updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
 }

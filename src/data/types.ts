@@ -849,3 +849,19 @@ export const NOTIFICATION_CATEGORIES: { key: NotificationCategory; title: string
   { key: 'payments', title: 'Ödeme', detail: 'Onaylanan ve düzeltilen kayıtlar' },
   { key: 'programs', title: 'Antrenman programı', detail: 'Antrenörün yazdığı yeni program' },
 ];
+
+/**
+ * A coach's private note about a member (PER-14c) — injury, goal, what to
+ * watch. Doc id `{tenantId}_{memberId}`: one note per member per gym, shared
+ * by the gym's staff and never readable by the member. One shared note rather
+ * than one per trainer because in a small gym the owner coaches too, and a
+ * note about a bad knee that only its author can see protects nobody.
+ */
+export interface MemberNote {
+  tenantId: string;
+  memberId: string;
+  text: string;
+  updatedBy: string;
+  updatedByName?: string;
+  updatedAt: Date;
+}

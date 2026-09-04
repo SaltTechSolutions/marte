@@ -5,6 +5,7 @@ import { ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { StatCard } from '@/components/StatCard';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -181,6 +182,8 @@ export default function TrainerMemberDetail() {
           </Text>
         </View>
       </View>
+
+      <MemberNoteCard tenantId={tenantId} memberId={memberId} />
 
       {/* --- What they bought (PER-7) --- */}
       <Card style={{ gap: 8 }}>

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { DateStepper } from '@/components/DateStepper';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
@@ -12,9 +13,23 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { setTrainerAvailability, watchTrainerAvailability } from '@/data/firebase/availabilityRepo';
 import { gymWindowFor } from '@/data/openingHours';
-import { DayHours, TimeWindow, Weekday } from '@/data/types';
+import { AvailabilityException, DayHours, TimeWindow, Weekday } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { toHHMM, toMinutes } from '@/utils/time';
+
+function isoDateFromOffset(offset: number): string {
+  const d = new Date();
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() + offset);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+function formatIsoDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 const DAYS: { key: Weekday; label: string }[] = [
   { key: 'mon', label: 'Pazartesi' },
@@ -60,6 +75,11 @@ export default function TrainerAvailability() {
     mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null,
   });
   const [slotMinutes, setSlotMinutes] = useState(60);
+  // Kept in state and written back on save. The first version sent `[]` on
+  // every save, so any day off ever recorded was wiped the next time the
+  // trainer touched their hours.
+  const [exceptions, setExceptions] = useState<AvailabilityException[]>([]);
+  const [dayOffOffset, setDayOffOffset] = useState(1);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -73,6 +93,7 @@ export default function TrainerAvailability() {
           return next;
         });
         setSlotMinutes(availability.slotMinutes);
+        setExceptions(availability.exceptions);
       }
       setLoaded(true);
     });
@@ -105,6 +126,11 @@ export default function TrainerAvailability() {
     };
   };
 
+  // Only closed days, only from today on — a past day off is history, not a
+  // setting, and a half-day window (the model allows it) has no UI yet.
+  const todayIso = isoDateFromOffset(0);
+  const upcomingDaysOff = exceptions.filter((e) => e.closed && e.date >= todayIso).sort((a, b) => a.date.localeCompare(b.date));
+
   const save = async () => {
     if (saving) return;
     setSaving(true);
@@ -113,7 +139,7 @@ export default function TrainerAvailability() {
       for (const { key } of DAYS) {
         if (days[key]) weekly[key] = [days[key]!];
       }
-      await setTrainerAvailability({ tenantId, trainerId: user.uid, weekly, slotMinutes, exceptions: [] });
+      await setTrainerAvailability({ tenantId, trainerId: user.uid, weekly, slotMinutes, exceptions });
       toast.success('Çalışma saatlerin kaydedildi');
     } catch (e) {
       reportError(e, toast, 'Kaydedilemedi, tekrar dene.');
@@ -208,6 +234,44 @@ export default function TrainerAvailability() {
           </View>
         );
       })}
+
+      <View style={{ gap: 8 }}>
+        <Text variant="label" tone="sub">
+          İZİN GÜNLERİ
+        </Text>
+        <Text variant="helper" tone="sub">
+          O gün hiç randevu açılmaz; üye o günü boş görmez. Alınmış randevular
+          kendiliğinden iptal olmaz — onları takvimden sen kapatırsın.
+        </Text>
+        {upcomingDaysOff.length === 0 ? (
+          <Text variant="label" tone="sub">
+            Planlı izin günü yok.
+          </Text>
+        ) : (
+          upcomingDaysOff.map((e) => (
+            <View key={e.date} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text variant="helper" weight="700" style={{ flex: 1 }}>
+                {formatIsoDate(e.date)}
+              </Text>
+              <Button label="Kaldır" variant="ghost" compact onPress={() => setExceptions((prev) => prev.filter((x) => x.date !== e.date))} />
+            </View>
+          ))
+        )}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <DateStepper value={dayOffOffset} onChange={setDayOffOffset} min={0} max={90} />
+          </View>
+          <Button
+            label="İzin ekle"
+            variant="secondary"
+            compact
+            disabled={exceptions.some((e) => e.date === isoDateFromOffset(dayOffOffset))}
+            onPress={() =>
+              setExceptions((prev) => [...prev, { date: isoDateFromOffset(dayOffOffset), closed: true }])
+            }
+          />
+        </View>
+      </View>
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={saving} onPress={save} />
     </KeyboardAwareScroll>

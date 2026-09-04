@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
+import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
@@ -367,6 +368,8 @@ export default function AdminMemberDetail() {
           </View>
         </Card>
       )}
+
+      <MemberNoteCard tenantId={tenantId} memberId={memberId} />
 
       <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
         PAKETLER
