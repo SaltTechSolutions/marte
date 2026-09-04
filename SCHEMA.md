@@ -787,6 +787,24 @@ Cloud Functions (Admin SDK) okur. Temizlik mekanizması yok (plan.md P1-7).
 
 ---
 
+### `member_notes` — antrenörün üye notu (PER-14c)
+**Doküman kimliği: `{tenantId}_{memberId}`**
+
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` / `memberId` | string | Kimliğe sabitlenmiş; kural, alanları düzenleyerek notun başka kişiye/salona taşınmasını engeller |
+| `text` | string | 1–2000 karakter. Boş not saklanmaz, doküman silinir |
+| `updatedBy` / `updatedByName` | string | Son yazan personel |
+| `updatedAt` | Timestamp | |
+
+**Kurallar:** okuma/yazma/silme = kiracı personeli (`isTenantStaff`). **Üye kendi
+notunu okuyamaz** — notun varlık sebebi bu (sakatlık, hedef, dikkat edilecekler).
+Salon başına üye başına **tek ortak not**, antrenör başına değil: küçük salonda
+sahip de çalıştırıyor ve yalnızca yazanın gördüğü bir "dizi kötü" notu kimseyi
+korumaz. `removeMemberFromTenant` / `deleteMyAccount` cascade listesinde.
+
+---
+
 ### `exercise_reports` — hareket anlatımı sorun bildirimi (PER-19)
 | Alan | Tip | Not |
 |---|---|---|

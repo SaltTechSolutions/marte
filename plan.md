@@ -445,7 +445,13 @@ hiçbiri "dersin 1 saat sonra" demiyor. Hatırlatıcı bildirim sayısını
 artırıyor; susturma yolu olmadan eklenmez. Önce tercih, sonra hatırlatıcı,
 aynı iş.
 
-**9. PER-14 · Antrenör işletme detayları.** (a) **No-show durumu** —
+**9. [x] PER-14 · Antrenör işletme detayları** *(3 Eylül 2026 — deploy edildi;
+uygulamada görülmedi, simülatör yasak).* (a) no-show madde 7d ile geldi.
+(b) İzin günleri: `exceptions` modelde vardı ama ekran her kayıtta `[]`
+gönderiyordu — kaydedilmiş her izin günü saatlere dokununca siliniyordu;
+artık yükleniyor, listeleniyor, ekleniyor. (c) Üye notu: `member_notes`,
+salon/üye başına tek ortak not, personel okur-yazar, üye asla okumaz (kural).
+*Özgün madde:* (a) **No-show durumu** —
 `PtSessionStatus`'a `no-show`: hak yanar, üyeye bildirilir, rapora girer;
 bugün antrenör ya "Tamamla" (yalan) ya "İptal" (kredi iade, salon zarar)
 demek zorunda. (b) **İzin günü** — `TrainerAvailability.exceptions` modelde
