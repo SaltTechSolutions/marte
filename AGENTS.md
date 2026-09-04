@@ -240,3 +240,25 @@ elle Firestore'a yazmak yerine seed script'ine ekle — yoksa bir sonraki
 - Geri alınamaz işlemler (production deploy, veri silme, dış servise gönderim)
   öncesinde onay al.
 - Tamamlanan `plan.md` maddelerini işaretle ve altına nasıl çözüldüğünü yaz.
+
+## Kukla editörü (hareket çizimleri)
+
+Hareket figürlerinin açı kareleri `src/data/rigArchetypes.json` içinde ve
+**editörü var**:
+
+```
+npm run rig      # http://127.0.0.1:8123
+```
+
+Hareketi seç, kareyi seç, figürün eklemini sürükle, ekipmanı (kök nokta, bar,
+yük, sahne, düzlem) değiştir, Kaydet. Kaydet doğrudan `rigArchetypes.json`
+üstüne yazar — değişiklik git diff'te görünür.
+
+İki kural:
+
+- **Motor kopyalanmaz.** Editör `src/utils/rig.ts`, `rigEdit.ts` ve
+  `rigAudit.ts` dosyalarını `tsc` ile derleyip çalıştırır; yani uygulamanın
+  çalıştırdığı kodun aynısı. Ayrı bir çizim kopyası yazmak, uygulamada bozuk
+  olanın editörde düzgün görünmesine yol açar — bu iki kez oldu.
+- **Denetim kuralları tek yerde.** `rigAudit.ts` hem testlerde hem editörde
+  çalışır. Editörde kırmızı görünen bir şey testte de düşer.

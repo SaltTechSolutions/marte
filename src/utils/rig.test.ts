@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { EXERCISES } from '@/data/exerciseLibrary';
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, GROUND, Skeleton, Vec, angleOf, boundsFor, frontPoints, frontTrunk, ik, poseAt, skeleton } from './rig';
+import { B, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, skeleton } from './rig';
+import { auditExercise, auditSegments } from './rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const entries = Object.entries(RIG_ARCHETYPES);
@@ -17,19 +18,6 @@ const frames = (key: string): { S: Skeleton; p: ReturnType<typeof poseAt>['p']; 
 };
 
 describe('rig kinematics', () => {
-  it('segment boyları hareket boyunca sabit kalır', () => {
-    // Eski motorun asıl kusuru buydu: ara karelerde gövde uzuyordu.
-    entries.forEach(([key]) => {
-      frames(key).forEach(({ S, at }) => {
-        expect(len(S.pelvis, S.knee), `${at} uyluk`).toBeCloseTo(B.thigh, 3);
-        expect(len(S.knee, S.ankle), `${at} baldır`).toBeCloseTo(B.shin, 3);
-        expect(len(S.hipF, S.kneeF), `${at} uzak uyluk`).toBeCloseTo(B.thigh, 3);
-        expect(len(S.pelvis, S.lumbar), `${at} bel`).toBeCloseTo(B.lumbar, 3);
-        expect(len(S.lumbar, S.thorax), `${at} gövde`).toBeCloseTo(B.thorax, 3);
-      });
-    });
-  });
-
   it('ters kinematik erişilemeyen hedefte kolu koparmaz', () => {
     const far = ik([0, 0], [0, 900], B.upper, B.fore, 1);
     expect(len([0, 0], far.elbow)).toBeCloseTo(B.upper, 6);
@@ -81,91 +69,18 @@ describe('rig kinematics', () => {
  * çevrilmiş kareler tam bu yüzden saçmalıyordu.
  */
 describe('rig hareket denetimi', () => {
-  it('hiçbir eklem zeminin altına geçmez', () => {
-    entries.forEach(([key]) => {
-      frames(key).forEach(({ S, at }) => {
-        (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
-          const v = S[k];
-          if (!v || k === 'bar') return;
-          expect(v[1], `${at} ${k} zeminin altında`).toBeLessThanOrEqual(GROUND + 14);
-        });
-      });
-    });
-  });
-
-  it('ayakta yapılan hareketlerde basan ayak yerden kalkmaz', () => {
-    entries
-      .filter(([, ex]) => ex.mode === 'stand')
-      .forEach(([key]) => {
-        frames(key).forEach(({ S, p, at }) => {
-          expect(S.ankle[1] + p.ankleLift, `${at} basan ayak`).toBeCloseTo(GROUND - 12, 3);
-        });
-      });
-  });
-
-  it('yere basan modlarda temas noktası zeminde', () => {
-    entries
-      .filter(([, ex]) => ex.mode === 'quad' || ex.mode === 'supine')
-      .forEach(([key]) => {
-        frames(key).forEach(({ S, at }) => {
-          const lowest = Math.max(S.ankle[1], S.ankleF[1], S.knee[1], S.kneeF[1], S.hand[1], S.handF[1], S.pelvis[1], S.head[1]);
-          expect(lowest, `${at} yere temas`).toBeGreaterThan(GROUND - 30);
-        });
-      });
-  });
-
-  it('asılı hareketlerde eller barda, ayaklar havada', () => {
-    entries
-      .filter(([, ex]) => ex.mode === 'hang')
-      .forEach(([key]) => {
-        frames(key).forEach(({ S, at }) => {
-          expect(S.hand[1], `${at} el barda`).toBeLessThan(140);
-          expect(S.ankle[1], `${at} ayak havada`).toBeLessThan(GROUND - 20);
-        });
-      });
-  });
-
-  it('diz insan aralığında bükülür ve ters yöne kırılmaz', () => {
-    const flex = (S: Skeleton) => {
-      const thigh = angleOf(S.pelvis, S.knee);
-      const shin = angleOf(S.knee, S.ankle);
-      let d = ((shin - thigh) % 360 + 360) % 360;
-      if (d > 180) d -= 360;
-      return d;
-    };
+  // Kurallar rigAudit.ts'te: aynı kurallar editörde de canlı çalışıyor, yani
+  // burada geçen bir arketip editörde de temiz görünüyor.
+  it('her arketip mekanik denetimden geçer', () => {
     entries.forEach(([key, ex]) => {
-      frames(key).forEach(({ S, at }) => {
-        const d = flex(S);
-        // Diz en fazla ~150° bükülür. İşaret yalnızca ayakta anlamlı: orada
-        // zincir ayaktan yukarı kurulduğu için ters işaret dizin geri
-        // kırılması demek. Yatarak/asılı kurulan zincirlerde işaret dönüyor.
-        expect(Math.abs(d), `${at} diz açısı`).toBeLessThan(155);
-        if (ex.mode === 'stand') expect(d, `${at} diz yönü`).toBeGreaterThan(-14);
-      });
+      const issues = auditExercise(ex);
+      expect(issues.map((i) => `@${i.t.toFixed(2)} ${i.rule}: ${i.message}`), key).toEqual([]);
     });
   });
 
-  it('dirsek ters yöne kırılmaz', () => {
-    entries
-      // Ters kinematik dirseği zaten `bend` ile tek yöne kilitliyor; burada
-      // açıyla çizilen kollar denetleniyor.
-      .filter(([, ex]) => ex.arm === 'angles')
-      .forEach(([key]) => {
-        frames(key).forEach(({ S, at }) => {
-          const upper = angleOf(S.sh, S.elbow);
-          const fore = angleOf(S.elbow, S.hand);
-          let d = ((fore - upper) % 360 + 360) % 360;
-          if (d > 180) d -= 360;
-          expect(Math.abs(d), `${at} dirsek açısı`).toBeLessThan(160);
-        });
-      });
-  });
-
-  it('gövde kendi üstüne katlanmaz: baş kalçadan uzak durur', () => {
-    entries.forEach(([key]) => {
-      frames(key).forEach(({ S, at }) => {
-        expect(len(S.pelvis, S.head), `${at} gövde uzunluğu`).toBeGreaterThan(90);
-      });
+  it('segment boyları hiçbir karede değişmez', () => {
+    entries.forEach(([key, ex]) => {
+      expect(auditSegments(ex).map((i) => i.message), key).toEqual([]);
     });
   });
 
@@ -178,9 +93,17 @@ describe('rig hareket denetimi', () => {
     });
   });
 
+  it('omuz silkmede kol boyu hiç değişmez', () => {
+    // Kol omuzdan sarkar: omuz yükselince kol da yükselir.
+    const ex = RIG_ARCHETYPES.shrug_front;
+    const lens = frames('shrug_front').map(({ S, p }) => {
+      const F = frontPoints(ex, p, S);
+      return Math.hypot(F.R.elbow[0] - F.R.sh[0], F.R.elbow[1] - F.R.sh[1]);
+    });
+    expect(Math.max(...lens) - Math.min(...lens), 'omuz silkme kol boyu').toBeLessThan(1);
+  });
+
   it('desteğe yaslanan hareketlerde omuz yerinde kalır', () => {
-    // Hip thrust ve köprüde kalça yükselir, omuz sehpada/yerde kalır. Gövde
-    // açısı buna göre açılmazsa figür desteğinden kopup havaya kalkıyor.
     (['hip_thrust', 'glute_bridge'] as const).forEach((key) => {
       const ys = frames(key).map(({ S }) => S.thorax[1]);
       expect(Math.max(...ys) - Math.min(...ys), `${key} omuz kayması`).toBeLessThan(12);
@@ -201,46 +124,6 @@ describe('rig hareket denetimi', () => {
         expect(RIG_ARCHETYPES[key].view, `${key} düzlem`).toBe('front');
       },
     );
-  });
-
-  it('önden görünümde gövde elipsi çizilebilir ölçüde', () => {
-    // Yarıçap işaretli farktan hesaplanıyordu: ayakta duran figürde göğüs
-    // belin ÜSTÜNDE olduğu için değer negatife düşüyor ve SVG elipsi hiç
-    // çizmiyordu — önden bakışta gövde boş kalıyordu.
-    entries.forEach(([key, ex]) => {
-      frames(key).forEach(({ S, p, at }) => {
-        const trunk = frontTrunk(frontPoints(ex, p, S));
-        expect(trunk.ry, `${at} gövde yarıçapı`).toBeGreaterThan(0);
-        expect(trunk.rx, `${key} gövde genişliği`).toBeGreaterThan(0);
-      });
-    });
-  });
-
-  it('önden görünümde kol omuzdan çıkmaz', () => {
-    // İki ayrı kusur bu testin altında: omuz silkmede omuz yükselip kol
-    // yerinde kalınca üst kol uzuyordu; bant açmanın başında eller gövdeye
-    // yakınken dirsek omzun içine gömülüp kol yok oluyordu.
-    entries
-      .filter(([, ex]) => ex.view === 'front')
-      .forEach(([key, ex]) => {
-        frames(key).forEach(({ S, p, at }) => {
-          const F = frontPoints(ex, p, S);
-          [F.L, F.R].forEach((side) => {
-            const upper = len(side.sh, side.elbow);
-            expect(upper, `${at} üst kol`).toBeGreaterThan(30);
-            expect(upper, `${at} üst kol`).toBeLessThan(110);
-            expect(len(side.elbow, side.hand), `${at} ön kol`).toBeLessThan(120);
-          });
-        });
-        // Omuz silkmede kolun boyu hiç değişmemeli: kol omuzdan sarkıyor.
-        if (key === 'shrug_front') {
-          const lens = frames(key).map(({ S, p }) => {
-            const F = frontPoints(ex, p, S);
-            return len(F.R.sh, F.R.elbow);
-          });
-          expect(Math.max(...lens) - Math.min(...lens), 'omuz silkme kol boyu').toBeLessThan(1);
-        }
-      });
   });
 
   it('yanal hareketlerde el gerçekten yana açılır', () => {

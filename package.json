@@ -58,7 +58,8 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "rig": "node scripts/rig-editor.mjs"
   },
   "private": true
 }
