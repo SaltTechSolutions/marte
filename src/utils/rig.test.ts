@@ -124,6 +124,33 @@ describe('rig hareket denetimi', () => {
     expect(Math.max(...lifts), 'topuk ayak boyunu aşmamalı').toBeLessThanOrEqual(B.foot);
   });
 
+  it('uzak uzvu gizlemek figürü kımıldatmaz', () => {
+    // Gizleme yalnızca çizim kararı: iskelet, yere oturma ve kadraj aynı
+    // kalmalı, yoksa gizlemeyi açan kişi hareketi de değiştirmiş olur.
+    const base = RIG_ARCHETYPES.squat;
+    const hidden = { ...base, hideFarLeg: true, hideFarArm: true };
+    for (let i = 0; i <= 10; i++) {
+      const p = poseAt(base, i / 10).p;
+      const a = skeleton(base, p);
+      const b = skeleton(hidden, poseAt(hidden, i / 10).p);
+      (Object.keys(a) as (keyof typeof a)[]).forEach((k) => {
+        expect(b[k], `${k} @${i}`).toEqual(a[k]);
+      });
+    }
+    expect(boundsFor(hidden, 'side')).toBe(boundsFor(base, 'side'));
+  });
+
+  it('gizli uzuv denetimde kusur sayılmaz', () => {
+    // Çizilmeyen bir uzvun zeminin altında olması görünür bir hata değil.
+    // Uzak bacağı dümdüz aşağı çevir: çömelmenin dibinde ayak zeminin altına iner.
+    const sunk = {
+      ...RIG_ARCHETYPES.squat,
+      kf: RIG_ARCHETYPES.squat.kf.map((k) => ({ ...k, p: { ...k.p, thighF: 180, shinF: 180 } })),
+    };
+    expect(auditExercise(sunk).some((i) => i.message.includes('F'))).toBe(true);
+    expect(auditExercise({ ...sunk, hideFarLeg: true }).some((i) => i.message.includes('kneeF') || i.message.includes('ankleF'))).toBe(false);
+  });
+
   it('yanal düzlem hareketleri önden okunur', () => {
     ['lateral_raise_front', 'arm_circles_front', 'band_pull_apart_front', 'band_ext_rotation_front', 'shrug_front', 'hinged_fly'].forEach(
       (key) => {

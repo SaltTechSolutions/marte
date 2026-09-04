@@ -165,7 +165,14 @@ export function RigFigure({
     ) : (
       <>
         <G key="floor">
-          <Ellipse cx={(S.ankle[0] + S.ankleF[0]) / 2 + 6} cy={GROUND + 4} rx={92} ry={12} fill={floorC} opacity={0.25} />
+          <Ellipse
+            cx={rig.hideFarLeg ? S.ankle[0] + 6 : (S.ankle[0] + S.ankleF[0]) / 2 + 6}
+            cy={GROUND + 4}
+            rx={rig.hideFarLeg ? 62 : 92}
+            ry={12}
+            fill={floorC}
+            opacity={0.25}
+          />
           <Line x1={S0.pelvis[0] - 220} y1={GROUND} x2={S0.pelvis[0] + 280} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
         {/* Sehpa gövdenin ekseni boyunca, sırtın hemen altında çizilir: düz
@@ -219,15 +226,25 @@ export function RigFigure({
             <Rect x={S0.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
           </G>
         )}
+        {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
+            oturma ve kadraj değişmez, figür kımıldamaz. */}
         <G key="far" opacity={0.95}>
-          <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe)} fill={skinFar} stroke={line} />
-          {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true)}
-          {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true)}
-          {ball('fk', S.kneeF, 12, true)}
-          {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true)}
-          {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true)}
-          {ball('fe', S.elbowF, 9, true)}
-          {ball('fh', S.handF, 9, true)}
+          {!rig.hideFarLeg && (
+            <>
+              <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe)} fill={skinFar} stroke={line} />
+              {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true)}
+              {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true)}
+              {ball('fk', S.kneeF, 12, true)}
+            </>
+          )}
+          {!rig.hideFarArm && (
+            <>
+              {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true)}
+              {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true)}
+              {ball('fe', S.elbowF, 9, true)}
+              {ball('fh', S.handF, 9, true)}
+            </>
+          )}
         </G>
         {rig.bar === 'back' && plate(S.bar)}
         <G key="torso">
@@ -250,9 +267,9 @@ export function RigFigure({
         {rig.bar === 'hands' && plate(S.bar)}
         <G key="hands">
           <Circle cx={S.hand[0]} cy={S.hand[1]} r={10} fill={skin} stroke={line} />
-          <Circle cx={S.handF[0]} cy={S.handF[1]} r={9} fill={skinFar} stroke={line} />
+          {!rig.hideFarArm && <Circle cx={S.handF[0]} cy={S.handF[1]} r={9} fill={skinFar} stroke={line} />}
         </G>
-        {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
+        {rig.load === 'dumbbell' && !rig.hideFarArm && dumbbell('dbF', S.handF, S.elbowF, true)}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         <G key="head" transform={`rotate(${p.neckA} ${S.head[0]} ${S.head[1]})`}>
           <Ellipse cx={S.head[0]} cy={S.head[1] - 3} rx={23} ry={26} fill={skin} stroke={line} />

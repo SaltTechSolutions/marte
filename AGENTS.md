@@ -264,6 +264,10 @@ Kullanım notları:
 - `⌘Z` geri alır, `⇧⌘Z` ileri alır, `⌘S` kaydeder, boşluk oynatır. Ok tuşları
   seçili kaydırıcıyı 1° (Shift ile 5°) oynatır.
 - **Diske dön** kaydedilmemiş her şeyi atıp dosyadaki hâle döner.
+- **Uzak bacak / uzak kol** anahtarları yandan görünümde ikinci uzvu gizler.
+  İki tarafı aynı işi yapan hareketlerde (squat, deadlift) uzak bacak derinlik
+  yerine gürültü ekleyebiliyor. Gizleme yalnızca çizimi etkiler: iskelet, yere
+  oturma ve kadraj değişmez, yani figür kımıldamaz.
 
 İki kural:
 

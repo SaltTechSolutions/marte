@@ -50,9 +50,14 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   const issues: RigIssue[] = [];
   const add = (rule: string, message: string) => issues.push({ t, rule, message });
 
+  // Gizli uzuv çizilmiyor: zeminin altında olması görünür bir kusur değil.
+  const hidden = new Set<keyof Skeleton>([
+    ...(ex.hideFarLeg ? (['hipF', 'kneeF', 'ankleF'] as (keyof Skeleton)[]) : []),
+    ...(ex.hideFarArm ? (['shF', 'elbowF', 'handF'] as (keyof Skeleton)[]) : []),
+  ]);
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
     const v = S[k];
-    if (!v || k === 'bar') return;
+    if (!v || k === 'bar' || hidden.has(k)) return;
     if (v[1] > GROUND + 14) add('zemin', `${k} zeminin altında`);
   });
 

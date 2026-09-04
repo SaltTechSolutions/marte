@@ -114,6 +114,16 @@ export interface RigExercise {
   dur: number;
   /** Yazılmazsa `bar` varsa barbell, yoksa yük yok. */
   load?: RigLoad;
+  /**
+   * Uzak uzuvları yandan görünümde gizler.
+   *
+   * Yalnızca ÇİZİMİ etkiler: iskelet, yere oturma ve kadraj aynı kalır, yani
+   * gizlemek figürü kımıldatmaz. İki tarafı aynı işi yapan hareketlerde
+   * (squat, deadlift) uzak bacak derinlik yerine gürültü ekliyor; tek taraflı
+   * hareketlerde ise hareketin kendisi, o yüzden seçim harekete ait.
+   */
+  hideFarLeg?: boolean;
+  hideFarArm?: boolean;
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;

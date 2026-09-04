@@ -142,7 +142,8 @@ function draw() {
       const gs = skeleton(e, gp);
       const bones = [
         [gs.pelvis, gs.knee], [gs.knee, gs.ankle], [gs.pelvis, gs.lumbar], [gs.lumbar, gs.thorax],
-        [gs.thorax, gs.neck], [gs.sh, gs.elbow], [gs.elbow, gs.hand], [gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF],
+        [gs.thorax, gs.neck], [gs.sh, gs.elbow], [gs.elbow, gs.hand],
+        ...(e.hideFarLeg ? [] : [[gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF]]),
       ];
       bones.forEach(([a, b]) => svg.appendChild(el('line', {
         x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: ghost, 'stroke-width': 7,
@@ -209,11 +210,16 @@ function draw() {
   ]);
 
   const pin = e.prop !== 'box' && p.ankleLift > 0;
-  push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
-  push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true)); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
-  push([ball(S.kneeF, 12, true)]);
-  push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true)); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
-  push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
+  // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
+  if (!e.hideFarLeg) {
+    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
+    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true)); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
+    push([ball(S.kneeF, 12, true)]);
+  }
+  if (!e.hideFarArm) {
+    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true)); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+    push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
+  }
   if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
@@ -229,9 +235,12 @@ function draw() {
   push(limb(S.sh, S.elbow, 25, 22, 17, .5)); push(limb(S.elbow, S.hand, 18, 18, 12, .3));
   push([ball(S.elbow, 10)]);
   if (e.bar === 'hands') push(plate(S.bar));
-  push([el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line }),
-        el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
-  if (e.load === 'dumbbell') { push(db(S.handF, S.elbowF, true)); push(db(S.hand, S.elbow, false)); }
+  push([el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
+  if (!e.hideFarArm) push([el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+  if (e.load === 'dumbbell') {
+    if (!e.hideFarArm) push(db(S.handF, S.elbowF, true));
+    push(db(S.hand, S.elbow, false));
+  }
   svg.appendChild(el('g', { transform: `rotate(${p.neckA} ${S.head[0]} ${S.head[1]})` }, [
     el('ellipse', { cx: S.head[0], cy: S.head[1] - 3, rx: 23, ry: 26, fill: skin, stroke: line }),
     el('path', { d: `M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`, fill: skin, stroke: line })]));
@@ -243,7 +252,11 @@ function draw() {
 function drawHandles(svg, e, S, view) {
   if (!editable() || view === 'front') return;
   const accent = css('--p');
-  dragHandles(e, S).forEach((h) => {
+  const hiddenJoints = new Set([
+    ...(e.hideFarLeg ? ['kneeF', 'ankleF'] : []),
+    ...(e.hideFarArm ? ['elbowF', 'handF'] : []),
+  ]);
+  dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
     const g = el('g', { class: 'handle', 'data-joint': h.joint });
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 15, fill: 'transparent' }));
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 7, fill: 'none', stroke: accent, 'stroke-width': 2, opacity: h.far ? .5 : 1 }));
@@ -495,6 +508,14 @@ function renderEquipment() {
   bind('prop', OPTIONS.prop, e.prop ?? '', (v) => (v ? (e.prop = v) : delete e.prop));
   bind('viewSel', OPTIONS.view, e.view ?? 'side', (v) => (v === 'side' ? delete e.view : (e.view = v)));
   bind('bend', OPTIONS.bend, String(e.bend), (v) => (e.bend = Number(v)));
+  const toggle = (id, on, apply) => {
+    const b = $(id);
+    b.setAttribute('aria-pressed', String(!on));
+    b.textContent = on ? 'Gizli' : 'Görünür';
+    b.onclick = () => { snapshot(); apply(!on); markDirty(); renderAll(); };
+  };
+  toggle('farLeg', !!e.hideFarLeg, (v) => (v ? (e.hideFarLeg = true) : delete e.hideFarLeg));
+  toggle('farArm', !!e.hideFarArm, (v) => (v ? (e.hideFarArm = true) : delete e.hideFarArm));
   $('dur').value = String(e.dur);
   $('dur').onchange = () => { const n = Number($('dur').value); if (n > 500) { e.dur = n; markDirty(); } };
 }
