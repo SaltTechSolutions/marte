@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { EXERCISES } from '@/data/exerciseLibrary';
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
 import { B, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, skeleton } from './rig';
-import { auditExercise, auditSegments } from './rigAudit';
+import { auditExercise, auditLoop, auditSegments } from './rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const entries = Object.entries(RIG_ARCHETYPES);
@@ -75,6 +75,12 @@ describe('rig hareket denetimi', () => {
     entries.forEach(([key, ex]) => {
       const issues = auditExercise(ex);
       expect(issues.map((i) => `@${i.t.toFixed(2)} ${i.rule}: ${i.message}`), key).toEqual([]);
+    });
+  });
+
+  it('her hareketin döngüsü kapanır', () => {
+    entries.forEach(([key, ex]) => {
+      expect(auditLoop(ex).map((i) => i.message), key).toEqual([]);
     });
   });
 

@@ -116,6 +116,24 @@ export function auditExercise(ex: RigExercise, samples = 21): RigIssue[] {
   return issues;
 }
 
+/**
+ * Döngü kapanıyor mu: son karenin pozu ilk kareyle aynı olmalı.
+ *
+ * Hareket sonsuz döner; t=1 ile t=0 farklıysa her tekrarın sonunda figür
+ * gözle görülür biçimde zıplar. Elle kare yazarken en kolay kaçırılan şey bu,
+ * çünkü iki kare de tek başına doğru görünür.
+ */
+export function auditLoop(ex: RigExercise): RigIssue[] {
+  const first = poseAt(ex, 0).p;
+  const last = poseAt(ex, 1).p;
+  const issues: RigIssue[] = [];
+  (Object.keys(first) as (keyof RigPose)[]).forEach((k) => {
+    const d = Math.abs(norm(first[k] - last[k]));
+    if (d > 1) issues.push({ t: 1, rule: 'döngü', message: `${k}: başlangıç ${first[k]}° ile bitiş ${last[k]}° farklı, tekrar başa dönerken zıplıyor` });
+  });
+  return issues;
+}
+
 /** Segment boyları — geçiş sırasında uzuv uzarsa motor bozulmuş demektir. */
 export function auditSegments(ex: RigExercise, samples = 21): RigIssue[] {
   const issues: RigIssue[] = [];

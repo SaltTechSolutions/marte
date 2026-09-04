@@ -254,6 +254,17 @@ Hareketi seç, kareyi seç, figürün eklemini sürükle, ekipmanı (kök nokta,
 yük, sahne, düzlem) değiştir, Kaydet. Kaydet doğrudan `rigArchetypes.json`
 üstüne yazar — değişiklik git diff'te görünür.
 
+Kullanım notları:
+- **Zaman çubuğu** kareler ARASINI da gösterir. Geçiş hataları orada yaşar
+  (kolun uzun yoldan dönüp yerin içinden geçmesi böyle bulundu). Ara karede
+  düzenleme kapalıdır: o poz hiçbir kareye ait değildir.
+- **Gölge** komşu karelerin izini çizer; çömelmenin dibini yazarken tepesini
+  görmenin tek yolu.
+- **Denetim uyarısına tıklamak** sorunun yaşandığı ana götürür.
+- `⌘Z` geri alır, `⇧⌘Z` ileri alır, `⌘S` kaydeder, boşluk oynatır. Ok tuşları
+  seçili kaydırıcıyı 1° (Shift ile 5°) oynatır.
+- **Diske dön** kaydedilmemiş her şeyi atıp dosyadaki hâle döner.
+
 İki kural:
 
 - **Motor kopyalanmaz.** Editör `src/utils/rig.ts`, `rigEdit.ts` ve

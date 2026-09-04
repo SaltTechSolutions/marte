@@ -102,6 +102,23 @@ const server = createServer((req, res) => {
     }
     return send(res, 404, 'yok');
   }
+  if (req.method === 'GET' && url.pathname === '/names') {
+    // Arketip anahtarları (`hip_hinge_dumbbell`) insanın kafasındaki isim
+    // değil. Kütüphaneden Türkçe adları okuyup listede onları gösteriyoruz.
+    try {
+      const lib = readFileSync(join(ROOT, 'src/data/exerciseLibrary.ts'), 'utf8');
+      const names = {};
+      const re = /tr: '((?:[^'\\]|\\.)*)',[\s\S]*?archetype: '(\w+)'/g;
+      let m;
+      while ((m = re.exec(lib))) {
+        const tr = m[1].replace(/\\'/g, "'");
+        (names[m[2]] ||= []).push(tr);
+      }
+      return send(res, 200, JSON.stringify(names), TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
   if (req.method === 'GET' && url.pathname === '/data') {
     return send(res, 200, readFileSync(DATA), TYPES['.json']);
   }
@@ -124,6 +141,15 @@ const server = createServer((req, res) => {
     return;
   }
   send(res, 404, 'yok');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n${PORT} portu dolu — editör zaten açık olabilir: http://127.0.0.1:${PORT}`);
+    console.error('Başka bir port için:  RIG_PORT=8124 npm run rig\n');
+    process.exit(1);
+  }
+  throw err;
 });
 
 server.listen(PORT, '127.0.0.1', () => {
