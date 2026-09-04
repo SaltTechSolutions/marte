@@ -449,6 +449,23 @@ export interface FrontPoints {
 export const FX = 210;
 
 /**
+ * Önden görünümde dirseğin yeri.
+ *
+ * Normalde omuz-el doğrusunun %45'i. Ama eller gövdeye yakınken (bant
+ * açmanın başı, dış rotasyon) omuz ile el neredeyse üst üste geliyor ve
+ * dirsek omzun içine gömülüyordu: üst kol 8 piksele iniyor, kol yok gibi
+ * görünüyordu. Kollar öne uzandığında önden bakış onları kısaltır, ama
+ * tamamen yutmamalı — bu durumda dirsek dışa ve aşağı açılıyor.
+ */
+function frontElbow(sh: Vec, hand: Vec, sgn: number): Vec {
+  const dx = hand[0] - sh[0];
+  const dy = hand[1] - sh[1];
+  const d = Math.hypot(dx, dy);
+  if (d < 70) return [sh[0] + sgn * 24, sh[1] + 32];
+  return [sh[0] + dx * 0.45, sh[1] + dy * 0.45];
+}
+
+/**
  * Önden görünüm, çözülmüş YAN iskeletin dikey seviyelerini okur; burada
  * yalnızca yanal açıklık yazılır. Böylece çömelme derinliği iki görünümde
  * birebir aynı kalıyor ve önden bakışta bir bacak önde bir bacak geride
@@ -472,8 +489,11 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
       knee: [FX + sgn * (footDx + ab), S.knee[1]],
       ankle: [FX + sgn * footDx, S.ankle[1]],
       sh: [shX, shY],
-      elbow: [shX + (handX - shX) * 0.45, S.elbow[1]],
-      hand: [handX, S.hand[1]],
+      // Kol omuzdan SARKAR: omuz yükselince dirsek ve el de aynı kadar
+      // yükselir. Omuz silkmede omuz kalkıp kol yerinde kalınca üst kol
+      // uzuyor, kol omuzdan çıkmış gibi görünüyordu.
+      elbow: frontElbow([shX, shY], [handX, S.hand[1] - p.shLift], sgn),
+      hand: [handX, S.hand[1] - p.shLift],
     };
   };
   const F: FrontPoints = {

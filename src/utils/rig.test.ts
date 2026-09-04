@@ -216,6 +216,33 @@ describe('rig hareket denetimi', () => {
     });
   });
 
+  it('önden görünümde kol omuzdan çıkmaz', () => {
+    // İki ayrı kusur bu testin altında: omuz silkmede omuz yükselip kol
+    // yerinde kalınca üst kol uzuyordu; bant açmanın başında eller gövdeye
+    // yakınken dirsek omzun içine gömülüp kol yok oluyordu.
+    entries
+      .filter(([, ex]) => ex.view === 'front')
+      .forEach(([key, ex]) => {
+        frames(key).forEach(({ S, p, at }) => {
+          const F = frontPoints(ex, p, S);
+          [F.L, F.R].forEach((side) => {
+            const upper = len(side.sh, side.elbow);
+            expect(upper, `${at} üst kol`).toBeGreaterThan(30);
+            expect(upper, `${at} üst kol`).toBeLessThan(110);
+            expect(len(side.elbow, side.hand), `${at} ön kol`).toBeLessThan(120);
+          });
+        });
+        // Omuz silkmede kolun boyu hiç değişmemeli: kol omuzdan sarkıyor.
+        if (key === 'shrug_front') {
+          const lens = frames(key).map(({ S, p }) => {
+            const F = frontPoints(ex, p, S);
+            return len(F.R.sh, F.R.elbow);
+          });
+          expect(Math.max(...lens) - Math.min(...lens), 'omuz silkme kol boyu').toBeLessThan(1);
+        }
+      });
+  });
+
   it('yanal hareketlerde el gerçekten yana açılır', () => {
     (['lateral_raise_front', 'band_pull_apart_front', 'band_ext_rotation_front', 'hinged_fly'] as const).forEach((key) => {
       const ex = RIG_ARCHETYPES[key];
