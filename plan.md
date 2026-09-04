@@ -479,7 +479,7 @@ başladı" — uygulamada duyuru kavramı yok; promosyon üyeye hiç görünmüy
 `announcements` koleksiyonu + push + ana ekranda kart. Promosyonların üyeye
 görünür kampanyaya dönüşmesi de buraya bağlanır.
 
-**12. PER-20 · Üye profili: boy, kilo ve fotoğraf.** *(Kullanıcı isteği,
+**12. [x] PER-20 · Üye profili: boy, kilo ve fotoğraf.** *(4 Eylül 2026 — deploy edildi: `firestore:rules`, `storage`, `uploadMemberPhoto`, `deleteMemberPhoto`, `deleteMyAccount`.)* Kural tarafında `changedKeys()` yerine `affectedKeys()`: `changedKeys` yalnızca iki haritada da bulunup değeri değişen alanları sayar, bu yüzden boş bırakılmış bir alanı ilk kez doldurmak (telefon dahil) reddediliyordu. *(Kullanıcı isteği,
 3 Eylül 2026.)* Profilde boy ve kilo görünmüyor, üye kendi fotoğrafını
 ekleyemiyor.
 
