@@ -787,6 +787,24 @@ Cloud Functions (Admin SDK) okur. Temizlik mekanizması yok (plan.md P1-7).
 
 ---
 
+### `announcements` — salon duyurusu (PER-16)
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` | string | |
+| `title` / `body` | string | 1–80 / ≤600 karakter |
+| `createdBy` / `createdByName` | string | Yazan yönetici |
+| `createdAt` / `expiresAt` | Timestamp | `expiresAt` yoksa silinene kadar görünür; varsayılan 14 gün |
+
+**Kurallar:** okuma = salonun aktif üyesi/antrenörü; create = yönetici; **update
+kapalı** (yanlış duyuru silinip yeniden yayınlanır — push eski metinle gitti,
+düzenleme onu geri çağıramaz); delete = yönetici. `notifyMembersOnAnnouncement`
+oluşturulduğunda yazan hariç herkese push (`announcements` kategorisi,
+kapatılabilir).
+
+**Index:** `tenantId ASC, createdAt DESC`
+
+---
+
 ### `renewal_requests` — üyeden yenileme talebi (PER-15)
 **Doküman kimliği: `{tenantId}_{memberId}`** — üye başına en fazla bir açık talep.
 

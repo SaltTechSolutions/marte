@@ -468,7 +468,13 @@ paketin üyesi "salon yöneticisi atadığında görünür" duvarına bakıyor.
 "Yenileme talebi gönder" → admin'e bildirim + panelde bekleyen talep.
 PKG-12 yaklaşan bitişlerin üye ayağı; 5'ten sonra.
 
-**11. PER-16 · Duyuru / toplu bildirim.** "Yarın kapalıyız", "kampanya
+**11. [x] PER-16 · Duyuru / toplu bildirim** *(3 Eylül 2026 — deploy edildi;
+uygulamada görülmedi).* `announcements`: yönetici tek ekrandan yayınlar, ana
+ekranda son iki kart, herkese push (yeni `announcements` kategorisi,
+kapatılabilir). Düzenleme yok — silip yeniden yayınla. *Promosyonların üyeye
+görünür kampanyaya dönüşmesi yapılmadı*: promosyon bugün yalnızca paket
+atarken uygulanan bir indirim; üyeye vitrin açmak ayrı bir tasarım kararı
+(PER-15'in yenileme akışına bağlanmalı). *Özgün madde:* "Yarın kapalıyız", "kampanya
 başladı" — uygulamada duyuru kavramı yok; promosyon üyeye hiç görünmüyor.
 `announcements` koleksiyonu + push + ana ekranda kart. Promosyonların üyeye
 görünür kampanyaya dönüşmesi de buraya bağlanır.
