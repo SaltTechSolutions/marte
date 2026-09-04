@@ -540,10 +540,10 @@ erişiminden çıkarır (AGENTS §2).
 | Kim | Nereden | Ne görür |
 |---|---|---|
 | Üye | Program sekmesi → "Programımdaki hareketler" | **yalnızca kendisine atananlar** (`scope=program`) |
-| Antrenör | Profil → "Hareket kütüphanesi"; ayrıca builder'daki ⓘ | 46 hareketin tamamı |
-| Yönetici | Salon → "Hareket kütüphanesi" | 46 hareketin tamamı |
+| Antrenör | Profil → "Hareket kütüphanesi"; ayrıca builder'daki ⓘ | kütüphanenin tamamı (38) |
+| Yönetici | Salon → "Hareket kütüphanesi" | kütüphanenin tamamı (38) |
 
-Üyeye 46 hareketlik katalog vermek, onu antrenörünün yazmadığı bir listeden
+Üyeye 38 hareketlik katalog vermek, onu antrenörünün yazmadığı bir listeden
 çalışmaya davet eder; sorumluluk antrenörde kalmalı.
 
 **Sorun bildirme.** Detay ekranının altında, **yalnızca personele** görünen

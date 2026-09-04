@@ -47,7 +47,7 @@ kurallarıyla zorlanır — istemciye güvenilmez.
 `toDate()` ile JS `Date`'e çevrilir. Yazarken `serverTimestamp()` tercih
 edilir (istemci saati güvenilmez).
 
-**Veritabanında olmayan şey: hareket kütüphanesi.** 46 hareketin adı,
+**Veritabanında olmayan şey: hareket kütüphanesi.** 38 hareketin adı (3 Eylül 2026: makine/kablo hareketleri çıkarıldı; halter, dumbbell, bench, bant ve vücut ağırlığı kaldı),
 kas haritası, poz kareleri ve anlatımı `gymentra-mobile/src/data/exerciseLibrary.ts`
 içinde **istemci tarafında sabit veri** olarak duruyor — Firestore'da bir
 `exercises` koleksiyonu yok ve olmamalı: içerik uygulamayla birlikte
