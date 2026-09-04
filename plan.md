@@ -526,7 +526,22 @@ listeyi de taşıyor. *Yapılmadı:* bildirimler hâlâ seçili salona bakıyor,
 başka salondaki bir randevu bildirimi geldiğinde uygulama salonu kendiliğinden
 değiştirmiyor.
 
-**14. PER-17 · WORKOUT — antrenman derinliği (kısaltılmış kapsam).**
+**14. [x] PER-17 · WORKOUT — antrenman derinliği** *(4 Eylül 2026 — kısaltılmış
+kapsam tamamlandı; sunucu değişikliği gerekmedi, `programs` güncelleme kuralı
+alan kısıtı taşımıyor).* **(a) Çok günlü program:** `Program.days[]` eklendi,
+antrenör kurucusunda gün sekmeleri var. Tek günlü programlar `days` yazmıyor
+ve okuma tarafı onları tek günlük liste olarak görüyor (`programDays`) — göç
+yok. Kaydederken ilk gün `exercises`'a aynalanıyor, eski sürümdeki telefon boş
+program görmüyor. Üye tarafında gün seçimi var ve **son çalışılan günden
+sonraki gün** önceden işaretli (`suggestedDayId`); seçim üyenin. Liste
+ekranları bütün günleri sayıyor. **(b) "Geçen sefer":** son tamamlanmış
+kayıttan `80 kg × 3 set` satırı ağırlık seçicinin üstünde; yapılmamış setler
+sayılmıyor. **(c)** `ProgramExercise.libraryId` eklendi — anlatım bağı isim
+üzerinden kuruluyordu ve antrenör ismi düzenlediğinde sessizce kopuyordu.
+*Kuyrukta kalan:* set bazlı ağırlık/tekrar, PR ve hacim grafiği, dinlenme
+sayacı, salona açık egzersiz kütüphanesi, kardiyo tipi.
+
+*Özgün madde:* 
 *Model değişikliği yapılırken `ProgramExercise.exerciseId` de eklenmeli —
 PER-19'un anlatım bağı bugün isim string'i üzerinden kuruluyor ve antrenör
 ismi düzenlerse sessizce kopuyor.*
