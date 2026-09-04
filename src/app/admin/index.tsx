@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/Card';
 import { GymLogo } from '@/components/GymLogo';
+import { GymSwitchTarget } from '@/components/GymSwitcher';
 import { InfoCard } from '@/components/InfoCard';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -64,8 +65,12 @@ export default function AdminPanel() {
     <ScrollView
       refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 }}>
-        <GymLogo size={30} radius={8} />
-        <Text variant="h3">{tenantName}</Text>
+        <GymSwitchTarget>
+          <GymLogo size={30} radius={8} />
+          <Text variant="h3" numberOfLines={1} style={{ flex: 1 }}>
+            {tenantName}
+          </Text>
+        </GymSwitchTarget>
       </View>
 
       <Pressable onPress={() => router.push('/admin/today')}>

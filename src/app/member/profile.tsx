@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { GymCodeCard } from '@/components/GymCodeCard';
+import { GymSwitchRow } from '@/components/GymSwitcher';
 import { GymInfoCard } from '@/components/GymInfoCard';
 import { InfoCard } from '@/components/InfoCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
@@ -223,6 +224,7 @@ export default function MemberProfile() {
       ))}
 
       {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} />}
+      <GymSwitchRow />
 
       {activeTenant && (
         <GymInfoCard hours={activeTenant.openingHours} address={activeTenant.address} contact={contact} />

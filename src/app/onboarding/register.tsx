@@ -16,7 +16,7 @@ import { LegalConsentNotice } from '@/components/LegalLinks';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { requestPasswordReset } from '@/data/firebase/authRepo';
-import { getActiveMembership } from '@/data/firebase/membershipRepo';
+import { getActiveMemberships } from '@/data/firebase/membershipRepo';
 import { primaryRole, ROLE_HOME } from '@/data/membership';
 import { auth } from '@/services/firebase';
 import { isAppleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/socialAuth';
@@ -43,7 +43,7 @@ function authErrorMessage(code: string): string {
 /** Shared by every sign-in path (email, Google, Apple): existing member goes
  * straight to their role's home, first-timer goes to pick/create a gym. */
 async function routeAfterAuth(router: ReturnType<typeof useRouter>, user: User) {
-  const membership = await getActiveMembership(user.uid);
+  const membership = (await getActiveMemberships(user.uid))[0] ?? null;
   const role = primaryRole(membership);
   if (role) {
     router.replace(ROLE_HOME[role]);

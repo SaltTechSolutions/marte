@@ -1,11 +1,12 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
-import { getActiveMembership, watchMembership } from '@/data/firebase/membershipRepo';
+import { getActiveMemberships, watchMembership } from '@/data/firebase/membershipRepo';
 import { getTenant } from '@/data/firebase/tenantRepo';
-import { primaryRole } from '@/data/membership';
+import { primaryRole, selectMembership } from '@/data/membership';
 import { MembershipRole, Tenant, TenantMembership } from '@/data/types';
 import { loadActiveRole, saveActiveRole } from '@/services/activeRole';
+import { loadActiveTenant, saveActiveTenant } from '@/services/activeTenant';
 import { auth } from '@/services/firebase';
 import { clearMembershipCache, loadMembershipCache, saveMembershipCache } from '@/services/membershipCache';
 
@@ -14,6 +15,13 @@ interface AuthState {
   authLoading: boolean;
   activeMembership: TenantMembership | null;
   activeTenant: Tenant | null;
+  /**
+   * Kişinin aktif olduğu tüm salonlar (P1-8). Çoğu hesapta tek eleman;
+   * ekranlar "birden fazla mı" sorusunu buradan sorar.
+   */
+  memberships: TenantMembership[];
+  /** Görüntülenen salonu değiştirir; seçim cihazda saklanır. */
+  switchTenant: (tenantId: string) => Promise<void>;
   membershipLoading: boolean;
   /** True when the membership on screen came from disk and the network
    * refresh hasn't landed — the QR card uses it to flag stale data. */
@@ -31,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [activeMembership, setActiveMembership] = useState<TenantMembership | null>(null);
+  const [memberships, setMemberships] = useState<TenantMembership[]>([]);
   const [activeTenant, setActiveTenant] = useState<Tenant | null>(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
   const [membershipFromCache, setMembershipFromCache] = useState(false);
@@ -44,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     activeTenantRef.current = activeTenant;
   }, [activeTenant]);
+  const membershipsRef = useRef<TenantMembership[]>([]);
+  useEffect(() => {
+    membershipsRef.current = memberships;
+  }, [memberships]);
 
   /** Restore the stored surface, falling back to the most privileged role.
    * A stored role that is no longer granted (an admin demoted to trainer)
@@ -62,20 +75,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const cached = await loadMembershipCache(uid);
     if (cached && activeUidRef.current === uid) {
       setActiveMembership(cached.membership);
+      setMemberships(cached.memberships ?? (cached.membership ? [cached.membership] : []));
       setActiveTenant(cached.tenant);
       setMembershipFromCache(true);
       setActiveRoleState(await resolveRole(uid, cached.membership));
     }
 
     try {
-      const membership = await getActiveMembership(uid);
+      const all = await getActiveMemberships(uid);
+      // Son seçilen salon hâlâ listedeyse o, değilse listenin ilki. Ayrılınan
+      // bir salonda takılı kalmamak için seçim her yüklemede doğrulanıyor.
+      const membership = selectMembership(all, await loadActiveTenant(uid));
       const tenant = membership ? await getTenant(membership.tenantId) : null;
       if (activeUidRef.current !== uid) return;
       setActiveMembership(membership);
+      setMemberships(all);
       setActiveTenant(tenant);
       setMembershipFromCache(false);
       setActiveRoleState(await resolveRole(uid, membership));
-      await saveMembershipCache(uid, { membership, tenant });
+      await saveMembershipCache(uid, { membership, tenant, memberships: all });
     } catch (error) {
       // Offline or permission error. If the cache already populated the UI we
       // stay on it; otherwise the caller sees no membership, same as before.
@@ -94,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await loadMembership(firebaseUser.uid);
       } else {
         setActiveMembership(null);
+        setMemberships([]);
         setActiveTenant(null);
         setMembershipFromCache(false);
         setActiveRoleState(null);
@@ -125,13 +144,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setActiveMembership(membership);
       setMembershipFromCache(false);
       setActiveRoleState(await resolveRole(uid, membership));
-      await saveMembershipCache(uid, { membership, tenant: activeTenantRef.current });
+      await saveMembershipCache(uid, { membership, tenant: activeTenantRef.current, memberships: membershipsRef.current });
     });
     // uid + tenant are the only inputs that should restart the listener.
   }, [user?.uid, activeMembership?.tenantId]);
 
   const refreshMembership = async () => {
     if (user) await loadMembership(user.uid);
+  };
+
+  /**
+   * Görüntülenen salonu değiştirir.
+   *
+   * Rol salona göre değişir — biri kendi salonunda yönetici, gittiği başka
+   * salonda üyedir — bu yüzden yüzey de yeniden çözülüyor. Tema ve canlı
+   * dinleyiciler `activeMembership.tenantId`'yi izlediği için kendiliğinden
+   * yeni salona geçer.
+   */
+  const switchTenant = async (tenantId: string) => {
+    const uid = user?.uid;
+    const next = memberships.find((m) => m.tenantId === tenantId);
+    if (!uid || !next || next.tenantId === activeMembership?.tenantId) return;
+    setActiveMembership(next);
+    setActiveRoleState(await resolveRole(uid, next));
+    await saveActiveTenant(uid, tenantId);
+    try {
+      const tenant = await getTenant(tenantId);
+      if (activeUidRef.current !== uid) return;
+      setActiveTenant(tenant);
+      await saveMembershipCache(uid, { membership: next, tenant, memberships });
+    } catch (error) {
+      // Salon belgesi çevrimdışı okunamadı: üyelik zaten değişti, marka
+      // bilgisi ağ dönünce yerine oturur.
+      console.warn('[auth] salon bilgisi alınamadı:', error);
+    }
   };
 
   const setActiveRole = async (role: MembershipRole) => {
@@ -147,6 +193,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authLoading,
         activeMembership,
         activeTenant,
+        memberships,
+        switchTenant,
         membershipLoading,
         membershipFromCache,
         activeRole,

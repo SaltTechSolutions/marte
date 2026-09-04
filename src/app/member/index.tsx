@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GymLogo } from '@/components/GymLogo';
+import { GymSwitchTarget } from '@/components/GymSwitcher';
 import { MyPackageCard } from '@/components/MyPackageCard';
 import { RenewalRequestRow } from '@/components/RenewalRequestRow';
 import { isLive, watchAnnouncements } from '@/data/firebase/announcementRepo';
@@ -158,15 +159,17 @@ export default function MemberHome() {
       refreshControl={refreshControl}
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.xs, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 }}>
-        <GymLogo size={32} radius={9} />
-        <View style={{ flex: 1 }}>
-          <Text variant="helper" weight="700">
-            {tenantName}
-          </Text>
-          <Text variant="label" tone="sub">
-            Merhaba {displayName} 👋
-          </Text>
-        </View>
+        <GymSwitchTarget>
+          <GymLogo size={32} radius={9} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              {tenantName}
+            </Text>
+            <Text variant="label" tone="sub">
+              Merhaba {displayName} 👋
+            </Text>
+          </View>
+        </GymSwitchTarget>
         {/* Account lives here rather than in a sixth tab — it is somewhere you
             visit, not somewhere you switch between. */}
         <Pressable

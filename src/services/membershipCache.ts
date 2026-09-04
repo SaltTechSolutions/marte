@@ -20,6 +20,12 @@ const KEY_PREFIX = 'gymentra.membership.v1.';
 interface CachedPayload {
   membership: TenantMembership | null;
   tenant: Tenant | null;
+  /**
+   * Kişinin aktif olduğu diğer salonlar (P1-8). Salon değiştirici çevrimdışı
+   * açıldığında da listeyi gösterebilsin diye burada; eski önbellek
+   * kayıtlarında yok, o durumda seçili üyelik tek başına liste sayılır.
+   */
+  memberships?: TenantMembership[];
 }
 
 /** Dates don't survive JSON — revive the fields we know are Date-typed. */
@@ -53,10 +59,19 @@ export async function loadMembershipCache(uid: string): Promise<CachedPayload | 
   try {
     const raw = await AsyncStorage.getItem(KEY_PREFIX + uid);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as { membership: Record<string, unknown> | null; tenant: Record<string, unknown> | null };
+    const parsed = JSON.parse(raw) as {
+      membership: Record<string, unknown> | null;
+      tenant: Record<string, unknown> | null;
+      memberships?: Record<string, unknown>[];
+    };
+    const membership = reviveMembership(parsed.membership);
+    const revived = (parsed.memberships ?? [])
+      .map(reviveMembership)
+      .filter((m): m is TenantMembership => !!m);
     return {
-      membership: reviveMembership(parsed.membership),
+      membership,
       tenant: reviveTenant(parsed.tenant),
+      memberships: revived.length ? revived : membership ? [membership] : [],
     };
   } catch {
     return null;

@@ -10,6 +10,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListRow } from '@/components/ListRow';
 import { GymLogo } from '@/components/GymLogo';
+import { GymSwitchTarget } from '@/components/GymSwitcher';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
@@ -118,10 +119,12 @@ export default function TrainerClients() {
       {/* The trainer's home was the one role surface with no gym mark at
           all — the same header row the member and admin homes use. */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <GymLogo size={30} radius={8} />
-        <Text variant="helper" weight="700" tone="sub" style={{ flex: 1 }} numberOfLines={1}>
-          {tenantName}
-        </Text>
+        <GymSwitchTarget>
+          <GymLogo size={30} radius={8} />
+          <Text variant="helper" weight="700" tone="sub" style={{ flex: 1 }} numberOfLines={1}>
+            {tenantName}
+          </Text>
+        </GymSwitchTarget>
       </View>
       <Text variant="h3">Üyelerim</Text>
 

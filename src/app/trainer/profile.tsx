@@ -8,6 +8,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { StatCard } from '@/components/StatCard';
 import { GymCodeCard } from '@/components/GymCodeCard';
+import { GymSwitchRow } from '@/components/GymSwitcher';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
 import { LegalLinks } from '@/components/LegalLinks';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
@@ -183,6 +184,7 @@ export default function TrainerProfile() {
       </View>
 
       {activeTenant && <GymCodeCard tenantName={activeTenant.name} code={activeTenant.code} showQrAction />}
+      <GymSwitchRow />
 
       {/* --- Workload --- */}
       <StatCard

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canCheckIn, canCoach, canManageGym, canOverseeCalendars, isStaff, primaryRole } from './membership';
+import { canCheckIn, canCoach, canManageGym, canOverseeCalendars, isStaff, primaryRole, selectMembership } from './membership';
 import { TenantMembership } from './types';
 
 const make = (over: Partial<TenantMembership>): TenantMembership =>
@@ -65,5 +65,27 @@ describe('capabilities', () => {
     expect(canManageGym(suspended)).toBe(false);
     expect(isStaff(suspended)).toBe(false);
     expect(primaryRole(suspended)).toBeNull();
+  });
+});
+
+describe('selectMembership (P1-8)', () => {
+  const m = (tenantId: string) => make({ id: `${tenantId}_u1`, tenantId, roles: ['member'], status: 'active' });
+
+  it('hiç üyelik yoksa null', () => {
+    expect(selectMembership([], 'a')).toBeNull();
+    expect(selectMembership([], null)).toBeNull();
+  });
+
+  it('seçim yoksa listenin ilki — sıra belirli olduğu için her açılışta aynı salon', () => {
+    expect(selectMembership([m('a'), m('b')], null)?.tenantId).toBe('a');
+  });
+
+  it('saklanan salon listedeyse o gelir', () => {
+    expect(selectMembership([m('a'), m('b')], 'b')?.tenantId).toBe('b');
+  });
+
+  it('ayrılınan salonda takılı kalmaz', () => {
+    // Salondan ayrılan biri, artık üye olmadığı bir salonun ekranını açamaz.
+    expect(selectMembership([m('a')], 'silinmis')?.tenantId).toBe('a');
   });
 });

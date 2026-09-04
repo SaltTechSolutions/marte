@@ -112,12 +112,25 @@ export async function requestJoin(params: {
 }
 
 /** First active membership for a user — used for role-based routing after login. */
-export async function getActiveMembership(userId: string): Promise<TenantMembership | null> {
+/**
+ * Kişinin aktif olduğu TÜM salonlar (P1-8).
+ *
+ * Eskiden yalnızca `docs[0]` okunuyordu: iki salona üye olan kişi ikincisine
+ * hiç erişemiyordu ve hangisini göreceği Firestore'un döndürme sırasına
+ * kalıyordu — aynı hesap iki açılışta iki farklı salonu açabiliyordu.
+ * Sıralama burada belirli: önce katılım tarihi, sonra salon kimliği.
+ */
+export async function getActiveMemberships(userId: string): Promise<TenantMembership[]> {
   const snap = await getDocs(
     query(collection(db, 'tenant_memberships'), where('userId', '==', userId), where('status', '==', 'active')),
   );
-  if (snap.empty) return null;
-  return membershipFromDoc(snap.docs[0]);
+  return snap.docs
+    .map(membershipFromDoc)
+    .sort((a, b) => {
+      const at = a.approvedAt?.getTime() ?? a.requestedAt.getTime();
+      const bt = b.approvedAt?.getTime() ?? b.requestedAt.getTime();
+      return at - bt || a.tenantId.localeCompare(b.tenantId);
+    });
 }
 
 /** Live active members of a tenant — trainer client list. */

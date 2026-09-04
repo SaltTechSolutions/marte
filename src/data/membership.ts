@@ -103,3 +103,19 @@ export const ROLE_LABEL: Record<MembershipRole, string> = {
 export function tenantIdIf(m: Maybe, allowed: boolean): string | null {
   return allowed && m ? m.tenantId : null;
 }
+
+/**
+ * Birden çok salonda aktif olan kişi hangi salonu görür (P1-8).
+ *
+ * Kişinin son seçtiği salon saklanır; o salondan ayrıldıysa ya da hiç
+ * seçmediyse listenin ilkine düşer. Sıra `getActiveMemberships`'te belirli,
+ * yani seçim yapılmamış bir hesap her açılışta AYNI salonu açar.
+ */
+export function selectMembership(
+  memberships: TenantMembership[],
+  storedTenantId: string | null,
+): TenantMembership | null {
+  if (memberships.length === 0) return null;
+  const stored = storedTenantId ? memberships.find((m) => m.tenantId === storedTenantId) : undefined;
+  return stored ?? memberships[0];
+}

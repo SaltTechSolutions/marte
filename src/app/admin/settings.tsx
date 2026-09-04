@@ -6,6 +6,7 @@ import { Image, Pressable, ScrollView, View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { GymCodeCard } from '@/components/GymCodeCard';
+import { GymSwitchRow } from '@/components/GymSwitcher';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
@@ -224,6 +225,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
       <GymCodeCard tenantName={tenant.name} code={tenant.code} showQrAction />
+      <GymSwitchRow />
 
       <Text variant="h3">Salon bilgileri</Text>
 
