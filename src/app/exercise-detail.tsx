@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -92,14 +92,33 @@ function difficultyTone(difficulty: string, colors: ReturnType<typeof useAppThem
   return colors.ok;
 }
 
+/**
+ * Hareket ekranı: çizim üstte sabit, kaslar ve anlatım yana kaydırmalı.
+ *
+ * Üye bu ekranı çoğunlukla hareketin ortasında açıyor ve baktığı tek şey
+ * canlandırma. Tek uzun kaydırmada çizim ilk parmak hareketinde ekrandan
+ * çıkıyor, adımları okurken duruşu görmek için geri kaydırmak gerekiyordu.
+ * Çizim artık sabit; altındaki iki sayfa (kaslar / nasıl yapılır) yana
+ * kaydırılıyor ya da başlıklarına dokunularak değiştiriliyor.
+ */
 function Detail({ exercise }: { exercise: Exercise }) {
   const { colors, spacing } = useAppTheme();
   const [view, setView] = useState<'front' | 'back'>('front');
+  const [page, setPage] = useState(0);
+  // Pencere genişliği değil ölçülen genişlik: Screen'in kendi kenar boşluğu
+  // varsa sayfalar yarım kayar ve pagingEnabled hizayı bir daha tutturamaz.
+  const [pagerW, setPagerW] = useState(0);
+  const pagerRef = useRef<ScrollView>(null);
 
   const pose = POSE_ARCHETYPES[exercise.archetype];
   const activation: Partial<Record<MuscleId, Activation>> = {};
   exercise.secondary.forEach((m) => (activation[m] = 'secondary'));
   exercise.primary.forEach((m) => (activation[m] = 'primary'));
+
+  const goTo = (i: number) => {
+    setPage(i);
+    if (pagerW > 0) pagerRef.current?.scrollTo({ x: i * pagerW, animated: true });
+  };
 
   const viewToggle = (target: 'front' | 'back', label: string) => {
     const on = view === target;
@@ -124,113 +143,141 @@ function Detail({ exercise }: { exercise: Exercise }) {
     );
   };
 
+  const tab = (i: number, label: string) => {
+    const on = page === i;
+    return (
+      <Pressable
+        key={label}
+        onPress={() => goTo(i)}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: on }}
+        style={{ flex: 1, alignItems: 'center', paddingVertical: 10, gap: 8 }}>
+        <Text variant="label" weight="900" tone={on ? 'inherit' : 'sub'}>
+          {label}
+        </Text>
+        <View style={{ height: 2, width: '70%', borderRadius: 2, backgroundColor: on ? colors.p : 'transparent' }} />
+      </Pressable>
+    );
+  };
+
+  const pageStyle = pagerW > 0 ? { width: pagerW } : { width: 0 };
+
   return (
     <Screen>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
-          <BackButton />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text variant="h3" numberOfLines={1}>
-              {exercise.tr}
-            </Text>
-            <Text variant="label" tone="sub" numberOfLines={1}>
-              {exercise.en}
-            </Text>
-          </View>
-          <View style={{ backgroundColor: colors.surf2, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
-            <Text variant="label" weight="700" style={{ color: difficultyTone(exercise.difficulty, colors) }}>
-              {exercise.difficulty}
-            </Text>
-          </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+        <BackButton />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text variant="h3" numberOfLines={1}>
+            {exercise.tr}
+          </Text>
+          <Text variant="label" tone="sub" numberOfLines={1}>
+            {exercise.en}
+          </Text>
         </View>
-
-        {/* --- Movement frames --- */}
-        <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <Text variant="label" tone="sub">
-              HAREKET
-            </Text>
-            <Text variant="label" tone="sub">
-              {pose.end ? 'canlı' : 'sabit duruş'}
-            </Text>
-          </View>
-          <PoseMotion pose={pose} />
-          {!exercise.poseReviewed && (
-            <Text variant="label" tone="sub">
-              ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
-            </Text>
-          )}
-        </Card>
-
-        {/* --- Dose + equipment --- */}
-        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: spacing.md, marginBottom: spacing.sm }}>
-          <Card style={{ flex: 1, gap: 3 }}>
-            <Text variant="label" tone="sub">
-              SET · TEKRAR
-            </Text>
-            <Text variant="body" weight="900">
-              {exercise.setsHint || '—'}
-            </Text>
-            <Text variant="label" tone="sub">
-              {exercise.restHint ? `Dinlenme ${exercise.restHint}` : 'Antrenörün belirler'}
-            </Text>
-          </Card>
-          <Card style={{ flex: 1, gap: 3 }}>
-            <Text variant="label" tone="sub">
-              EKİPMAN
-            </Text>
-            <Text variant="helper" weight="700">
-              {exercise.equipTr}
-            </Text>
-            <Text variant="label" tone="sub">
-              {exercise.equipEn}
-            </Text>
-          </Card>
+        <View style={{ backgroundColor: colors.surf2, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
+          <Text variant="label" weight="700" style={{ color: difficultyTone(exercise.difficulty, colors) }}>
+            {exercise.difficulty}
+          </Text>
         </View>
+      </View>
 
-        {/* --- Muscles --- */}
-        <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text variant="label" tone="sub">
-              ÇALIŞAN KASLAR
-            </Text>
-            <View style={{ flexDirection: 'row', backgroundColor: colors.bg1, borderRadius: 999, padding: 3 }}>
-              {viewToggle('front', 'Ön')}
-              {viewToggle('back', 'Arka')}
-            </View>
-          </View>
-
-          <View style={{ alignItems: 'center' }}>
-            <MuscleMap view={view} activation={activation} />
-          </View>
-          <MuscleMapLegend />
-        </Card>
-
-        {/* --- How to --- */}
-        {exercise.steps.length > 0 && (
-          <Card style={{ marginHorizontal: spacing.md, gap: 14 }}>
-            <Text variant="label" tone="sub">
-              NASIL YAPILIR
-            </Text>
-            {exercise.steps.map(([tr, en], i) => (
-              <View key={i} style={{ flexDirection: 'row', gap: 11 }}>
-                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text variant="label" weight="900">
-                    {i + 1}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text variant="helper">{tr}</Text>
-                  <Text variant="label" tone="sub" style={{ paddingTop: 3 }}>
-                    {en}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </Card>
+      {/* --- Hareket: sabit, kaydırılmaz --- */}
+      <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <Text variant="label" tone="sub">
+            HAREKET
+          </Text>
+          <Text variant="label" tone="sub">
+            {pose.end ? 'canlı' : 'sabit duruş'}
+          </Text>
+        </View>
+        <PoseMotion pose={pose} />
+        {!exercise.poseReviewed && (
+          <Text variant="label" tone="sub">
+            ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
+          </Text>
         )}
+      </Card>
 
-        <ReportProblem exercise={exercise} />
+      {/* --- Kaslar / anlatım --- */}
+      <View style={{ flexDirection: 'row', paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.line }}>
+        {tab(0, 'ÇALIŞAN KASLAR')}
+        {tab(1, 'NASIL YAPILIR')}
+      </View>
+
+      <ScrollView
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onLayout={(e) => setPagerW(e.nativeEvent.layout.width)}
+        onMomentumScrollEnd={(e) => {
+          if (pagerW > 0) setPage(Math.round(e.nativeEvent.contentOffset.x / pagerW));
+        }}
+        style={{ flex: 1 }}>
+        <ScrollView style={pageStyle} contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.sm }}>
+          <Card style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <View style={{ flexDirection: 'row', backgroundColor: colors.bg1, borderRadius: 999, padding: 3 }}>
+                {viewToggle('front', 'Ön')}
+                {viewToggle('back', 'Arka')}
+              </View>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <MuscleMap view={view} activation={activation} />
+            </View>
+            <MuscleMapLegend />
+          </Card>
+        </ScrollView>
+
+        <ScrollView style={pageStyle} contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.sm }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Card style={{ flex: 1, gap: 3 }}>
+              <Text variant="label" tone="sub">
+                SET · TEKRAR
+              </Text>
+              <Text variant="body" weight="900">
+                {exercise.setsHint || '—'}
+              </Text>
+              <Text variant="label" tone="sub">
+                {exercise.restHint ? `Dinlenme ${exercise.restHint}` : 'Antrenörün belirler'}
+              </Text>
+            </Card>
+            <Card style={{ flex: 1, gap: 3 }}>
+              <Text variant="label" tone="sub">
+                EKİPMAN
+              </Text>
+              <Text variant="helper" weight="700">
+                {exercise.equipTr}
+              </Text>
+              <Text variant="label" tone="sub">
+                {exercise.equipEn}
+              </Text>
+            </Card>
+          </View>
+
+          {exercise.steps.length > 0 && (
+            <Card style={{ gap: 14 }}>
+              {exercise.steps.map(([tr, en], i) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 11 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text variant="label" weight="900">
+                      {i + 1}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text variant="helper">{tr}</Text>
+                    <Text variant="label" tone="sub" style={{ paddingTop: 3 }}>
+                      {en}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </Card>
+          )}
+
+          <ReportProblem exercise={exercise} />
+        </ScrollView>
       </ScrollView>
     </Screen>
   );
