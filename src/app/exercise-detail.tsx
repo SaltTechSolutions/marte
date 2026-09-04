@@ -16,17 +16,17 @@ import { ExerciseReportReason } from '@/data/types';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { MuscleMap, MuscleMapLegend } from '@/components/MuscleMap';
-import { PoseMotion } from '@/components/PoseDiagram';
+import { RigFigure } from '@/components/RigFigure';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import {
   Activation,
   Exercise,
   MuscleId,
-  POSE_ARCHETYPES,
   exerciseById,
   exerciseByName,
 } from '@/data/exerciseLibrary';
+import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 
@@ -110,7 +110,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
   const [pagerW, setPagerW] = useState(0);
   const pagerRef = useRef<ScrollView>(null);
 
-  const pose = POSE_ARCHETYPES[exercise.archetype];
+  const rig = RIG_ARCHETYPES[exercise.archetype];
   const activation: Partial<Record<MuscleId, Activation>> = {};
   exercise.secondary.forEach((m) => (activation[m] = 'secondary'));
   exercise.primary.forEach((m) => (activation[m] = 'primary'));
@@ -187,11 +187,8 @@ function Detail({ exercise }: { exercise: Exercise }) {
           <Text variant="label" tone="sub">
             HAREKET
           </Text>
-          <Text variant="label" tone="sub">
-            {pose.end ? 'canlı' : 'sabit duruş'}
-          </Text>
         </View>
-        <PoseMotion pose={pose} />
+        <RigFigure rig={rig} />
         {!exercise.poseReviewed && (
           <Text variant="label" tone="sub">
             ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
