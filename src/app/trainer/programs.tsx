@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { watchProgramsForTenant } from '@/data/firebase/programRepo';
+import { allProgramExercises, programDays } from '@/data/program';
 import { Program } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -19,10 +20,15 @@ const FILTERS = ['Tümü', 'Aktif', 'Taslak'] as const;
 type Filter = (typeof FILTERS)[number];
 
 function summarize(program: Program): string {
-  if (program.exercises.length === 0) return 'Henüz egzersiz eklenmedi';
-  const names = program.exercises.slice(0, 2).map((e) => e.name).join(', ');
-  const rest = program.exercises.length - 2;
-  return rest > 0 ? `${names} +${rest}` : names;
+  // Çok günlü programda `exercises` yalnızca ilk günün aynası; isimler de
+  // sayı da bütün günlerden okunuyor.
+  const all = allProgramExercises(program);
+  if (all.length === 0) return 'Henüz egzersiz eklenmedi';
+  const days = programDays(program).length;
+  const names = all.slice(0, 2).map((e) => e.name).join(', ');
+  const rest = all.length - 2;
+  const list = rest > 0 ? `${names} +${rest}` : names;
+  return days > 1 ? `${days} gün · ${list}` : list;
 }
 
 /**
@@ -111,7 +117,7 @@ export default function TrainerPrograms() {
                     </Text>
                   </View>
                   <Text variant="label" tone="sub">
-                    {p.exercises.length} egzersiz
+                    {allProgramExercises(p).length} egzersiz
                   </Text>
                 </View>
               </ListRow>

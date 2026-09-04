@@ -1,18 +1,25 @@
-import { collection, doc, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
-import { ExerciseLog, Program, WorkoutLog } from '../types';
+import { ExerciseLog, Program, ProgramDay, WorkoutLog } from '../types';
 import { workoutLogFromDoc } from './convert';
 import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
 
 /** Member taps "Antrenmana başla" — snapshots the program's targets into a
  * fresh log so later edits to the program don't rewrite already-logged history. */
-export async function startWorkoutLog(tenantId: string, memberId: string, program: Program): Promise<string> {
+export async function startWorkoutLog(
+  tenantId: string,
+  memberId: string,
+  program: Program,
+  day?: ProgramDay,
+): Promise<string> {
   const ref = doc(collection(db, 'workout_logs'));
-  const exerciseLogs: ExerciseLog[] = program.exercises.map((e) => ({
+  const source = day?.exercises ?? program.exercises;
+  const exerciseLogs: ExerciseLog[] = source.map((e) => ({
     exerciseId: e.id,
     name: e.name,
+    ...(e.libraryId ? { libraryId: e.libraryId } : {}),
     setsTarget: e.sets,
     repsTarget: e.reps,
     setsCompleted: 0,
@@ -23,10 +30,33 @@ export async function startWorkoutLog(tenantId: string, memberId: string, progra
     memberId,
     programId: program.id,
     programName: program.name,
+    // Hangi gün çalışıldığı kayda giriyor: sıradaki günü önermenin tek yolu
+    // bu, ve programın günleri sonradan değişse bile geçmiş doğru kalıyor.
+    ...(day ? { dayId: day.id, dayName: day.name } : {}),
     startedAt: serverTimestamp(),
     exerciseLogs,
   });
   return ref.id;
+}
+
+/**
+ * Son antrenmanlar — "geçen sefer" satırı ve sıradaki gün önerisi için.
+ *
+ * Canlı dinleyici değil tek seferlik okuma: antrenman başlarken bir kez
+ * bakılıyor, seans sürerken geçmişin değişmesi diye bir şey yok. Aynı
+ * (tenantId, memberId, startedAt) bileşik dizinini kullanır.
+ */
+export async function getRecentLogs(tenantId: string, memberId: string, count = 12): Promise<WorkoutLog[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, 'workout_logs'),
+      where('tenantId', '==', tenantId),
+      where('memberId', '==', memberId),
+      orderBy('startedAt', 'desc'),
+      limit(count),
+    ),
+  );
+  return snap.docs.map(workoutLogFromDoc);
 }
 
 export function watchWorkoutLog(

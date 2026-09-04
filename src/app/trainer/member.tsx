@@ -13,6 +13,7 @@ import { watchMeasurements } from '@/data/firebase/measurementRepo';
 import { watchMemberCredits, watchMemberPackages } from '@/data/firebase/memberPackageRepo';
 import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
 import { watchWorkoutLogsForMember } from '@/data/firebase/workoutLogRepo';
+import { programSummary } from '@/data/program';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { MeasurementEntry, MemberCredit, MemberPackage, Program, WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -239,7 +240,7 @@ export default function TrainerMemberDetail() {
               {program.name}
             </Text>
             <Text variant="label" tone="sub">
-              {program.exercises.length} egzersiz · {formatDate(program.updatedAt)} güncellendi
+              {programSummary(program)} · {formatDate(program.updatedAt)} güncellendi
             </Text>
             <Button
               label="Programı düzenle"

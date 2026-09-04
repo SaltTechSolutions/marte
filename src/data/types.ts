@@ -277,6 +277,28 @@ export interface ProgramExercise {
   sets: number;
   reps: number;
   targetWeightKg: number;
+  /**
+   * Hareket kütüphanesindeki karşılığı (PER-19 bağı).
+   *
+   * Anlatım bağı bugüne kadar İSİM üzerinden kuruluyordu; antrenör ismi
+   * düzenlediğinde bağ sessizce kopuyordu. Eski programlarda yok, o yüzden
+   * isim hâlâ yedek yol.
+   */
+  libraryId?: string;
+}
+
+/**
+ * Programın bir günü (PER-17).
+ *
+ * Push/Pull/Legs tek bir egzersiz listesiyle modellenemiyordu: üyeye bir
+ * program atanıyor ve o programın TAMAMI her antrenmanda karşısına
+ * çıkıyordu. Tek günlü programlar `days` yazmaz — okuma tarafı onları tek
+ * günlük bir listeymiş gibi görür (`programDays`).
+ */
+export interface ProgramDay {
+  id: string;
+  name: string;
+  exercises: ProgramExercise[];
 }
 
 export type ProgramStatus = 'draft' | 'active';
@@ -290,7 +312,10 @@ export interface Program {
   trainerId: string;
   name: string;
   status: ProgramStatus;
+  /** Tek günlü programın egzersizleri; çok günlüde `days[0]`'ın aynası. */
   exercises: ProgramExercise[];
+  /** Çok günlü program. Yazılmadıysa program tek günlüktür. */
+  days?: ProgramDay[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -298,6 +323,8 @@ export interface Program {
 export interface ExerciseLog {
   exerciseId: string;
   name: string;
+  /** Kütüphane karşılığı; "geçen sefer" eşleşmesi isim değişse de tutsun diye. */
+  libraryId?: string;
   setsTarget: number;
   /**
    * Reps the programme asked for. Optional because logs written before
@@ -321,6 +348,9 @@ export interface WorkoutLog {
   memberId: string;
   programId: string;
   programName: string;
+  /** Çok günlü programda hangi gün çalışıldı — sıradaki günü önermek için. */
+  dayId?: string;
+  dayName?: string;
   startedAt: Date;
   completedAt?: Date;
   exerciseLogs: ExerciseLog[];

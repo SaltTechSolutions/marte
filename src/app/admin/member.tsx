@@ -16,6 +16,7 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { getMembership } from '@/data/firebase/membershipRepo';
 import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
+import { programSummary } from '@/data/program';
 import {
   CancellationAccess,
   cancelPackageAssignment,
@@ -242,7 +243,7 @@ export default function AdminMemberDetail() {
 
       {program ? (
         <Text variant="label" tone="sub">
-          Aktif program: {program.name} · {program.exercises.length} egzersiz
+          Aktif program: {program.name} · {programSummary(program)}
         </Text>
       ) : program === null ? (
         <Text variant="label" tone="sub">

@@ -9,10 +9,11 @@ import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
-import { newLocalId, saveProgramExercises, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
+import { newLocalId, saveProgramDays, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
-import { Program, ProgramExercise } from '@/data/types';
+import { programDays } from '@/data/program';
+import { Program, ProgramDay, ProgramExercise } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { confirmDestructive } from '@/utils/confirm';
@@ -58,18 +59,52 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
 
-  const [exercises, setExercises] = useState<ProgramExercise[]>(program.exercises);
+  // Program artık günlerden oluşuyor; tek günlü programlar da tek elemanlı
+  // bir gün listesi olarak düzenleniyor, böylece ekranın iki ayrı hâli yok.
+  const [days, setDays] = useState<ProgramDay[]>(programDays(program));
+  const [dayId, setDayId] = useState<string>(programDays(program)[0].id);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pickingFromLibrary, setPickingFromLibrary] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
-  const persist = (next: ProgramExercise[]) => {
-    setExercises(next);
-    saveProgramExercises(program.id, next);
+  const activeDay = days.find((d) => d.id === dayId) ?? days[0];
+  const exercises = activeDay.exercises;
+
+  const persistDays = (next: ProgramDay[]) => {
+    setDays(next);
+    saveProgramDays(program.id, next);
   };
 
-  const addFromLibrary = (name: string) => {
-    const exercise: ProgramExercise = { id: newLocalId(), name, sets: 3, reps: 10, targetWeightKg: 20 };
+  const persist = (next: ProgramExercise[]) => {
+    persistDays(days.map((d) => (d.id === activeDay.id ? { ...d, exercises: next } : d)));
+  };
+
+  const addDay = () => {
+    const day: ProgramDay = { id: newLocalId(), name: `Gün ${days.length + 1}`, exercises: [] };
+    persistDays([...days, day]);
+    setDayId(day.id);
+    setExpandedId(null);
+  };
+
+  const removeDay = () => {
+    if (days.length < 2) return;
+    confirmDestructive({
+      title: 'Günü kaldır',
+      message: `"${activeDay.name}" ve içindeki ${activeDay.exercises.length} egzersiz programdan çıkarılacak.`,
+      confirmLabel: 'Kaldır',
+      onConfirm: () => {
+        const next = days.filter((d) => d.id !== activeDay.id);
+        persistDays(next);
+        setDayId(next[0].id);
+        setExpandedId(null);
+      },
+    });
+  };
+
+  const addFromLibrary = (entryId: string, name: string) => {
+    // Kütüphane kimliği kaydediliyor: anlatım bağı isim üzerinden kuruluyordu
+    // ve antrenör ismi düzenlediğinde sessizce kopuyordu (PER-19).
+    const exercise: ProgramExercise = { id: newLocalId(), name, libraryId: entryId, sets: 3, reps: 10, targetWeightKg: 20 };
     persist([...exercises, exercise]);
     setPickingFromLibrary(false);
     setExpandedId(exercise.id);
@@ -126,6 +161,31 @@ function ProgramBuilderForm({ program }: { program: Program }) {
         </View>
       </View>
 
+      {/* Gün sekmeleri. Tek günlü programda da görünür: ikinci günü eklemek
+          buradan tek dokunuş, ve "program = günler" fikri baştan okunuyor. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+        {days.map((d) => (
+          <Chip
+            key={d.id}
+            label={`${d.name} · ${d.exercises.length}`}
+            selected={d.id === activeDay.id}
+            onPress={() => {
+              setDayId(d.id);
+              setExpandedId(null);
+            }}
+          />
+        ))}
+        <Chip label="+ Gün" onPress={addDay} />
+      </ScrollView>
+
+      {days.length > 1 && (
+        <Pressable onPress={removeDay} accessibilityRole="button">
+          <Text variant="label" style={{ color: colors.danger }}>
+            {activeDay.name} gününü kaldır
+          </Text>
+        </Pressable>
+      )}
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: spacing.sm }}>
         {exercises.map((ex) => {
           const expanded = expandedId === ex.id;
@@ -145,9 +205,14 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     {ex.sets} set × {ex.reps} tekrar · {ex.targetWeightKg} kg
                   </Text>
                 </View>
-                {exerciseByName(ex.name) && (
+                {(ex.libraryId ? exerciseById(ex.libraryId) : exerciseByName(ex.name)) && (
                   <Pressable
-                    onPress={() => router.push({ pathname: '/exercise-detail', params: { name: ex.name } })}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/exercise-detail',
+                        params: ex.libraryId ? { exerciseId: ex.libraryId } : { name: ex.name },
+                      })
+                    }
                     hitSlop={8}
                     accessibilityRole="button"
                     accessibilityLabel={`${ex.name} nasıl yapılır`}>
@@ -199,7 +264,7 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                   {group.ids.map((id) => {
                     const entry = exerciseById(id);
                     if (!entry) return null;
-                    return <Chip key={id} label={entry.tr} onPress={() => addFromLibrary(entry.tr)} />;
+                    return <Chip key={id} label={entry.tr} onPress={() => addFromLibrary(entry.id, entry.tr)} />;
                   })}
                 </View>
               </View>
@@ -226,7 +291,7 @@ function ProgramBuilderForm({ program }: { program: Program }) {
         <Button
           label={assigning ? '…' : `${program.memberName.split(' ')[0]}'e ata`}
           style={{ flex: 1 }}
-          disabled={assigning || exercises.length === 0}
+          disabled={assigning || days.every((d) => d.exercises.length === 0)}
           onPress={assign}
         />
       </View>

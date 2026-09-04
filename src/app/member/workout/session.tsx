@@ -7,8 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
-import { completeWorkoutLog, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
-import { exerciseByName } from '@/data/exerciseLibrary';
+import { completeWorkoutLog, getRecentLogs, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
+import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
+import { formatLastTime, lastTimeFor } from '@/data/program';
 import { WorkoutLog } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
@@ -57,6 +58,22 @@ export default function WorkoutSession() {
   // Only the start time seeds the clocks; depending on the whole log would
   // reset them on every set the member ticks off.
   const startedAtMs = log?.startedAt.getTime();
+  // "Geçen sefer" için geçmiş bir kez okunuyor: seans sürerken geçmişin
+  // değişmesi diye bir şey yok, canlı dinleyici gereksiz.
+  const [history, setHistory] = useState<WorkoutLog[]>([]);
+  useEffect(() => {
+    if (!log?.tenantId || !log?.memberId) return;
+    let cancelled = false;
+    getRecentLogs(log.tenantId, log.memberId)
+      .then((logs) => !cancelled && setHistory(logs))
+      .catch(() => {
+        // Geçmiş okunamazsa satır hiç görünmez; antrenman etkilenmiyor.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [log?.tenantId, log?.memberId]);
+
   useEffect(() => {
     if (startedAtMs == null) return;
     segmentStartRef.current = startedAtMs;
@@ -148,7 +165,9 @@ export default function WorkoutSession() {
         <View />
     );
 
-  const guide = exerciseByName(exercise.name);
+  const guide = exercise.libraryId ? exerciseById(exercise.libraryId) : exerciseByName(exercise.name);
+  const guideParams = exercise.libraryId ? { exerciseId: exercise.libraryId } : { name: exercise.name };
+  const lastTime = lastTimeFor(history, exercise, log.id);
   const progressPercent = Math.round(((exerciseIndex + 1) / log.exerciseLogs.length) * 100);
   const nextExercise = log.exerciseLogs[exerciseIndex + 1];
 
@@ -175,7 +194,7 @@ export default function WorkoutSession() {
               member actually asks "am I doing this right?". */}
           <Pressable
             onPress={() =>
-              guide && router.push({ pathname: '/exercise-detail', params: { name: exercise.name } })
+              guide && router.push({ pathname: '/exercise-detail', params: guideParams })
             }
             disabled={!guide}
             accessibilityRole={guide ? 'button' : undefined}
@@ -203,7 +222,7 @@ export default function WorkoutSession() {
             </Text>
             {guide && (
               <Pressable
-                onPress={() => router.push({ pathname: '/exercise-detail', params: { name: exercise.name } })}
+                onPress={() => router.push({ pathname: '/exercise-detail', params: guideParams })}
                 hitSlop={6}
                 accessibilityRole="button"
                 style={{ minHeight: 22, justifyContent: 'center' }}>
@@ -214,6 +233,14 @@ export default function WorkoutSession() {
             )}
           </View>
         </View>
+
+        {/* Ağırlık, antrenörün haftalar önce yazdığı hedefle açılıyor. Üyenin
+            gerçekte kaldırdığı ağırlık hiçbir yerde görünmüyordu. */}
+        {lastTime && (
+          <Text variant="label" tone="sub">
+            Geçen sefer: {formatLastTime(lastTime)}
+          </Text>
+        )}
 
         <Stepper value={exercise.weightKg} unit="kg" onChange={(w) => updateExercise({ weightKg: w })} />
 

@@ -106,6 +106,7 @@ export function programFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     name: data.name,
     status: data.status,
     exercises: data.exercises ?? [],
+    ...(data.days ? { days: data.days } : {}),
     createdAt: toDate(data.createdAt) ?? new Date(),
     updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
@@ -119,6 +120,8 @@ export function workoutLogFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     memberId: data.memberId,
     programId: data.programId,
     programName: data.programName,
+    ...(data.dayId ? { dayId: data.dayId } : {}),
+    ...(data.dayName ? { dayName: data.dayName } : {}),
     startedAt: toDate(data.startedAt) ?? new Date(),
     completedAt: toDate(data.completedAt),
     exerciseLogs: data.exerciseLogs ?? [],

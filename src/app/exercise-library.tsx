@@ -12,6 +12,7 @@ import { EXERCISES, Exercise, exerciseById, exerciseByName } from '@/data/exerci
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
 import { useAuth } from '@/context/AuthContext';
 import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
+import { allProgramExercises } from '@/data/program';
 import { Program } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
@@ -56,7 +57,7 @@ export default function ExerciseLibrary() {
     if (!program) return [];
     const seen = new Set<string>();
     const out: Exercise[] = [];
-    for (const ex of program.exercises) {
+    for (const ex of allProgramExercises(program)) {
       const hit = exerciseByName(ex.name);
       if (hit && !seen.has(hit.id)) {
         seen.add(hit.id);

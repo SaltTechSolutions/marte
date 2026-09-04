@@ -2,7 +2,7 @@ import { collection, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, wh
 
 import { db } from '@/services/firebase';
 
-import { Program, ProgramExercise, ProgramStatus } from '../types';
+import { Program, ProgramDay, ProgramExercise, ProgramStatus } from '../types';
 import { programFromDoc } from './convert';
 import { sharedWatch } from './sharedWatch';
 import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
@@ -64,6 +64,22 @@ export function watchProgram(
 /** Whole-array rewrite on every edit — matches the builder screen's own
  * "autosaves on every change" design intent, and embedded arrays don't
  * support granular per-object updates anyway. */
+/**
+ * Çok günlü programı kaydeder (PER-17).
+ *
+ * `days`'in yanına ilk günün egzersizleri `exercises`'a da yazılıyor: eski
+ * sürümdeki bir telefon yalnızca `exercises` okuyor ve boş bir program
+ * görmektense ilk günü görmeli. Tek doğruluk kaynağı `days`; `exercises`
+ * onun aynası.
+ */
+export async function saveProgramDays(programId: string, days: ProgramDay[]): Promise<void> {
+  await updateDoc(doc(db, 'programs', programId), {
+    days,
+    exercises: days[0]?.exercises ?? [],
+    updatedAt: serverTimestamp(),
+  });
+}
+
 export async function saveProgramExercises(programId: string, exercises: ProgramExercise[]): Promise<void> {
   await updateDoc(doc(db, 'programs', programId), { exercises, updatedAt: serverTimestamp() });
 }
