@@ -51,7 +51,20 @@ export function PoseFigure({
   const seg = (a: [number, number], b: [number, number], w: number, stroke: string, key: string) => (
     <Line key={key} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={stroke} strokeWidth={w} strokeLinecap="round" />
   );
+  // In the front view the other side is this side mirrored across the body's
+  // centre and drawn in the SAME passes as the near limbs — same halo, same
+  // colour, same layer. Drawing it earlier put it under the near limb's halo
+  // and it read as the leg standing behind, which a front view never has.
+  const mirrored: [[number, number], [number, number], number, string][] =
+    view === 'front'
+      ? [
+          [f.hip, mirrorX(f.knee, f.hip[0]), 21, 'mThigh'], [mirrorX(f.knee, f.hip[0]), mirrorX(f.ankle, f.hip[0]), 17, 'mShin'],
+          [mirrorX(f.ankle, f.hip[0]), mirrorX(f.toe, f.hip[0]), 11, 'mFoot'],
+          [f.shoulder, mirrorX(f.elbow, f.shoulder[0]), 15, 'mUpperArm'], [mirrorX(f.elbow, f.shoulder[0]), mirrorX(f.wrist, f.shoulder[0]), 13, 'mForearm'],
+        ]
+      : [];
   const nearSegs: [[number, number], [number, number], number, string][] = [
+    ...mirrored,
     [f.shoulder, f.hip, 30, 'torso'], [f.hip, f.knee, 21, 'thigh'], [f.knee, f.ankle, 17, 'shin'], [f.ankle, f.toe, 11, 'foot'],
     [f.head, f.shoulder, 13, 'neck'], [f.shoulder, f.elbow, 15, 'upperArm'], [f.elbow, f.wrist, 13, 'forearm'],
   ];
@@ -89,16 +102,7 @@ export function PoseFigure({
       <Ellipse cx={view === 'front' ? f.hip[0] : (f.ankle[0] + f.toe[0]) / 2} cy={208} rx={34} ry={4} fill={outline} opacity={0.35} />
 
       {view === 'front' ? (
-        // The other side is this side mirrored across the body's centre —
-        // same depth, same colour; a front view has no far limb.
-        <>
-          {seg(f.hip, mirrorX(f.knee, f.hip[0]), 21, near, 'mirThigh')}
-          {seg(mirrorX(f.knee, f.hip[0]), mirrorX(f.ankle, f.hip[0]), 17, near, 'mirShin')}
-          {seg(mirrorX(f.ankle, f.hip[0]), mirrorX(f.toe, f.hip[0]), 11, near, 'mirFoot')}
-          {seg(f.shoulder, mirrorX(f.elbow, f.shoulder[0]), 15, near, 'mirUpperArm')}
-          {seg(mirrorX(f.elbow, f.shoulder[0]), mirrorX(f.wrist, f.shoulder[0]), 13, near, 'mirForearm')}
-          {f.bar && <Circle cx={mirrorX(f.bar, f.shoulder[0])[0]} cy={f.bar[1]} r={12} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />}
-        </>
+        f.bar && <Circle cx={mirrorX(f.bar, f.shoulder[0])[0]} cy={f.bar[1]} r={12} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />
       ) : (
         <>
           {seg(f.hip, f.farKnee, 17, far, 'farThigh')}
@@ -136,7 +140,7 @@ export function PoseFigure({
           <Circle cx={hx + fx * 6 - fy * 4} cy={hy + fy * 6 + fx * 4} r={2.2} fill={colors.bg1} />
         </>
       )}
-      {[f.hip, f.knee, f.elbow].map((j, i) => (
+      {[f.hip, f.knee, f.elbow, ...(view === 'front' ? [mirrorX(f.knee, f.hip[0]), mirrorX(f.elbow, f.shoulder[0])] : [])].map((j, i) => (
         <Circle key={`j${i}`} cx={j[0]} cy={j[1]} r={3.2} fill={colors.p} />
       ))}
 
