@@ -28,8 +28,8 @@
   "submit": {
     "production": {
       "ios": {
-        "ascApiKeyPath": "./secrets/AuthKey_DLVPQCL56S.p8",
-        "ascApiKeyId": "DLVPQCL56S",
+        "ascApiKeyPath": "./secrets/AuthKey_8MGK76S6ZD.p8",
+        "ascApiKeyId": "8MGK76S6ZD",
         "ascApiKeyIssuerId": "8048df28-6b46-4f4f-a5b1-df5359ad2f4b",
         "ascAppId": "6802950274"
       },
