@@ -7,6 +7,7 @@ import { hexToHsl, mix } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
 import {
   B,
+  BAR_Y,
   D,
   FX,
   GROUND,
@@ -37,14 +38,16 @@ const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
  */
 export function RigFigure({
   rig,
-  view = 'side',
+  view,
   height = 260,
 }: {
   rig: RigExercise;
+  /** Yazılmazsa hareketin kendi düzlemi: yanal işler önden okunur. */
   view?: 'side' | 'front';
   height?: number;
 }) {
   const { colors } = useAppTheme();
+  const plane: 'side' | 'front' = view ?? rig.view ?? 'side';
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const originRef = useRef(0);
@@ -89,7 +92,7 @@ export function RigFigure({
 
   const { p, phase } = poseAt(rig, t);
   const S = useMemo(() => skeleton(rig, p), [rig, p]);
-  const viewBox = useMemo(() => boundsFor(rig, view), [rig, view]);
+  const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
     <Path key={key} d={capsule(a, b, wa, wb)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
@@ -131,7 +134,7 @@ export function RigFigure({
   const label = phase.tr;
 
   const body =
-    view === 'front' ? (
+    plane === 'front' ? (
       <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC }} />
     ) : (
       <>
@@ -139,11 +142,39 @@ export function RigFigure({
           <Ellipse cx={(S.ankle[0] + S.ankleF[0]) / 2 + 6} cy={GROUND + 4} rx={92} ry={12} fill={floorC} opacity={0.25} />
           <Line x1={S.pelvis[0] - 190} y1={GROUND} x2={S.pelvis[0] + 250} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
-        {rig.mode === 'bench' && (
+        {rig.prop === 'bench' && rig.mode === 'bench' && (
           <G key="bench">
             <Rect x={S.pelvis[0] - 110} y={S.pelvis[1] + 22} width={360} height={20} rx={10} fill={colors.surf2} stroke={line} />
             <Rect x={S.pelvis[0] - 96} y={S.pelvis[1] + 40} width={16} height={GROUND - S.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
             <Rect x={S.pelvis[0] + 130} y={S.pelvis[1] + 40} width={16} height={GROUND - S.pelvis[1] - 40} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {/* Bulgar split squat: arka ayağın bastığı sehpa, ayağın altına çizilir. */}
+        {rig.prop === 'bench' && rig.mode !== 'bench' && (
+          <G key="rearbench">
+            <Rect x={S.ankleF[0] - 70} y={S.ankleF[1] + 16} width={150} height={16} rx={8} fill={colors.surf2} stroke={line} />
+            <Rect x={S.ankleF[0] - 56} y={S.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {/* Step-up: ayağın çıktığı basamak. */}
+        {rig.prop === 'box' && (
+          <Rect
+            key="box"
+            x={S.ankle[0] - 62}
+            y={S.ankle[1] + 12}
+            width={150}
+            height={Math.max(0, GROUND - S.ankle[1] - 12)}
+            rx={6}
+            fill={colors.surf2}
+            stroke={line}
+          />
+        )}
+        {/* Barfiks barı: figür buna asılı, bu yüzden figürden ÖNCE çizilir. */}
+        {rig.prop === 'bar' && (
+          <G key="pullbar">
+            <Rect x={S.hand[0] - 150} y={BAR_Y - 6} width={300} height={12} rx={6} fill={metal} stroke={line} />
+            <Rect x={S.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
+            <Rect x={S.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
           </G>
         )}
         <G key="far" opacity={0.95}>

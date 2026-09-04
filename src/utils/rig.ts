@@ -1,16 +1,22 @@
 /**
  * Eklemli kukla — ileri kinematik + kollar için ters kinematik.
  *
- * Önceki motor her kareyi eklem KOORDİNATI olarak tutuyordu ve iki kare
- * arasında noktaları doğrudan taşıyordu. Bunun iki kusuru vardı: uzuvlar
- * bükülmek yerine kendi etraflarında dönüyordu, ve ara karelerde segment
- * boyları değiştiği için gövde lastik gibi uzuyordu.
+ * Kareler AÇI olarak yazılır, segment boyları sabittir (`B`). Geçiş
+ * eklem-yerel uzayda yapılır: kalça, diz, omuz, dirsek açıları gövdeye GÖRE
+ * geçer, yani sırt açısı değişirken uzuvlar gövdeyle birlikte döner. Nokta
+ * interpolasyonu yapan eski motorun iki kusuru böyle kapanıyor: uzuvlar
+ * kendi etraflarında dönmüyor ve gövde ara karelerde uzamıyor.
  *
- * Burada kareler AÇI olarak yazılıyor, boylar sabit (`B`). Geçiş eklem-yerel
- * uzayda yapılıyor: kalça, diz, omuz, dirsek açıları gövdeye GÖRE geçiş
- * yapar, yani sırt açısı değişirken uzuvlar gövdeyle birlikte döner. Ayakta
- * yapılan hareketlerde zincir ayak tabanına köklenir, kalça yüksekliği
- * açılardan hesaplanır — çömelirken figür yere gömülmez.
+ * Figür +x yönüne bakar. Açılar dünya uzayında: 0 = yukarı, saat yönünde
+ * artar.
+ *
+ * Beş kök nokta (`mode`) var, çünkü bir hareketin nereye bastığı çizimin
+ * temelidir:
+ *   stand  — ayak tabanı yere sabit, kalça yüksekliği açılardan çıkar
+ *   quad   — dört ayak / şınav duruşu, en alçak temas noktası yere oturur
+ *   bench  — sehpada sırtüstü, sehpa çizilir
+ *   supine — yerde sırtüstü, sırt yere oturur
+ *   hang   — barda asılı, eller bara sabit, gövde aşağı sarkar
  */
 
 export type Vec = [number, number];
@@ -31,8 +37,13 @@ export const B = {
 export const GROUND = 560;
 export const ANKLE_X = 210;
 export const CENTER_X = 210;
+/**
+ * Barın yüksekliği (hang). Asılı figür bardan aşağı yaklaşık 480px sarkıyor
+ * (kol + gövde + bacak), bu yüzden bar yeterince yukarıda olmalı — yoksa
+ * ayaklar zeminin altında kalır.
+ */
+export const BAR_Y = 56;
 
-/** Dünya açıları: 0 = yukarı, saat yönünde artar. */
 export const rad = (d: number): number => (d * Math.PI) / 180;
 export const D = (d: number): Vec => [Math.sin(rad(d)), -Math.cos(rad(d))];
 export const add = (p: Vec, v: Vec, s: number): Vec => [p[0] + v[0] * s, p[1] + v[1] * s];
@@ -43,15 +54,34 @@ export const lerpP = (a: Vec, b: Vec, u: number): Vec => [a[0] + (b[0] - a[0]) *
 export const angleOf = (a: Vec, b: Vec): number => (Math.atan2(b[0] - a[0], -(b[1] - a[1])) * 180) / Math.PI;
 
 export interface RigPose {
+  /** Yakın taraf: diz→ayak bileği, kalça→diz, kalça→bel, bel→göğüs, göğüs→boyun. */
   shinA: number;
   thighA: number;
   torso: number;
   thoraxA: number;
   neckA: number;
+  /** Yakın kol (arm: 'angles' iken). */
   upperA: number;
   foreA: number;
+  /** Ters kinematik hedefi, omuza göre (arm: 'ik' / 'floor'). */
   hx: number;
   hy: number;
+  /**
+   * Uzak taraf uzuvları. Yazılmazsa yakın uzvun birkaç derece kaydırılmışı
+   * kullanılır — iki bacak üst üste binip tek bacak gibi görünmesin diye.
+   * Hamle, step-up, bird-dog gibi iki tarafı AYRI çalışan hareketlerde
+   * kareler bunları açıkça yazar.
+   */
+  thighF: number;
+  shinF: number;
+  upperF: number;
+  foreF: number;
+  /** Önden görünümde elin merkeze uzaklığı — yanal düzlemde çalışan hareketler. */
+  hxF: number;
+  /** Önden görünümde omuz yükselmesi (shrug). */
+  shLift: number;
+  /** Topuğun yerden kalkması (calf raise) ya da ayağın basamağa çıkması (step-up). */
+  ankleLift: number;
 }
 
 export interface RigKeyframe {
@@ -60,9 +90,10 @@ export interface RigKeyframe {
   p: Partial<RigPose>;
 }
 
-export type RigMode = 'stand' | 'quad' | 'bench';
+export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang';
 export type RigArm = 'angles' | 'ik' | 'floor';
 export type RigBar = 'back' | 'hands' | null;
+export type RigProp = 'bench' | 'box' | 'bar' | null;
 
 export interface RigExercise {
   mode: RigMode;
@@ -73,15 +104,44 @@ export interface RigExercise {
   bend: number;
   /** Bir tekrarın süresi (ms). */
   dur: number;
+  /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
+  view?: 'side' | 'front';
+  prop?: RigProp;
   kf: RigKeyframe[];
 }
 
-const ZERO: RigPose = { shinA: 180, thighA: 180, torso: 0, thoraxA: 0, neckA: 0, upperA: 180, foreA: 180, hx: 0, hy: 0 };
+const BASE = {
+  shinA: 180,
+  thighA: 180,
+  torso: 0,
+  thoraxA: 0,
+  neckA: 0,
+  upperA: 180,
+  foreA: 180,
+  hx: 0,
+  hy: 0,
+  hxF: 66,
+  shLift: 0,
+  ankleLift: 0,
+};
 
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
 export const ease = (u: number): number => u * u * (3 - 2 * u);
 
-const full = (p: Partial<RigPose>): RigPose => ({ ...ZERO, ...p });
+/**
+ * Eksik alanları doldurur. Uzak uzuvlar yazılmadıysa yakınından türetilir:
+ * yalnızca birkaç derece fark, çünkü iki taraf aynı işi yapıyordur.
+ */
+export const fillPose = (p: Partial<RigPose>): RigPose => {
+  const f = { ...BASE, ...p };
+  return {
+    ...f,
+    thighF: p.thighF ?? f.thighA + 7,
+    shinF: p.shinF ?? f.shinA - 5,
+    upperF: p.upperF ?? f.upperA - 5,
+    foreF: p.foreF ?? f.foreA + 2,
+  };
+};
 
 interface LocalPose {
   torso: number;
@@ -91,8 +151,15 @@ interface LocalPose {
   shinA: number;
   upperA: number;
   foreA: number;
+  thighF: number;
+  shinF: number;
+  upperF: number;
+  foreF: number;
   hx: number;
   hy: number;
+  hxF: number;
+  shLift: number;
+  ankleLift: number;
 }
 
 /**
@@ -110,23 +177,41 @@ export const toLocal = (p: RigPose): LocalPose => ({
   shinA: p.shinA - p.thighA,
   upperA: p.upperA - p.thoraxA,
   foreA: p.foreA - p.upperA,
+  thighF: p.thighF - p.torso,
+  shinF: p.shinF - p.thighF,
+  upperF: p.upperF - p.thoraxA,
+  foreF: p.foreF - p.upperF,
   hx: p.hx,
   hy: p.hy,
+  hxF: p.hxF,
+  shLift: p.shLift,
+  ankleLift: p.ankleLift,
 });
 
 export const toWorld = (l: LocalPose): RigPose => {
   const torso = l.torso;
   const thoraxA = torso + l.thoraxA;
+  const thighA = torso + l.thighA;
+  const thighF = torso + l.thighF;
+  const upperA = thoraxA + l.upperA;
+  const upperF = thoraxA + l.upperF;
   return {
     torso,
     thoraxA,
     neckA: thoraxA + l.neckA,
-    thighA: torso + l.thighA,
-    shinA: torso + l.thighA + l.shinA,
-    upperA: thoraxA + l.upperA,
-    foreA: thoraxA + l.upperA + l.foreA,
+    thighA,
+    shinA: thighA + l.shinA,
+    upperA,
+    foreA: upperA + l.foreA,
+    thighF,
+    shinF: thighF + l.shinF,
+    upperF,
+    foreF: upperF + l.foreF,
     hx: l.hx,
     hy: l.hy,
+    hxF: l.hxF,
+    shLift: l.shLift,
+    ankleLift: l.ankleLift,
   };
 };
 
@@ -161,8 +246,8 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   const b = kf[i + 1] || kf[i];
   const span = Math.max(0.0001, b.t - a.t);
   const u = ease(Math.min(1, Math.max(0, (t - a.t) / span)));
-  const la = toLocal(full(a.p));
-  const lb = toLocal(full(b.p));
+  const la = toLocal(fillPose(a.p));
+  const lb = toLocal(fillPose(b.p));
   const l = {} as LocalPose;
   (Object.keys(la) as (keyof LocalPose)[]).forEach((k) => {
     l[k] = la[k] + (lb[k] - la[k]) * u;
@@ -190,20 +275,43 @@ export interface Skeleton {
   bar: Vec | null;
 }
 
+/** Modun yere bastığı noktalar — figür bunların en alçağına oturtulur. */
+const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
+  stand: [],
+  quad: ['ankle', 'ankleF', 'knee', 'kneeF', 'hand', 'handF'],
+  bench: [],
+  supine: ['pelvis', 'thorax', 'head', 'ankle', 'hand'],
+  hang: [],
+};
+
 /**
  * Açılardan iskeleti çözer.
  *
- * Ayakta yapılan hareketlerde zincir AYAK BİLEĞİNDEN yukarı kurulur, yani
- * ayak yere sabit; diğer modlarda kalçadan aşağı kurulur. Uzaktaki uzuvlar
- * (`...F`) yakınına göre birkaç derece kaydırılır — iki bacak üst üste
- * binip tek bacak gibi görünmesin diye.
+ * Ayakta yapılan hareketlerde zincir AYAK BİLEĞİNDEN yukarı kurulur (ayak
+ * yere sabit), barda asılı hareketlerde ELDEN aşağı kurulur (el bara
+ * sabit), diğerlerinde kalçadan kurulup en alçak temas noktası yere
+ * oturtulur. Bu son adım olmadan plank'ın ayakları havada kalıyordu.
  */
 export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
   let pelvis: Vec;
   let ankle: Vec;
   let knee: Vec;
-  if (ex.mode === 'stand') {
-    ankle = [ANKLE_X, GROUND - 12];
+  let sh: Vec | null = null;
+  let hand: Vec | null = null;
+  let elbow: Vec | null = null;
+
+  if (ex.mode === 'hang') {
+    // Zincir ters yönde: el barda, omuz elden aşağıda, gövde omuzdan sarkar.
+    hand = [CENTER_X, BAR_Y];
+    elbow = sub(hand, D(p.foreA), B.fore);
+    sh = sub(elbow, D(p.upperA), B.upper);
+    const thoraxH = sub(sh, D(p.thoraxA + 118), 14);
+    const lumbarH = sub(thoraxH, D(p.thoraxA), B.thorax);
+    pelvis = sub(lumbarH, D(p.torso), B.lumbar);
+    knee = add(pelvis, D(p.thighA), B.thigh);
+    ankle = add(knee, D(p.shinA), B.shin);
+  } else if (ex.mode === 'stand') {
+    ankle = [ANKLE_X, GROUND - 12 - p.ankleLift];
     knee = sub(ankle, D(p.shinA), B.shin);
     pelvis = sub(knee, D(p.thighA), B.thigh);
   } else {
@@ -211,22 +319,25 @@ export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
     knee = add(pelvis, D(p.thighA), B.thigh);
     ankle = add(knee, D(p.shinA), B.shin);
   }
+
   const hipF: Vec = [pelvis[0] - 18, pelvis[1] + 3];
-  const kneeF = add(hipF, D(p.thighA + 7), B.thigh);
-  const ankleF = add(kneeF, D(p.shinA - 5), B.shin);
+  const kneeF = add(hipF, D(p.thighF), B.thigh);
+  const ankleF = add(kneeF, D(p.shinF), B.shin);
 
   const lumbar = add(pelvis, D(p.torso), B.lumbar);
   const thorax = add(lumbar, D(p.thoraxA), B.thorax);
   const neck = add(thorax, D(p.neckA), B.neck);
   const head = add(neck, D(p.neckA), 28);
 
-  const sh = add(thorax, D(p.thoraxA + 118), 14);
+  if (!sh) sh = add(thorax, D(p.thoraxA + 118), 14);
   const shF: Vec = [sh[0] - 16, sh[1] + 5];
-  let elbow: Vec;
-  let hand: Vec;
   let elbowF: Vec;
   let handF: Vec;
-  if (ex.arm === 'ik' || ex.arm === 'floor') {
+  if (ex.mode === 'hang') {
+    const a2 = ik(shF, [hand![0] - 13, hand![1] + 3], B.upper, B.fore, ex.bend);
+    elbowF = a2.elbow;
+    handF = a2.hand;
+  } else if (ex.arm === 'ik' || ex.arm === 'floor') {
     const T: Vec = ex.arm === 'floor' ? [sh[0] + p.hx, GROUND - 12] : [sh[0] + p.hx, sh[1] + p.hy];
     const a1 = ik(sh, T, B.upper, B.fore, ex.bend);
     const a2 = ik(shF, [T[0] - 11, T[1] + 4], B.upper, B.fore, ex.bend);
@@ -237,23 +348,34 @@ export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
   } else {
     elbow = add(sh, D(p.upperA), B.upper);
     hand = add(elbow, D(p.foreA), B.fore);
-    elbowF = add(shF, D(p.upperA - 5), B.upper);
-    handF = add(elbowF, D(p.foreA + 2), B.fore);
+    elbowF = add(shF, D(p.upperF), B.upper);
+    handF = add(elbowF, D(p.foreF), B.fore);
   }
 
   const bar: Vec | null =
-    ex.bar === 'back' ? add(thorax, D(p.thoraxA + 201), 18) : ex.bar === 'hands' ? [hand[0], hand[1]] : null;
+    ex.bar === 'back' ? add(thorax, D(p.thoraxA + 201), 18) : ex.bar === 'hands' ? [hand![0], hand![1]] : null;
+
+  const S: Skeleton = {
+    pelvis, knee, ankle, hipF, kneeF, ankleF, lumbar, thorax, neck, head,
+    sh, elbow: elbow!, hand: hand!, shF, elbowF, handF, bar,
+  };
+
+  // Yere oturt: en alçak temas noktası zemine gelsin. Plank'ın ayakları,
+  // dört ayak duruşunun dizleri bu adım olmadan havada kalıyordu.
+  const contacts = CONTACTS[ex.mode];
+  let dy = 0;
+  if (contacts.length) {
+    const lowest = Math.max(...contacts.map((k) => (S[k] as Vec)[1]));
+    dy = GROUND - 8 - lowest;
+  }
+
   // Bar taşıyan hareketlerde kadraj barın da ağırlığını sayar, yoksa figür
   // tepe noktasında çerçevenin dışına taşıyor.
   const anchor = bar ? (bar[0] + pelvis[0] * 1.4) / 2.4 : pelvis[0];
-  const dx = CENTER_X - anchor;
-  const S: Skeleton = {
-    pelvis, knee, ankle, hipF, kneeF, ankleF, lumbar, thorax, neck, head,
-    sh, elbow, hand, shF, elbowF, handF, bar,
-  };
+  const dx = ex.mode === 'hang' ? 0 : CENTER_X - anchor;
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
     const v = S[k];
-    if (v) (S[k] as Vec) = [v[0] + dx, v[1]];
+    if (v) (S[k] as Vec) = [v[0] + dx, v[1] + dy];
   });
   return S;
 }
@@ -283,26 +405,29 @@ export const FX = 210;
 
 /**
  * Önden görünüm, çözülmüş YAN iskeletin dikey seviyelerini okur; burada
- * yalnızca yanal açıklık (omuz/kalça genişliği, dizin dışa çıkması, tutuş)
- * yazılır. Böylece çömelme derinliği iki görünümde birebir aynı kalıyor ve
- * önden bakışta bir bacak önde bir bacak geride olmuyor.
+ * yalnızca yanal açıklık yazılır. Böylece çömelme derinliği iki görünümde
+ * birebir aynı kalıyor ve önden bakışta bir bacak önde bir bacak geride
+ * olmuyor.
+ *
+ * Elin merkeze uzaklığı `hxF` ile kareden geliyor: yan kaldırış, bant açma,
+ * dış rotasyon gibi yanal düzlemde çalışan hareketlerin bütün hikâyesi bu.
  */
-export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton, grip = 66, bulge = 7): FrontPoints {
+export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoints {
   const kneeFlex = Math.abs(p.shinA - p.thighA);
   const ab = 4 + kneeFlex * 0.16;
   const shDx = 44;
   const hipDx = 23;
   const footDx = 31;
-  const shY = S.thorax[1] + 6;
+  const shY = S.thorax[1] + 6 - p.shLift;
   const mk = (sgn: number): FrontSide => {
     const shX = FX + sgn * shDx;
-    const handX = FX + sgn * grip;
+    const handX = FX + sgn * p.hxF;
     return {
       hip: [FX + sgn * hipDx, S.pelvis[1]],
       knee: [FX + sgn * (footDx + ab), S.knee[1]],
       ankle: [FX + sgn * footDx, S.ankle[1]],
       sh: [shX, shY],
-      elbow: [shX + (handX - shX) * 0.45 + sgn * bulge, S.elbow[1]],
+      elbow: [shX + (handX - shX) * 0.45, S.elbow[1]],
       hand: [handX, S.hand[1]],
     };
   };
@@ -355,6 +480,7 @@ export function boundsFor(ex: RigExercise, view: 'side' | 'front'): string {
     } else {
       (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => eat(S[k], k === 'bar' ? 54 : k === 'head' ? 34 : 24));
       if (ex.mode === 'bench') x1 = Math.max(x1, S.pelvis[0] + 270);
+      if (ex.mode === 'hang') eat([CENTER_X, BAR_Y], 30);
     }
   }
   y1 = Math.max(y1, GROUND + 20);
@@ -388,13 +514,18 @@ export function capsule(a: Vec, b: Vec, wa: number, wb: number): string {
   );
 }
 
-/** Ayak: topuk yerde, parmak ucu yere değer. */
+/**
+ * Ayak. Topuk ayak bileğinin altında, parmak ucu önde; ikisi de yerden
+ * yükselebilir — topuk kalkışında ve basamağa çıkışta ayak havada kalır,
+ * tabanı zemine yapıştırmak yanlış olur.
+ */
 export function footPath(ankle: Vec, dir: number): string {
   const d = D(dir);
   const heel = add(ankle, d, -16);
   const toe = add(ankle, d, B.foot - 16);
   const sx = d[0] < 0 ? -1 : 1;
-  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(GROUND - 6, toe[1])} L ${toe[0] + 6 * sx} ${GROUND} L ${heel[0] - 4 * sx} ${GROUND} Z`;
+  const sole = Math.min(GROUND, ankle[1] + 12);
+  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(sole - 6, toe[1])} L ${toe[0] + 6 * sx} ${Math.min(GROUND, toe[1] + 12)} L ${heel[0] - 4 * sx} ${sole} Z`;
 }
 
-export const footDirFor = (mode: RigMode): number => (mode === 'bench' ? 268 : mode === 'quad' ? 250 : 92);
+export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);
