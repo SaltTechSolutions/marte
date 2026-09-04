@@ -123,26 +123,32 @@ export default function Paywall() {
     <Screen>
       <ScrollView
         contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 30, gap: spacing.md, paddingBottom: spacing.lg }}>
-        <Text variant="h3">Salonun büyüyor</Text>
-        <Text variant="helper" tone="sub" style={{ lineHeight: 20 }}>
-          Ücretsiz plan {FREE_MEMBER_LIMIT} aktif üyeye kadar.
-          {typeof memberCount === 'number' ? ` Şu an ${memberCount} üyen var.` : ''} Yeni üyelik
-          isteklerin <Text variant="helper" weight="700">silinmedi</Text> — sırada bekliyorlar ve
-          limiti yükselttiğin anda onaylayabilirsin.
-        </Text>
+        <Text variant="h3">{alreadySubscribed ? 'Aboneliğin aktif' : 'Salonun büyüyor'}</Text>
+        {alreadySubscribed ? (
+          <Text variant="helper" tone="sub" style={{ lineHeight: 20 }}>
+            Sınırsız üye ekleyebilirsin — sırada bekleyen üyelik isteklerini onaylaman yeterli.
+          </Text>
+        ) : (
+          <Text variant="helper" tone="sub" style={{ lineHeight: 20 }}>
+            Ücretsiz plan {FREE_MEMBER_LIMIT} aktif üyeye kadar.
+            {typeof memberCount === 'number' ? ` Şu an ${memberCount} üyen var.` : ''} Yeni üyelik
+            isteklerin <Text variant="helper" weight="700">silinmedi</Text> — sırada bekliyorlar ve
+            limiti yükselttiğin anda onaylayabilirsin.
+          </Text>
+        )}
 
         {alreadySubscribed ? (
           <Card outlineColor={colors.ok} style={{ gap: 4 }}>
             <Text variant="helper" weight="700">
-              Aboneliğin zaten aktif
+              Üye onaylayamıyor musun?
             </Text>
             <Text variant="label" tone="sub">
-              Üye onaylarken sorun yaşıyorsan uygulamayı kapatıp açman yeterli.
+              Uygulamayı kapatıp açman yeterli — abonelik bilgisi tazelenir.
             </Text>
           </Card>
         ) : null}
 
-        {packages.length > 0 && (
+        {!alreadySubscribed && packages.length > 0 && (
           <View style={{ flexDirection: 'row', gap: 10, marginTop: spacing.sm }}>
             {packages.map((pkg) => {
               const { title, per } = periodLabel(pkg);
@@ -179,7 +185,7 @@ export default function Paywall() {
 
         <Card style={{ gap: 6 }}>
           <Text variant="helper" weight="700">
-            Premium ile
+            Pro ile
           </Text>
           <Text variant="helper" tone="sub" style={{ lineHeight: 22 }}>
             • Sınırsız üye{'\n'}• Tüm antrenör ve program özellikleri{'\n'}• Ödeme defteri ve
@@ -192,7 +198,7 @@ export default function Paywall() {
 
         {/* Only when there is genuinely nothing to buy. Loading is a separate
             state: "no plans" and "not fetched yet" must not look the same. */}
-        {!loading && packages.length === 0 && (
+        {!alreadySubscribed && !loading && packages.length === 0 && (
           <Card outlineColor={colors.warn} style={{ gap: 4 }}>
             <Text variant="helper" weight="700">
               Satın alma şu an açılamadı
@@ -205,7 +211,7 @@ export default function Paywall() {
           </Card>
         )}
 
-        {packages.length > 0 && (
+        {!alreadySubscribed && packages.length > 0 && (
           <>
             <Button
               label={busy ? '…' : 'Aboneliği başlat'}
