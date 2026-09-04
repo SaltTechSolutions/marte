@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { watchPendingRenewals } from '@/data/firebase/renewalRequestRepo';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -52,6 +53,7 @@ export default function AdminMembers() {
   const tenantId = tenantIdIf(activeMembership, canManageGym(activeMembership));
 
   const [requests, setRequests] = useState<TenantMembership[]>([]);
+  const [renewalIds, setRenewalIds] = useState<Set<string>>(new Set());
   // undefined until the roster snapshot lands; [] means the gym really is empty.
   const [members, setMembers] = useState<TenantMembership[] | undefined>(undefined);
   // No tenantId means there's nothing to load — start "loading" only when
@@ -62,6 +64,11 @@ export default function AdminMembers() {
   const [query, setQuery] = useState('');
   const [failed, setFailed] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    return watchPendingRenewals(tenantId, (reqs) => setRenewalIds(new Set(reqs.map((r) => r.memberId))));
+  }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -393,6 +400,11 @@ export default function AdminMembers() {
                 <Text variant="label" tone="sub" numberOfLines={1}>
                   {m.shortCode ? `Giriş kodu ${m.shortCode}` : 'Giriş kodu atanıyor…'}
                 </Text>
+                {renewalIds.has(m.userId) ? (
+                  <Text variant="label" weight="700" style={{ color: colors.p }}>
+                    Yenileme talebi
+                  </Text>
+                ) : null}
               </View>
               <Text tone="sub">›</Text>
             </ListRow>

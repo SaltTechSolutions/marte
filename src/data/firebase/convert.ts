@@ -17,6 +17,7 @@ import {
   Tenant,
   TenantMembership,
   MemberNote,
+  RenewalRequest,
   WorkoutLog,
 } from '../types';
 
@@ -362,5 +363,20 @@ export function memberNoteFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     updatedBy: data.updatedBy,
     updatedByName: data.updatedByName,
     updatedAt: toDate(data.updatedAt) ?? new Date(),
+  };
+}
+
+export function renewalRequestFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): RenewalRequest | null {
+  const data = snap.data();
+  if (!data) return null;
+  return {
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    memberName: data.memberName,
+    status: data.status,
+    note: data.note,
+    createdAt: toDate(data.createdAt) ?? new Date(),
+    handledAt: toDate(data.handledAt),
+    handledBy: data.handledBy,
   };
 }

@@ -13,7 +13,8 @@ import { watchTodayCheckinCount } from '@/data/firebase/checkinRepo';
 import { sumPayments } from '@/utils/revenue';
 import { countActiveMembers, watchPendingRequests } from '@/data/firebase/membershipRepo';
 import { watchPaymentsForTenant } from '@/data/firebase/paymentRepo';
-import { TenantMembership } from '@/data/types';
+import { watchPendingRenewals } from '@/data/firebase/renewalRequestRepo';
+import { RenewalRequest, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';
 
@@ -32,12 +33,14 @@ export default function AdminPanel() {
   const [checkinCount, setCheckinCount] = useState<number | null>(null);
   const [activeMembers, setActiveMembers] = useState<number | null>(null);
   const [requests, setRequests] = useState<TenantMembership[]>([]);
+  const [renewals, setRenewals] = useState<RenewalRequest[]>([]);
   const [monthRevenue, setMonthRevenue] = useState<number | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
     const unsubCheckins = watchTodayCheckinCount(tenantId, setCheckinCount);
     const unsubRequests = watchPendingRequests(tenantId, setRequests);
+    const unsubRenewals = watchPendingRenewals(tenantId, setRenewals);
     countActiveMembers(tenantId).then(setActiveMembers);
     const monthStart = new Date();
     monthStart.setDate(1);
@@ -52,6 +55,7 @@ export default function AdminPanel() {
     return () => {
       unsubCheckins();
       unsubRequests();
+      unsubRenewals();
       unsubPayments();
     };
   }, [tenantId, retryKey]);
@@ -120,6 +124,23 @@ export default function AdminPanel() {
           trailing={<Ionicons name="chevron-forward" size={18} color={colors.sub} />}
         />
       </Pressable>
+
+      {renewals.length > 0 && (
+        <InfoCard
+          outlined
+          onPress={() => router.push('/admin/members')}
+          icon="refresh-outline"
+          title={`${renewals.length} yenileme talebi`}
+          subtitle={`${renewals[0].memberName}${renewals.length > 1 ? ` ve ${renewals.length - 1} kişi` : ''} paketini yenilemek istiyor`}
+          trailing={
+            <View style={{ backgroundColor: colors.p, borderRadius: 11, paddingHorizontal: 13, paddingVertical: 9 }}>
+              <Text variant="helper" weight="700" tone="onp">
+                Paket ata
+              </Text>
+            </View>
+          }
+        />
+      )}
 
       {requests.length > 0 && (
         <InfoCard

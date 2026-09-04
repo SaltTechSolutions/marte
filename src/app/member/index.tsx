@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GymLogo } from '@/components/GymLogo';
 import { MyPackageCard } from '@/components/MyPackageCard';
+import { RenewalRequestRow } from '@/components/RenewalRequestRow';
 import { InfoCard } from '@/components/InfoCard';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
@@ -235,6 +236,12 @@ export default function MemberHome() {
           groupCredits={groupCredits}
           ptCredits={ptCredits}
         />
+        {tenantId ? (
+          <RenewalRequestRow
+            tenantId={tenantId}
+            endsAt={packages.find((p) => p.status === 'active' || p.status === 'frozen')?.endsAt ?? null}
+          />
+        ) : null}
       </View>
 
       {/* --- What's coming --- */}

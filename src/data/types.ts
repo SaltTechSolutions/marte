@@ -865,3 +865,25 @@ export interface MemberNote {
   updatedByName?: string;
   updatedAt: Date;
 }
+
+export type RenewalRequestStatus = 'pending' | 'handled' | 'withdrawn';
+
+/**
+ * A member asking for their package to be renewed (PER-15). Doc id
+ * `{tenantId}_{memberId}`: at most one open request per member per gym, so a
+ * member cannot flood the desk and the admin sees one line per person.
+ *
+ * `handled` is written by the server when a new package is assigned to the
+ * member — the request is answered by the thing the member asked for, not by
+ * an extra tap the admin has to remember.
+ */
+export interface RenewalRequest {
+  tenantId: string;
+  memberId: string;
+  memberName: string;
+  status: RenewalRequestStatus;
+  note?: string;
+  createdAt: Date;
+  handledAt?: Date;
+  handledBy?: string;
+}

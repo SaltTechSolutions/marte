@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
+import { markRenewalHandled, watchMyRenewalRequest } from '@/data/firebase/renewalRequestRepo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
@@ -23,7 +24,7 @@ import {
   watchMemberPackages,
 } from '@/data/firebase/memberPackageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
-import { MemberCredit, MemberPackage, Program, TenantMembership } from '@/data/types';
+import { MemberCredit, MemberPackage, Program, RenewalRequest, TenantMembership } from '@/data/types';
 import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
@@ -74,6 +75,7 @@ export default function AdminMemberDetail() {
   const [freezing, setFreezing] = useState<MemberPackage | null>(null);
   const [freezeDays, setFreezeDays] = useState(15);
   const [busy, setBusy] = useState(false);
+  const [renewal, setRenewal] = useState<RenewalRequest | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
   const [openingProgram, setOpeningProgram] = useState(false);
@@ -101,6 +103,11 @@ export default function AdminMemberDetail() {
   useEffect(() => {
     if (!tenantId || !memberId) return;
     return watchActiveProgramForMember(tenantId, memberId, setProgram);
+  }, [tenantId, memberId]);
+
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchMyRenewalRequest(tenantId, memberId, setRenewal);
   }, [tenantId, memberId]);
 
   if (!tenantId || !memberId) {
@@ -368,6 +375,35 @@ export default function AdminMemberDetail() {
           </View>
         </Card>
       )}
+
+      {renewal?.status === 'pending' ? (
+        <Card style={{ gap: 8 }} outlineColor={colors.p}>
+          <Text variant="helper" weight="700">
+            Yenileme talebi bekliyor
+          </Text>
+          <Text variant="label" tone="sub">
+            {renewal.note ? `"${renewal.note}" · ` : ''}
+            Paket atadığında talep kendiliğinden kapanır. Yenileme uygulama dışında yapıldıysa elle kapat.
+          </Text>
+          <Button
+            label={busy ? '…' : 'Talebi kapat'}
+            variant="ghost"
+            compact
+            disabled={busy}
+            onPress={async () => {
+              if (!user) return;
+              setBusy(true);
+              try {
+                await markRenewalHandled(tenantId, memberId, user.uid);
+              } catch (e) {
+                reportError(e, toast, 'Kapatılamadı, tekrar dene.');
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        </Card>
+      ) : null}
 
       <MemberNoteCard tenantId={tenantId} memberId={memberId} />
 
