@@ -48,6 +48,7 @@ function EditForm({ membership }: { membership: TenantMembership }) {
   const [name, setName] = useState(membership.userDisplayName ?? '');
   const [phone, setPhone] = useState(membership.phone ?? '');
   const [birthDate, setBirthDate] = useState(formatBirthDate(membership.birthDate));
+  const [height, setHeight] = useState(membership.heightCm ? String(membership.heightCm) : '');
   const [saving, setSaving] = useState(false);
   const [guardianEmail, setGuardianEmail] = useState('');
   const [linking, setLinking] = useState(false);
@@ -56,7 +57,10 @@ function EditForm({ membership }: { membership: TenantMembership }) {
   const parsed = parseBirthDate(birthDate);
   // Optional, but a half-typed date must not save silently.
   const birthDateValid = birthDate.trim() === '' || parsed !== null;
-  const canSave = trimmedName.length > 0 && birthDateValid && !saving;
+  const heightNum = height.trim() === '' ? null : Number(height.replace(',', '.'));
+  // The rule accepts 100–250; anything else is a typo, not a person.
+  const heightValid = heightNum === null || (Number.isFinite(heightNum) && heightNum >= 100 && heightNum <= 250);
+  const canSave = trimmedName.length > 0 && birthDateValid && heightValid && !saving;
 
   // Derived from what is SAVED, not from the field being typed into.
   const isMinor = !!membership.birthDate && ageFrom(membership.birthDate) < 18;
@@ -88,6 +92,7 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         userDisplayName: trimmedName,
         phone,
         ...(parsed ? { birthDate: parsed } : {}),
+        heightCm: heightNum === null ? null : Math.round(heightNum),
       });
       toast.success('Bilgilerin güncellendi');
       router.back();
@@ -116,6 +121,12 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         autoCapitalize="none"
         keyboardType="numbers-and-punctuation"
       />
+      <TextField placeholder="Boy (cm) — örn. 176" value={height} onChangeText={setHeight} keyboardType="number-pad" />
+      {!heightValid ? (
+        <Text variant="helper" style={{ color: colors.danger }}>
+          Boyu santimetre olarak yaz: 100 ile 250 arası.
+        </Text>
+      ) : null}
       {!birthDateValid ? (
         <Text variant="helper" style={{ color: colors.danger }}>
           Tarihi yıl-ay-gün olarak yaz: 1990-05-21

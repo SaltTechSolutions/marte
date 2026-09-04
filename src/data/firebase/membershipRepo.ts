@@ -275,12 +275,15 @@ export async function setMembershipRoles(
  */
 export async function updateMemberDetails(
   membershipDocId: string,
-  details: { userDisplayName?: string; phone?: string; birthDate?: Date | null },
+  details: { userDisplayName?: string; phone?: string; birthDate?: Date | null; heightCm?: number | null; photoUrl?: string | null },
 ): Promise<void> {
   const patch: Record<string, unknown> = {};
   if (details.userDisplayName !== undefined) patch.userDisplayName = details.userDisplayName.trim();
   if (details.phone !== undefined) patch.phone = details.phone.trim();
   if (details.birthDate !== undefined && details.birthDate !== null) patch.birthDate = details.birthDate;
+  // `null` clears: a removed photo or height must not leave the old value behind.
+  if (details.heightCm !== undefined) patch.heightCm = details.heightCm === null ? deleteField() : details.heightCm;
+  if (details.photoUrl !== undefined) patch.photoUrl = details.photoUrl === null ? deleteField() : details.photoUrl;
   if (Object.keys(patch).length === 0) return;
   await updateDoc(doc(db, 'tenant_memberships', membershipDocId), patch);
 }

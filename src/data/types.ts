@@ -149,6 +149,20 @@ export interface TenantMembership {
   phone?: string;
   birthDate?: Date;
   /**
+   * Height lives here, not in `measurements`: it is fixed in an adult and
+   * copying it onto every weigh-in would only dirty the weight series. Weight
+   * is read from the latest measurement — a second weight field on the
+   * profile would be two sources of truth (PER-20).
+   */
+  heightCm?: number;
+  /**
+   * Tokenised download URL of the member's own photo. The Storage object is
+   * unreadable by rule; the token in the URL is what grants access, so the
+   * roster can render it without a cross-service rule. Uploaded through the
+   * `uploadMemberPhoto` callable, downscaled on the phone first.
+   */
+  photoUrl?: string;
+  /**
    * Under-18 members are linked to a parent who is themselves a real member of
    * the gym (decision 1) — the parent pays, books and cancels on the child's
    * behalf, so free-text parent details would not have been enough.

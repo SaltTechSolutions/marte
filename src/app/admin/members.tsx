@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
+import { MemberAvatar } from '@/components/MemberAvatar';
 import { watchPendingRenewals } from '@/data/firebase/renewalRequestRepo';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
@@ -35,10 +36,6 @@ function requesterLabel(r: TenantMembership) {
   return r.userDisplayName || r.userEmail || r.userId;
 }
 
-function requesterInitials(r: TenantMembership) {
-  const label = requesterLabel(r);
-  return label.slice(0, 2).toUpperCase();
-}
 
 /** Join requests — one-tap approve, undo instead of confirm dialogs, bulk approve. */
 export default function AdminMembers() {
@@ -283,11 +280,7 @@ export default function AdminMembers() {
         requests.map((r) => (
           <View key={r.id} style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                <Text variant="helper" weight="900" style={{ color: colors.p }}>
-                  {requesterInitials(r)}
-                </Text>
-              </View>
+              <MemberAvatar name={requesterLabel(r)} photoUrl={r.photoUrl} size={40} />
               <View style={{ flex: 1 }}>
                 <Text variant="helper" weight="700" numberOfLines={1}>
                   {requesterLabel(r)}
@@ -388,11 +381,7 @@ export default function AdminMembers() {
             <ListRow
               last={i === visibleMembers.length - 1}
               onPress={() => router.push({ pathname: '/admin/member', params: { memberId: m.userId, memberName: requesterLabel(m) } })}>
-              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                <Text variant="helper" weight="900" style={{ color: colors.p }}>
-                  {requesterInitials(m)}
-                </Text>
-              </View>
+              <MemberAvatar name={requesterLabel(m)} photoUrl={m.photoUrl} size={32} />
               <View style={{ flex: 1 }}>
                 <Text variant="helper" weight="700" numberOfLines={1}>
                   {requesterLabel(m)}

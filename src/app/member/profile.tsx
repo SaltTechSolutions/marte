@@ -11,16 +11,22 @@ import { GymInfoCard } from '@/components/GymInfoCard';
 import { InfoCard } from '@/components/InfoCard';
 import { LeaveGymButton } from '@/components/LeaveGymButton';
 import { LegalLinks } from '@/components/LegalLinks';
+import { MemberAvatar } from '@/components/MemberAvatar';
+import { useToast } from '@/components/Toast';
+import { reportError } from '@/data/errors';
+import { watchMeasurements } from '@/data/firebase/measurementRepo';
+import { deleteMemberPhoto, uploadMemberPhoto } from '@/data/firebase/memberPhotoRepo';
+import * as ImagePicker from 'expo-image-picker';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchMyChildren } from '@/data/firebase/membershipRepo';
+import { updateMemberDetails, watchMyChildren } from '@/data/firebase/membershipRepo';
 import { watchPendingPackageChangeRequests } from '@/data/firebase/packageChangeRepo';
 import { getTenantContact } from '@/data/firebase/tenantRepo';
 import { formatBirthDate } from '@/utils/birthDate';
-import { PackageChangeRequest, TenantContact, TenantMembership } from '@/data/types';
+import { MeasurementEntry, PackageChangeRequest, TenantContact, TenantMembership } from '@/data/types';
 import { signOutAndForget } from '@/services/signOut';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -39,8 +45,50 @@ import { confirmDestructive } from '@/utils/confirm';
 export default function MemberProfile() {
   const router = useRouter();
   const { colors, spacing, tenantName } = useAppTheme();
-  const { user, activeMembership, activeTenant } = useAuth();
+  const { user, activeMembership, activeTenant, refreshMembership } = useAuth();
   const displayName = user?.displayName || user?.email || 'Üye';
+  const toast = useToast();
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [entries, setEntries] = useState<MeasurementEntry[]>([]);
+  const latestWeight = entries[0]?.weightKg ?? null;
+  const bmi =
+    latestWeight && activeMembership?.heightCm
+      ? (latestWeight / Math.pow(activeMembership.heightCm / 100, 2)).toFixed(1)
+      : null;
+
+  useEffect(() => {
+    if (!user || activeMembership?.status !== 'active') return;
+    return watchMeasurements(activeMembership.tenantId, user.uid, setEntries);
+  }, [user, activeMembership]);
+
+  const pickPhoto = async () => {
+    if (!activeMembership) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 });
+    if (res.canceled || !res.assets[0]) return;
+    setPhotoBusy(true);
+    try {
+      const url = await uploadMemberPhoto(res.assets[0].uri);
+      await updateMemberDetails(activeMembership.id, { photoUrl: url });
+      await refreshMembership();
+    } catch (e) {
+      reportError(e, toast, 'Fotoğraf yüklenemedi, tekrar dene.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+  const removePhoto = async () => {
+    if (!activeMembership) return;
+    setPhotoBusy(true);
+    try {
+      await deleteMemberPhoto();
+      await updateMemberDetails(activeMembership.id, { photoUrl: null });
+      await refreshMembership();
+    } catch (e) {
+      reportError(e, toast, 'Fotoğraf kaldırılamadı, tekrar dene.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
 
   const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
@@ -87,12 +135,24 @@ export default function MemberProfile() {
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Card style={{ alignItems: 'center', gap: 6, paddingVertical: spacing.lg }}>
-        <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="h3" style={{ color: colors.p }}>
-            {displayName[0]?.toUpperCase()}
-          </Text>
-        </View>
+        <MemberAvatar name={displayName} photoUrl={activeMembership?.photoUrl} size={72} />
         <Text variant="h3">{displayName}</Text>
+        {activeMembership ? (
+          <View style={{ flexDirection: 'row', gap: 14 }}>
+            <Pressable onPress={pickPhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+              <Text variant="label" weight="700" style={{ color: colors.p }}>
+                {photoBusy ? '…' : activeMembership.photoUrl ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
+              </Text>
+            </Pressable>
+            {activeMembership.photoUrl ? (
+              <Pressable onPress={removePhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+                <Text variant="label" weight="700" tone="sub">
+                  Kaldır
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
         {user?.email && displayName !== user.email ? (
           <Text variant="label" tone="sub">
             {user.email}
@@ -126,7 +186,17 @@ export default function MemberProfile() {
           // members have none and have no reason to suspect it is missing.
           subtitle={
             activeMembership.birthDate
-              ? `${activeMembership.phone ? `${activeMembership.phone} · ` : ''}${formatBirthDate(activeMembership.birthDate)}`
+              ? [
+                  activeMembership.phone,
+                  formatBirthDate(activeMembership.birthDate),
+                  activeMembership.heightCm ? `${activeMembership.heightCm} cm` : null,
+                  latestWeight ? `${latestWeight} kg` : null,
+                  // BMI from profile height + latest weigh-in — the two facts the
+                  // app already holds, never a second weight field.
+                  bmi ? `VKİ ${bmi}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : 'Doğum tarihin eksik — eklemek için dokun'
           }
           subtitleTone={activeMembership.birthDate ? 'sub' : 'warn'}

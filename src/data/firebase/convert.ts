@@ -67,6 +67,8 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     shortCode: data.shortCode,
     phone: data.phone,
     birthDate: toDate(data.birthDate),
+    heightCm: data.heightCm,
+    photoUrl: data.photoUrl,
     guardianId: data.guardianId,
     guardianName: data.guardianName,
     guardianStatus: data.guardianStatus,
