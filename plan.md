@@ -513,9 +513,18 @@ genişletilmeli. Bu, işin kural tarafındaki asıl işi.
 nesnesinin silinmesi girmeli — bugün o listeler yalnızca Firestore
 dokümanlarını temizliyor.
 
-**13. P1-8 + P4-6 · Çoklu salon üyeliği.** Kurallar ve veri modeli destekliyor,
-istemci ilk aktif üyeliği alıp gerisini yok sayıyor. İki salona üye olan kişi
-ikincisine hiç erişemiyor.
+**13. [x] P1-8 + P4-6 · Çoklu salon üyeliği** *(4 Eylül 2026 — istemci
+tarafı; sunucu değişikliği gerekmedi).* `getActiveMemberships` tüm aktif
+üyelikleri **belirli sırayla** döndürüyor (katılım tarihi, sonra salon
+kimliği) — eskiden `docs[0]` okunuyordu, yani aynı hesap iki açılışta iki
+farklı salonu açabiliyordu. Seçim cihazda uid başına saklanıyor ve her
+yüklemede listeye karşı doğrulanıyor, böylece ayrılınan salonda takılı
+kalınmıyor. Rol salona göre yeniden çözülüyor: biri kendi salonunda yönetici,
+gittiği salonda üyedir. Değiştirici yalnızca birden fazla üyelikte görünür —
+tek salonlu hesapların çoğunluğuna hiçbir şey eklemiyor. Çevrimdışı önbellek
+listeyi de taşıyor. *Yapılmadı:* bildirimler hâlâ seçili salona bakıyor,
+başka salondaki bir randevu bildirimi geldiğinde uygulama salonu kendiliğinden
+değiştirmiyor.
 
 **14. PER-17 · WORKOUT — antrenman derinliği (kısaltılmış kapsam).**
 *Model değişikliği yapılırken `ProgramExercise.exerciseId` de eklenmeli —
