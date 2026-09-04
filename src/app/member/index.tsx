@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { GymLogo } from '@/components/GymLogo';
 import { MyPackageCard } from '@/components/MyPackageCard';
 import { RenewalRequestRow } from '@/components/RenewalRequestRow';
+import { isLive, watchAnnouncements } from '@/data/firebase/announcementRepo';
 import { InfoCard } from '@/components/InfoCard';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Text } from '@/components/Text';
@@ -23,7 +24,7 @@ import { watchPaymentsForMember } from '@/data/firebase/paymentRepo';
 import { cancelPtSession, watchUpcomingSessionsForMember } from '@/data/firebase/ptSessionRepo';
 import { cancellationConsequence } from '@/utils/cancellation';
 import { watchCompletedThisWeek } from '@/data/firebase/workoutLogRepo';
-import { GymClass, MemberCredit, MemberPackage, PackageChangeRequest, Payment, PtSession } from '@/data/types';
+import { GymClass, MemberCredit, MemberPackage, PackageChangeRequest, Payment, PtSession, Announcement } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';
 import { confirmDestructive } from '@/utils/confirm';
@@ -80,9 +81,15 @@ export default function MemberHome() {
   const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
   const [visits, setVisits] = useState<Date[]>([]);
   const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [packages, setPackages] = useState<MemberPackage[]>([]);
   const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
   const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    return watchAnnouncements(tenantId, setAnnouncements, undefined, 5);
+  }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -175,6 +182,18 @@ export default function MemberHome() {
       {/* A pending offer outranks even today's action — it's the one thing
           on this screen with a real deadline (expiresAt) and a decision only
           this person can make. */}
+      {/* Gym announcements — the one channel the gym has to everyone at
+          once. Latest two only; the rest is noise on a home screen. */}
+      {announcements.filter((a) => isLive(a)).slice(0, 2).map((a) => (
+        <InfoCard
+          key={a.id}
+          icon="megaphone-outline"
+          title={a.title}
+          subtitle={a.body}
+          outlined
+        />
+      ))}
+
       {packageOffers.map((offer) => (
         <InfoCard
           key={offer.id}

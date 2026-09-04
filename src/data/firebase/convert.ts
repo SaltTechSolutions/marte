@@ -16,6 +16,7 @@ import {
   PtSession,
   Tenant,
   TenantMembership,
+  Announcement,
   MemberNote,
   RenewalRequest,
   WorkoutLog,
@@ -378,5 +379,19 @@ export function renewalRequestFromDoc(snap: QueryDocumentSnapshot | DocumentSnap
     createdAt: toDate(data.createdAt) ?? new Date(),
     handledAt: toDate(data.handledAt),
     handledBy: data.handledBy,
+  };
+}
+
+export function announcementFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): Announcement {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId,
+    title: data.title,
+    body: data.body ?? '',
+    createdBy: data.createdBy,
+    createdByName: data.createdByName,
+    createdAt: toDate(data.createdAt) ?? new Date(),
+    expiresAt: toDate(data.expiresAt),
   };
 }

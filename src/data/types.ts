@@ -832,7 +832,7 @@ export interface AppNotification {
  * do not want (P4-3). Mirrors `functions/src/push.ts` — the server is the one
  * that enforces it; this copy exists so the settings screen can name them.
  */
-export type NotificationCategory = 'bookings' | 'packages' | 'payments' | 'programs';
+export type NotificationCategory = 'bookings' | 'packages' | 'payments' | 'programs' | 'announcements';
 
 export interface UserSettings {
   /** Missing key = on. Only categories the person has switched off are stored. */
@@ -848,6 +848,7 @@ export const NOTIFICATION_CATEGORIES: { key: NotificationCategory; title: string
   { key: 'packages', title: 'Paket', detail: 'Teklif, bitiş uyarısı, dondurma' },
   { key: 'payments', title: 'Ödeme', detail: 'Onaylanan ve düzeltilen kayıtlar' },
   { key: 'programs', title: 'Antrenman programı', detail: 'Antrenörün yazdığı yeni program' },
+  { key: 'announcements', title: 'Salon duyuruları', detail: '"Yarın kapalıyız", kampanya, yeni ders' },
 ];
 
 /**
@@ -886,4 +887,22 @@ export interface RenewalRequest {
   createdAt: Date;
   handledAt?: Date;
   handledBy?: string;
+}
+
+/**
+ * A message from the gym to everyone in it (PER-16) — "yarın kapalıyız",
+ * "yeni ders açıldı". Written by an admin, read by every active member and
+ * trainer, pushed once on creation. It is not a chat: no replies, no edits;
+ * a wrong announcement is deleted and re-posted.
+ */
+export interface Announcement {
+  id: string;
+  tenantId: string;
+  title: string;
+  body: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: Date;
+  /** After this the home screen stops showing it. Absent = shown until deleted. */
+  expiresAt?: Date;
 }

@@ -52,6 +52,7 @@ export default function AdminLayout() {
           <Stack.Screen name="packages" options={{ ...detail, title: 'Paketler' }} />
           <Stack.Screen name="package-form" options={{ ...detail, title: 'Paket' }} />
           <Stack.Screen name="promotions" options={{ ...detail, title: 'Promosyonlar' }} />
+          <Stack.Screen name="announcements" options={{ ...detail, title: 'Duyurular' }} />
           <Stack.Screen name="promotion-form" options={{ ...detail, title: 'Promosyon' }} />
           <Stack.Screen name="member" options={{ ...detail, title: 'Üye' }} />
           <Stack.Screen name="builder" options={{ ...detail, title: 'Program' }} />

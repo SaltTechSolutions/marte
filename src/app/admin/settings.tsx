@@ -514,6 +514,31 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         </View>
       </Pressable>
 
+      <Pressable onPress={() => router.push('/admin/announcements')}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            backgroundColor: colors.surf,
+            borderWidth: 1,
+            borderColor: colors.line,
+            borderRadius: radius.md,
+            padding: 13,
+          }}>
+          <Ionicons name="notifications-outline" size={18} color={colors.txt} />
+          <View style={{ flex: 1 }}>
+            <Text variant="helper" weight="700">
+              Duyurular
+            </Text>
+            <Text variant="label" tone="sub">
+              Herkese tek seferde — yarın kapalıyız, yeni ders, kampanya
+            </Text>
+          </View>
+          <Text tone="sub">›</Text>
+        </View>
+      </Pressable>
+
       <Pressable onPress={() => router.push('/admin/promotions')}>
         <View
           style={{
