@@ -393,6 +393,17 @@ kapsamlı sorgularıyla birlikte.
 
 ### Kuşak 3 — üye derinliği ve ölçeklenince acıtanlar
 
+**[x] PER-19 hareket motoru** *(3 Eylül 2026 — kullanıcı isteği).* Figür tek
+bacaklı/tek kollu ve yönsüzdü. Uzak uzuv, yön kuralı (dik: ayak; yüzüstü:
+baş–kalça; sırtüstü: yukarı; açık `face`), önden görünüş (`view:'front'`,
+aynalama, glif yüz), oynat/sürükle motoru (rAF, 30 fps, odak dışında durur,
+"hareketi azalt"a uyar). Kütüphane 46→38 (makine/kablo çıktı), 34 arketip —
+aynı kareyi paylaşıp farklı hareket olan 11 tanesi ayrıldı. Üreticide zincir
+normalizasyonu (segment uzunluğu A'dan, yön B'den, ankraj ekleminden) ve
+yer/prop teması denetimi; ilk çalıştırmada 45 uyarı, şimdi sıfır. Uygulamada
+görülmedi (simülatör yasak); galeri artifact motorun birebiri. `poseReviewed`
+hâlâ false.
+
 **[x] Salon logosu uygulama içinde + yönetici atama (3 sınırı)** *(3 Eylül
 2026, kullanıcı isteği — deploy edildi).* Logo yalnızca sahibin ayar
 ekranındaki yükleme düğmesinde çiziliyordu. `GymLogo` (expo-image, disk
