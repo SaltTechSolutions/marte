@@ -1,6 +1,5 @@
 import { collection, deleteField, doc, getDoc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import * as FileSystem from 'expo-file-system';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { app, db } from '@/services/firebase';
@@ -152,6 +151,11 @@ export async function updateTenantContact(tenantId: string, contact: TenantConta
  * the picker's own cached copy is left to the OS, which owns that cache.
  */
 export async function uploadTenantLogo(tenantId: string, localUri: string): Promise<string> {
+  // Required here, not at module scope: a client without the native module
+  // (an older Expo Go) must lose only logo upload, not the whole app at
+  // startup — the same discipline as the Google Sign-In module.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const ImageManipulator = require('expo-image-manipulator') as typeof import('expo-image-manipulator');
   const resized = await ImageManipulator.manipulateAsync(
     localUri,
     [{ resize: { width: LOGO_SIZE, height: LOGO_SIZE } }],

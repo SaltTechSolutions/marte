@@ -17,6 +17,7 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
+import { EXERCISES } from '@/data/exerciseLibrary';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { FREE_MEMBER_LIMIT } from '@/data/seats';
 import {
@@ -556,7 +557,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
               Hareket kütüphanesi
             </Text>
             <Text variant="label" tone="sub">
-              46 hareket — çalışan kaslar, anlatım, sorun bildirme
+              {EXERCISES.length} hareket — çalışan kaslar, anlatım, sorun bildirme
             </Text>
           </View>
           <Text tone="sub">›</Text>

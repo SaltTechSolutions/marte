@@ -30,7 +30,7 @@ import { matchesTr } from '@/utils/search';
  * somewhere you switch between, the same call `member/profile` made.
  *
  * Two scopes. `scope=program` shows only what the member has actually been
- * assigned: handing them all 46 movements invites them to train off a
+ * assigned: handing them the whole catalogue invites them to train off a
  * catalogue their coach never prescribed, and the coach is the one
  * accountable for what they do. Without the param it is the whole library,
  * which is what a trainer picking a movement needs.

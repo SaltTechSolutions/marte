@@ -1,106 +1,218 @@
-import React from 'react';
-import Svg, { Circle, Line, Polygon, Rect } from 'react-native-svg';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, LayoutChangeEvent, Pressable, View } from 'react-native';
+import Svg, { Circle, Ellipse, Line, Path, Polygon, Rect } from 'react-native-svg';
 
 import { PoseFrame } from '@/data/exerciseLibrary';
 import { mix } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { DrawFrame, easeInOutCubic, facing, interpolate, repPhase } from '@/utils/pose';
+
+import { Text } from './Text';
 
 /**
- * One frame of a movement, drawn as a jointed figure (PER-19).
+ * One resolved frame of a movement as a jointed figure (PER-19).
  *
- * A pose is eight joint coordinates plus an optional implement — deliberately
- * coarse. It answers "which way does my body fold, and where does the weight
- * sit" and nothing finer; a figure detailed enough to imply exact joint angles
- * would be making promises the data cannot keep. Photographs or video replace
- * this later.
+ * Two things the first version could not say. It drew ONE leg and ONE arm,
+ * so a lunge's trailing leg had to be faked with a rectangle prop and a
+ * bird-dog looked like someone lying down; and its head was a plain disc, so
+ * nothing told you which way the body faced. The far limbs now draw behind
+ * the torso, faded; the near limbs draw over a halo in the card colour so the
+ * two never merge where they cross; a face wedge and eye point the way the
+ * toes do (up, when lying); the chest side of the torso bows slightly.
  *
- * The floor line and the props (bench, box, machine pad) are drawn first so
- * the body always sits in front of them.
+ * Still deliberately coarse — eight near joints and five far ones. It answers
+ * "which way does my body fold, where is the weight, which leg is which", not
+ * exact angles the data cannot promise.
  */
-export function PoseDiagram({ pose, showArrow = false }: { pose: PoseFrame; showArrow?: boolean }) {
+export function PoseFigure({ frame, arrow, height = 132 }: { frame: DrawFrame; arrow?: PoseFrame['arrow']; height?: number }) {
   const { colors } = useAppTheme();
-  // Lifted well off `surf2`: the figure is a flat silhouette with no outline
-  // or shading, so on a dark card the raw token left it barely visible.
-  const limb = mix(colors.surf2, colors.txt, 0.24);
+  const near = mix(colors.surf2, colors.txt, 0.55);
+  const far = mix(colors.surf2, colors.txt, 0.14);
+  const halo = colors.bg1;
   const propFill = mix(colors.surf2, colors.txt, 0.08);
-  // NOT `colors.line`: that token is an rgba() string and `mix` reads hex.
   const outline = mix(colors.surf2, colors.txt, 0.3);
+  const f = frame;
+  const [fx, fy] = facing(f);
 
-  const seg = (a: [number, number], b: [number, number], w: number, key: string) => (
-    <Line
-      key={key}
-      x1={a[0]}
-      y1={a[1]}
-      x2={b[0]}
-      y2={b[1]}
-      stroke={limb}
-      strokeWidth={w}
-      strokeLinecap="round"
-    />
+  const seg = (a: [number, number], b: [number, number], w: number, stroke: string, key: string) => (
+    <Line key={key} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke={stroke} strokeWidth={w} strokeLinecap="round" />
   );
+  const nearSegs: [[number, number], [number, number], number, string][] = [
+    [f.shoulder, f.hip, 30, 'torso'], [f.hip, f.knee, 21, 'thigh'], [f.knee, f.ankle, 17, 'shin'], [f.ankle, f.toe, 11, 'foot'],
+    [f.head, f.shoulder, 13, 'neck'], [f.shoulder, f.elbow, 15, 'upperArm'], [f.elbow, f.wrist, 13, 'forearm'],
+  ];
+  const mid: [number, number] = [(f.shoulder[0] + f.hip[0]) / 2, (f.shoulder[1] + f.hip[1]) / 2];
+  const chest = `M${f.shoulder[0]},${f.shoulder[1]} Q${mid[0] + fx * 11},${mid[1] + fy * 11} ${f.hip[0]},${f.hip[1]}`;
+  const [hx, hy] = f.head;
+  const r = 15;
+  const wedge = [
+    [hx + fx * (r + 7), hy + fy * (r + 7)],
+    [hx + fx * r * 0.55 - fy * 7, hy + fy * r * 0.55 + fx * 7],
+    [hx + fx * r * 0.55 + fy * 7, hy + fy * r * 0.55 - fx * 7],
+  ].map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ');
 
   const arrowHead = () => {
-    if (!showArrow || !pose.arrow) return null;
-    const [x1, y1, x2, y2] = pose.arrow;
+    if (!arrow) return null;
+    const [x1, y1, x2, y2] = arrow;
     const a = Math.atan2(y2 - y1, x2 - x1);
     const s = 8;
-    const points = [
-      [x2, y2],
-      [x2 - s * Math.cos(a - 0.45), y2 - s * Math.sin(a - 0.45)],
-      [x2 - s * Math.cos(a + 0.45), y2 - s * Math.sin(a + 0.45)],
-    ]
-      .map((p) => p.map((n) => n.toFixed(1)).join(','))
-      .join(' ');
+    const pts = [[x2, y2], [x2 - s * Math.cos(a - 0.45), y2 - s * Math.sin(a - 0.45)], [x2 - s * Math.cos(a + 0.45), y2 - s * Math.sin(a + 0.45)]]
+      .map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ');
     return (
       <>
-        <Line
-          x1={x1}
-          y1={y1}
-          x2={x2 - 6 * Math.cos(a)}
-          y2={y2 - 6 * Math.sin(a)}
-          stroke={colors.p}
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeDasharray="6 4"
-        />
-        <Polygon points={points} fill={colors.p} />
+        <Line x1={x1} y1={y1} x2={x2 - 6 * Math.cos(a)} y2={y2 - 6 * Math.sin(a)} stroke={colors.p} strokeWidth={2.5} strokeLinecap="round" strokeDasharray="6 4" />
+        <Polygon points={pts} fill={colors.p} />
       </>
     );
   };
 
   return (
-    <Svg viewBox="0 0 320 220" width="100%" height={120}>
-      {(pose.props ?? []).map((r, i) => (
-        <Rect
-          key={`prop${i}`}
-          x={r.x}
-          y={r.y}
-          width={r.w}
-          height={r.h}
-          rx={r.r ?? 3}
-          fill={propFill}
-          stroke={outline}
-        />
+    <Svg viewBox="0 0 320 220" width="100%" height={height}>
+      {(f.props ?? []).map((p, i) => (
+        <Rect key={`prop${i}`} x={p.x} y={p.y} width={p.w} height={p.h} rx={p.r ?? 3} fill={propFill} stroke={outline} />
       ))}
       <Line x1={16} y1={207} x2={304} y2={207} stroke={outline} strokeWidth={2} />
+      <Ellipse cx={(f.ankle[0] + f.toe[0]) / 2} cy={208} rx={34} ry={4} fill={outline} opacity={0.35} />
 
-      {pose.bar && (
+      {/* far limbs — behind everything, faded */}
+      {seg(f.hip, f.farKnee, 17, far, 'farThigh')}
+      {seg(f.farKnee, f.farAnkle, 14, far, 'farShin')}
+      {seg(f.farAnkle, f.farToe, 9, far, 'farFoot')}
+      {seg(f.shoulder, f.farElbow, 12, far, 'farUpperArm')}
+      {seg(f.farElbow, f.farWrist, 10, far, 'farForearm')}
+
+      {f.bar && (
         <>
-          <Circle cx={pose.bar[0]} cy={pose.bar[1]} r={21} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />
-          <Circle cx={pose.bar[0]} cy={pose.bar[1]} r={6} fill={colors.p} />
+          <Circle cx={f.bar[0]} cy={f.bar[1]} r={21} fill={colors.bg1} stroke={colors.p} strokeWidth={3} />
+          <Circle cx={f.bar[0]} cy={f.bar[1]} r={5} fill={colors.p} />
         </>
       )}
 
-      {seg(pose.shoulder, pose.hip, 30, 'torso')}
-      {seg(pose.hip, pose.knee, 21, 'thigh')}
-      {seg(pose.knee, pose.ankle, 17, 'shin')}
-      {seg(pose.ankle, pose.toe, 11, 'foot')}
-      {seg(pose.head, pose.shoulder, 13, 'neck')}
-      <Circle cx={pose.head[0]} cy={pose.head[1]} r={15} fill={limb} />
-      {seg(pose.shoulder, pose.elbow, 15, 'upperArm')}
-      {seg(pose.elbow, pose.wrist, 13, 'forearm')}
+      {/* near limbs — halo first so they stay separate from the far ones */}
+      {nearSegs.map(([a, b, w, k]) => seg(a, b, w + 4, halo, `halo-${k}`))}
+      <Circle cx={hx} cy={hy} r={r + 2} fill={halo} />
+      {nearSegs.map(([a, b, w, k]) => seg(a, b, w, near, k))}
+      <Path d={chest} stroke={near} strokeWidth={30} fill="none" strokeLinecap="round" />
+      <Circle cx={hx} cy={hy} r={r} fill={near} />
+      <Polygon points={wedge} fill={near} strokeLinejoin="round" />
+      <Circle cx={hx + fx * 6 - fy * 4} cy={hy + fy * 6 + fx * 4} r={2.2} fill={colors.bg1} />
+      {[f.hip, f.knee, f.elbow].map((j, i) => (
+        <Circle key={`j${i}`} cx={j[0]} cy={j[1]} r={3.2} fill={colors.p} />
+      ))}
 
       {arrowHead()}
     </Svg>
+  );
+}
+
+const REP_MS = 1500;
+const HOLD_MS = 220;
+/** ~30 fps is plenty for a 20-primitive SVG and keeps the JS thread quiet. */
+const FRAME_MS = 33;
+
+/**
+ * The movement, played.
+ *
+ * A small ping-pong engine: `requestAnimationFrame`, eased interpolation
+ * between the two authored frames, a beat of stillness at each end. State
+ * updates are throttled to ~30 fps and the loop stops whenever the screen
+ * loses focus, so nothing runs while the phone sits on the bench.
+ *
+ * Dragging the track scrubs and pauses; Başlangıç / Bitiş jump to the ends
+ * — the two frames the trainer authored are still one tap away. With the
+ * OS "reduce motion" setting on, it opens paused on the start frame and the
+ * play button still works: the person chose less motion, not none.
+ */
+export function PoseMotion({ start, end, showArrow = true }: { start: PoseFrame; end: PoseFrame | null; showArrow?: boolean }) {
+  const { colors, radius } = useAppTheme();
+  const [t, setT] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [trackW, setTrackW] = useState(1);
+  const originRef = useRef(0);
+  const lastPaintRef = useRef(0);
+  const isHold = end === null;
+
+  useEffect(() => {
+    if (isHold) return;
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
+      if (!cancelled && !reduce) setPlaying(true);
+    });
+    return () => { cancelled = true; };
+  }, [isHold]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!playing || isHold) return undefined;
+      let raf = 0;
+      originRef.current = performance.now() - HOLD_MS - t * REP_MS;
+      const tick = (now: number) => {
+        if (now - lastPaintRef.current >= FRAME_MS) {
+          lastPaintRef.current = now;
+          setT(repPhase(now - originRef.current, REP_MS, HOLD_MS));
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+      // `t` is intentionally not a dependency: the loop owns it while playing.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [playing, isHold]),
+  );
+
+  const scrubTo = (x: number) => {
+    setPlaying(false);
+    setT(Math.min(1, Math.max(0, x / trackW)));
+  };
+  const frame = interpolate(start, end, easeInOutCubic(t));
+
+  return (
+    <View style={{ backgroundColor: colors.bg1, borderRadius: radius.md, padding: 8, gap: 6 }}>
+      <PoseFigure frame={frame} arrow={showArrow && t < 0.02 ? start.arrow : undefined} />
+      {isHold ? (
+        <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+          İzometrik hareket — pozisyonu koru, tekrar yok.
+        </Text>
+      ) : (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Pressable
+            onPress={() => setPlaying((p) => !p)}
+            accessibilityRole="button"
+            accessibilityLabel={playing ? 'Durdur' : 'Oynat'}
+            hitSlop={6}
+            style={{ minWidth: 44, minHeight: 44, borderRadius: 22, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
+            <Text variant="helper" weight="900" tone="onp">
+              {playing ? '❚❚' : '▶'}
+            </Text>
+          </Pressable>
+          <View
+            onLayout={(e: LayoutChangeEvent) => setTrackW(Math.max(1, e.nativeEvent.layout.width))}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={(e) => scrubTo(e.nativeEvent.locationX)}
+            onResponderMove={(e) => scrubTo(e.nativeEvent.locationX)}
+            accessibilityRole="adjustable"
+            accessibilityLabel="Kare"
+            accessibilityValue={{ min: 0, max: 100, now: Math.round(t * 100) }}
+            style={{ flex: 1, height: 44, justifyContent: 'center' }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.surf2 }}>
+              <View style={{ width: `${t * 100}%`, height: 6, borderRadius: 3, backgroundColor: colors.p }} />
+            </View>
+            <View style={{ position: 'absolute', left: Math.max(0, t * trackW - 9), width: 18, height: 18, borderRadius: 9, backgroundColor: colors.p, borderWidth: 3, borderColor: colors.bg1 }} />
+          </View>
+          <Pressable onPress={() => { setPlaying(false); setT(0); }} hitSlop={8} accessibilityRole="button">
+            <Text variant="label" weight="700" style={{ color: t < 0.02 ? colors.p : colors.sub }}>
+              Başlangıç
+            </Text>
+          </Pressable>
+          <Pressable onPress={() => { setPlaying(false); setT(1); }} hitSlop={8} accessibilityRole="button">
+            <Text variant="label" weight="700" style={{ color: t > 0.98 ? colors.p : colors.sub }}>
+              Bitiş
+            </Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }

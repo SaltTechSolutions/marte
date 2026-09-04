@@ -16,7 +16,7 @@ import { ExerciseReportReason } from '@/data/types';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { MuscleMap, MuscleMapLegend } from '@/components/MuscleMap';
-import { PoseDiagram } from '@/components/PoseDiagram';
+import { PoseMotion } from '@/components/PoseDiagram';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import {
@@ -24,7 +24,6 @@ import {
   Exercise,
   MuscleId,
   POSE_ARCHETYPES,
-  PoseFrame,
   exerciseById,
   exerciseByName,
 } from '@/data/exerciseLibrary';
@@ -94,7 +93,7 @@ function difficultyTone(difficulty: string, colors: ReturnType<typeof useAppThem
 }
 
 function Detail({ exercise }: { exercise: Exercise }) {
-  const { colors, spacing, radius } = useAppTheme();
+  const { colors, spacing } = useAppTheme();
   const [view, setView] = useState<'front' | 'back'>('front');
 
   const pose = POSE_ARCHETYPES[exercise.archetype];
@@ -152,21 +151,10 @@ function Detail({ exercise }: { exercise: Exercise }) {
               HAREKET
             </Text>
             <Text variant="label" tone="sub">
-              {pose.end ? '2 kare' : 'sabit duruş'}
+              {pose.end ? 'canlı' : 'sabit duruş'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <PoseCard label="Başlangıç" step={1} pose={pose.start} showArrow />
-            {pose.end ? (
-              <PoseCard label="Bitiş" step={2} pose={pose.end} />
-            ) : (
-              <View style={{ flex: 1, backgroundColor: colors.bg1, borderRadius: radius.md, padding: 10, justifyContent: 'center' }}>
-                <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
-                  İzometrik hareket — pozisyonu koru, tekrar yok.
-                </Text>
-              </View>
-            )}
-          </View>
+          <PoseMotion start={pose.start} end={pose.end} />
           {!exercise.poseReviewed && (
             <Text variant="label" tone="sub">
               ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
@@ -382,34 +370,6 @@ function ReportProblem({ exercise }: { exercise: Exercise }) {
   );
 }
 
-function PoseCard({
-  label,
-  step,
-  pose,
-  showArrow = false,
-}: {
-  label: string;
-  step: number;
-  pose: PoseFrame;
-  showArrow?: boolean;
-}) {
-  const { colors, radius } = useAppTheme();
-  return (
-    <View style={{ flex: 1, backgroundColor: colors.bg1, borderRadius: radius.md, padding: 8, paddingBottom: 6 }}>
-      <PoseDiagram pose={pose} showArrow={showArrow} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 4 }}>
-        <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: colors.p, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="label" tone="onp" weight="900" style={{ fontSize: 10 }}>
-            {step}
-          </Text>
-        </View>
-        <Text variant="label" weight="700">
-          {label}
-        </Text>
-      </View>
-    </View>
-  );
-}
 
 function BackButton() {
   const router = useRouter();

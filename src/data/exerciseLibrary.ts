@@ -1,8 +1,9 @@
 // GENERATED — do not hand-edit. Rebuild with
 // `marte06/scripts/build_exercise_library.py` (source data lives beside it).
 //
-// The exercise visualiser (PER-19): 46 canonical movements distilled from the
-// ~146 lines across the 14 program templates, each with a muscle-activation
+// The exercise visualiser (PER-19): 38 canonical movements distilled from the
+// ~146 lines across the 14 program templates (machine and cable moves were
+// dropped on 3 Sep 2026 — barbell, dumbbell, bench, band and bodyweight only), each with a muscle-activation
 // map and start/end pose frames. Ported from the Claude Design canvas
 // "Exercise Library.dc.html", which was itself built against this app's own
 // theme tokens.
@@ -137,6 +138,17 @@ export interface PoseFrame {
   knee: [number, number];
   ankle: [number, number];
   toe: [number, number];
+  /**
+   * The far-side limb, drawn behind the torso, only where it does something
+   * different from the near one (a lunge's trailing leg, bird-dog's planted
+   * leg and reaching arm). Absent means "same as the near limb" and the
+   * renderer draws a faded copy — right for squats, hinges and presses.
+   */
+  farKnee?: [number, number];
+  farAnkle?: [number, number];
+  farToe?: [number, number];
+  farElbow?: [number, number];
+  farWrist?: [number, number];
   /** Loaded implement (bar/dumbbell/handle). Absent for bodyweight moves. */
   bar?: [number, number];
   /** [x1,y1,x2,y2] motion hint, drawn dashed on the start frame only. */
@@ -188,33 +200,17 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
     start: { head: [128, 96], shoulder: [144, 112], elbow: [150, 146], wrist: [152, 178], hip: [178, 142], knee: [156, 172], ankle: [150, 206], toe: [174, 206], bar: [152, 180] },
     end: { head: [128, 96], shoulder: [144, 112], elbow: [168, 120], wrist: [176, 142], hip: [178, 142], knee: [156, 172], ankle: [150, 206], toe: [174, 206], bar: [176, 144], arrow: [204, 182, 204, 150] },
   },
-  seated_row: {
-    start: { head: [210, 60], shoulder: [196, 80], elbow: [168, 88], wrist: [140, 86], hip: [196, 150], knee: [196, 182], ankle: [196, 206], toe: [218, 206], bar: [140, 86], arrow: [104, 86, 140, 86], props: [{ x: 178, y: 150, w: 36, h: 16, r: 6 }] },
-    end: { head: [210, 60], shoulder: [196, 80], elbow: [214, 90], wrist: [212, 64], hip: [196, 150], knee: [196, 182], ankle: [196, 206], toe: [218, 206], bar: [212, 64], props: [{ x: 178, y: 150, w: 36, h: 16, r: 6 }] },
-  },
-  lat_pulldown: {
-    start: { head: [150, 58], shoulder: [150, 84], elbow: [122, 66], wrist: [100, 40], hip: [150, 150], knee: [150, 182], ankle: [150, 206], toe: [172, 206], bar: [100, 40], arrow: [110, 86, 100, 52], props: [{ x: 140, y: 150, w: 22, h: 58, r: 6 }] },
-    end: { head: [150, 58], shoulder: [150, 84], elbow: [124, 96], wrist: [126, 122], hip: [150, 150], knee: [150, 182], ankle: [150, 206], toe: [172, 206], bar: [126, 122], props: [{ x: 140, y: 150, w: 22, h: 58, r: 6 }] },
-  },
   pullup: {
     start: { head: [152, 74], shoulder: [150, 100], elbow: [138, 68], wrist: [126, 36], hip: [150, 160], knee: [148, 186], ankle: [176, 176], toe: [192, 172], bar: [126, 34] },
     end: { head: [152, 52], shoulder: [150, 78], elbow: [140, 58], wrist: [126, 36], hip: [150, 138], knee: [148, 164], ankle: [176, 154], toe: [192, 150], bar: [126, 34], arrow: [196, 110, 196, 84] },
   },
   unilateral_lunge: {
     start: { head: [150, 46], shoulder: [150, 70], elbow: [136, 96], wrist: [140, 120], hip: [152, 134], knee: [152, 172], ankle: [150, 206], toe: [174, 206], bar: [140, 122] },
-    end: { head: [144, 70], shoulder: [146, 94], elbow: [132, 118], wrist: [136, 142], hip: [142, 152], knee: [176, 178], ankle: [176, 206], toe: [198, 206], bar: [136, 144], props: [{ x: 96, y: 180, w: 14, h: 26, r: 5 }] },
+    end: { head: [144, 70], shoulder: [146, 94], elbow: [132, 118], wrist: [136, 142], hip: [142, 152], knee: [176, 178], ankle: [176, 206], toe: [198, 206], farKnee: [104, 186], farAnkle: [84, 196], farToe: [102, 206], bar: [136, 144] },
   },
   step_up: {
     start: { head: [110, 66], shoulder: [112, 90], elbow: [100, 116], wrist: [104, 140], hip: [114, 150], knee: [114, 182], ankle: [114, 206], toe: [136, 206], bar: [104, 142], props: [{ x: 150, y: 174, w: 70, h: 32, r: 4 }] },
-    end: { head: [176, 52], shoulder: [178, 76], elbow: [166, 102], wrist: [170, 126], hip: [180, 136], knee: [188, 166], ankle: [188, 174], toe: [210, 174], bar: [170, 128], props: [{ x: 150, y: 174, w: 70, h: 32, r: 4 }] },
-  },
-  leg_press: {
-    start: { head: [70, 146], shoulder: [92, 148], elbow: [92, 172], wrist: [92, 190], hip: [130, 172], knee: [104, 180], ankle: [104, 152], toe: [104, 132], bar: [104, 120], props: [{ x: 50, y: 100, w: 30, h: 90, r: 8 }] },
-    end: { head: [70, 146], shoulder: [92, 148], elbow: [92, 172], wrist: [92, 190], hip: [130, 172], knee: [178, 178], ankle: [220, 178], toe: [220, 158], bar: [220, 148], props: [{ x: 50, y: 100, w: 30, h: 90, r: 8 }] },
-  },
-  leg_extension_curl: {
-    start: { head: [80, 66], shoulder: [92, 88], elbow: [80, 106], wrist: [92, 120], hip: [100, 148], knee: [100, 180], ankle: [76, 190], toe: [60, 190], bar: [76, 190], props: [{ x: 64, y: 118, w: 50, h: 36, r: 6 }] },
-    end: { head: [80, 66], shoulder: [92, 88], elbow: [80, 106], wrist: [92, 120], hip: [100, 148], knee: [100, 180], ankle: [150, 168], toe: [168, 158], bar: [150, 168], props: [{ x: 64, y: 118, w: 50, h: 36, r: 6 }] },
+    end: { head: [176, 52], shoulder: [178, 76], elbow: [166, 102], wrist: [170, 126], hip: [180, 136], knee: [188, 166], ankle: [188, 174], toe: [210, 174], farKnee: [152, 178], farAnkle: [132, 206], farToe: [154, 206], bar: [170, 128], props: [{ x: 150, y: 174, w: 70, h: 32, r: 4 }] },
   },
   calf_raise: {
     start: { head: [150, 58], shoulder: [150, 84], elbow: [142, 110], wrist: [144, 136], hip: [150, 150], knee: [150, 182], ankle: [148, 200], toe: [170, 206] },
@@ -230,11 +226,11 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
   },
   floor_core_supine: {
     start: { head: [248, 168], shoulder: [220, 168], elbow: [200, 146], wrist: [200, 118], hip: [150, 168], knee: [110, 150], ankle: [80, 168], toe: [60, 168] },
-    end: { head: [248, 168], shoulder: [220, 168], elbow: [236, 148], wrist: [248, 124], hip: [150, 168], knee: [150, 168], ankle: [176, 180], toe: [196, 182], arrow: [130, 132, 158, 150] },
+    end: { head: [248, 168], shoulder: [220, 168], elbow: [236, 148], wrist: [248, 124], hip: [150, 168], knee: [150, 168], ankle: [176, 180], toe: [196, 182], farKnee: [110, 150], farAnkle: [80, 168], farToe: [60, 168], farElbow: [200, 146], farWrist: [200, 118], arrow: [130, 132, 158, 150] },
   },
   bird_dog: {
     start: { head: [244, 134], shoulder: [216, 140], elbow: [216, 172], wrist: [216, 204], hip: [150, 140], knee: [150, 174], ankle: [150, 204], toe: [132, 206] },
-    end: { head: [248, 128], shoulder: [218, 138], elbow: [218, 170], wrist: [218, 204], hip: [150, 140], knee: [104, 130], ankle: [68, 122], toe: [52, 120], arrow: [92, 152, 64, 136] },
+    end: { head: [248, 128], shoulder: [218, 138], elbow: [218, 170], wrist: [218, 204], hip: [150, 140], knee: [104, 130], ankle: [68, 122], toe: [52, 120], farKnee: [150, 174], farAnkle: [150, 204], farToe: [132, 206], farElbow: [256, 120], farWrist: [292, 106], arrow: [92, 152, 64, 136] },
   },
   quadruped_spine: {
     start: { head: [248, 120], shoulder: [216, 138], elbow: [216, 172], wrist: [216, 204], hip: [150, 148], knee: [150, 174], ankle: [150, 204], toe: [132, 206] },
@@ -243,10 +239,6 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
   hinged_fly: {
     start: { head: [128, 96], shoulder: [144, 112], elbow: [148, 144], wrist: [150, 176], hip: [178, 142], knee: [156, 172], ankle: [150, 206], toe: [174, 206], bar: [150, 178] },
     end: { head: [128, 96], shoulder: [144, 112], elbow: [160, 126], wrist: [178, 110], hip: [178, 142], knee: [156, 172], ankle: [150, 206], toe: [174, 206], bar: [180, 108], arrow: [200, 168, 204, 124] },
-  },
-  leg_curl_prone: {
-    start: { head: [262, 146], shoulder: [228, 148], elbow: [210, 166], wrist: [200, 182], hip: [150, 150], knee: [104, 152], ankle: [74, 154], toe: [58, 154], bar: [74, 156], props: [{ x: 64, y: 158, w: 204, h: 12, r: 5 }] },
-    end: { head: [262, 146], shoulder: [228, 148], elbow: [210, 166], wrist: [200, 182], hip: [150, 150], knee: [104, 152], ankle: [112, 110], toe: [112, 94], bar: [112, 108], arrow: [58, 138, 94, 114], props: [{ x: 64, y: 158, w: 204, h: 12, r: 5 }] },
   },
   mobility_bodyweight: {
     start: { head: [150, 58], shoulder: [150, 84], elbow: [122, 96], wrist: [98, 96], hip: [150, 150], knee: [150, 182], ankle: [150, 206], toe: [170, 206] },
@@ -257,8 +249,8 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
     end: { head: [150, 58], shoulder: [150, 84], elbow: [150, 96], wrist: [178, 96], hip: [150, 150], knee: [150, 182], ankle: [150, 206], toe: [170, 206], bar: [178, 96] },
   },
   carry: {
-    start: { head: [120, 58], shoulder: [120, 84], elbow: [110, 110], wrist: [108, 140], hip: [120, 150], knee: [110, 182], ankle: [104, 206], toe: [126, 206], bar: [108, 142] },
-    end: { head: [190, 58], shoulder: [190, 84], elbow: [180, 110], wrist: [178, 140], hip: [190, 150], knee: [204, 182], ankle: [210, 206], toe: [232, 206], bar: [178, 142], arrow: [150, 60, 180, 60] },
+    start: { head: [120, 58], shoulder: [120, 84], elbow: [110, 110], wrist: [108, 140], hip: [120, 150], knee: [110, 182], ankle: [104, 206], toe: [126, 206], farKnee: [132, 182], farAnkle: [140, 206], farToe: [162, 206], bar: [108, 142] },
+    end: { head: [190, 58], shoulder: [190, 84], elbow: [180, 110], wrist: [178, 140], hip: [190, 150], knee: [204, 182], ankle: [210, 206], toe: [232, 206], farKnee: [178, 182], farAnkle: [170, 206], farToe: [192, 206], bar: [178, 142], arrow: [150, 60, 180, 60] },
   },
   standing_arm_isolation: {
     start: { head: [150, 58], shoulder: [150, 84], elbow: [146, 110], wrist: [148, 138], hip: [150, 150], knee: [150, 182], ankle: [150, 206], toe: [170, 206], bar: [148, 140] },
@@ -395,8 +387,8 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'front-hack-squat', tr: 'Front squat / Hack squat', en: 'Front squat or hack squat',
-    difficulty: 'ORTA', equipTr: 'Squat rack veya makine', equipEn: 'Rack or machine',
+    id: 'front-hack-squat', tr: 'Front squat', en: 'Front squat',
+    difficulty: 'ORTA', equipTr: 'Squat rack', equipEn: 'Squat rack',
     primary: ['quadRF', 'quadVL', 'quadVM'],
     secondary: ['gluteMax', 'adductors', 'absMid'],
     archetype: 'squat_goblet',
@@ -404,19 +396,6 @@ export const EXERCISES: Exercise[] = [
     steps: [
       ['Bar ön omuzlarda ya da makinede sırt sabit.', 'Bar racked on front shoulders, or back braced on the machine.'],
       ['Diklemesine in, göğüs yukarıda kalsın.', 'Descend vertically, chest stays up.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'leg-press', tr: 'Leg press', en: 'Leg press',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Leg press makinesi', equipEn: 'Leg press machine',
-    primary: ['quadRF', 'quadVL', 'quadVM', 'gluteMax'],
-    secondary: ['hamBF', 'hamST'],
-    archetype: 'leg_press',
-    setsHint: '3×10-12', restHint: '75-90 sn',
-    steps: [
-      ['Ayaklar omuz genişliği, sırt sedyeye yaslı.', 'Feet shoulder-width, back flat against the pad.'],
-      ['Dizleri göğse yaklaştır, sonra topuklardan it.', 'Lower knees toward chest, then drive through the heels.'],
     ],
     poseReviewed: false,
   },
@@ -512,31 +491,6 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'leg-extension', tr: 'Leg extension', en: 'Leg extension',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Makine', equipEn: 'Machine',
-    primary: ['quadRF', 'quadVL', 'quadVM'],
-    secondary: [],
-    archetype: 'leg_extension_curl',
-    setsHint: '3×12', restHint: '60-75 sn',
-    steps: [
-      ['Diz makinenin dönüş noktasıyla hizalı.', 'Knee aligned with the machine\'s pivot.'],
-      ['Bacakları uzat, üstte 1 sn sık.', 'Extend the legs, squeeze 1s at the top.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'leg-curl', tr: 'Leg curl', en: 'Leg curl',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Makine', equipEn: 'Machine',
-    primary: ['hamBF', 'hamST'],
-    secondary: ['gastroMed'],
-    archetype: 'leg_curl_prone',
-    setsHint: '3×12', restHint: '60-75 sn',
-    steps: [
-      ['Dizi bük, topuğu kalçaya yaklaştır.', 'Flex the knee, bring the heel toward the glutes.'],
-    ],
-    poseReviewed: false,
-  },
-  {
     id: 'calf-raise', tr: 'Calf raise', en: 'Calf raise',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok / makine', equipEn: 'Bodyweight or machine',
     primary: ['gastroLat', 'gastroMed', 'soleus'],
@@ -573,19 +527,6 @@ export const EXERCISES: Exercise[] = [
     steps: [
       ['Bank 30°, dumbbell\'lar göğüs hizasında.', 'Bench at 30°, dumbbells at chest height.'],
       ['Yukarı it, tam kilitleme yapma.', 'Press up without fully locking the elbows.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'machine-chest-press', tr: 'Göğüs pres (makine)', en: 'Machine chest press',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Makine', equipEn: 'Machine',
-    primary: ['pecSternal', 'deltFront', 'triLat'],
-    secondary: ['serratus'],
-    archetype: 'bench_press',
-    setsHint: '3×10-12', restHint: '75-90 sn',
-    steps: [
-      ['Kollar tutamağa, dirsekler bilek altında.', 'Grip handles, elbows under wrists.'],
-      ['İterek kilitle, kontrollü geri getir.', 'Press to lockout, return with control.'],
     ],
     poseReviewed: false,
   },
@@ -642,32 +583,6 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'seated-cable-row', tr: 'Oturarak kürek', en: 'Seated cable row',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo makinesi', equipEn: 'Cable machine',
-    primary: ['lat', 'trapMid', 'deltPost', 'biceps'],
-    secondary: ['erector'],
-    archetype: 'seated_row',
-    setsHint: '3×10-12', restHint: '75-90 sn',
-    steps: [
-      ['Göğsü aç, dirsekleri gövdeye yakın çek.', 'Open the chest, pull with elbows close to the body.'],
-      ['Kürek kemiklerini sıkarak bitir.', 'Finish by squeezing the shoulder blades.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'lat-pulldown', tr: 'Lat pulldown', en: 'Lat pulldown',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo makinesi', equipEn: 'Cable machine',
-    primary: ['lat', 'biceps', 'trapLower'],
-    secondary: ['deltPost'],
-    archetype: 'lat_pulldown',
-    setsHint: '3×10-12', restHint: '75-90 sn',
-    steps: [
-      ['Barı göğsün üstüne çek, dirsekler aşağı-geri.', 'Pull the bar to the upper chest, elbows down and back.'],
-      ['Kontrollü olarak yukarı bırak.', 'Return under control.'],
-    ],
-    poseReviewed: false,
-  },
-  {
     id: 'pullup', tr: 'Barfiks', en: 'Pull-up',
     difficulty: 'İLERİ', equipTr: 'Barfiks barı', equipEn: 'Pull-up bar',
     primary: ['lat', 'biceps', 'trapLower'],
@@ -677,19 +592,6 @@ export const EXERCISES: Exercise[] = [
     steps: [
       ['Omuzlar aşağı-geri, çeneyi bara kadar çek.', 'Shoulders down and back, pull chin to the bar.'],
       ['Kontrollü in.', 'Lower with control.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'face-pull', tr: 'Yüz çekişi', en: 'Face pull',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo/bant', equipEn: 'Cable or band',
-    primary: ['deltPost', 'trapMid', 'infra'],
-    secondary: [],
-    archetype: 'mobility_generic',
-    setsHint: '3×15', restHint: '45-60 sn',
-    steps: [
-      ['İpi yüze doğru çek, dirsekler yukarı-geri.', 'Pull the rope toward the face, elbows up and back.'],
-      ['Dış rotasyonla bitir.', 'Finish with external rotation.'],
     ],
     poseReviewed: false,
   },
@@ -728,18 +630,6 @@ export const EXERCISES: Exercise[] = [
     setsHint: '3×12', restHint: '45-60 sn',
     steps: [
       ['Dirsekleri gövdeye sabitle, ağırlığı kaldır.', 'Pin elbows to the sides, curl the weight up.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'triceps-pushdown', tr: 'Triceps pushdown', en: 'Triceps pushdown',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo makinesi', equipEn: 'Cable machine',
-    primary: ['triLat', 'triLong'],
-    secondary: [],
-    archetype: 'standing_arm_isolation',
-    setsHint: '3×12-15', restHint: '45-60 sn',
-    steps: [
-      ['Dirsekler gövdeye sabit, ipi aşağı it.', 'Elbows pinned to the sides, push the rope down.'],
     ],
     poseReviewed: false,
   },
@@ -930,8 +820,8 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Goblet squat': 'goblet-squat',
   'Goblet squat (hafif dumbbell)': 'goblet-squat',
   'Goblet squat veya leg press': 'goblet-squat',
-  'Göğüs pres (makine veya dumbbell)': 'machine-chest-press',
-  'Göğüs pres (makine)': 'machine-chest-press',
+  'Göğüs pres (makine veya dumbbell)': null,
+  'Göğüs pres (makine)': null,
   'Günün ilk hareketi — boş bar / hafif': null,
   'Hack squat veya front squat': 'front-hack-squat',
   'Hammer curl + overhead triceps (süperset)': 'biceps-curl',
@@ -949,20 +839,20 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Kol çevirme + kedi-deve': 'arm-circles',
   'Kol çevirme + omuz silkme': 'arm-circles',
   'Kürek / kol ergometresi / ip atlama': null,
-  'Lat pulldown': 'lat-pulldown',
-  'Lat pulldown (geniş)': 'lat-pulldown',
-  'Lat pulldown (nötr tutuş)': 'lat-pulldown',
-  'Lat pulldown veya barfiks': 'lat-pulldown',
+  'Lat pulldown': null,
+  'Lat pulldown (geniş)': null,
+  'Lat pulldown (nötr tutuş)': null,
+  'Lat pulldown veya barfiks': null,
   'Lateral raise': 'lateral-raise',
-  'Leg curl': 'leg-curl',
-  'Leg extension': 'leg-extension',
-  'Leg press': 'leg-press',
+  'Leg curl': null,
+  'Leg extension': null,
+  'Leg press': null,
   'Lunge + gövde rotasyonu (world\'s greatest stretch)': 'worlds-greatest-stretch',
   'McGill curl-up': 'mcgill-curl-up',
   'Omuz pres (makine veya dumbbell)': 'shoulder-press',
   'Omuz silkme (shrug)': 'shrug',
-  'Oturarak kürek': 'seated-cable-row',
-  'Oturarak kürek (seated row)': 'seated-cable-row',
+  'Oturarak kürek': null,
+  'Oturarak kürek (seated row)': null,
   'Overhead press (bar)': 'shoulder-press',
   'Pallof pres': 'pallof-press',
   'Plank': 'plank',
@@ -988,8 +878,8 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Yan yatarak bacak kaldırma / bantlı yan adım': null,
   'Yerinde hafif koşu / ip atlama': null,
   'Yerinde yürüyüş / hafif zıplama': null,
-  'Yüz çekişi': 'face-pull',
-  'Yüz çekişi (face pull)': 'face-pull',
+  'Yüz çekişi': null,
+  'Yüz çekişi (face pull)': null,
   'Çene içeri çekme (chin tuck)': 'chin-tuck',
   'Ölü böcek': 'dead-bug',
   'Ölü böcek (dead bug)': 'dead-bug',

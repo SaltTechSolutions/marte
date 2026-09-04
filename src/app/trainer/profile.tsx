@@ -15,6 +15,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
+import { EXERCISES } from '@/data/exerciseLibrary';
 import { reportError } from '@/data/errors';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { grantCalendarShare, revokeCalendarShare, watchSharesGrantedToMe, watchSharesIGranted } from '@/data/firebase/calendarShareRepo';
@@ -236,7 +237,7 @@ export default function TrainerProfile() {
               Hareket kütüphanesi
             </Text>
             <Text variant="label" tone="sub">
-              46 hareket — çalışan kaslar ve anlatım
+              {EXERCISES.length} hareket — çalışan kaslar ve anlatım
             </Text>
           </View>
           <Text tone="sub">›</Text>
