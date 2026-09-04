@@ -458,7 +458,12 @@ demek zorunda. (b) **İzin günü** — `TrainerAvailability.exceptions` modelde
 var, `availability.tsx` her kayıtta `[]` gönderiyor. (c) **Üye notu** —
 antrenörün üye başına, üyeye kapalı notu (sakatlık, hedef).
 
-**10. PER-15 · Üyeden yenileme talebi.** Paket yalnızca admin atıyor; biten
+**10. [x] PER-15 · Üyeden yenileme talebi** *(3 Eylül 2026 — deploy edildi;
+uygulamada görülmedi).* `renewal_requests/{tenantId}_{memberId}`, üye başına
+tek açık talep; paket kartının altında yalnızca anlamlıyken (paket yok ya da
+≤7 gün) görünür. Yöneticiye push + panel kartı + listede rozet + detayda
+şerit. **Paket atanınca sunucu talebi kendiliğinden kapatır** — yöneticinin
+hatırlaması gereken ek dokunuş yok. *Özgün madde:* Paket yalnızca admin atıyor; biten
 paketin üyesi "salon yöneticisi atadığında görünür" duvarına bakıyor.
 "Yenileme talebi gönder" → admin'e bildirim + panelde bekleyen talep.
 PKG-12 yaklaşan bitişlerin üye ayağı; 5'ten sonra.

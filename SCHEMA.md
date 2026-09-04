@@ -787,6 +787,27 @@ Cloud Functions (Admin SDK) okur. Temizlik mekanizması yok (plan.md P1-7).
 
 ---
 
+### `renewal_requests` — üyeden yenileme talebi (PER-15)
+**Doküman kimliği: `{tenantId}_{memberId}`** — üye başına en fazla bir açık talep.
+
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` / `memberId` / `memberName` | | `memberName` denormalize |
+| `status` | `'pending' \| 'handled' \| 'withdrawn'` | |
+| `note` | string? | ≤ 300 karakter, üyenin mesajı |
+| `createdAt` / `handledAt` / `handledBy` | | |
+
+**Kurallar:** üye kendi talebini açar (kimlik sabit) ve geri çeker; personel
+okur; yönetici `handled` yapar. **Sunucu da kapatır:** `resolveRenewalOnAssignment`
+üyeye yeni `member_packages` yazıldığında bekleyen talebi `handled` yapar —
+talep, üyenin istediği şeyin kendisiyle cevaplanır, yöneticinin hatırlaması
+gereken ek bir dokunuşla değil. `notifyAdminsOnRenewalRequest` yöneticilere
+push (`packages` kategorisi).
+
+**Index:** `tenantId ASC, status ASC`
+
+---
+
 ### `member_notes` — antrenörün üye notu (PER-14c)
 **Doküman kimliği: `{tenantId}_{memberId}`**
 
