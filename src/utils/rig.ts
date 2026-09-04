@@ -95,6 +95,14 @@ export type RigArm = 'angles' | 'ik' | 'floor';
 export type RigBar = 'back' | 'hands' | 'hips' | null;
 export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | null;
 
+/**
+ * Elde taşınan yük. `bar` barın NEREDE olduğunu söyler (sırtta, elde,
+ * kalçada); bu ise NE olduğunu: barbell tek uzun bir demir, dambıl iki ayrı
+ * ağırlık. Dambıl hareketlerinde barbell tabağı çizmek yükü olduğundan çok
+ * daha büyük gösteriyordu.
+ */
+export type RigLoad = 'barbell' | 'dumbbell' | null;
+
 export interface RigExercise {
   mode: RigMode;
   /** `ik`: eller hedefe gider, `floor`: eller yere basar, `angles`: açıyla çizilir. */
@@ -104,6 +112,8 @@ export interface RigExercise {
   bend: number;
   /** Bir tekrarın süresi (ms). */
   dur: number;
+  /** Yazılmazsa `bar` varsa barbell, yoksa yük yok. */
+  load?: RigLoad;
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;

@@ -28,6 +28,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   },
   // Ağırlık göğüste: gövde squat'tan dik, derinlik biraz daha az.
   squat_goblet: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3600,
     kf: [
       { t: 0, tr: 'Ayakta', p: { shinA: 178, thighA: 183, torso: 6, thoraxA: 3, neckA: 3, upperA: 205, foreA: 62 } },
@@ -37,6 +38,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
     ],
   },
   bulgarian_split_squat: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3800, prop: 'bench',
     kf: [
       { t: 0, tr: 'Üst', p: { shinA: 180, thighA: 178, torso: 10, thoraxA: 6, neckA: 4, upperA: 186, foreA: 184, thighF: 230, shinF: 240 } },
@@ -80,6 +82,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   // Romen: diz açısı neredeyse sabit, hareketin tamamı kalçadan. Kollar
   // dünyaya göre dik sarkar — ağırlık bacağın önünden aşağı iner.
   hip_hinge_dumbbell: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3800,
     kf: [
       { t: 0, tr: 'Ayakta', p: { shinA: 178, thighA: 183, torso: 5, thoraxA: 3, neckA: 3, upperA: 180, foreA: 180 } },
@@ -129,7 +132,8 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
     ],
   },
   incline_press: {
-    mode: 'bench', arm: 'ik', bar: 'hands', bend: -1, dur: 3400, prop: 'bench',
+    mode: 'bench', arm: 'ik', bar: null, bend: -1, dur: 3400, prop: 'bench',
+    load: 'dumbbell',
     kf: [
       { t: 0, tr: 'Göğüste', p: { thighA: 250, shinA: 150, torso: 68, thoraxA: 72, neckA: 76, hx: -40, hy: -52 } },
       { t: 0.45, tr: 'Kilit', p: { thighA: 250, shinA: 150, torso: 68, thoraxA: 72, neckA: 74, hx: -26, hy: -134 } },
@@ -171,6 +175,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   },
   // Dirsek gövdeye sabit, yalnızca ön kol döner.
   standing_arm_isolation: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3000,
     kf: [
       { t: 0, tr: 'Açık', p: { shinA: 178, thighA: 182, torso: 4, thoraxA: 2, neckA: 2, upperA: 184, foreA: 178 } },
@@ -182,6 +187,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
 
   // --- Yanal düzlem: önden okunur ---------------------------------------
   lateral_raise_front: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3200, view: 'front',
     kf: [
       { t: 0, tr: 'Yanda', p: { shinA: 178, thighA: 182, torso: 2, thoraxA: 1, neckA: 1, upperA: 176, foreA: 176, hxF: 44 } },
@@ -219,6 +225,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
     ],
   },
   shrug_front: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 2800, view: 'front',
     kf: [
       { t: 0, tr: 'Aşağıda', p: { shinA: 178, thighA: 182, torso: 2, upperA: 180, foreA: 180, hxF: 52, shLift: 0 } },
@@ -229,6 +236,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   },
   // Menteşede, kollar yanlara açılır — yanal düzlem, önden okunur.
   hinged_fly: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3400, view: 'front',
     kf: [
       { t: 0, tr: 'Aşağıda', p: { shinA: 188, thighA: 152, torso: 70, thoraxA: 66, neckA: 54, upperA: 176, foreA: 174, hxF: 46 } },
@@ -303,6 +311,7 @@ export const RIG_ARCHETYPES: Record<string, RigExercise> = {
   // arkaya salınır ve HER İKİ ucta da ayak yere yakın kalır — havada
   // yürüyen bir figür yerine gerçek bir adım.
   carry: {
+    load: 'dumbbell',
     mode: 'stand', arm: 'angles', bar: null, bend: 1, dur: 3600,
     kf: [
       { t: 0, tr: 'Adım', p: { shinA: 178, thighA: 183, torso: 3, thoraxA: 2, neckA: 2, upperA: 180, foreA: 180, thighF: 160, shinF: 190 } },

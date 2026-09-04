@@ -131,6 +131,22 @@ export function RigFigure({
       {...(deg === undefined ? {} : { transform: `rotate(${deg} ${c[0]} ${c[1]})` })}
     />
   );
+  /**
+   * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin
+   * kavradığı yön bu. Barbell tabağını küçültmek dambıl yapmıyor; iki ayrı
+   * ağırlık olduğu görünmeli.
+   */
+  const dumbbell = (key: string, c: Vec, from: Vec, far?: boolean) => {
+    const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
+    const fill = far ? skinFar : metal;
+    return (
+      <G key={key} transform={`rotate(${deg} ${c[0]} ${c[1]})`}>
+        <Rect x={c[0] - 17} y={c[1] - 4} width={34} height={8} rx={4} fill={fill} stroke={line} />
+        <Rect x={c[0] - 25} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.p} strokeWidth={1.5} />
+        <Rect x={c[0] + 12} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.p} strokeWidth={1.5} />
+      </G>
+    );
+  };
   const plate = (c: Vec | null) =>
     c ? (
       <G key="plate">
@@ -144,7 +160,7 @@ export function RigFigure({
 
   const body =
     plane === 'front' ? (
-      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC }} />
+      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC, accent: colors.p }} />
     ) : (
       <>
         <G key="floor">
@@ -235,6 +251,8 @@ export function RigFigure({
           <Circle cx={S.hand[0]} cy={S.hand[1]} r={10} fill={skin} stroke={line} />
           <Circle cx={S.handF[0]} cy={S.handF[1]} r={9} fill={skinFar} stroke={line} />
         </G>
+        {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
+        {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         <G key="head" transform={`rotate(${p.neckA} ${S.head[0]} ${S.head[1]})`}>
           <Ellipse cx={S.head[0]} cy={S.head[1] - 3} rx={23} ry={26} fill={skin} stroke={line} />
           <Path
@@ -268,7 +286,7 @@ function FrontBody({
   rig: RigExercise;
   p: RigPose;
   S: Skeleton;
-  colors: { skin: string; joint: string; line: string; metal: string; floorC: string };
+  colors: { skin: string; joint: string; line: string; metal: string; floorC: string; accent: string };
 }) {
   const F = frontPoints(rig, p, S);
   const cx = F.cx;
@@ -299,6 +317,13 @@ function FrontBody({
       {limb('f', s.elbow, s.hand, 18, 18, 12, 0.3)}
       {ball('e', s.elbow, 10)}
       <Circle cx={s.hand[0]} cy={s.hand[1]} r={10} fill={c.skin} stroke={c.line} />
+      {rig.load === 'dumbbell' && (
+        <G key="db" transform={`rotate(${(Math.atan2(s.hand[1] - s.elbow[1], s.hand[0] - s.elbow[0]) * 180) / Math.PI + 90} ${s.hand[0]} ${s.hand[1]})`}>
+          <Rect x={s.hand[0] - 17} y={s.hand[1] - 4} width={34} height={8} rx={4} fill={c.metal} stroke={c.line} />
+          <Rect x={s.hand[0] - 25} y={s.hand[1] - 13} width={13} height={26} rx={4} fill={c.metal} stroke={c.accent} strokeWidth={1.5} />
+          <Rect x={s.hand[0] + 12} y={s.hand[1] - 13} width={13} height={26} rx={4} fill={c.metal} stroke={c.accent} strokeWidth={1.5} />
+        </G>
+      )}
     </G>
   );
   const bar = (key: string) =>
