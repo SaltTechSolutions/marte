@@ -114,8 +114,22 @@ içeriği değil), **yaş doğrulama hayır** (doğum tarihi kullanıcı beyanı
 (Supergym-88, uydurma veri), İngilizce inceleme notu (uygulama Türkçe;
 incelemeci menüde kaybolursa kesin ret) ve iletişim bilgileri.
 
-**Kalan tek iş: 6.5" ekran görüntüleri.** Görselleri Supergym-88'den almak
-gerekiyor ve bu ajanın yapabileceği bir iş değil.
+*(5 Eylül 2026 — iOS kapandı, sürüm incelemede.)* **6.5" ekran görüntüleri**
+Supergym-88 demo hesabıyla simülatörden alındı ve beş görsel `APP_IPHONE_65`
+setine yüklendi. **App Privacy** konsoldan tamamlandı: 13 veri türü (Health,
+Photos or Videos, Other User Content, Purchase History, Crash Data ve Other
+Data Types eklendi), Crash Data dışında hepsi kimliğe bağlı, hiçbirinde
+takip yok — yani ATT ekranı gerekmiyor. Cevaplar tahmin değil, koddan
+çıkarıldı; gerekçeleriyle `gymentra-mobile/APP_PRIVACY.md` içinde. Beyan
+yayınlandıktan sonra son engel de kalktı ve **sürüm 1.0 (build 22)
+incelemeye gönderildi** → `WAITING_FOR_REVIEW`.
+
+Yol üzerinde bir Apple tuhaflığı: aynı anda tek bir açık "gönderim kabı"na
+izin veriliyor ama gönderilmemiş bir kap **iptal edilemiyor** ("not in
+cancellable state"), yani her yarım kalan `precheck` bir sonrakini
+kilitliyordu. `asc.mjs` artık yeni kap açamıyorsa mevcut boş kabı yeniden
+kullanıyor ve `precheck` kabı iptal etmek yerine maddesini silip boş
+bırakıyor (`submissions` komutu kapları listeler).
 
 ### Kuşak 1.5 — [x] TAMAMLANDI (3 Eylül 2026)
 
@@ -2411,19 +2425,19 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] Sign in with Apple (Google girişi sunulduğu için zorunlu) — aktif
 - [x] `ITSAppUsesNonExemptEncryption: false`
 - [x] Kamera / fotoğraf izin açıklamaları (Türkçe, `app.json` plugin'lerinde)
-- [x] App Privacy anketi dolduruldu (Contact Info, Fitness, Financial,
-      Identifiers — hepsi App Functionality + Linked, tracking yok)
+- [x] App Privacy anketi dolduruldu ve **yayınlandı** — 13 veri türü; Crash
+      Data dışında hepsi kimliğe bağlı, hiçbirinde tracking yok
+      (gerekçeler: `gymentra-mobile/APP_PRIVACY.md`)
 - [x] Gizlilik politikası URL'i
 - [x] Açıklama, anahtar kelimeler, destek/pazarlama URL'i
-- [ ] **Ekran görüntüleri** — 6.5" (1284×2778) seti hazırlanıyor
+- [x] **Ekran görüntüleri** — 6.1" ve 6.5" setleri yüklü (Supergym-88)
 - [x] **Hesap silme akışı** (P0-2) — uygulama içi `DeleteAccountButton` üç rol
       ekranında da var, `deleteMyAccount` callable canlıda, web sayfası yayında
 - [x] Uygulama içi gizlilik/şartlar bağlantısı (P0-4) — `LegalLinks`, üç rol
       ekranında
-- [ ] Yaş sınırı (age rating) anketi
-- [ ] Demo hesap bilgileri — inceleme ekibi giriş yapabilmeli; salon kodu ve
-      onaylı bir test üyesi App Review Notes'a yazılmalı (**kritik**: onay
-      bekleyen bir hesapla incelemeci hiçbir şey göremez ve ret gelir)
+- [x] Yaş sınırı (age rating) anketi — 25 alan, 4+ sonucu
+- [x] Demo hesap bilgileri — `uye01@supergym88.test`, onaylı üye; İngilizce
+      inceleme notu ve iletişim bilgileri yazıldı
 - [ ] TestFlight ile gerçek cihaz doğrulaması
 - [ ] Privacy manifest (`PrivacyInfo.xcprivacy`) — Expo SDK 57 çoğunu üretir,
       üçüncü parti SDK'lar için doğrulanmalı
