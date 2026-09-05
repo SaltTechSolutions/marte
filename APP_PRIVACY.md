@@ -1,7 +1,13 @@
-# App Privacy — App Store Connect yanıtları
+# Gizlilik beyanları — Apple App Privacy ve Google Play Veri güvenliği
 
-App Store Connect → GymEntra → **App Privacy** bölümünde işaretlenecek
-cevaplar. Apple bu bölümü API'ye açmıyor; konsoldan elle doldurulur.
+App Store Connect → GymEntra → **App Privacy** ve Play Console → Uygulama
+içeriği → **Veri güvenliği** bölümlerinde işaretlenecek cevaplar. İki mağaza
+da bu bölümü API'ye açmıyor; konsoldan doldurulur.
+
+**İkisi aynı gerçeği anlatmalı.** Farklı beyan etmek incelemede göze çarpar
+ve her iki yönde de (eksik ya da fazla beyan) politika ihlalidir. Koda yeni
+bir veri alanı girdiğinde bu dosya, App Privacy ve Veri güvenliği birlikte
+güncellenir.
 
 Cevaplar **koddan** çıkarıldı, tahminle değil. Kaynak dosyalar her satırın
 yanında.
@@ -53,6 +59,32 @@ verinin NEREDEN geldiği değil, NE olduğu. Üyenin uygulamaya girdiği kilo ve
 vücut ölçüleri Apple'ın taksonomisinde **Health**, antrenman kayıtları
 **Fitness** sayılıyor. Bunları "toplamıyoruz" diye beyan etmek, incelemecinin
 Gelişim ekranında gördüğü şeyle çelişir.
+
+## Play karşılığı — Veri güvenliği taksonomisi
+
+Google'ın kategorileri Apple'ınkiyle birebir örtüşmüyor. Karşılıklar:
+
+| Apple | Play |
+|---|---|
+| Name, Email Address, Phone Number | Kişisel bilgiler → Ad, E-posta adresi, Telefon numarası |
+| Other Data Types (doğum tarihi) | Kişisel bilgiler → **Diğer bilgiler** |
+| User ID | Kişisel bilgiler → Kullanıcı kimlikleri *(tek "paylaşılan" kalem — Firebase)* |
+| Health | Sağlık ve fitness → Sağlık bilgisi |
+| Fitness | Sağlık ve fitness → Fitness bilgisi |
+| Photos or Videos | Fotoğraflar ve videolar → **Fotoğraflar** *(isteğe bağlı)* |
+| Other User Content | Uygulama etkinliği → **Kullanıcı tarafından oluşturulan diğer içerikler** |
+| Purchase History, Other Financial Info | Finansal bilgiler → İşlem geçmişi |
+| Device ID | Cihaz veya diğer kimlikler |
+| Crash Data | Uygulama bilgileri ve performansı → Kilitlenme günlükleri |
+
+Play tarafında **bilerek işaretlenmeyenler** (5 Eylül 2026'da kaldırıldı,
+çünkü koda karşılığı yok):
+
+- **Kullanıcı ödeme bilgileri** — kart bilgisi hiç görülmüyor; salonun ödeme
+  defteri elle tutulan bir kayıt, para hareketi uygulamanın dışında.
+- **Teşhisler** ve **uygulama performansıyla ilgili diğer veriler** — Sentry
+  `tracesSampleRate: 0`, yalnızca çökme gönderiyor.
+- **Uygulama işlemleri** — analitik SDK'sı yok.
 
 ## Üçüncü taraf SDK'ları
 
