@@ -83,17 +83,25 @@ ile" → "Pro ile". Aktif abonenin görebildiği tek eylem "Geri dön". Tip kont
 ve 148 test geçiyor. **Cihazda doğrulanmadı** — abonelikli bir salonla paywall
 açılıp satın alma düğmesinin gerçekten kaybolduğu görülmeli.
 
-**2. Mağaza girişini bitir (Android).** Metinler `PLAY_STORE.md` §1'de hazır,
-1024×500 öne çıkan grafik ve üretim sürümü kaldı.
+**2. Mağaza girişini bitir (Android).** *(5 Eylül 2026 — `/play` ajanıyla
+konsoldan doğrulandı: metinler ve 1024×500 öne çıkan grafik **zaten yüklü**;
+ikon var, 6 telefon ekran görüntüsü var. Tablet görselleri boş ama Play
+onları zorunlu tutmuyor.)* **Kalan tek iş: üretim kanalına sürüm çıkarmak** —
+bugün yalnızca iç test kanalında 1.0.0 (sürüm kodu 5) var, üretim/beta/alfa
+boş.
 
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
 Android yayını anlamsız.
 
-**4. iOS mağaza kalanları.** Yaş sınırı anketi, App Review Notes'a demo
-hesap (onay bekleyen bir hesapla incelemeci hiçbir şey göremez → kesin ret),
-6.5" ekran görüntüleri.
+**4. iOS mağaza kalanları.** *(5 Eylül 2026 — `/appstore` ajanıyla
+doğrulandı, üçü de gerçekten eksik.)* Yaş sınırı anketinde **26 yanıtsız
+alan**; inceleme bilgileri **tamamen boş** (demo hesap adı, parolası, not ve
+iletişim — onay bekleyen bir hesapla incelemeci hiçbir şey göremez, kesin
+ret); ekran görüntülerinde yalnızca **6.1" yüklü (5/5)**, 6.5" seti hiç yok.
+Sürüm 1.0 `PREPARE_FOR_SUBMISSION`, yani henüz gönderilmedi. Demo hesap
+Supergym-88'den verilecek (Tarabya'da gerçek kişilerin verisi var).
 
 ### Kuşak 1.5 — [x] TAMAMLANDI (3 Eylül 2026)
 
