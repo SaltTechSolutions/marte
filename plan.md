@@ -100,8 +100,22 @@ doğrulandı, üçü de gerçekten eksik.)* Yaş sınırı anketinde **26 yanıt
 alan**; inceleme bilgileri **tamamen boş** (demo hesap adı, parolası, not ve
 iletişim — onay bekleyen bir hesapla incelemeci hiçbir şey göremez, kesin
 ret); ekran görüntülerinde yalnızca **6.1" yüklü (5/5)**, 6.5" seti hiç yok.
-Sürüm 1.0 `PREPARE_FOR_SUBMISSION`, yani henüz gönderilmedi. Demo hesap
-Supergym-88'den verilecek (Tarabya'da gerçek kişilerin verisi var).
+Sürüm 1.0 `PREPARE_FOR_SUBMISSION`, yani henüz gönderilmedi.
+
+*(5 Eylül 2026 — ikisi kapandı.)* **Yaş sınırı anketi dolduruldu:** 25 alanın
+tamamı tek istekte yazıldı (Apple parça kabul etmiyor); içerik alanlarının
+hepsi yok/NONE, `healthOrWellnessTopics` evet. Üç alan yorum gerektirdi ve
+şöyle yanıtlandı: **kullanıcı üretimi içerik hayır** (profil fotoğrafı yalnızca
+kendi salonunun personeline görünüyor; "evet" demek uygulamayı Apple 1.2'nin
+filtreleme/şikâyet/engelleme zorunluluklarına sokardı ve onlar yok),
+**ebeveyn kontrolü hayır** (veli onayı üyeliği aktifleştirmeyi kontrol ediyor,
+içeriği değil), **yaş doğrulama hayır** (doğum tarihi kullanıcı beyanı).
+**İnceleme bilgileri yazıldı:** demo hesap `uye01@supergym88.test`
+(Supergym-88, uydurma veri), İngilizce inceleme notu (uygulama Türkçe;
+incelemeci menüde kaybolursa kesin ret) ve iletişim bilgileri.
+
+**Kalan tek iş: 6.5" ekran görüntüleri.** Görselleri Supergym-88'den almak
+gerekiyor ve bu ajanın yapabileceği bir iş değil.
 
 ### Kuşak 1.5 — [x] TAMAMLANDI (3 Eylül 2026)
 
