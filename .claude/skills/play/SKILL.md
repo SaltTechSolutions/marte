@@ -32,9 +32,16 @@ Bu yüzden okuma komutlarını serbestçe çalıştırabilirsin.
 
 Onay isterken hangi kanal, hangi sürüm kodu ve hangi yüzde olduğunu yaz.
 
-**İnsan işi:** geliştirici hesabı doğrulaması, ödeme profili, içerik
-derecelendirme anketi (konsol formu), veri güvenliği formu, ekran görüntüsü
-çekmek.
+**İnsan işi:** geliştirici hesabı doğrulaması, ödeme profili, ekran
+görüntüsü çekmek.
+
+**Konsol formları API'de yok ama doldurulabilir.** Veri güvenliği, içerik
+derecelendirme, oturum açma bilgileri ve gizlilik politikası Play Developer
+API'sinde yok; tarayıcıdan doldurulur. İki tuzak: (1) Play Console tek
+sayfalık bir uygulama, adres çubuğuna URL yazmak seni uygulama listesine
+geri atar — gezinme **bağlantıya tıklayarak** yapılır; (2) veri güvenliği
+sihirbazında adımlar sırayla açılır, adım başlığına tıklamak işe yaramaz,
+`İleri` ile ilerlenir.
 
 ## Komutlar
 
@@ -61,4 +68,9 @@ Kimlik `secrets/play-service-account.json`. **Anahtarın içeriğini hiçbir
 - Metinler `PLAY_STORE.md` içinde tutuluyor; mağazadaki metni değiştirirken o
   dosyayı da aynı anda güncelle, yoksa iki doğruluk kaynağı oluşur.
 - Ekran görüntüleri **Supergym-88'den** alınır (uydurma veri), Tarabya'dan
-  değil — orada gerçek kişilerin verisi var.
+  değil — orada gerçek kişilerin verisi var. Aynı kural **inceleme giriş
+  bilgileri** için de geçerli: `uye01@supergym88.test`. (5 Eylül 2026'da
+  burada bir Tarabya hesabı duruyordu ve düzeltildi.)
+- **Veri güvenliği formu iOS'un App Privacy beyanıyla aynı gerçeği
+  anlatmalı.** İkisinin de tek kaynağı `gymentra-mobile/APP_PRIVACY.md`;
+  koda bir veri alanı eklendiğinde üçü birden güncellenir.
