@@ -371,8 +371,97 @@ async function submit(flag) {
   console.log('✓ sürüm incelemeye gönderildi\n');
 }
 
+
+/**
+ * Ekran görüntüsü yükler.
+ *
+ * Apple'ın akışı üç adımlı: önce dosyayı BİLDİR (boyut ve ad), Apple parça
+ * parça yükleme talimatı döndürür, parçalar yüklenir, sonra sağlama toplamıyla
+ * "bitti" denir. Tek adımda dosya göndermek diye bir şey yok.
+ *
+ * Sıra korunuyor: dosya adları alfabetik yükleniyor ve sonunda kümenin
+ * sırası açıkça yazılıyor — mağazadaki ilk üç görsel listede öne çıktığı için
+ * sıra bir tasarım kararı.
+ */
+async function uploadScreenshots(displayType, dir) {
+  const { createHash } = await import('node:crypto');
+  const { readFileSync, readdirSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const cfg = config();
+
+  const versions = await call(`/apps/${cfg.appId}/appStoreVersions?limit=1&fields[appStoreVersions]=versionString`);
+  const version = versions.data[0];
+  const locs = await call(`/appStoreVersions/${version.id}/appStoreVersionLocalizations?limit=10`);
+  const loc = locs.data[0];
+
+  const sets = await call(`/appStoreVersionLocalizations/${loc.id}/appScreenshotSets?limit=20`);
+  let set = sets.data.find((x) => x.attributes.screenshotDisplayType === displayType);
+  if (!set) {
+    const created = await call('/appScreenshotSets', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'appScreenshotSets',
+          attributes: { screenshotDisplayType: displayType },
+          relationships: {
+            appStoreVersionLocalization: { data: { type: 'appStoreVersionLocalizations', id: loc.id } },
+          },
+        },
+      },
+    });
+    set = created.data;
+    console.log(`✓ ${displayType} kümesi oluşturuldu (${loc.attributes.locale})`);
+  }
+
+  const files = readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.png')).sort();
+  const ids = [];
+  for (const name of files) {
+    const bytes = readFileSync(join(dir, name));
+    const reserved = await call('/appScreenshots', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'appScreenshots',
+          attributes: { fileSize: bytes.length, fileName: name },
+          relationships: { appScreenshotSet: { data: { type: 'appScreenshotSets', id: set.id } } },
+        },
+      },
+    });
+    const shot = reserved.data;
+    for (const op of shot.attributes.uploadOperations) {
+      const headers = {};
+      (op.requestHeaders || []).forEach((h) => (headers[h.name] = h.value));
+      const res = await fetch(op.url, {
+        method: op.method,
+        headers,
+        body: bytes.subarray(op.offset, op.offset + op.length),
+      });
+      if (!res.ok) throw new Error(`${name} parçası yüklenemedi: ${res.status}`);
+    }
+    await call(`/appScreenshots/${shot.id}`, {
+      method: 'PATCH',
+      body: {
+        data: {
+          type: 'appScreenshots',
+          id: shot.id,
+          attributes: { uploaded: true, sourceFileChecksum: createHash('md5').update(bytes).digest('hex') },
+        },
+      },
+    });
+    ids.push(shot.id);
+    console.log(`  ↑ ${name} (${(bytes.length / 1024).toFixed(0)} KB)`);
+  }
+
+  await call(`/appScreenshotSets/${set.id}/relationships/appScreenshots`, {
+    method: 'PATCH',
+    body: { data: ids.map((id) => ({ type: 'appScreenshots', id })) },
+  });
+  console.log(`\n✓ ${files.length} görsel yüklendi ve sırası yazıldı. Apple işleyene kadar birkaç dakika sürebilir.\n`);
+}
+
 const COMMANDS = {
   status,
+  'upload-screenshots': uploadScreenshots,
   'attach-build': attachBuild,
   precheck,
   submit,
@@ -395,6 +484,7 @@ if (!cmd || !COMMANDS[cmd]) {
   review-detail ['{"...":"..."}'] inceleme bilgileri (demo hesap, not) oku / yaz
   age-rating ['{"...":"..."}']    yaş sınırı anketini oku / yaz
   screenshots                     ekran görüntüsü setleri, hangisi eksik
+  upload-screenshots <tip> <dizin>  klasördeki PNG'leri sırayla yükle
   testers                         TestFlight grupları ve kişiler
 `);
   process.exit(cmd ? 1 : 0);
