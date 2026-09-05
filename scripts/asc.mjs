@@ -268,15 +268,14 @@ async function currentVersion() {
  * Apple'ın döndürdüğü `associatedErrors` listesini yazdırıyor. Kap oluşmadan
  * hata alındığı için mağazada hiçbir şey değişmiyor.
  */
-async function precheck() {
-  const cfg = config();
-  const version = await currentVersion();
-  console.log(`\nSÜRÜM ${version.attributes.versionString} · ${version.attributes.appStoreState}`);
-
-  const build = await call(`/appStoreVersions/${version.id}/build?fields[builds]=version`).catch(() => null);
-  console.log(`  build: ${build?.data ? build.data.attributes.version : '— BAĞLANMAMIŞ'}`);
-
-  const sub = await call('/reviewSubmissions', {
+/**
+ * Gönderim kabı bulur. Apple aynı anda tek bir açık kaba izin veriyor, ve
+ * gönderilmemiş bir kap İPTAL EDİLEMİYOR ("not in cancellable state") — yani
+ * yarım kalmış bir kap silinemediği için yenisi de açılamıyor. Çözüm: yeni
+ * kap açılamıyorsa mevcut boş kabı yeniden kullan.
+ */
+async function openSubmission(cfg) {
+  const fresh = await call('/reviewSubmissions', {
     method: 'POST',
     body: {
       data: {
@@ -286,10 +285,36 @@ async function precheck() {
       },
     },
   }).catch(() => null);
-  if (!sub) {
-    console.log('\n  Açık bir gönderim kabı zaten var — App Store Connect\'ten bak.\n');
-    return { version, blockers: ['açık gönderim kabı var'] };
+  if (fresh) return fresh.data.id;
+
+  const res = await call(
+    `/apps/${cfg.appId}/reviewSubmissions?fields[reviewSubmissions]=state&limit=20`,
+  );
+  for (const sub of res.data ?? []) {
+    if (sub.attributes.state !== 'READY_FOR_REVIEW') continue;
+    const items = await call(`/reviewSubmissions/${sub.id}/items`).catch(() => null);
+    if (!items?.data?.length) return sub.id;
   }
+  throw new Error('açık ve boş gönderim kabı yok — App Store Connect\'ten bak');
+}
+
+/** Kabı bir sonraki çalıştırma için boş bırakır. */
+async function clearSubmission(id) {
+  const items = await call(`/reviewSubmissions/${id}/items`).catch(() => null);
+  for (const item of items?.data ?? []) {
+    await call(`/reviewSubmissionItems/${item.id}`, { method: 'DELETE' }).catch(() => {});
+  }
+}
+
+async function precheck() {
+  const cfg = config();
+  const version = await currentVersion();
+  console.log(`\nSÜRÜM ${version.attributes.versionString} · ${version.attributes.appStoreState}`);
+
+  const build = await call(`/appStoreVersions/${version.id}/build?fields[builds]=version`).catch(() => null);
+  console.log(`  build: ${build?.data ? build.data.attributes.version : '— BAĞLANMAMIŞ'}`);
+
+  const subId = await openSubmission(cfg);
 
   const blockers = [];
   try {
@@ -299,7 +324,7 @@ async function precheck() {
         data: {
           type: 'reviewSubmissionItems',
           relationships: {
-            reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.data.id } },
+            reviewSubmission: { data: { type: 'reviewSubmissions', id: subId } },
             appStoreVersion: { data: { type: 'appStoreVersions', id: version.id } },
           },
         },
@@ -307,10 +332,7 @@ async function precheck() {
     });
     console.log('\n  Engel yok — gönderilebilir.\n');
     // Kabı temiz bırak: gönderim ayrı bir karar.
-    await call(`/reviewSubmissions/${sub.data.id}`, {
-      method: 'PATCH',
-      body: { data: { type: 'reviewSubmissions', id: sub.data.id, attributes: { canceled: true } } },
-    }).catch(() => {});
+    await clearSubmission(subId);
   } catch (e) {
     const assoc = e.associated ?? {};
     console.log('\nENGELLER');
@@ -342,31 +364,22 @@ async function submit(flag) {
     console.log(`Göndermek için:  node scripts/asc.mjs submit --yes\n`);
     return;
   }
-  const sub = await call('/reviewSubmissions', {
-    method: 'POST',
-    body: {
-      data: {
-        type: 'reviewSubmissions',
-        attributes: { platform: 'IOS' },
-        relationships: { app: { data: { type: 'apps', id: cfg.appId } } },
-      },
-    },
-  });
+  const subId = await openSubmission(cfg);
   await call('/reviewSubmissionItems', {
     method: 'POST',
     body: {
       data: {
         type: 'reviewSubmissionItems',
         relationships: {
-          reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.data.id } },
+          reviewSubmission: { data: { type: 'reviewSubmissions', id: subId } },
           appStoreVersion: { data: { type: 'appStoreVersions', id: version.id } },
         },
       },
     },
   });
-  await call(`/reviewSubmissions/${sub.data.id}`, {
+  await call(`/reviewSubmissions/${subId}`, {
     method: 'PATCH',
-    body: { data: { type: 'reviewSubmissions', id: sub.data.id, attributes: { submitted: true } } },
+    body: { data: { type: 'reviewSubmissions', id: subId, attributes: { submitted: true } } },
   });
   console.log('✓ sürüm incelemeye gönderildi\n');
 }
@@ -459,12 +472,46 @@ async function uploadScreenshots(displayType, dir) {
   console.log(`\n✓ ${files.length} görsel yüklendi ve sırası yazıldı. Apple işleyene kadar birkaç dakika sürebilir.\n`);
 }
 
+/**
+ * Açık gönderim kapları. Apple aynı anda yalnızca bir açık kaba izin
+ * veriyor; yarım kalmış bir kap `precheck`i ve `submit`i kilitliyor.
+ * `cancel <id>` kabı iptal eder — kaptaki sürüm mağazada değişmez.
+ */
+async function submissions(sub, id) {
+  const cfg = config();
+  if (sub === 'cancel') {
+    if (!id) throw new Error('kap kimliği gerek: submissions cancel <id>');
+    await call(`/reviewSubmissions/${id}`, {
+      method: 'PATCH',
+      body: { data: { type: 'reviewSubmissions', id, attributes: { canceled: true } } },
+    });
+    console.log(`✓ kap iptal edildi: ${id}\n`);
+    return;
+  }
+  const res = await call(
+    `/apps/${cfg.appId}/reviewSubmissions?fields[reviewSubmissions]=state,platform,submittedDate&limit=20`,
+  );
+  console.log('\nGÖNDERİM KAPLARI');
+  for (const s of res.data ?? []) {
+    console.log(`  ${s.id}  ${s.attributes.state.padEnd(24)} ${s.attributes.submittedDate ?? '(gönderilmemiş)'}`);
+    const items = await call(
+      `/reviewSubmissions/${s.id}/items?include=appStoreVersion&fields[appStoreVersions]=versionString`,
+    ).catch(() => null);
+    const inc = items?.included ?? [];
+    if (!items?.data?.length) console.log('      (boş kap)');
+    inc.forEach((i) => console.log(`      sürüm ${i.attributes?.versionString}`));
+  }
+  if (!res.data?.length) console.log('  (yok)');
+  console.log('');
+}
+
 const COMMANDS = {
   status,
   'upload-screenshots': uploadScreenshots,
   'attach-build': attachBuild,
   precheck,
   submit,
+  submissions: (a, b) => submissions(a, b),
   notes: (v, ...rest) => notes(v, rest.length ? rest.join(' ') : undefined),
   'review-detail': (...args) => reviewDetail(args.length ? JSON.parse(args.join(' ')) : undefined),
   'age-rating': (...args) => ageRating(args.length ? JSON.parse(args.join(' ')) : undefined),
@@ -480,6 +527,7 @@ if (!cmd || !COMMANDS[cmd]) {
   attach-build <build>            sürüme build bağla
   precheck                        Apple'ın gönderim engelleri listesi
   submit [--yes]                  incelemeye gönder (dışarıya açılan iş)
+  submissions [cancel <id>]       açık gönderim kaplarını listele / iptal et
   notes <build> [metin]           TestFlight "Neyi test edin" notunu oku / yaz
   review-detail ['{"...":"..."}'] inceleme bilgileri (demo hesap, not) oku / yaz
   age-rating ['{"...":"..."}']    yaş sınırı anketini oku / yaz
