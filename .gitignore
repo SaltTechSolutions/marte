@@ -1,1 +1,4 @@
 .env*
+
+# Antrenman simülatörü kendi deposu — buraya gömülmesin
+antrenman-simulatoru/
