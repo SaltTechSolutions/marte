@@ -96,6 +96,10 @@ async function status() {
       (t.releases ?? []).forEach((r) => {
         const pct = r.userFraction ? ` · %${Math.round(r.userFraction * 100)}` : '';
         console.log(`      ${(r.name ?? '').padEnd(14)} ${r.status}${pct}  sürüm kodu: ${(r.versionCodes ?? []).join(', ') || '—'}`);
+        // Sürüm notu, TestFlight'taki "neyi test edin"in Play karşılığı.
+        const notes = r.releaseNotes ?? [];
+        if (!notes.length) console.log('        sürüm notu: (yok)');
+        notes.forEach((n) => console.log(`        sürüm notu (${n.language}): ${n.text.replace(/\n/g, ' ').slice(0, 90)}`));
       });
       if (!t.releases?.length) console.log('      (sürüm yok)');
     });
