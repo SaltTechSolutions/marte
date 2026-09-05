@@ -118,9 +118,11 @@ export interface RigExercise {
    * Uzak uzuvları yandan görünümde gizler.
    *
    * Yalnızca ÇİZİMİ etkiler: iskelet, yere oturma ve kadraj aynı kalır, yani
-   * gizlemek figürü kımıldatmaz. İki tarafı aynı işi yapan hareketlerde
-   * (squat, deadlift) uzak bacak derinlik yerine gürültü ekliyor; tek taraflı
-   * hareketlerde ise hareketin kendisi, o yüzden seçim harekete ait.
+   * gizlemek figürü kımıldatmaz.
+   *
+   * `hideFarLeg` yazılmazsa karar OTOMATİK: uzak bacağın yakın bacaktan ayrı
+   * bir hareketi yoksa gizlenir (bkz. `farLegDistinct`). Yalnızca kuralın
+   * dışına çıkmak gerektiğinde yazılır.
    */
   hideFarLeg?: boolean;
   hideFarArm?: boolean;
@@ -520,6 +522,40 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
   F.barY = ex.bar === 'back' ? S.thorax[1] + 4 : ex.bar === 'hands' ? F.R.hand[1] : null;
   return F;
 }
+
+/**
+ * Uzak bacağın yakınından ayrı sayılması için gereken en küçük fark.
+ *
+ * Yazılmadığında uzak bacak yakınının 7°/5° kaydırılmışı olarak türetiliyor;
+ * eşik bunun üstünde ki o kozmetik kayma "ayrı hareket" sayılmasın. Yan
+ * plank'ta bacaklar bilerek üst üste yazılı (aynı açı) — o da ayrı hareket
+ * değil, gizlenmeli.
+ */
+const FAR_LEG_EPSILON = 12;
+
+/**
+ * Uzak bacağın kendi hareketi var mı?
+ *
+ * Kural basit: ikinci bacak, birincinin birkaç derece kaydırılmış kopyasından
+ * ibaretse çizimde bilgi taşımıyor, yalnızca gürültü ekliyor — squat,
+ * deadlift, press. Hamle, step-up, Bulgar split squat ve bird-dog'da ise
+ * hareketin kendisi orada, o yüzden görünmeli.
+ *
+ * Karar veriden türetiliyor, elle işaretlenmiyor: kareler değişince cevap da
+ * kendiliğinden değişir, unutulmuş bir bayrak yüzünden bacak kaybolmaz.
+ */
+export function farLegDistinct(ex: RigExercise, samples = 21): boolean {
+  for (let i = 0; i < samples; i++) {
+    const { p } = poseAt(ex, i / (samples - 1));
+    if (Math.abs(p.thighF - p.thighA) > FAR_LEG_EPSILON) return true;
+    if (Math.abs(p.shinF - p.shinA) > FAR_LEG_EPSILON) return true;
+  }
+  return false;
+}
+
+/** Uzak bacak çizilecek mi: elle yazılan değer varsa o, yoksa kural. */
+export const showFarLeg = (ex: RigExercise): boolean =>
+  ex.hideFarLeg === undefined ? farLegDistinct(ex) : !ex.hideFarLeg;
 
 /**
  * Önden görünümde gövde elipsi.

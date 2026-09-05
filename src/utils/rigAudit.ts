@@ -10,6 +10,7 @@ import {
   frontPoints,
   frontTrunk,
   poseAt,
+  showFarLeg,
   skeleton,
 } from './rig';
 
@@ -52,7 +53,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
 
   // Gizli uzuv çizilmiyor: zeminin altında olması görünür bir kusur değil.
   const hidden = new Set<keyof Skeleton>([
-    ...(ex.hideFarLeg ? (['hipF', 'kneeF', 'ankleF'] as (keyof Skeleton)[]) : []),
+    ...(showFarLeg(ex) ? [] : (['hipF', 'kneeF', 'ankleF'] as (keyof Skeleton)[])),
     ...(ex.hideFarArm ? (['shF', 'elbowF', 'handF'] as (keyof Skeleton)[]) : []),
   ]);
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {

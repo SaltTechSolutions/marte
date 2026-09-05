@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
-  frontPoints, frontTrunk, lerpP, poseAt, skeleton,
+  frontPoints, frontTrunk, lerpP, poseAt, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -143,7 +143,7 @@ function draw() {
       const bones = [
         [gs.pelvis, gs.knee], [gs.knee, gs.ankle], [gs.pelvis, gs.lumbar], [gs.lumbar, gs.thorax],
         [gs.thorax, gs.neck], [gs.sh, gs.elbow], [gs.elbow, gs.hand],
-        ...(e.hideFarLeg ? [] : [[gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF]]),
+        ...(showFarLeg(e) ? [[gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF]] : []),
       ];
       bones.forEach(([a, b]) => svg.appendChild(el('line', {
         x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: ghost, 'stroke-width': 7,
@@ -211,7 +211,7 @@ function draw() {
 
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
-  if (!e.hideFarLeg) {
+  if (showFarLeg(e)) {
     push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
     push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true)); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
     push([ball(S.kneeF, 12, true)]);
@@ -253,7 +253,7 @@ function drawHandles(svg, e, S, view) {
   if (!editable() || view === 'front') return;
   const accent = css('--p');
   const hiddenJoints = new Set([
-    ...(e.hideFarLeg ? ['kneeF', 'ankleF'] : []),
+    ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF']),
     ...(e.hideFarArm ? ['elbowF', 'handF'] : []),
   ]);
   dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
@@ -508,14 +508,33 @@ function renderEquipment() {
   bind('prop', OPTIONS.prop, e.prop ?? '', (v) => (v ? (e.prop = v) : delete e.prop));
   bind('viewSel', OPTIONS.view, e.view ?? 'side', (v) => (v === 'side' ? delete e.view : (e.view = v)));
   bind('bend', OPTIONS.bend, String(e.bend), (v) => (e.bend = Number(v)));
-  const toggle = (id, on, apply) => {
-    const b = $(id);
-    b.setAttribute('aria-pressed', String(!on));
-    b.textContent = on ? 'Gizli' : 'Görünür';
-    b.onclick = () => { snapshot(); apply(!on); markDirty(); renderAll(); };
+  // Uzak bacak üç durumlu: kural (varsayılan), elle görünür, elle gizli.
+  // Kural, uzak bacağın yakınından ayrı bir hareketi olup olmadığına bakıyor;
+  // elle seçim yalnızca kuralın dışına çıkmak için.
+  const leg = $('farLeg');
+  const auto = showFarLeg({ ...e, hideFarLeg: undefined });
+  leg.textContent =
+    e.hideFarLeg === undefined ? `Kural: ${auto ? 'görünür' : 'gizli'}` : e.hideFarLeg ? 'Elle: gizli' : 'Elle: görünür';
+  leg.setAttribute('aria-pressed', String(showFarLeg(e)));
+  leg.onclick = () => {
+    snapshot();
+    if (e.hideFarLeg === undefined) e.hideFarLeg = auto;       // kuralın tersi
+    else if (e.hideFarLeg) e.hideFarLeg = false;
+    else delete e.hideFarLeg;                                   // kurala dön
+    markDirty();
+    renderAll();
   };
-  toggle('farLeg', !!e.hideFarLeg, (v) => (v ? (e.hideFarLeg = true) : delete e.hideFarLeg));
-  toggle('farArm', !!e.hideFarArm, (v) => (v ? (e.hideFarArm = true) : delete e.hideFarArm));
+
+  const arm = $('farArm');
+  arm.textContent = e.hideFarArm ? 'Gizli' : 'Görünür';
+  arm.setAttribute('aria-pressed', String(!e.hideFarArm));
+  arm.onclick = () => {
+    snapshot();
+    if (e.hideFarArm) delete e.hideFarArm;
+    else e.hideFarArm = true;
+    markDirty();
+    renderAll();
+  };
   $('dur').value = String(e.dur);
   $('dur').onchange = () => { const n = Number($('dur').value); if (n > 500) { e.dur = n; markDirty(); } };
 }

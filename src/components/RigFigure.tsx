@@ -22,6 +22,7 @@ import {
   footPath,
   frontPoints,
   frontTrunk,
+  showFarLeg,
   lerpP,
   poseAt,
   skeleton,
@@ -102,6 +103,10 @@ export function RigFigure({
   const benchDeg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
   // Topuk kalkışında ayak parmak ucu etrafında döner; basamakta ayak düz basar.
   const pinToe = rig.prop !== 'box' && p.ankleLift > 0;
+  // Uzak bacak yalnızca kendi hareketi varsa çizilir (hamle, step-up,
+  // bird-dog, taşıma). Squat gibi iki tarafın aynı işi yaptığı hareketlerde
+  // ikinci bacak derinlik değil gürültü ekliyor.
+  const farLeg = showFarLeg(rig);
   const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
@@ -166,9 +171,9 @@ export function RigFigure({
       <>
         <G key="floor">
           <Ellipse
-            cx={rig.hideFarLeg ? S.ankle[0] + 6 : (S.ankle[0] + S.ankleF[0]) / 2 + 6}
+            cx={farLeg ? (S.ankle[0] + S.ankleF[0]) / 2 + 6 : S.ankle[0] + 6}
             cy={GROUND + 4}
-            rx={rig.hideFarLeg ? 62 : 92}
+            rx={farLeg ? 92 : 62}
             ry={12}
             fill={floorC}
             opacity={0.25}
@@ -229,7 +234,7 @@ export function RigFigure({
         {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
             oturma ve kadraj değişmez, figür kımıldamaz. */}
         <G key="far" opacity={0.95}>
-          {!rig.hideFarLeg && (
+          {farLeg && (
             <>
               <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe)} fill={skinFar} stroke={line} />
               {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true)}

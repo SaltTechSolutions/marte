@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EXERCISES } from '@/data/exerciseLibrary';
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, skeleton } from './rig';
+import { B, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from './rig';
 import { auditExercise, auditLoop, auditSegments } from './rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -122,6 +122,21 @@ describe('rig hareket denetimi', () => {
     const lifts = frames('calf_raise').map(({ p }) => p.ankleLift);
     expect(Math.max(...lifts), 'topuk yüksekliği').toBeGreaterThan(20);
     expect(Math.max(...lifts), 'topuk ayak boyunu aşmamalı').toBeLessThanOrEqual(B.foot);
+  });
+
+  it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {
+    // Kural: ikinci bacak birincinin kopyasıysa çizimde bilgi taşımıyor.
+    const gorunur = entries.filter(([, ex]) => showFarLeg(ex)).map(([k]) => k);
+    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'step_up', 'unilateral_lunge']);
+    // Yan plank'ta bacaklar bilerek üst üste: ayrı hareket değil, gizli.
+    expect(showFarLeg(RIG_ARCHETYPES.side_plank)).toBe(false);
+    expect(showFarLeg(RIG_ARCHETYPES.squat)).toBe(false);
+  });
+
+  it('elle yazılan değer kuralı ezer', () => {
+    // Kuralın dışına çıkmak gerektiğinde kare verisi son sözü söyler.
+    expect(showFarLeg({ ...RIG_ARCHETYPES.squat, hideFarLeg: false })).toBe(true);
+    expect(showFarLeg({ ...RIG_ARCHETYPES.unilateral_lunge, hideFarLeg: true })).toBe(false);
   });
 
   it('uzak uzvu gizlemek figürü kımıldatmaz', () => {
