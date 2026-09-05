@@ -63,7 +63,10 @@ async function call(path, { method = 'GET', body } = {}) {
   const json = text ? JSON.parse(text) : {};
   if (!res.ok) {
     const detail = (json.errors || []).map((e) => `${e.title}: ${e.detail}`).join('\n  ') || text;
-    throw new Error(`${method} ${path} → ${res.status}\n  ${detail}`);
+    const err = new Error(`${method} ${path} → ${res.status}\n  ${detail}`);
+    // Apple engelleri ana hatanın içinde, `associatedErrors` altında veriyor.
+    err.associated = json.errors?.[0]?.meta?.associatedErrors;
+    throw err;
   }
   return json;
 }
@@ -230,8 +233,149 @@ async function testers() {
   console.log('');
 }
 
+
+/** Sürüme build bağlar — gönderimin ön koşulu. */
+async function attachBuild(buildVersion) {
+  const cfg = config();
+  const builds = await call(`/builds?filter[app]=${cfg.appId}&filter[version]=${buildVersion}&limit=1`);
+  const build = builds.data[0];
+  if (!build) throw new Error(`build ${buildVersion} bulunamadı`);
+  const versions = await call(`/apps/${cfg.appId}/appStoreVersions?limit=1&fields[appStoreVersions]=versionString`);
+  const version = versions.data[0];
+  await call(`/appStoreVersions/${version.id}/relationships/build`, {
+    method: 'PATCH',
+    body: { data: { type: 'builds', id: build.id } },
+  });
+  console.log(`✓ build ${buildVersion} → sürüm ${version.attributes.versionString}`);
+}
+
+async function currentVersion() {
+  const cfg = config();
+  const versions = await call(
+    `/apps/${cfg.appId}/appStoreVersions?limit=1&fields[appStoreVersions]=versionString,appStoreState`,
+  );
+  const v = versions.data[0];
+  if (!v) throw new Error('mağaza sürümü yok');
+  return v;
+}
+
+/**
+ * Gönderim engelleri — Apple'ın kendi listesinden.
+ *
+ * Yerel denetim yeterli değil: fiyatlandırma, gizlilik beyanı, telif ve
+ * içerik hakları yalnızca gönderim denendiğinde ortaya çıkıyor. Bu komut
+ * gönderimi DENEMİYOR; boş bir gönderim kabına sürümü eklemeyi deniyor ve
+ * Apple'ın döndürdüğü `associatedErrors` listesini yazdırıyor. Kap oluşmadan
+ * hata alındığı için mağazada hiçbir şey değişmiyor.
+ */
+async function precheck() {
+  const cfg = config();
+  const version = await currentVersion();
+  console.log(`\nSÜRÜM ${version.attributes.versionString} · ${version.attributes.appStoreState}`);
+
+  const build = await call(`/appStoreVersions/${version.id}/build?fields[builds]=version`).catch(() => null);
+  console.log(`  build: ${build?.data ? build.data.attributes.version : '— BAĞLANMAMIŞ'}`);
+
+  const sub = await call('/reviewSubmissions', {
+    method: 'POST',
+    body: {
+      data: {
+        type: 'reviewSubmissions',
+        attributes: { platform: 'IOS' },
+        relationships: { app: { data: { type: 'apps', id: cfg.appId } } },
+      },
+    },
+  }).catch(() => null);
+  if (!sub) {
+    console.log('\n  Açık bir gönderim kabı zaten var — App Store Connect\'ten bak.\n');
+    return { version, blockers: ['açık gönderim kabı var'] };
+  }
+
+  const blockers = [];
+  try {
+    await call('/reviewSubmissionItems', {
+      method: 'POST',
+      body: {
+        data: {
+          type: 'reviewSubmissionItems',
+          relationships: {
+            reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.data.id } },
+            appStoreVersion: { data: { type: 'appStoreVersions', id: version.id } },
+          },
+        },
+      },
+    });
+    console.log('\n  Engel yok — gönderilebilir.\n');
+    // Kabı temiz bırak: gönderim ayrı bir karar.
+    await call(`/reviewSubmissions/${sub.data.id}`, {
+      method: 'PATCH',
+      body: { data: { type: 'reviewSubmissions', id: sub.data.id, attributes: { canceled: true } } },
+    }).catch(() => {});
+  } catch (e) {
+    const assoc = e.associated ?? {};
+    console.log('\nENGELLER');
+    Object.entries(assoc).forEach(([where, list]) => {
+      list.forEach((x) => {
+        blockers.push(x.detail);
+        console.log(`  ✗ ${x.detail}`);
+        console.log(`     (${where.replace('/v1/', '').replace('/v2/', '')})`);
+      });
+    });
+    if (!blockers.length) console.log(`  ✗ ${e.message}`);
+    console.log('');
+  }
+  return { version, blockers };
+}
+
+/**
+ * Sürümü incelemeye gönderir. DIŞARIYA AÇILAN İŞ — `--yes` olmadan yalnızca
+ * engelleri gösterir.
+ */
+async function submit(flag) {
+  const cfg = config();
+  const { version, blockers } = await precheck();
+  if (blockers.length) {
+    console.log('Engeller kapanmadan gönderilmez.\n');
+    process.exit(1);
+  }
+  if (flag !== '--yes') {
+    console.log(`Göndermek için:  node scripts/asc.mjs submit --yes\n`);
+    return;
+  }
+  const sub = await call('/reviewSubmissions', {
+    method: 'POST',
+    body: {
+      data: {
+        type: 'reviewSubmissions',
+        attributes: { platform: 'IOS' },
+        relationships: { app: { data: { type: 'apps', id: cfg.appId } } },
+      },
+    },
+  });
+  await call('/reviewSubmissionItems', {
+    method: 'POST',
+    body: {
+      data: {
+        type: 'reviewSubmissionItems',
+        relationships: {
+          reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.data.id } },
+          appStoreVersion: { data: { type: 'appStoreVersions', id: version.id } },
+        },
+      },
+    },
+  });
+  await call(`/reviewSubmissions/${sub.data.id}`, {
+    method: 'PATCH',
+    body: { data: { type: 'reviewSubmissions', id: sub.data.id, attributes: { submitted: true } } },
+  });
+  console.log('✓ sürüm incelemeye gönderildi\n');
+}
+
 const COMMANDS = {
   status,
+  'attach-build': attachBuild,
+  precheck,
+  submit,
   notes: (v, ...rest) => notes(v, rest.length ? rest.join(' ') : undefined),
   'review-detail': (...args) => reviewDetail(args.length ? JSON.parse(args.join(' ')) : undefined),
   'age-rating': (...args) => ageRating(args.length ? JSON.parse(args.join(' ')) : undefined),
@@ -244,6 +388,9 @@ if (!cmd || !COMMANDS[cmd]) {
   console.log(`Kullanım: node scripts/asc.mjs <komut>
 
   status                          build ve mağaza sürümü durumu
+  attach-build <build>            sürüme build bağla
+  precheck                        Apple'ın gönderim engelleri listesi
+  submit [--yes]                  incelemeye gönder (dışarıya açılan iş)
   notes <build> [metin]           TestFlight "Neyi test edin" notunu oku / yaz
   review-detail ['{"...":"..."}'] inceleme bilgileri (demo hesap, not) oku / yaz
   age-rating ['{"...":"..."}']    yaş sınırı anketini oku / yaz
