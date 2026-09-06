@@ -1,95 +1,100 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (d45ab12+kirli), 2026-09-06T09:21:50.698Z
+// Kaynak: antrenman-simulatoru v1.0.0 (8edfa16+kirli), 2026-09-06T11:07:45.484Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
 /**
- * Kanonik kas grubu sözlüğü.
+ * Kas bölgesi sözlüğü.
  *
- * Bu liste BİZE ait. Bugün `Muscle-Map-for-React-Native`'in 36 slug'ıyla
- * birebir örtüşüyor, ama örtüşme bir tesadüf değil bir SEÇİM: aynı isimleri
- * kullanmak eşlemeyi bugün bedava kılıyor. Renderer değiştiği gün değişecek
- * olan `rendererSlug()`; 34 hareketlik kas verisi değil. İş verisini bir çizim
- * kütüphanesinin sözlüğüne çivilemek, o kütüphaneyi bıraktığın gün veriyi
- * yeniden yazmak demekti.
+ * Bu liste UYGULAMANIN listesi. GymEntra'nın `exerciseLibrary.ts`'indeki
+ * `MUSCLE_LABELS` 39 bölgesiyle birebir aynı ve Türkçe etiketleri de oradan
+ * geliyor; kas haritasını çizen SVG tam olarak bu kimlikleri boyuyor.
  *
- * `trainable: false` olanlar çizimde bölge olarak var ama çalıştırılabilir kas
- * grubu değil; şema onları hareket verisinde reddediyor. "Baş" birincil kas
- * olamaz.
+ * Kendi sözlüğümüzü yazmak denenmişti ve yanlıştı: dışarıdan bir çizim
+ * kütüphanesinin (Muscle-Map) 36 grubu alınmıştı, oysa uygulama o kütüphaneyi
+ * kullanmıyor. Veriyi çizmeyen bir sözlüğe bağlamak, ilk render denemesinde
+ * çöpe giden bir eşleme katmanı üretirdi.
+ *
+ * `group` bizim eklediğimiz tek şey: 39 bölge bir çipe sığmaz, "Sırt · Biceps"
+ * sığar. Anatomik üst-alt ilişkisi değil ARAYÜZ gruplaması.
  */
-export interface MuscleGroup {
-  /** Arayüzde görünen Türkçe ad. */
+export interface MuscleRegion {
+  /** Arayüzde görünen Türkçe ad. Kaynak: uygulamanın MUSCLE_LABELS'ı. */
   label: string;
-  /** Hareket verisinde kullanılabilir mi? */
-  trainable: boolean;
-  /** Daha kaba bir gruba toplanabiliyorsa üstü. Arayüz isterse özet gösterir. */
-  parent?: string;
+  /** Özet gösterim için kaba grup. */
+  group: string;
 }
 
-export const MUSCLES: Record<string, MuscleGroup> = {
-  // Göğüs
-  chest: { label: 'Göğüs', trainable: true },
-  'upper-chest': { label: 'Üst göğüs', trainable: true, parent: 'chest' },
-  'lower-chest': { label: 'Alt göğüs', trainable: true, parent: 'chest' },
-
-  // Sırt
-  'upper-back': { label: 'Üst sırt', trainable: true },
-  'lower-back': { label: 'Bel', trainable: true },
-  rhomboids: { label: 'Romboid', trainable: true },
-  trapezius: { label: 'Trapez', trainable: true },
-  'upper-trapezius': { label: 'Üst trapez', trainable: true, parent: 'trapezius' },
-  'lower-trapezius': { label: 'Alt trapez', trainable: true, parent: 'trapezius' },
-
+export const MUSCLES: Record<string, MuscleRegion> = {
+  // Boyun
+  sterno: { label: 'Boyun ön', group: 'Boyun' },
+  // Trapez
+  trapFront: { label: 'Trapez (üst-ön)', group: 'Trapez' },
+  trapUpper: { label: 'Trapez (üst)', group: 'Trapez' },
+  trapMid: { label: 'Trapez (orta)', group: 'Trapez' },
+  trapLower: { label: 'Trapez (alt)', group: 'Trapez' },
   // Omuz
-  deltoids: { label: 'Omuz', trainable: true },
-  'front-deltoid': { label: 'Ön omuz', trainable: true, parent: 'deltoids' },
-  'rear-deltoid': { label: 'Arka omuz', trainable: true, parent: 'deltoids' },
-  'rotator-cuff': { label: 'Rotator manşet', trainable: true },
-
-  // Kol
-  biceps: { label: 'Biceps', trainable: true },
-  triceps: { label: 'Triceps', trainable: true },
-  forearm: { label: 'Ön kol', trainable: true },
-
-  // Gövde
-  abs: { label: 'Karın', trainable: true },
-  'upper-abs': { label: 'Üst karın', trainable: true, parent: 'abs' },
-  'lower-abs': { label: 'Alt karın', trainable: true, parent: 'abs' },
-  obliques: { label: 'Yan karın', trainable: true },
-  serratus: { label: 'Serratus', trainable: true },
-
-  // Kalça ve bacak
-  gluteal: { label: 'Kalça', trainable: true },
-  'hip-flexors': { label: 'Kalça fleksörleri', trainable: true },
-  quadriceps: { label: 'Ön bacak', trainable: true },
-  'inner-quad': { label: 'İç ön bacak', trainable: true, parent: 'quadriceps' },
-  'outer-quad': { label: 'Dış ön bacak', trainable: true, parent: 'quadriceps' },
-  hamstring: { label: 'Arka bacak', trainable: true },
-  adductors: { label: 'İç bacak', trainable: true },
-  calves: { label: 'Baldır', trainable: true },
-  tibialis: { label: 'Ön baldır', trainable: true },
-  neck: { label: 'Boyun', trainable: true },
-
-  // Çizimde bölge olarak var, kas grubu değil.
-  head: { label: 'Baş', trainable: false },
-  hands: { label: 'Eller', trainable: false },
-  feet: { label: 'Ayaklar', trainable: false },
-  knees: { label: 'Dizler', trainable: false },
-  ankles: { label: 'Ayak bilekleri', trainable: false },
+  deltFront: { label: 'Ön omuz', group: 'Omuz' },
+  deltPost: { label: 'Arka omuz', group: 'Omuz' },
+  infra: { label: 'Infraspinatus', group: 'Omuz' },
+  teres: { label: 'Teres major', group: 'Omuz' },
+  // Göğüs
+  pecClav: { label: 'Göğüs (üst)', group: 'Göğüs' },
+  pecSternal: { label: 'Göğüs (orta-alt)', group: 'Göğüs' },
+  serratus: { label: 'Serratus', group: 'Göğüs' },
+  // Biceps
+  biceps: { label: 'Biceps', group: 'Biceps' },
+  brachialis: { label: 'Brachialis', group: 'Biceps' },
+  // Ön kol
+  forearmFlex: { label: 'Ön kol bükücüler', group: 'Ön kol' },
+  forearmExt: { label: 'Ön kol açıcılar', group: 'Ön kol' },
+  // Karın
+  absUpper: { label: 'Karın (üst)', group: 'Karın' },
+  absMid: { label: 'Karın (orta)', group: 'Karın' },
+  absLower: { label: 'Karın (alt)', group: 'Karın' },
+  // Yan karın
+  oblique: { label: 'Yan karın', group: 'Yan karın' },
+  // Ön bacak
+  quadRF: { label: 'Ön bacak (orta)', group: 'Ön bacak' },
+  quadVL: { label: 'Ön bacak (dış)', group: 'Ön bacak' },
+  quadVM: { label: 'Ön bacak (iç)', group: 'Ön bacak' },
+  sartorius: { label: 'Sartorius', group: 'Ön bacak' },
+  // İç bacak
+  adductors: { label: 'İç bacak', group: 'İç bacak' },
+  addMagnus: { label: 'İç bacak (arka)', group: 'İç bacak' },
+  // İncik
+  tibialis: { label: 'Ön incik', group: 'İncik' },
+  peroneus: { label: 'Dış incik', group: 'İncik' },
+  // Sırt
+  lat: { label: 'Kanat kası (lat)', group: 'Sırt' },
+  // Bel
+  erector: { label: 'Bel dikleştirici', group: 'Bel' },
+  // Triceps
+  triLat: { label: 'Triceps (yan baş)', group: 'Triceps' },
+  triLong: { label: 'Triceps (uzun baş)', group: 'Triceps' },
+  // Kalça
+  gluteMax: { label: 'Kalça', group: 'Kalça' },
+  gluteMed: { label: 'Yan kalça', group: 'Kalça' },
+  // Arka bacak
+  hamBF: { label: 'Arka bacak (dış)', group: 'Arka bacak' },
+  hamST: { label: 'Arka bacak (iç)', group: 'Arka bacak' },
+  // Baldır
+  gastroLat: { label: 'Baldır (dış baş)', group: 'Baldır' },
+  gastroMed: { label: 'Baldır (iç baş)', group: 'Baldır' },
+  soleus: { label: 'Soleus', group: 'Baldır' },
 };
 
-/** Hareket verisinde kullanılabilecek kas kimlikleri. */
-export const TRAINABLE = Object.keys(MUSCLES).filter((k) => MUSCLES[k].trainable);
+export type MuscleId = keyof typeof MUSCLES;
 
-/**
- * Kanonik kimliği çizim kütüphanesinin slug'ına çevirir.
- *
- * Bugün birebir. Bu fonksiyon var olduğu için renderer değiştiğinde
- * dokunulacak yer BURASI oluyor, `rigMuscles.json`'daki 34 kayıt değil.
- * Kütüphanenin bilmediği bir kimlik `null` döner; arayüz o kası çizmez ama
- * metin listesinde göstermeye devam eder.
- */
-export const rendererSlug = (id: string): string | null => (MUSCLES[id] ? id : null);
+/** Kas kimliklerini kaba gruplarına indirger; sıra korunur, tekrar atılır. */
+export const groupsOf = (ids: string[]): string[] => {
+  const out: string[] = [];
+  ids.forEach((id) => {
+    const g = MUSCLES[id]?.group;
+    if (g && !out.includes(g)) out.push(g);
+  });
+  return out;
+};
 
-/** Alt grubu daha kaba üstüne toplar; üstü yoksa kendisi. */
-export const coarse = (id: string): string => MUSCLES[id]?.parent ?? id;
+/** Etiketleri okunur biçimde birleştirir. */
+export const labelsOf = (ids: string[]): string[] => ids.map((id) => MUSCLES[id]?.label ?? id);

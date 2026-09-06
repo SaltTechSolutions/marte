@@ -52,7 +52,7 @@ function buildEngine() {
           skipLibCheck: true,
           resolveJsonModule: true,
         },
-        files: ['../src/rig.ts', '../src/rigEdit.ts', '../src/rigAudit.ts'],
+        files: ['../src/rig.ts', '../src/rigEdit.ts', '../src/rigAudit.ts', '../src/muscles.ts'],
       },
       null,
       2,
@@ -116,6 +116,15 @@ const server = createServer((req, res) => {
     try {
       const lib = readFileSync(join(ROOT, 'data/exercises.json'), 'utf8');
       return send(res, 200, lib, TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/muscles') {
+    // Hareket başına birincil/ikincil kaslar. Önizleme çipi ve metin listesi
+    // bunu okuyor; uygulamadan taşındı, anahtarı uygulamanın egzersiz kimliği.
+    try {
+      return send(res, 200, readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8'), TYPES['.json']);
     } catch {
       return send(res, 200, '{}', TYPES['.json']);
     }

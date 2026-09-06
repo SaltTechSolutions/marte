@@ -4,7 +4,7 @@ import rawArchetypes from '../data/rigArchetypes.json';
 import rawExercises from '../data/exercises.json';
 import rawMuscles from '../data/rigMuscles.json';
 import { B } from '../src/rig';
-import { MUSCLES, TRAINABLE, coarse, rendererSlug } from '../src/muscles';
+import { MUSCLES, groupsOf, labelsOf } from '../src/muscles';
 import {
   MIN_DUR,
   assertArchetypes,
@@ -237,42 +237,34 @@ const musErrs = (mutate: (m: Muscles) => void): string[] => {
   return validateMuscles(m, Object.keys(c));
 };
 
-describe('muscles.ts — kanonik sözlük', () => {
-  it('36 grup, 31 tanesi çalıştırılabilir', () => {
-    expect(Object.keys(MUSCLES)).toHaveLength(36);
-    expect(TRAINABLE).toHaveLength(31);
-  });
-
-  it('çalıştırılamayan gruplar yalnızca vücut bölgeleri', () => {
-    const notTrainable = Object.keys(MUSCLES).filter((k) => !MUSCLES[k].trainable);
-    expect(notTrainable.sort()).toEqual(['ankles', 'feet', 'hands', 'head', 'knees']);
-  });
-
-  it('her parent sözlükte var ve kendisi parent değil', () => {
-    Object.entries(MUSCLES).forEach(([id, g]) => {
-      if (!g.parent) return;
-      expect(MUSCLES[g.parent], `${id} → ${g.parent}`).toBeDefined();
-      expect(MUSCLES[g.parent].parent, `${g.parent} kendi de alt grup olmamalı`).toBeUndefined();
+describe('muscles.ts — uygulamanın kas bölgeleri', () => {
+  it('39 bölge, hepsinin Türkçe etiketi ve kaba grubu var', () => {
+    expect(Object.keys(MUSCLES)).toHaveLength(39);
+    Object.entries(MUSCLES).forEach(([id, r]) => {
+      expect(r.label.trim(), id).not.toBe('');
+      expect(r.group.trim(), id).not.toBe('');
     });
   });
 
-  it('coarse alt grubu üstüne topluyor, üstü olmayanı bırakıyor', () => {
-    expect(coarse('upper-chest')).toBe('chest');
-    expect(coarse('chest')).toBe('chest');
-    expect(coarse('biceps')).toBe('biceps');
+  it('groupsOf kaba gruba indiriyor, sırayı koruyor, tekrarı atıyor', () => {
+    // Çipin işi bu: 39 bölge sığmaz, "Sırt · Trapez · Omuz · Biceps" sığar.
+    expect(groupsOf(['lat', 'trapMid', 'deltPost', 'biceps'])).toEqual(['Sırt', 'Trapez', 'Omuz', 'Biceps']);
+    expect(groupsOf(['absUpper', 'absMid', 'absLower'])).toEqual(['Karın']);
+    expect(groupsOf(['yok-boyle'])).toEqual([]);
   });
 
-  it('rendererSlug bilinen kimliği veriyor, bilinmeyene null', () => {
-    // Bugün birebir. Seam burada olduğu için renderer değişince dokunulacak
-    // yer bu fonksiyon, 34 kayıtlık veri değil.
-    expect(rendererSlug('lower-chest')).toBe('lower-chest');
-    expect(rendererSlug('yok-boyle')).toBeNull();
+  it('labelsOf etiketi veriyor, bilinmeyeni kimliğiyle bırakıyor', () => {
+    expect(labelsOf(['lat', 'biceps'])).toEqual(['Kanat kası (lat)', 'Biceps']);
+    expect(labelsOf(['yok-boyle'])).toEqual(['yok-boyle']);
   });
 
-  it('her grubun Türkçe etiketi var', () => {
-    Object.entries(MUSCLES).forEach(([id, g]) => {
-      expect(g.label.trim(), id).not.toBe('');
+  it('sözlük uygulamanın kimlikleriyle aynı — veri o kimliklerle yazıldı', () => {
+    const used = new Set<string>();
+    Object.values(rawMuscles as Record<string, { primary: string[]; secondary: string[] }>).forEach((m) => {
+      m.primary.forEach((x) => used.add(x));
+      m.secondary.forEach((x) => used.add(x));
     });
+    expect([...used].filter((id) => !MUSCLES[id]), 'sözlükte olmayan kas kullanılmış').toEqual([]);
   });
 });
 
@@ -316,7 +308,7 @@ describe('validateMuscles — kas verisi', () => {
   it('yazılmış (authored) kayıt geçiyor', () => {
     expect(
       musErrs((m) => {
-        m.plank = { status: 'authored', primary: ['abs'], secondary: ['obliques'], source: 'antrenör incelemesi' };
+        m.plank = { status: 'authored', primary: ['absMid'], secondary: ['oblique'], source: 'antrenör incelemesi', reviewed: true };
       }),
     ).toEqual([]);
   });
@@ -330,35 +322,36 @@ describe('validateMuscles — kas verisi', () => {
     ['secondary dizi değil', (m) => (m.plank.secondary = 3), 'secondary metin dizisi'],
     [
       'bilinmeyen kas kimliği',
-      (m) => (m.plank = { status: 'authored', primary: ['karin'], secondary: [], source: 'x' }),
+      (m) => (m.plank = { status: 'authored', primary: ['karin'], secondary: [], source: 'x', reviewed: false }),
       'bilinmeyen kas',
     ],
     [
-      'çalıştırılamayan grup',
-      (m) => (m.plank = { status: 'authored', primary: ['head'], secondary: [], source: 'x' }),
-      'çalıştırılabilir bir kas grubu değil',
-    ],
-    [
       'aynı kas iki kez',
-      (m) => (m.plank = { status: 'authored', primary: ['abs', 'abs'], secondary: [], source: 'x' }),
+      (m) => (m.plank = { status: 'authored', primary: ['absMid', 'absMid'], secondary: [], source: 'x', reviewed: false }),
       'iki kez yazılmış',
     ],
     [
       'hem birincil hem ikincil',
-      (m) => (m.plank = { status: 'authored', primary: ['abs'], secondary: ['abs'], source: 'x' }),
+      (m) => (m.plank = { status: 'authored', primary: ['absMid'], secondary: ['absMid'], source: 'x', reviewed: false }),
       'hem birincil hem ikincil',
     ],
     [
       'authored ama birincil yok',
-      (m) => (m.plank = { status: 'authored', primary: [], secondary: ['abs'], source: 'x' }),
+      (m) => (m.plank = { status: 'authored', primary: [], secondary: ['absMid'], source: 'x', reviewed: false }),
       'birincil kas yazılmamış',
     ],
     [
       'authored ama source yok',
-      (m) => (m.plank = { status: 'authored', primary: ['abs'], secondary: [] }),
-      'source (kaynak/güven notu) yok',
+      (m) => (m.plank = { status: 'authored', primary: ['absMid'], secondary: [], reviewed: false }),
+      'source (kaynak notu) yok',
     ],
-    ['pending ama kas yazılmış', (m) => (m.plank.primary = ['abs']), 'status authored olmalı'],
+    ['pending ama kas yazılmış', (m) => (m.plank.primary = ['absMid']), 'status authored olmalı'],
+    [
+      'authored ama reviewed yok',
+      (m) => (m.plank = { status: 'authored', primary: ['absMid'], secondary: [], source: 'x' }),
+      'reviewed',
+    ],
+    ['pending ama reviewed yazılmış', (m) => (m.plank.reviewed = false), 'pending ama reviewed'],
     ['pending ama source yazılmış', (m) => (m.plank.source = 'x'), 'pending ama source'],
   ];
   cases.forEach(([name, mutate, needle]) => {

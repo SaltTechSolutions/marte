@@ -14,6 +14,7 @@ import {
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
+import { groupsOf, labelsOf } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -50,6 +51,8 @@ let DATA = {};
 let NAMES = {};
 /** Ham hareket kataloğu: kimlik → { name, archetype }. */
 let CATALOG = {};
+/** Hareket başına kaslar: kimlik → { status, primary, secondary }. */
+let MUSCLEDATA = {};
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -161,8 +164,15 @@ function renderPhone() {
   const body = $('phoneBody');
   const push = (html) => body.insertAdjacentHTML('beforeend', html);
 
+  // Bu arketibi kullanan hareketler farklı kas profilleri taşıyabiliyor
+  // (30 arketip, 34 hareket). Önizleme birincisini gösteriyor; diğerleri
+  // aşağıda ayrıca yazılı.
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  const authored = mus && mus.status === 'authored';
+
   push(`<h3>${title}</h3>`);
-  if (others.length) push(`<span class="chip">aynı çizim: ${others.join(' · ')}</span>`);
+  if (authored) push(`<span class="chip">${groupsOf(mus.primary).slice(0, 3).join(' · ')}</span>`);
   if (phoneMode === 'phases') {
     const [i0, i1] = keyPhases(e);
     const lab = (i) => e.kf[i].tr || `%${(e.kf[i].t * 100).toFixed(0)}`;
@@ -177,7 +187,19 @@ function renderPhone() {
 
   // Kas verisi yoksa panel HİÇ açılmıyor — tasarım incelemesinin kararı.
   // Boş siluet "hiçbir kas çalışmıyor" olarak okunur, bu yanlış bilgi.
-  push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi henüz taşınmadı.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
+  if (authored) {
+    // Metin listesi A varyantından geliyor ve üç işi birden görüyor: ekran
+    // okuyucunun tek yolu, renk körü kullanıcının yedek kanalı, ve anatomi
+    // SVG'si gelene kadar tek gösterim.
+    push(`<div class="card"><h4>Çalışan kaslar</h4>
+        <div class="mus"><span>Birincil</span><b>${labelsOf(mus.primary).join(', ')}</b></div>
+        ${mus.secondary.length ? `<div class="mus"><span>İkincil</span><b>${labelsOf(mus.secondary).join(', ')}</b></div>` : ''}
+        <p class="none" style="margin-top:6px">Anatomi çizimi henüz yok; şema uygulamanın SVG yolları alınınca gelecek.</p>
+      </div>`);
+  } else {
+    push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi yok.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
+  }
+  if (others.length) push(`<p class="none" style="margin:-4px 2px 9px">Aynı çizimi paylaşan: ${others.join(' · ')} — kas verileri farklı olabilir.</p>`);
 
   push(`<div class="card stats">
       <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
@@ -983,10 +1005,12 @@ function tick(now) {
 }
 
 const boot = async () => {
-  const [data, names] = await Promise.all([
+  const [data, names, muscles] = await Promise.all([
     fetch('/data').then((r) => r.json()),
     fetch('/names').then((r) => r.json()).catch(() => ({})),
+    fetch('/muscles').then((r) => r.json()).catch(() => ({})),
   ]);
+  MUSCLEDATA = muscles;
   DATA = data;
   // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
   // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için

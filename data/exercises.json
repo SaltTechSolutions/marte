@@ -1,49 +1,41 @@
 {
-  "kol-cevirme": {
+  "arm-circles": {
     "name": "Kol çevirme",
     "archetype": "arm_circles_front"
   },
-  "kedi-deve": {
+  "cat-cow": {
     "name": "Kedi-deve",
     "archetype": "quadruped_spine"
   },
-  "bant-pull-apart": {
+  "band-pull-apart": {
     "name": "Bant pull-apart",
     "archetype": "band_pull_apart_front"
   },
-  "bant-ile-dis-rotasyon": {
+  "band-external-rotation": {
     "name": "Bant ile dış rotasyon",
     "archetype": "band_ext_rotation_front"
   },
-  "cene-iceri-cekme": {
+  "chin-tuck": {
     "name": "Çene içeri çekme",
     "archetype": "chin_tuck_side"
   },
-  "lunge-govde-rotasyonu": {
+  "worlds-greatest-stretch": {
     "name": "Lunge + gövde rotasyonu",
-    "archetype": "unilateral_lunge"
-  },
-  "walking-lunge": {
-    "name": "Walking lunge",
-    "archetype": "unilateral_lunge"
-  },
-  "reverse-lunge": {
-    "name": "Reverse lunge",
     "archetype": "unilateral_lunge"
   },
   "goblet-squat": {
     "name": "Goblet squat",
     "archetype": "squat_goblet"
   },
-  "front-squat": {
-    "name": "Front squat",
-    "archetype": "squat_goblet"
-  },
   "back-squat": {
     "name": "Back squat",
     "archetype": "squat"
   },
-  "romanian-deadlift": {
+  "front-hack-squat": {
+    "name": "Front squat",
+    "archetype": "squat_goblet"
+  },
+  "rdl": {
     "name": "Romanian deadlift",
     "archetype": "hip_hinge_dumbbell"
   },
@@ -59,6 +51,14 @@
     "name": "Bulgarian split squat",
     "archetype": "bulgarian_split_squat"
   },
+  "walking-lunge": {
+    "name": "Walking lunge",
+    "archetype": "unilateral_lunge"
+  },
+  "reverse-lunge": {
+    "name": "Reverse lunge",
+    "archetype": "unilateral_lunge"
+  },
   "step-up": {
     "name": "Step-up",
     "archetype": "step_up"
@@ -71,11 +71,11 @@
     "name": "Bench press",
     "archetype": "bench_press"
   },
-  "incline-dumbbell-pres": {
+  "incline-press": {
     "name": "Incline dumbbell pres",
     "archetype": "incline_press"
   },
-  "omuz-pres": {
+  "shoulder-press": {
     "name": "Omuz pres",
     "archetype": "seated_overhead_press"
   },
@@ -83,11 +83,11 @@
     "name": "Barbell row",
     "archetype": "standing_row_hinged"
   },
-  "tek-kol-dumbbell-row": {
+  "single-arm-row": {
     "name": "Tek kol dumbbell row",
     "archetype": "standing_row_hinged"
   },
-  "dumbbell-reverse-fly": {
+  "reverse-fly": {
     "name": "Dumbbell reverse fly",
     "archetype": "hinged_fly"
   },
@@ -99,7 +99,7 @@
     "name": "Biceps curl",
     "archetype": "standing_arm_isolation"
   },
-  "omuz-silkme": {
+  "shrug": {
     "name": "Omuz silkme",
     "archetype": "shrug_front"
   },
@@ -115,7 +115,7 @@
     "name": "Bird-dog",
     "archetype": "bird_dog"
   },
-  "pallof-pres": {
+  "pallof-press": {
     "name": "Pallof pres",
     "archetype": "anti_rotation_standing"
   },
@@ -123,7 +123,7 @@
     "name": "Ab wheel rollout",
     "archetype": "rollout"
   },
-  "asili-diz-cekme": {
+  "hanging-knee-raise": {
     "name": "Asılı diz çekme",
     "archetype": "hanging_knee_raise"
   },
@@ -131,7 +131,7 @@
     "name": "Suitcase carry",
     "archetype": "carry"
   },
-  "kalca-koprusu": {
+  "glute-bridge": {
     "name": "Kalça köprüsü",
     "archetype": "glute_bridge"
   }

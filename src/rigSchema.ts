@@ -123,7 +123,7 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 const CATALOG_KEYS = ['name', 'archetype'];
-const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source'];
+const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source', 'reviewed'];
 const STATUSES = ['pending', 'authored'];
 
 const strList = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
@@ -205,7 +205,6 @@ export function validateMuscles(data: unknown, exerciseKeys: string[]): string[]
     ([['primary', primary], ['secondary', secondary]] as [string, string[]][]).forEach(([which, list]) => {
       list.forEach((id2) => {
         if (!MUSCLES[id2]) bad(`${which}: bilinmeyen kas "${id2}"`);
-        else if (!MUSCLES[id2].trainable) bad(`${which}: "${id2}" çalıştırılabilir bir kas grubu değil`);
       });
       const dup = list.filter((x, i) => list.indexOf(x) !== i);
       [...new Set(dup)].forEach((x) => bad(`${which}: "${x}" iki kez yazılmış`));
@@ -214,10 +213,15 @@ export function validateMuscles(data: unknown, exerciseKeys: string[]): string[]
 
     if (m.status === 'authored') {
       if (primary.length === 0) bad('authored ama birincil kas yazılmamış');
-      if (typeof m.source !== 'string' || m.source.trim() === '') bad('authored ama source (kaynak/güven notu) yok');
+      if (typeof m.source !== 'string' || m.source.trim() === '') bad('authored ama source (kaynak notu) yok');
+      // `reviewed` bilerek zorunlu: verinin nereden geldiği kadar KİM
+      // DOĞRULADIĞI da kayıtta dursun. Uygulama aynı disiplini pozlar için
+      // `poseReviewed` ile uyguluyor; kas verisi de aynı soruyu hak ediyor.
+      if (typeof m.reviewed !== 'boolean') bad('authored ama reviewed (uzman doğruladı mı) yazılmamış');
     } else {
       if (primary.length || secondary.length) bad('pending ama kas yazılmış — status authored olmalı');
       if (m.source !== undefined) bad('pending ama source yazılmış');
+      if (m.reviewed !== undefined) bad('pending ama reviewed yazılmış');
     }
   });
 
