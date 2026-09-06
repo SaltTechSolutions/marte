@@ -48,6 +48,8 @@ const OPTIONS = {
 
 let DATA = {};
 let NAMES = {};
+/** Ham hareket kataloğu: kimlik → { name, archetype }. */
+let CATALOG = {};
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -59,6 +61,9 @@ let dragging = null;
 let dirty = false;
 let onion = true;
 let filter = '';
+/** Mobil önizleme: hangi cihaz ve açık mı. */
+let phoneOn = true;
+let phoneSize = 0;
 // Geri alma yığını: sürükleme yıkıcı ve anında; kaçan bir hamlenin
 // dönüşü olmazsa araç kullanılamaz.
 const undoStack = [];
@@ -99,6 +104,123 @@ const restore = (json) => {
 };
 
 // --- çizim ---------------------------------------------------------------
+
+/* --- mobil önizleme ------------------------------------------------------ */
+
+/**
+ * Önizlenecek cihazlar.
+ *
+ * 375×667 (SE) tasarım incelemesinin ölçtüğü katlama riskinin yaşandığı yer:
+ * kas paneli orada kaydırmadan görünmüyordu. Listede ilk sırada duruyor ki
+ * en dar durum varsayılan olsun.
+ */
+const PHONES = [
+  { label: 'iPhone SE — 375×667', w: 375, h: 667 },
+  { label: 'iPhone 14 — 390×844', w: 390, h: 844 },
+  { label: 'Pro Max — 440×956', w: 440, h: 956 },
+];
+
+/** Sağ sütuna sığacak ölçek. */
+const phoneScale = (w) => Math.min(1, 268 / w);
+
+/**
+ * Mobil önizleme.
+ *
+ * Bu bir KOMPOZİSYON ve ÖLÇEK önizlemesi, piksel birebir render değil:
+ * burada tarayıcı SVG'si çiziyor, uygulamada `react-native-svg`. İkisi ayrı
+ * yazılmak zorunda (bkz. README). Cevapladığı sorular: figür 375pt'de okunuyor
+ * mu, kas paneli katlamanın altında mı kalıyor, hiyerarşi doğru mu.
+ */
+function renderPhone() {
+  const host = $('phone');
+  const wrap = host.parentElement;
+  if (!phoneOn) { wrap.style.display = 'none'; $('phoneNote').textContent = ''; return; }
+  wrap.style.display = 'flex';
+
+  const dev = PHONES[phoneSize];
+  const sc = phoneScale(dev.w);
+  host.style.width = dev.w + 'px';
+  host.style.height = dev.h + 'px';
+  host.style.transform = `scale(${sc})`;
+  wrap.style.height = dev.h * sc + 'px';
+
+  const e = ex();
+  // Bir arketip birden çok harekete hizmet edebiliyor (30 arketip, 34 hareket).
+  // Önizleme hepsini gösteriyor: hangi hareketin bu çizimi paylaştığı görünür olsun.
+  const uses = Object.values(CATALOG).filter((c) => c.archetype === key);
+  const title = uses[0]?.name || key;
+  const others = uses.slice(1).map((c) => c.name);
+  const phase = editable() ? frame().tr : poseAt(e, currentT()).phase.tr;
+
+  host.innerHTML = '';
+  const add = (html) => host.insertAdjacentHTML('beforeend', html);
+  add(`<div class="status"><span>9:41</span><span>▪▪▪ ▪ ▮</span></div>`);
+  add('<div class="body" id="phoneBody"></div>');
+  const body = $('phoneBody');
+  const push = (html) => body.insertAdjacentHTML('beforeend', html);
+
+  push(`<h3>${title}</h3>`);
+  if (others.length) push(`<span class="chip">aynı çizim: ${others.join(' · ')}</span>`);
+  push(`<div class="card"><h4>Hareket</h4><div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div><div class="phase" id="phonePhase"></div></div>`);
+
+  // Kas verisi yoksa panel HİÇ açılmıyor — tasarım incelemesinin kararı.
+  // Boş siluet "hiçbir kas çalışmıyor" olarak okunur, bu yanlış bilgi.
+  push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi henüz taşınmadı.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
+
+  push(`<div class="card stats">
+      <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
+      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.bar ? 'Halter' : 'Yok'}</b></div>
+      <div>Süre<b>${(e.dur / 1000).toFixed(1)} sn</b></div>
+    </div>`);
+
+  drawPhoneFigure();
+  $('phonePhase').textContent = phase || '';
+
+  // Katlama: dekoratif bir çizgi değil, ÖLÇÜM. `.phone` taşanı kırpıyor, yani
+  // ekranın altına düşen içerik gerçekten görünmüyor — tasarım incelemesinin
+  // "kas paneli SE'de kaydırmadan görünmüyor" bulgusunun sınandığı yer burası.
+  const need = body.scrollHeight + $('phone').querySelector('.status').offsetHeight;
+  const over = need - dev.h;
+  host.classList.toggle('over', over > 0);
+  $('phoneNote').innerHTML =
+    (over > 0
+      ? `<b style="color:var(--warn)">${over}px kaydırma gerekiyor</b> — içerik ${need}px, ekran ${dev.h}px. Alttaki içerik ilk bakışta görünmüyor.`
+      : `<b style="color:var(--p)">Hepsi katlamanın üstünde</b> — içerik ${need}px, ekran ${dev.h}px.`) +
+    `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
+}
+
+/** Yalnızca figürü yeniden çizer; oynatmada her karede bu çalışıyor. */
+function drawPhoneFigure() {
+  const svg = $('phoneFig');
+  if (!svg) return;
+  const e = ex();
+  const p = currentPose();
+  const S = skeleton(e, p);
+  svg.setAttribute('viewBox', boundsFor(e, 'side'));
+  svg.innerHTML = '';
+  const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
+  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
+  const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
+  const limb = (a, b, wa, wm, wb, at, far) => { const m = lerpP(a, b, at); return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)]; };
+  const push = (arr) => arr.forEach((n) => svg.appendChild(n));
+  push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
+  if (showFarLeg(e)) {
+    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true));
+    push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
+  }
+  if (!e.hideFarArm) {
+    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true));
+    push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+  }
+  push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
+  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0), fill: skin, stroke: line })]);
+  push(limb(S.pelvis, S.knee, 42, 33, 26, .42));
+  push(limb(S.knee, S.ankle, 26, 28, 13, .34));
+  push(limb(S.sh, S.elbow, 25, 22, 17, .5));
+  push(limb(S.elbow, S.hand, 18, 18, 12, .3));
+  push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
+  push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
+}
 
 /**
  * Kadrajı tazeler.
@@ -325,6 +447,7 @@ function moveDrag(evt) {
   markDirty();
   syncViewBox();
   draw();
+  drawPhoneFigure();
   renderSliders();
   renderIssues();
 }
@@ -479,6 +602,7 @@ function renderSliders() {
       markDirty();
       syncViewBox();
       draw();
+      drawPhoneFigure();
       renderIssues();
     };
     range.oninput = () => set(range.value, 'range');
@@ -594,6 +718,7 @@ function renderAll() {
   renderSliders();
   renderEquipment();
   renderIssues();
+  renderPhone();
   syncViewBox();
   draw();
 }
@@ -706,6 +831,7 @@ $('scrub').oninput = () => {
   renderSliders();
   renderIssues();
   draw();
+  drawPhoneFigure();
 };
 
 $('play').onclick = () => {
@@ -742,6 +868,20 @@ window.addEventListener('keydown', (evt) => {
   if (evt.key === ' ' && evt.target === document.body) { evt.preventDefault(); $('play').click(); }
 });
 
+$('phoneOn').onclick = () => {
+  phoneOn = !phoneOn;
+  $('phoneOn').textContent = phoneOn ? 'Açık' : 'Kapalı';
+  $('phoneOn').setAttribute('aria-pressed', String(phoneOn));
+  renderPhone();
+};
+PHONES.forEach((d, i) => {
+  const o = document.createElement('option');
+  o.value = String(i);
+  o.textContent = d.label;
+  $('phoneSize').appendChild(o);
+});
+$('phoneSize').onchange = () => { phoneSize = Number($('phoneSize').value); renderPhone(); };
+
 $('search').oninput = () => { filter = $('search').value.trim().toLowerCase(); renderExList(); };
 
 window.addEventListener('beforeunload', (e) => {
@@ -756,6 +896,7 @@ function tick(now) {
     last = now;
     playT = ((now / ex().dur) % 1 + 1) % 1;
     draw();
+    drawPhoneFigure();
     $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
   }
   requestAnimationFrame(tick);
@@ -770,6 +911,7 @@ const boot = async () => {
   // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
   // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
   // (unilateral_lunge üç hareket) ters çeviriyoruz.
+  CATALOG = names;
   NAMES = {};
   for (const e of Object.values(names)) {
     (NAMES[e.archetype] ||= []).push(e.name);
