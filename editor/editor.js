@@ -9,7 +9,7 @@
  */
 
 import {
-  BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
   shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
@@ -178,6 +178,107 @@ const trunkPart = (name, a, b) => {
 };
 
 
+/* --- karşılaştırma ekranı ------------------------------------------------ */
+
+/**
+ * Derinlik izdüşümü — DENEY.
+ *
+ * Motora değil editöre yazılı, çünkü henüz bir karar değil. Uzak uzuvlar bugün
+ * 2B'de sahte kaydırmayla ayrılıyor (`hipF = pelvis[0] - 18`); burada o sahte
+ * kaydırma geri alınıp gerçek bir Z koordinatına çevriliyor ve kamera
+ * döndürülüyor. Sonuç: gerçek ön kısalma ve gerçek uzak/yakın ayrımı.
+ *
+ * Açı 0 verilirse çıktı bugünkü 2B çizimle BİREBİR aynı — yani geriye uyumlu.
+ * Seçilirse motora taşınır; taşınırsa `rigAudit` 3B'de ölçmek zorunda kalır
+ * (izdüşümde kemikler kısalıyor) ve uygulama da aynı izdüşümü uygulamalı.
+ * Bunlar TODOS.md'de.
+ */
+const HIPZ = 19;
+const SHZ = 17;
+function skel3(e, p) {
+  const S = skeleton(e, p);
+  const out = {};
+  ['pelvis', 'knee', 'ankle', 'lumbar', 'thorax', 'neck', 'head', 'sh', 'elbow', 'hand'].forEach((k) => {
+    const z = k === 'pelvis' || k === 'knee' || k === 'ankle' ? HIPZ : k === 'sh' || k === 'elbow' || k === 'hand' ? SHZ : 0;
+    out[k] = [S[k][0], S[k][1], z];
+  });
+  ['hipF', 'kneeF', 'ankleF', 'shF', 'elbowF', 'handF'].forEach((f) => {
+    const leg = f === 'hipF' || f === 'kneeF' || f === 'ankleF';
+    out[f] = [S[f][0] + (leg ? 18 : 16), S[f][1] - (leg ? 3 : 5), leg ? -HIPZ : -SHZ];
+  });
+  if (S.bar) out.bar = [S.bar[0], S.bar[1], 0];
+  return out;
+}
+const proj = (q, az) => {
+  const c = Math.cos((az * Math.PI) / 180);
+  const s2 = Math.sin((az * Math.PI) / 180);
+  return { p: [CENTER_X + (q[0] - CENTER_X) * c + q[2] * s2, q[1]], z: -(q[0] - CENTER_X) * s2 + q[2] * c };
+};
+
+/** Karşılaştırma hücresi için figür SVG'si. */
+function cmpFigure(e, p, mode) {
+  const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
+  const az = mode === 'depth' ? 26 : 0;
+  const S3 = skel3(e, p);
+  const P = {}, Z = {};
+  for (const k in S3) { const r = proj(S3[k], az); P[k] = r.p; Z[k] = r.z; }
+  const S = mode === 'capsule' ? skeleton(e, p) : P;
+  const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}" fill="${f}" stroke="${line}"/>` : '');
+  const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
+  const limbOf = (n, a, b, w1, w2, w3, at, f) =>
+    mode === 'capsule' ? (() => { const m = lerpP(a, b, at); return cap(a, m, w1, w2, f) + cap(m, b, w2, w3, f); })() : pc(n, a, b, f);
+  const groups = [
+    { z: Z.kneeF, d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
+    { z: Z.elbowF, d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
+    { z: 0, d: (mode === 'capsule'
+        ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
+        : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
+      + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
+    { z: Z.knee, d: `<path d="${footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0)}" fill="${skin}" stroke="${line}"/>`
+        + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
+    { z: Z.elbow, d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
+  ];
+  // Derinlik kipinde uzak olan önce çiziliyor; 2B'de sabit sıra.
+  if (mode === 'depth') groups.sort((a, b) => a.z - b.z);
+  let g = groups.map((x) => x.d).join('');
+  const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
+  g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
+  g += mode === 'capsule'
+    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
+  if (S.bar) {
+    const metal = css('--metal'), accent = css('--p');
+    const end = (sgn) => (mode === 'depth' ? proj([S3.bar[0], S3.bar[1], sgn * 70], az).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
+    const A = end(-1), Bp = end(1);
+    g += `<line x1="${A[0]}" y1="${A[1]}" x2="${Bp[0]}" y2="${Bp[1]}" stroke="${metal}" stroke-width="7" stroke-linecap="round"/>`;
+    [A, Bp].forEach((q) => { g += `<ellipse cx="${q[0]}" cy="${q[1]}" rx="15" ry="34" fill="${metal}" fill-opacity=".62" stroke="${accent}" stroke-width="2"/>`; });
+  }
+  return `<svg viewBox="${boundsFor(e, 'side')}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+}
+
+let cmpOn = false;
+
+function renderCompare() {
+  if (!cmpOn) return;
+  const e = ex();
+  const p = poseAt(e, phonePlayT).p;
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  $('cmpTitle').textContent = (CATALOG[mid] && CATALOG[mid].name) || key;
+  const cell = (h3, note, inner) => `<div class="cell"><h3>${h3}</h3><p>${note}</p><div class="box">${inner}</div></div>`;
+  $('cmpGrid').innerHTML =
+    cell('Kapsül', 'Bugünkü eski çizim. Uzuvlar iki kapsülden, eklemler kontrastlı toplarla.', cmpFigure(e, p, 'capsule')) +
+    cell('Parça · 2B', 'Bugünkü varsayılan. Uzuv siluetleri veriden, eklemler sessiz, yan görünüm.', cmpFigure(e, p, 'flat')) +
+    cell('Parça · 3/4 açı (deney)', 'Kamera 26° döndürülmüş. Gerçek ön kısalma ve uzak/yakın ayrımı. Motorda YOK, henüz deney.', cmpFigure(e, p, 'depth')) +
+    cell(
+      'Kas haritası',
+      mus && mus.status === 'authored' ? `Birincil: ${labelsOf(mus.primary).join(', ')}` : 'Bu hareket için kas verisi yok.',
+      mus && mus.status === 'authored' && ANATOMY
+        ? `<div class="two">${muscleMapSvg('front', mus)}${muscleMapSvg('back', mus)}</div>`
+        : '',
+    );
+}
+
 /* --- mobil önizleme ------------------------------------------------------ */
 
 /**
@@ -273,19 +374,17 @@ function renderPhone() {
   if (authored) {
     // Harita bloğu önce değişkene kuruluyor: iç içe üç şablon dizisi okunmaz
     // ve bir kez bozuldu.
-    let maps = '';
-    if (ANATOMY && phoneLayout.includes('tabs')) {
-      maps = `<div class="tabbar">
+    // Kas paneli her zaman SEKMELİ: ön ve arka ayrı. Yan yana iki gövde daha
+    // az yer kaplıyor (ölçüldü) ama her biri yarı genişlikte kalıyor ve
+    // anatomi çizimi kaba olduğu için o boyutta okunmuyor. Kaydırma kabul
+    // edilebilir olduğuna göre okunurluk kazanıyor.
+    const maps = ANATOMY
+      ? `<div class="tabbar">
           <button data-view="front" aria-pressed="${phoneView === 'front'}">ÖN</button>
           <button data-view="back" aria-pressed="${phoneView === 'back'}">ARKA</button>
         </div>
-        <div class="maps"><figure>${muscleMapSvg(phoneView, mus)}</figure></div>`;
-    } else if (ANATOMY) {
-      maps = `<div class="maps">
-          <figure>${muscleMapSvg('front', mus)}<figcaption>Ön</figcaption></figure>
-          <figure>${muscleMapSvg('back', mus)}<figcaption>Arka</figcaption></figure>
-        </div>`;
-    }
+        <div class="maps"><figure>${muscleMapSvg(phoneView, mus)}</figure></div>`
+      : '';
     const key = ANATOMY
       ? `<div class="key">
           <span><i style="background:${MUSCLE_FILL.primary}"></i>Birincil</span>
@@ -1080,6 +1179,15 @@ $('kfTime').onchange = () => {
 $('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
 $('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
 
+$('compare').onclick = () => {
+  cmpOn = true;
+  $('cmp').classList.add('on');
+  renderCompare();
+};
+const closeCmp = () => { cmpOn = false; $('cmp').classList.remove('on'); };
+$('cmpClose').onclick = closeCmp;
+window.addEventListener('keydown', (evt) => { if (evt.key === 'Escape' && cmpOn) closeCmp(); });
+
 $('parts').onclick = () => {
   useParts = !useParts;
   $('parts').setAttribute('aria-pressed', String(useParts));
@@ -1186,8 +1294,6 @@ const LAYOUTS = [
   ['full', 'Geniş: canlı + evreler'],
   ['stack', 'Yalnız evreler'],
   ['compact', 'Sıkı: animasyon küçük'],
-  ['tabs', 'Sekme: ön / arka'],
-  ['compact tabs', 'Sıkı + sekme'],
 ];
 LAYOUTS.forEach(([v, label]) => {
   const o = document.createElement('option');
@@ -1224,6 +1330,7 @@ function tick(now) {
     phonePlayT = (phonePlayT + dt / ex().dur) % 1;
     // Önizleme her zaman oynuyor; ana sahne yalnızca "Oynat" açıkken.
     drawPhoneFigure();
+    renderCompare();
     if (playing) {
       playT = phonePlayT;
       draw();

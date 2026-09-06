@@ -64,6 +64,24 @@
   kbd { font:inherit; font-size:10px; background:var(--surf2); border:1px solid var(--line);
         border-radius:4px; padding:1px 4px; color:var(--sub); }
   /* --- mobil önizleme: kompozisyon ve ölçek, piksel render değil --- */
+  /* Karşılaştırma ekranı: kararı gözle vermek için, büyük. */
+  #cmp { position:fixed; inset:0; background:var(--bg0); z-index:50; display:none;
+         flex-direction:column; padding:14px 18px; }
+  #cmp.on { display:flex; }
+  #cmp header { display:flex; align-items:baseline; gap:14px; margin-bottom:10px; flex:none; }
+  #cmp h2 { margin:0; font-size:15px; letter-spacing:0; text-transform:none; color:var(--txt); }
+  #cmp .sub { font-size:12px; color:var(--sub); }
+  #cmp .grid { flex:1 1 0; display:grid; grid-template-columns:repeat(4,1fr);
+               grid-template-rows:1fr; gap:14px; min-height:0; overflow:hidden; }
+  #cmp .cell { display:flex; flex-direction:column; min-height:0; overflow:hidden;
+               background:var(--surf); border:1px solid var(--line); border-radius:12px; padding:10px; }
+  #cmp .cell h3 { margin:0 0 2px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--sub); flex:none; }
+  #cmp .cell p { margin:0 0 8px; font-size:11px; color:var(--sub); line-height:1.4; flex:none; height:44px; overflow:hidden; }
+  #cmp .cell .box { flex:1 1 0; min-height:0; display:flex; align-items:center; justify-content:center; }
+  #cmp .cell .box > svg { width:100%; height:100%; display:block; }
+  #cmp .two { display:grid; grid-template-columns:1fr 1fr; gap:6px; width:100%; height:100%; }
+  #cmp .two > svg { width:100%; height:100%; display:block; }
+
   .phoneWrap { display:flex; justify-content:center; margin-bottom:6px; }
   .phone { position:relative; background:var(--bg0); border:1px solid var(--line);
            border-radius:22px; overflow:hidden; flex:none; transform-origin:top center; }
@@ -105,17 +123,17 @@
   .phone .mus { display:grid; grid-template-columns:52px 1fr; gap:6px; align-items:baseline; margin-bottom:3px; }
   .phone .mus span { font-size:9px; letter-spacing:.08em; text-transform:uppercase; color:var(--sub); }
   .phone .mus b { font-size:11px; font-weight:500; line-height:1.4; }
-  .phone .maps { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:7px; }
+  .phone .maps { display:grid; gap:6px; margin-bottom:7px; }
   .phone .maps svg { width:100%; height:auto; display:block; }
   /* Sıkı düzen: animasyon küçülür, harita yükseklik tavanı alır. */
   .phone.compact .ph svg { height:92px; }
   .phone.compact .maps svg { max-height:210px; }
   .phone.compact .card { padding:7px 9px; margin-bottom:7px; }
   .phone.compact h3 { font-size:19px; margin:4px 0 4px; }
-  /* Sekme düzeni: tek gövde, ön/arka arasında geçiş. */
-  .phone.tabs .maps { grid-template-columns:1fr; }
-  .phone.tabs .maps svg { max-height:250px; }
-  .phone.compact.tabs .maps svg { max-height:230px; }
+  /* Kas paneli tek gövde: ön/arka sekmeyle değişiyor. */
+  .phone .maps { grid-template-columns:1fr; }
+  .phone .maps svg { max-height:340px; }
+  .phone.compact .maps svg { max-height:250px; }
   .phone .tabbar { display:flex; gap:5px; margin-bottom:6px; }
   .phone .tabbar button { flex:1; font:inherit; font-size:10px; letter-spacing:.06em;
                           background:var(--surf2); color:var(--sub); border:1px solid var(--line);
@@ -149,6 +167,7 @@
       <button id="play">Oynat</button>
       <button id="onion" aria-pressed="true">Gölge</button>
     <button id="parts" aria-pressed="true" title="Kapsül çizim / uzuv parçaları">Parça</button>
+    <button id="compare" title="Olası çıktıları büyük karşılaştır">Karşılaştır</button>
       <span style="flex:1"></span>
       <button id="undo" title="⌘Z">Geri al</button>
       <button id="redo" title="⇧⌘Z">İleri al</button>
@@ -207,5 +226,14 @@
   </div>
 </div>
 <script type="module" src="/editor.js"></script>
+  <div id="cmp">
+    <header>
+      <h2 id="cmpTitle"></h2>
+      <span class="sub">Aynı hareket, aynı kare — dört olası çıktı. Kapatmak için Esc.</span>
+      <span style="flex:1"></span>
+      <button id="cmpClose">Kapat</button>
+    </header>
+    <div class="grid" id="cmpGrid"></div>
+  </div>
 </body>
 </html>
