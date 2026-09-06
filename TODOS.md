@@ -111,6 +111,16 @@ derinliğe uzanıyor, uçlardaki tabaklar elips) ve o yapıldı — mobil önizl
 çizim konvansiyonu olarak duruyor. Diğeri figürün kendi açısıydı ve o bu kayda
 kaldı. Kullanıcı bunu bilerek erteledi (2026-09-06).
 
+**UCUZ KESTİRME DENENDİ VE YETMEDİ (2026-09-06).** Uzak uzuvların 2B'deki
+sahte kaydırmasını gerçek bir Z'ye çevirip kamerayı döndürmek denendi; ucuza
+3/4 vereceği sanılmıştı. Ölçüm (standing_row_hinged, 0° → 26°): uyluk
+105.0 → 102.4, baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Şekil neredeyse
+hiç değişmiyor. Sebep: poz sagittal düzlemde yazıldığı için bir taraftaki
+bütün eklemler AYNI derinlikte, ve aynı derinlikteki noktaları döndürmek
+onları göreli olarak değiştirmiyor — olan tek şey %10 yatay sıkışma. Deney
+editörün "Karşılaştır" ekranında kanıt olarak duruyor. Bu işin ucuz yolu
+YOK: eklem başına enine düzlem açısı gerekiyor.
+
 **Artı:** Hareketin okunurluğu artar; yan görünümde üst üste binen uzuvlar
 ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir çözüme kavuşur.
 **Eksi:** En pahalı ve en yayılan değişiklik. Devir sözleşmesini kırar,

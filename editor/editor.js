@@ -181,17 +181,27 @@ const trunkPart = (name, a, b) => {
 /* --- karşılaştırma ekranı ------------------------------------------------ */
 
 /**
- * Derinlik izdüşümü — DENEY.
+ * Derinlik izdüşümü — DENENDİ VE YETMEDİ.
  *
- * Motora değil editöre yazılı, çünkü henüz bir karar değil. Uzak uzuvlar bugün
- * 2B'de sahte kaydırmayla ayrılıyor (`hipF = pelvis[0] - 18`); burada o sahte
- * kaydırma geri alınıp gerçek bir Z koordinatına çevriliyor ve kamera
- * döndürülüyor. Sonuç: gerçek ön kısalma ve gerçek uzak/yakın ayrımı.
+ * Fikir şuydu: uzak uzuvlar bugün 2B'de sahte kaydırmayla ayrılıyor
+ * (`hipF = pelvis[0] - 18`); o sahte kaydırmayı gerçek bir Z koordinatına
+ * çevirip kamerayı döndürmek ucuza 3/4 görünüm verir sanmıştım.
  *
- * Açı 0 verilirse çıktı bugünkü 2B çizimle BİREBİR aynı — yani geriye uyumlu.
- * Seçilirse motora taşınır; taşınırsa `rigAudit` 3B'de ölçmek zorunda kalır
- * (izdüşümde kemikler kısalıyor) ve uygulama da aynı izdüşümü uygulamalı.
- * Bunlar TODOS.md'de.
+ * VERMİYOR. Ölçüldü (standing_row_hinged, 0° → 26°): uyluk 105.0 → 102.4,
+ * baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Figürün şekli neredeyse hiç
+ * değişmiyor.
+ *
+ * Sebep yapısal: modelde bir taraftaki BÜTÜN eklemler aynı derinlikte, çünkü
+ * poz sagittal düzlemde yazılıyor. Aynı derinlikteki noktaları döndürmek
+ * onları göreli olarak değiştirmiyor. Olan tek şey yatay sıkıştırma
+ * (cos 26° = 0.90) ve derinlik düzlemleri arasında ~17px kayma. Barbell
+ * farklı görünüyor çünkü ona ±70 birimlik GERÇEK derinlik verildi; vücutta
+ * öyle bir şey yok.
+ *
+ * Gerçek 3/4 için eklem BAŞINA enine düzlem açısı gerekiyor — yani yeni poz
+ * alanları, 3B denetim, ve uygulamada yeni izdüşüm. TODOS.md'deki pahalı yol
+ * bu; ucuz kestirme diye bir şey yok. Panel kanıt olarak duruyor ki aynı
+ * kestirme bir daha denenmesin.
  */
 const HIPZ = 19;
 const SHZ = 17;
@@ -269,7 +279,11 @@ function renderCompare() {
   $('cmpGrid').innerHTML =
     cell('Kapsül', 'Bugünkü eski çizim. Uzuvlar iki kapsülden, eklemler kontrastlı toplarla.', cmpFigure(e, p, 'capsule')) +
     cell('Parça · 2B', 'Bugünkü varsayılan. Uzuv siluetleri veriden, eklemler sessiz, yan görünüm.', cmpFigure(e, p, 'flat')) +
-    cell('Parça · 3/4 açı (deney)', 'Kamera 26° döndürülmüş. Gerçek ön kısalma ve uzak/yakın ayrımı. Motorda YOK, henüz deney.', cmpFigure(e, p, 'depth')) +
+    cell(
+      'Derinlik denemesi · YETMEDİ',
+      'Kamera 26°. Ölçüldü: uyluk 105→102, diz açısı 38°→35°. Şekil değişmiyor; yalnızca %10 yatay sıkışma ve barın tabakları ayrışıyor. Gerçek 3/4 için eklem başına derinlik gerekiyor.',
+      cmpFigure(e, p, 'depth'),
+    ) +
     cell(
       'Kas haritası',
       mus && mus.status === 'authored' ? `Birincil: ${labelsOf(mus.primary).join(', ')}` : 'Bu hareket için kas verisi yok.',
