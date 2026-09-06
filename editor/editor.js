@@ -64,6 +64,8 @@ let filter = '';
 /** Mobil önizleme: hangi cihaz ve açık mı. */
 let phoneOn = true;
 let phoneSize = 0;
+/** 'phases' = iki evre yan yana (onaylanan tasarım), 'live' = canlı figür. */
+let phoneMode = 'phases';
 // Geri alma yığını: sürükleme yıkıcı ve anında; kaçan bir hamlenin
 // dönüşü olmazsa araç kullanılamaz.
 const undoStack = [];
@@ -161,7 +163,17 @@ function renderPhone() {
 
   push(`<h3>${title}</h3>`);
   if (others.length) push(`<span class="chip">aynı çizim: ${others.join(' · ')}</span>`);
-  push(`<div class="card"><h4>Hareket</h4><div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div><div class="phase" id="phonePhase"></div></div>`);
+  if (phoneMode === 'phases') {
+    const [i0, i1] = keyPhases(e);
+    const lab = (i) => e.kf[i].tr || `%${(e.kf[i].t * 100).toFixed(0)}`;
+    push(`<div class="card"><h4>Hareket</h4><div class="phases">
+        <div class="ph${kfIndex === i0 ? ' sel' : ''}"><svg id="phA" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">1. ${lab(i0)}</div></div>
+        <div class="arrow">›</div>
+        <div class="ph${kfIndex === i1 ? ' sel' : ''}"><svg id="phB" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">2. ${lab(i1)}</div></div>
+      </div></div>`);
+  } else {
+    push(`<div class="card"><h4>Hareket</h4><div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div><div class="phase" id="phonePhase"></div></div>`);
+  }
 
   // Kas verisi yoksa panel HİÇ açılmıyor — tasarım incelemesinin kararı.
   // Boş siluet "hiçbir kas çalışmıyor" olarak okunur, bu yanlış bilgi.
@@ -174,7 +186,7 @@ function renderPhone() {
     </div>`);
 
   drawPhoneFigure();
-  $('phonePhase').textContent = phase || '';
+  if ($('phonePhase')) $('phonePhase').textContent = phase || '';
 
   // Katlama: dekoratif bir çizgi değil, ÖLÇÜM. `.phone` taşanı kırpıyor, yani
   // ekranın altına düşen içerik gerçekten görünmüyor — tasarım incelemesinin
@@ -189,12 +201,31 @@ function renderPhone() {
     `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
 }
 
-/** Yalnızca figürü yeniden çizer; oynatmada her karede bu çalışıyor. */
-function drawPhoneFigure() {
-  const svg = $('phoneFig');
-  if (!svg) return;
-  const e = ex();
-  const p = currentPose();
+/**
+ * Hareketi iki karede anlatan evre çifti.
+ *
+ * İlk kare ve ondan EN ÇOK AYRILAN kare. Elle "başlangıç ve tepe" işaretlemek
+ * yerine veriden çıkıyor: kareler değişince seçim de kendiliğinden değişir,
+ * unutulmuş bir bayrak yüzünden yanlış evre gösterilmez. Ayrılma iskelet
+ * üstünden ölçülüyor, poz alanları üstünden değil — hepsi piksel, birim
+ * karışması olmuyor.
+ */
+function keyPhases(e) {
+  const S0 = skeleton(e, fillPose(e.kf[0].p));
+  const joints = Object.keys(S0).filter((k) => k !== 'bar');
+  let best = Math.min(1, e.kf.length - 1);
+  let bestD = -1;
+  e.kf.forEach((k, i) => {
+    if (i === 0) return;
+    const S = skeleton(e, fillPose(k.p));
+    const d = joints.reduce((sum, j) => sum + Math.hypot(S[j][0] - S0[j][0], S[j][1] - S0[j][1]), 0);
+    if (d > bestD) { bestD = d; best = i; }
+  });
+  return [0, best];
+}
+
+/** Tek bir pozu verilen SVG'ye çizer. */
+function drawPose(svg, e, p) {
   const S = skeleton(e, p);
   svg.setAttribute('viewBox', boundsFor(e, 'side'));
   svg.innerHTML = '';
@@ -220,6 +251,25 @@ function drawPhoneFigure() {
   push(limb(S.elbow, S.hand, 18, 18, 12, .3));
   push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
   push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
+}
+
+/** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
+function drawPhoneFigure() {
+  const e = ex();
+  if (phoneMode === 'phases') {
+    if (!$('phA')) return;
+    const [i0, i1] = keyPhases(e);
+    drawPose($('phA'), e, fillPose(e.kf[i0].p));
+    drawPose($('phB'), e, fillPose(e.kf[i1].p));
+    // Seçili kare işareti burada tazeleniyor: paneli baştan kurmak zaman
+    // çubuğunda gezerken gereksiz iş olurdu.
+    const boxes = $('phone').querySelectorAll('.ph');
+    if (boxes[0]) boxes[0].classList.toggle('sel', editable() && kfIndex === i0);
+    if (boxes[1]) boxes[1].classList.toggle('sel', editable() && kfIndex === i1);
+  } else {
+    if (!$('phoneFig')) return;
+    drawPose($('phoneFig'), e, currentPose());
+  }
 }
 
 /**
@@ -868,9 +918,15 @@ window.addEventListener('keydown', (evt) => {
   if (evt.key === ' ' && evt.target === document.body) { evt.preventDefault(); $('play').click(); }
 });
 
+$('phoneMode').onclick = () => {
+  phoneMode = phoneMode === 'phases' ? 'live' : 'phases';
+  $('phoneMode').textContent = phoneMode === 'phases' ? 'Evre' : 'Canlı';
+  renderPhone();
+};
+
 $('phoneOn').onclick = () => {
   phoneOn = !phoneOn;
-  $('phoneOn').textContent = phoneOn ? 'Açık' : 'Kapalı';
+  $('phoneOn').textContent = phoneOn ? '◉' : '○';
   $('phoneOn').setAttribute('aria-pressed', String(phoneOn));
   renderPhone();
 };
