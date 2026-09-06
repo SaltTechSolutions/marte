@@ -821,28 +821,66 @@ export function capsule(a: Vec, b: Vec, wa: number, wb: number): string {
 }
 
 /**
- * Ayak. Topuk ayak bileğinin altında, parmak ucu önde; ikisi de yerden
- * yükselebilir — topuk kalkışında ve basamağa çıkışta ayak havada kalır,
- * tabanı zemine yapıştırmak yanlış olur.
+ * Ayak ölçüleri, ayak bileği orijin alınarak.
+ *
+ * Ayak bileği ayağın arkadan yaklaşık dörtte birinde durur; topuk arkada,
+ * parmak ucu önde. Bu sayılar `footPath`'in ve `MAX_ANKLE_LIFT`'in ortak
+ * kaynağı — ikisi ayrı yazılsaydı denetim, çizimin yapamayacağı bir kalkışa
+ * izin verirdi. Nitekim veriyordu.
  */
+export const FOOT = { heel: -12, toe: 34, sole: 13 } as const;
+
 /**
- * Ayak.
+ * Topuğun kalkabileceği en yüksek nokta.
  *
- * `pinToe`: topuk kalkarken parmak ucu yerde kalır ve ayak parmak ucu
- * etrafında döner — topuk kalkışının tanımı bu. Yükseklik ayağın boyuyla
- * sınırlı: taban zeminden koparsa figür havada yürür.
+ * Topuk kalkarken ayak parmak ucu etrafında döner, yani parmak yerde kalır.
+ * Ayak bileği ancak parmak ucuna olan mesafesi kadar yükselebilir; ötesinde
+ * parmak yerden kopar ve figür havada yürür.
  *
- * `pinToe` olmadan taban ayak bileğine bağlı kalır; havadaki ayak (hamlenin
- * arka ayağı, asılı bacak) zemine kadar uzayan bir kama çizmez.
+ * Ölçüldü: `calf_raise` 38px kaldırıyordu ama sınır 23px. Aradaki fark
+ * çizimde ayağı dörtgen gibi deforme ediyordu, çünkü `pinToe` parmağı zorla
+ * yerde tutmaya çalışıyordu. Eski denetim sınırı ayak BOYUYDU (46) — çizimin
+ * yapabildiğinden iki kat gevşek.
+ */
+export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.sole);
+
+/**
+ * Ayak profili.
+ *
+ * Topuk yuvarlak ve arkada, taban ortada hafif kavisli (ayak tabanı düz
+ * değil), parmak ucu öne incelir. Eskiden dört köşeli bir dörtgendi ve eğim
+ * değişince hangi ucun parmak olduğu okunmuyordu.
+ *
+ * `pinToe`: topuk kalkarken ayak PARMAK UCU ETRAFINDA döner — topuk
+ * kalkışının tanımı bu. Dönüş açısı ayak bileğinin yerden yüksekliğinden
+ * çıkıyor, yani şekil deforme olmuyor, katı kalıp dönüyor.
  */
 export function footPath(ankle: Vec, dir: number, pinToe = false): string {
-  const d = D(dir);
-  const heel = add(ankle, d, -16);
-  const toe = add(ankle, d, B.foot - 16);
-  const sx = d[0] < 0 ? -1 : 1;
-  const heelBottom = Math.min(GROUND, ankle[1] + 12);
-  const toeBottom = pinToe ? GROUND : Math.min(GROUND, toe[1] + 12);
-  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(toeBottom - 6, toe[1])} L ${toe[0] + 6 * sx} ${toeBottom} L ${heel[0] - 4 * sx} ${heelBottom} Z`;
+  const r = Math.hypot(FOOT.toe, FOOT.sole);
+  let extra = 0;
+  if (pinToe) {
+    // Parmak yerde kalsın diye gereken ek dönüş.
+    const h = Math.min(r, GROUND - ankle[1]);
+    extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
+  }
+  // Yerel eksen: +u parmak yönü, +v aşağı.
+  const a = rad(dir) + extra;
+  const ux = Math.sin(a);
+  const uy = -Math.cos(a);
+  const vx = -uy;
+  const vy = ux;
+  const P = (u: number, v: number): Vec => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+  const pt = (u: number, v: number) => { const q = P(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
+  const { heel, toe, sole } = FOOT;
+  return (
+    `M ${pt(heel + 2, -9)} ` +
+    `C ${pt(heel - 3, -4)} ${pt(heel - 4, 6)} ${pt(heel + 1, sole - 1)} ` + // topuk arkası, yuvarlak
+    `C ${pt(heel + 6, sole + 1)} ${pt(2, sole - 3)} ${pt(10, sole - 2)} ` + // taban kavisi
+    `C ${pt(18, sole)} ${pt(26, sole)} ${pt(toe - 2, sole - 1)} ` + // topuk-parmak arası taban
+    `C ${pt(toe + 2, sole - 5)} ${pt(toe + 1, 3)} ${pt(toe - 7, 1)} ` + // parmak ucu
+
+    `C ${pt(18, -2)} ${pt(6, -6)} ${pt(heel + 2, -9)} Z`
+  );
 }
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);

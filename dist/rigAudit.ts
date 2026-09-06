@@ -1,10 +1,11 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (eaed1ea+kirli), 2026-09-06T15:03:53.311Z
+// Kaynak: antrenman-simulatoru v1.0.0 (c62e06a+kirli), 2026-09-06T15:09:48.797Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
 import {
   B,
+  MAX_ANKLE_LIFT,
   FrontSide,
   GROUND,
   RigExercise,
@@ -166,8 +167,12 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // ayak değil, altındaki kutu.
   if (ex.mode === 'stand' && ex.prop !== 'box') {
     if (p.ankleLift < 0) add('ayak', 'basan ayak zeminin altına inmiş');
-    if (p.ankleLift > B.foot) {
-      add('ayak', `topuk ${Math.round(p.ankleLift)}px kalkmış, ayak boyu ${B.foot} — taban zeminden kopuyor`);
+    // Sınır ayak BOYU değil, parmak ucunun UZANABİLDİĞİ mesafe: topuk kalkarken
+    // ayak parmak etrafında döner ve ayak bileği ancak o mesafe kadar
+    // yükselebilir. Eski sınır (ayak boyu 46) çizimin yapabildiğinin iki katı
+    // gevşekti ve `calf_raise` 38px ile aradan geçiyordu.
+    if (p.ankleLift > MAX_ANKLE_LIFT) {
+      add('ayak', `topuk ${Math.round(p.ankleLift)}px kalkmış, parmak ucu en fazla ${MAX_ANKLE_LIFT}px'e yetişiyor — parmak yerden kopuyor`);
     }
   }
 

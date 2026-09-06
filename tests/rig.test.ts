@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
-import { B, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
+import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
 import { auditExercise, auditLoop, auditSegments } from '../src/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -114,7 +114,7 @@ describe('rig hareket denetimi', () => {
   it('topuk kalkışında ayak boyunu aşmaz', () => {
     const lifts = frames('calf_raise').map(({ p }) => p.ankleLift);
     expect(Math.max(...lifts), 'topuk yüksekliği').toBeGreaterThan(20);
-    expect(Math.max(...lifts), 'topuk ayak boyunu aşmamalı').toBeLessThanOrEqual(B.foot);
+    expect(Math.max(...lifts), 'topuk parmak ucunun uzanabildiğinden fazla kalkmamalı').toBeLessThanOrEqual(MAX_ANKLE_LIFT);
   });
 
   it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {

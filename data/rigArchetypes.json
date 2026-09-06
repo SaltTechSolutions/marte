@@ -627,7 +627,7 @@
         "t": 0.4,
         "tr": "Tepe",
         "p": {
-          "ankleLift": 38,
+          "ankleLift": 22,
           "shinA": 174,
           "thighA": 181,
           "torso": 4,
@@ -641,7 +641,7 @@
         "t": 0.55,
         "tr": "Tepe",
         "p": {
-          "ankleLift": 38,
+          "ankleLift": 22,
           "shinA": 174,
           "thighA": 181,
           "torso": 4,
@@ -665,7 +665,8 @@
           "foreA": 180
         }
       }
-    ]
+    ],
+    "note": "Topuk kalkisi 38px idi ama ayak bilegi-parmak ucu mesafesi 23px'e izin veriyor; fazlasinda parmak yerden kopuyor ve ayak carpik cizilyordu. 22px'e cekildi (figur boyunun ~%5'i, gercek bir topuk kalkisi kadar)."
   },
   "bench_press": {
     "mode": "bench",
