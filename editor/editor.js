@@ -71,6 +71,13 @@ let phoneOn = true;
 let phoneSize = 0;
 /** 'phases' = iki evre yan yana (onaylanan tasarım), 'live' = canlı figür. */
 let phoneMode = 'phases';
+/**
+ * Düzen. Varsayılan `compact`, çünkü ölçüm tek onun üç cihazda da sığdığını
+ * gösterdi (SE'de 652/667). `stack` bugünkü hâl ve SE'de 231px taşıyor.
+ */
+let phoneLayout = 'compact';
+/** Sekme düzeninde hangi görünüm açık. */
+let phoneView = 'front';
 // Geri alma yığını: sürükleme yıkıcı ve anında; kaçan bir hamlenin
 // dönüşü olmazsa araç kullanılamaz.
 const undoStack = [];
@@ -146,6 +153,7 @@ function renderPhone() {
 
   const dev = PHONES[phoneSize];
   const sc = phoneScale(dev.w);
+  host.className = 'phone' + (phoneLayout === 'stack' ? '' : ' ' + phoneLayout);
   host.style.width = dev.w + 'px';
   host.style.height = dev.h + 'px';
   host.style.transform = `scale(${sc})`;
@@ -190,32 +198,47 @@ function renderPhone() {
   // Kas verisi yoksa panel HİÇ açılmıyor — tasarım incelemesinin kararı.
   // Boş siluet "hiçbir kas çalışmıyor" olarak okunur, bu yanlış bilgi.
   if (authored) {
-    // Metin listesi A varyantından geliyor ve üç işi birden görüyor: ekran
-    // okuyucunun tek yolu, renk körü kullanıcının yedek kanalı, ve anatomi
-    // SVG'si gelene kadar tek gösterim.
-    push(`<div class="card"><h4>Çalışan kaslar</h4>
-        ${ANATOMY ? `<div class="maps">
+    // Harita bloğu önce değişkene kuruluyor: iç içe üç şablon dizisi okunmaz
+    // ve bir kez bozuldu.
+    let maps = '';
+    if (ANATOMY && phoneLayout.includes('tabs')) {
+      maps = `<div class="tabbar">
+          <button data-view="front" aria-pressed="${phoneView === 'front'}">ÖN</button>
+          <button data-view="back" aria-pressed="${phoneView === 'back'}">ARKA</button>
+        </div>
+        <div class="maps"><figure>${muscleMapSvg(phoneView, mus)}</figure></div>`;
+    } else if (ANATOMY) {
+      maps = `<div class="maps">
           <figure>${muscleMapSvg('front', mus)}<figcaption>Ön</figcaption></figure>
           <figure>${muscleMapSvg('back', mus)}<figcaption>Arka</figcaption></figure>
-        </div>
-        <div class="key">
+        </div>`;
+    }
+    const key = ANATOMY
+      ? `<div class="key">
           <span><i style="background:${MUSCLE_FILL.primary}"></i>Birincil</span>
           <span><i style="background:${MUSCLE_FILL.secondary}"></i>İkincil (taramalı)</span>
           <span><i style="background:${MUSCLE_FILL.rest}"></i>Pasif</span>
-        </div>` : ''}
-        <div class="mus"><span>Birincil</span><b>${labelsOf(mus.primary).join(', ')}</b></div>
-        ${mus.secondary.length ? `<div class="mus"><span>İkincil</span><b>${labelsOf(mus.secondary).join(', ')}</b></div>` : ''}
-      </div>`);
+        </div>`
+      : '';
+    // Metin listesi A varyantından ve üç işi birden görüyor: ekran okuyucunun
+    // tek yolu, renk körü kullanıcının yedek kanalı, ve haritanın okunmadığı
+    // her durumda yedek gösterim.
+    const list = `<div class="mus"><span>Birincil</span><b>${labelsOf(mus.primary).join(', ')}</b></div>` +
+      (mus.secondary.length ? `<div class="mus"><span>İkincil</span><b>${labelsOf(mus.secondary).join(', ')}</b></div>` : '');
+    push(`<div class="card"><h4>Çalışan kaslar</h4>${maps}${key}${list}</div>`);
   } else {
     push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi yok.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
   }
-  if (others.length) push(`<p class="none" style="margin:-4px 2px 9px">Aynı çizimi paylaşan: ${others.join(' · ')} — kas verileri farklı olabilir.</p>`);
 
   push(`<div class="card stats">
       <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
       <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.bar ? 'Halter' : 'Yok'}</b></div>
       <div>Süre<b>${(e.dur / 1000).toFixed(1)} sn</b></div>
     </div>`);
+
+  host.querySelectorAll('.tabbar button').forEach((b) => {
+    b.onclick = () => { phoneView = b.dataset.view; renderPhone(); };
+  });
 
   drawPhoneFigure();
   if ($('phonePhase')) $('phonePhase').textContent = phase || '';
@@ -226,10 +249,16 @@ function renderPhone() {
   const need = body.scrollHeight + $('phone').querySelector('.status').offsetHeight;
   const over = need - dev.h;
   host.classList.toggle('over', over > 0);
+  // "Aynı çizim" bilgisi telefonun DIŞINDA: editör bilgisi, uygulamada
+  // olmayacak. İçeride tutmak katlama ölçümünü şişiriyordu.
+  const shared = others.length
+    ? `<br><span style="color:var(--sub)">Aynı çizimi paylaşan: ${others.join(' · ')} — kas verileri farklı olabilir.</span>`
+    : '';
   $('phoneNote').innerHTML =
     (over > 0
       ? `<b style="color:var(--warn)">${over}px kaydırma gerekiyor</b> — içerik ${need}px, ekran ${dev.h}px. Alttaki içerik ilk bakışta görünmüyor.`
       : `<b style="color:var(--p)">Hepsi katlamanın üstünde</b> — içerik ${need}px, ekran ${dev.h}px.`) +
+    shared +
     `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
 }
 
@@ -1031,6 +1060,21 @@ PHONES.forEach((d, i) => {
   o.textContent = d.label;
   $('phoneSize').appendChild(o);
 });
+const LAYOUTS = [
+  ['stack', 'Bugünkü düzen'],
+  ['compact', 'Sıkı: animasyon küçük'],
+  ['tabs', 'Sekme: ön / arka'],
+  ['compact tabs', 'Sıkı + sekme'],
+];
+LAYOUTS.forEach(([v, label]) => {
+  const o = document.createElement('option');
+  o.value = v;
+  o.textContent = label;
+  $('phoneLayout').appendChild(o);
+});
+$('phoneLayout').value = phoneLayout;
+$('phoneLayout').onchange = () => { phoneLayout = $('phoneLayout').value; renderPhone(); };
+
 $('phoneSize').onchange = () => { phoneSize = Number($('phoneSize').value); renderPhone(); };
 
 $('search').oninput = () => { filter = $('search').value.trim().toLowerCase(); renderExList(); };

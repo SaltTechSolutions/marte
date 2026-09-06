@@ -96,6 +96,20 @@
   .phone .mus b { font-size:11px; font-weight:500; line-height:1.4; }
   .phone .maps { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:7px; }
   .phone .maps svg { width:100%; height:auto; display:block; }
+  /* Sıkı düzen: animasyon küçülür, harita yükseklik tavanı alır. */
+  .phone.compact .ph svg { height:92px; }
+  .phone.compact .maps svg { max-height:210px; }
+  .phone.compact .card { padding:7px 9px; margin-bottom:7px; }
+  .phone.compact h3 { font-size:19px; margin:4px 0 4px; }
+  /* Sekme düzeni: tek gövde, ön/arka arasında geçiş. */
+  .phone.tabs .maps { grid-template-columns:1fr; }
+  .phone.tabs .maps svg { max-height:250px; }
+  .phone.compact.tabs .maps svg { max-height:230px; }
+  .phone .tabbar { display:flex; gap:5px; margin-bottom:6px; }
+  .phone .tabbar button { flex:1; font:inherit; font-size:10px; letter-spacing:.06em;
+                          background:var(--surf2); color:var(--sub); border:1px solid var(--line);
+                          border-radius:7px; padding:4px 0; cursor:pointer; }
+  .phone .tabbar button[aria-pressed="true"] { background:#12281f; color:var(--p); border-color:var(--p); }
   .phone .maps figcaption { font-size:8px; letter-spacing:.1em; text-transform:uppercase;
                             color:var(--sub); text-align:center; margin-top:2px; }
   .phone .maps figure { margin:0; }
@@ -156,6 +170,7 @@
     <div class="bar" style="margin-bottom:8px">
       <select id="phoneSize" style="flex:1;min-width:0"></select>
       <button id="phoneMode" title="İki evre / canlı figür">Evre</button>
+      <select id="phoneLayout" title="Düzen" style="flex:1;min-width:0"></select>
       <button id="phoneOn" aria-pressed="true" title="Önizlemeyi aç/kapat">◉</button>
     </div>
     <div class="phoneWrap"><div class="phone" id="phone"></div></div>
