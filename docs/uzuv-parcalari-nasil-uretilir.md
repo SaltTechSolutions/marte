@@ -95,6 +95,20 @@ Yay komutları (`A`) bu dönüşümde doğru çevrilmiyor — yarıçap ve bayra
 yeniden hesaplanması gerekiyor. Inkscape'te `Path > Object to Path` ve
 eğrilere düzleştirme ile yaylardan kurtul; `M`, `L`, `C`, `Q`, `Z` yeterli.
 
+**Bunu elle yapma.** `scripts/normalize-part.mjs` dönüşümü yapıyor ve sonucu
+kendi kendine doğruluyor — kemik başı gerçekten `(0,0)`'a, sonu `(0,len)`'e
+düşmüş mü:
+
+```bash
+node scripts/normalize-part.mjs --part thigh --a 300,200 --b 298,305 --d "M 300 200 ..."
+```
+
+`--a` kemiğin başı, `--b` sonu, ikisi de yolun kendi koordinat uzayında.
+Script ayrıca ön (+X) ve arka (−X) genişliğini yazıyor: kütle arkada ağır
+basıyorsa parça aynalanmıştır ve uyarı veriyor. `--write` eklersen sonucu
+doğrudan `data/bodyParts.json`'a yazar. Göreli komutları mutlağa, `H`/`V`'yi
+`L`'ye çeviriyor; yay komutuna açık hatayla itiraz ediyor.
+
 ### 5. Yaz ve doğrula
 
 Yolları `data/bodyParts.json`'a koy, `source` alanını güncelle, sonra:
