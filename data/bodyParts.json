@@ -1,6 +1,6 @@
 {
   "_": "Uzuv silueti parcalari. Yerel uzay: kemik (0,0)'dan (0,len)'e uzanir. YEREL +X'in dunyada nereye baktigi KEMIGIN YONUNE bagli: asagi bakan kemiklerde (uyluk, baldir, ust kol) on taraf, yukari bakan kemiklerde (bel, govde, boyun) arka taraf. Kemigi poz icinde yon degistiren uzuvlarda (ozellikle on kol) asimetri taraf degistirir, o yuzden oralar bilerek ig bicimli: ortada sisik, iki yani dengeli.",
-  "source": "elle çizilmiş; uzuv kalınlıkları gerçek insan ölçülerine göre ayarlandı (2026-09-06)",
+  "source": "elle çizilmiş; uzuv kalınlıkları insan ölçüsünde, birleşimler örtüşmeli (2026-09-06)",
   "parts": {
     "thigh": {
       "len": 105,
@@ -28,7 +28,7 @@
     },
     "neck": {
       "len": 24,
-      "d": "M -13.2 -4 C -14.4 6 -14.4 16 -12 24 C -4.8 28 4.8 28 12 24 C 14.4 16 14.4 6 13.2 -4 C 6 -8 -6 -8 -13.2 -4 Z"
+      "d": "M -14 -14 C -15 -2 -15 12 -13 26 C -11 33 -5 36 0 36 C 5 36 11 33 13 26 C 15 12 15 -2 14 -14 C 7 -18 -7 -18 -14 -14 Z"
     }
   }
 }

@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (fe2af16+kirli), 2026-09-06T13:59:48.646Z
+// Kaynak: antrenman-simulatoru v1.0.0 (eaed1ea+kirli), 2026-09-06T15:03:53.311Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 

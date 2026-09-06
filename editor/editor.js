@@ -626,10 +626,14 @@ function draw() {
     ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
     ...(useParts ? [] : [el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` })]),
     ...(useParts ? [trunkPart('neck', S.thorax, S.neck)].filter(Boolean) : [seg(S.thorax, S.neck, 21, 19)]),
-    // Deltoid kaması: omuz topu tek başına gövdeye teğet bir daire gibi
-    // duruyordu, bu onu göğüs kafesine bağlıyor.
-    el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }),
-    ball(S.sh, 17),
+    // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
+    // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
+    // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
+    // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
+    // ayrı ayrı okunuyor.
+    ...(useParts
+      ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
+      : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
   ]);
   push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
