@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
-  frontPoints, frontTrunk, lerpP, poseAt, showFarLeg, skeleton,
+  frontPoints, frontTorsoPath, frontTrunk, lerpP, poseAt, shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -457,9 +457,13 @@ function draw() {
       el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
     ])];
   };
+  // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
+  // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
+  // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
+  // opak kalıyor ki tabağın sınırı belirsizleşmesin.
   const plate = (c) => (c ? [
-    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, stroke: accent, 'stroke-width': 2 }),
-    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line }),
+    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, 'fill-opacity': .62, stroke: accent, 'stroke-width': 2 }),
+    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line, opacity: .8 }),
     el('circle', { cx: c[0], cy: c[1], r: 11, fill: joint, stroke: accent, 'stroke-width': 2 }),
   ] : []);
 
@@ -503,18 +507,20 @@ function draw() {
     [F.L, F.R].forEach((s) => {
       push([el('rect', { x: s.ankle[0] - 15, y: GROUND - 13, width: 30, height: 13, rx: 5, fill: skin, stroke: line })]);
       push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34));
-      push([ball(s.knee, 13), ball(s.ankle, 9), ball(s.sh, 17)]);
+      push([ball(s.knee, 13), ball(s.ankle, 9)]);
       push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3));
       push([ball(s.elbow, 10), el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
       if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
     });
     push([
       el('ellipse', { cx, cy: F.pelvis[1] + 8, rx: 38, ry: 25, fill: skin, stroke: line }),
-      seg(F.pelvis, F.lumbar, 66, 56),
-      el('ellipse', { cx, cy: trunk.cy, rx: trunk.rx, ry: trunk.ry, fill: skin, stroke: line }),
+      // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
+      // omuz silkerken omuz gövdeden kopamıyor.
+      el('path', { d: frontTorsoPath(F), fill: skin, stroke: line }),
       seg(F.thorax, F.neck, 27, 24),
       el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: line }),
     ]);
+    [F.L, F.R].forEach((s2) => push([ball(s2.sh, 16)]));
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view);
   }
@@ -559,7 +565,11 @@ function draw() {
     el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }),
     seg(S.pelvis, S.lumbar, 40, 33),
     el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }),
-    seg(S.thorax, S.neck, 21, 19), ball(S.sh, 17),
+    seg(S.thorax, S.neck, 21, 19),
+    // Deltoid kaması: omuz topu tek başına gövdeye teğet bir daire gibi
+    // duruyordu, bu onu göğüs kafesine bağlıyor.
+    el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }),
+    ball(S.sh, 17),
   ]);
   push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42)); push(limb(S.knee, S.ankle, 26, 28, 13, .34));

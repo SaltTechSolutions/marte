@@ -671,6 +671,64 @@ export function boundsFor(ex: RigExercise, view: 'side' | 'front'): string {
 }
 
 /**
+ * Önden görünümde gövde silueti: kalçadan omuza TEK parça.
+ *
+ * Eskiden gövde çıplak bir elipsti ve omuz topu ayrı çiziliyordu. Ölçüldü:
+ * `shrug_front`'ta omuz silkerken omuz topu elipsin tepesinin tamamen dışına
+ * çıkıyor (elipsin o yükseklikteki yarı genişliği 0) ve 27px boşluk kalıyordu
+ * — omuzlar gövdeden kopuk duruyordu.
+ *
+ * Anatomik olarak eksik olan şey omuz kuşağıydı: gerçek bir önden görünümde
+ * trapez boyundan omuza doğru eğimle iner, yani omuz gövdeden kopamaz. Bu yol
+ * o eğimi çiziyor — boyun kökünden omuza, omuzdan bele, belden kalçaya.
+ *
+ * Omuz yükselmesi (`shLift`) siluetin İÇİNDE kalıyor: omuz kalkınca yamuk da
+ * onunla birlikte yükseliyor.
+ */
+export function frontTorsoPath(F: FrontPoints): string {
+  const cx = F.cx;
+  const neckW = 20;
+  const shL = F.L.sh;
+  const shR = F.R.sh;
+  const waistY = (F.lumbar[1] + F.thorax[1]) / 2 + (F.pelvis[1] - F.thorax[1]) * 0.42;
+  const waistW = 38;
+  const hipY = F.pelvis[1] + 10;
+  const hipW = 44;
+  const neckY = F.neck[1] + 6;
+  // Yamuk eğimi: boyun kökünden omuza doğru dışa ve aşağı.
+  return (
+    `M ${cx - neckW} ${neckY} ` +
+    `C ${cx - neckW - 8} ${neckY + 6} ${shL[0] + 12} ${shL[1] - 12} ${shL[0]} ${shL[1]} ` +
+    `C ${shL[0] - 6} ${shL[1] + 14} ${cx - waistW - 6} ${waistY - 30} ${cx - waistW} ${waistY} ` +
+    `C ${cx - waistW - 2} ${waistY + 18} ${cx - hipW} ${hipY - 22} ${cx - hipW} ${hipY} ` +
+    `L ${cx + hipW} ${hipY} ` +
+    `C ${cx + hipW} ${hipY - 22} ${cx + waistW + 2} ${waistY + 18} ${cx + waistW} ${waistY} ` +
+    `C ${cx + waistW + 6} ${waistY - 30} ${shR[0] + 6} ${shR[1] + 14} ${shR[0]} ${shR[1]} ` +
+    `C ${shR[0] - 12} ${shR[1] - 12} ${cx + neckW + 8} ${neckY + 6} ${cx + neckW} ${neckY} Z`
+  );
+}
+
+/**
+ * Yandan görünümde omzu göğüs kafesine bağlayan deltoid kaması.
+ *
+ * Omuz topu tek başına çizilince gövdeye teğet geçen bir daire gibi duruyordu.
+ * Gerçekte deltoid göğüs kafesinin üstüne oturur ve silueti sürekli kılar.
+ */
+export function shoulderWedge(thorax: Vec, sh: Vec, w = 20): string {
+  const dx = sh[0] - thorax[0];
+  const dy = sh[1] - thorax[1];
+  const l = Math.hypot(dx, dy) || 1;
+  const nx = -dy / l;
+  const ny = dx / l;
+  return (
+    `M ${thorax[0] + nx * w} ${thorax[1] + ny * w} ` +
+    `L ${sh[0] + nx * w * 0.75} ${sh[1] + ny * w * 0.75} ` +
+    `A ${w * 0.75} ${w * 0.75} 0 0 0 ${sh[0] - nx * w * 0.75} ${sh[1] - ny * w * 0.75} ` +
+    `L ${thorax[0] - nx * w} ${thorax[1] - ny * w} Z`
+  );
+}
+
+/**
  * İki uçtaki kalınlığı farklı olabilen kapsül gövde.
  *
  * Uzuvlar tek kalınlıkta çubuk değil: kas kütlesi uyluğun ve baldırın üst
