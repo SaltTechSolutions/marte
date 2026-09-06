@@ -152,6 +152,23 @@ const BASE = {
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
 export const ease = (u: number): number => u * u * (3 - 2 * u);
 
+/** Duruştan çıkış: yavaş başla, hızla devam et. */
+const easeOut = (u: number): number => u * u;
+/** Duruşa varış: hızla gel, yavaşlayarak dur. */
+const easeIn = (u: number): number => u * (2 - u);
+
+/**
+ * İki karenin pozu aynı mı? Aynıysa aradaki aralık bir BEKLEME'dir.
+ *
+ * Bekleme ile geçiş ayrımı yumuşatmanın nereye uygulanacağını belirliyor:
+ * beklemede hızın sıfırlanması hareketin kendisi, geçiş karesinde ise hata.
+ */
+const samePose = (a: RigKeyframe, b: RigKeyframe): boolean => {
+  const A = fillPose(a.p);
+  const B = fillPose(b.p);
+  return (Object.keys(A) as (keyof RigPose)[]).every((k) => Math.abs(A[k] - B[k]) <= 0.5);
+};
+
 /**
  * Eksik alanları doldurur. Uzak uzuvlar yazılmadıysa yakınından türetilir:
  * yalnızca birkaç derece fark, çünkü iki taraf aynı işi yapıyordur.
@@ -269,7 +286,29 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   const a = kf[i];
   const b = kf[i + 1] || kf[i];
   const span = Math.max(0.0001, b.t - a.t);
-  const u = ease(Math.min(1, Math.max(0, (t - a.t) / span)));
+  const raw = Math.min(1, Math.max(0, (t - a.t) / span));
+
+  /*
+   * Yumuşatma her aralığa DEĞİL, yalnızca hareketin gerçekten durduğu yerlere
+   * uygulanıyor.
+   *
+   * Eskiden her aralık smoothstep'ti ve bu, figürün HER ara karede hızını
+   * sıfırlaması demekti. Ölçüldü: 30 arketipteki 9 gerçek geçiş karesinin
+   * dokuzunda da hız ortalamanın %25'inin altına düşüyordu — kol çevirme turun
+   * içinde üç kez, omuz presi itişin ortasında duruyordu.
+   *
+   * Sıfır hız yalnızca BEKLEME'de doğru: iki komşu karenin pozu aynıysa orada
+   * hareket gerçekten duruyor (çömelmenin dibi, plank duruşu). Geçiş
+   * karesinden ise hızla geçilmeli.
+   *
+   * Kübik bir eğri (Catmull-Rom) hızı tam sürekli yapardı ama uçları aşabilir
+   * ve aşan bir eklem ROM bandını ihlal eder; yani yumuşaklık uğruna anatomik
+   * doğruluk riske girerdi. Buradaki çözüm hızda küçük bir kırılma bırakıyor,
+   * ama duraklamayı tamamen kaldırıyor.
+   */
+  const startsAtRest = i === 0 || samePose(kf[i - 1], a);
+  const endsAtRest = i + 2 >= kf.length || samePose(b, kf[i + 2]);
+  const u = startsAtRest && endsAtRest ? ease(raw) : startsAtRest ? easeOut(raw) : endsAtRest ? easeIn(raw) : raw;
   const la = toLocal(fillPose(a.p));
   const lb = toLocal(fillPose(b.p));
   const l = {} as LocalPose;

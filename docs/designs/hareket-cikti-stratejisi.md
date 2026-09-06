@@ -142,6 +142,30 @@ sonucuna bağlı değil. Kas verisinin yazımı ve renderer işi (6) **beş göz
 bitene kadar bekler**, çünkü 34 hareketlik veriyi şemanın işe yaradığını görmeden
 yazmak bu oturumda B'yi reddetme gerekçesinin ta kendisiydi.
 
+## Plan dışı yapılan iş
+
+**Geçiş karelerinde duraklama giderildi (2026-09-06).** `poseAt` her kare
+aralığına smoothstep uyguluyordu, yani figür HER ara karede hızını sıfırlıyordu.
+Ölçüldü: 30 arketipteki 9 gerçek geçiş karesinin dokuzunda da hız ortalamanın
+%25'inin altına düşüyordu — kol çevirme turun içinde üç kez, omuz presi itişin
+ortasında duruyordu.
+
+Yumuşatma artık yalnızca hareketin gerçekten durduğu yerlere uygulanıyor: iki
+komşu karenin pozu aynıysa orası bir bekleme (çömelmenin dibi, plank duruşu) ve
+sıfır hız doğru; geçiş karesinden ise hızla geçiliyor. Kübik bir eğri hızı tam
+sürekli yapardı ama uçları aşabilir ve aşan bir eklem ROM bandını ihlal eder —
+yumuşaklık uğruna anatomik doğruluğu riske atmadık.
+
+Sonuç: 9 duraklamanın 6'sı kalktı, 50 beklemenin 50'si korundu, 30 arketip
+denetimden temiz geçti. Kalan 3'ü doğru: `plank_prone` ve `side_plank` statik
+hareketler (tüm hareket 1-2 derece), `arm_circles_front` ise dönüş noktası —
+`upperA` 178 → 92 → 8 → 92 → 178 gidiyor, yani kol yukarı çıkıp aynı yoldan
+iniyor. Bu bir daire değil salınım; modelde derinlik ekseni olmadığı için daire
+çizilemiyor (TODOS.md).
+
+Ayrıca: önizleme animasyonu duvar saatinden değil biriken süreden ilerliyor.
+Eskiden `now / dur` idi ve hareket değiştirince faz zıplıyordu.
+
 ## NOT in scope
 
 - **GIF / video / önceden render çıktısı** — ölçüm motorun zaten binde bir yer
@@ -296,10 +320,24 @@ Bu incelemenin bulgularından türetildi. Kutucukları ilerledikçe işaretle.
   - Surfaced by: Tasarım Pass 2 — boş siluet "hiçbir kas çalışmıyor" olarak okunur, yanlış bilgi
   - Files: GymEntra egzersiz detay ekranı
   - Verify: verisi olmayan 24 harekette panel render edilmiyor, çip görünmeye devam ediyor
-- [ ] **T13 (P2, human: ~4sa / CC: ~15dk)** — GymEntra — animasyonu küçült, kas şemasını katlamanın üstüne al
+- [x] **T13 (P2, human: ~4sa / CC: ~15dk)** — GymEntra — animasyonu küçült, kas şemasını katlamanın üstüne al
   - Surfaced by: Tasarım Pass 1 — 375×667'de şema kaydırmadan görünmüyor
   - Files: GymEntra egzersiz detay ekranı
   - Verify: iPhone SE boyutunda kas paneli ilk ekranda görünüyor
+  - **KAPANDI 2026-09-06 — ama önerdiğim biçimde değil.** Görevin dayandığı
+    varsayım ("katlamanın üstünde olmalı") yanlıştı: kullanıcı ekranı
+    kaydırabiliyor, o yüzden okunurluğu katlamaya feda etmenin karşılığı yok.
+    Karar: geniş düzen, kaydırma serbest.
+  - **Teşhis de kısmen yanlıştı.** Ölçüm (mobil önizleme, gerçek veriyle):
+    kas kartı 482px, bunun 379px'i haritalar; animasyon 221px. Animasyonu
+    tamamen silmek bile 269px'lik taşmayı kapatmıyordu, yani "animasyonu
+    küçült" yanlış yere bakıyordu.
+  - **Sekme fikri ters teple.** Anatomi çiziminin en-boy oranı 1:2.3; tek
+    gövdeyi kart genişliğine yaymak onu uzatıyor. İki gövde yan yana, her biri
+    yarı genişlikte, tek gövdeden kısa duruyor. Ölçüm (SE 667px): geniş 948,
+    yalnız evreler 898, sıkı 652, sekme 800, sıkı+sekme 689.
+  - Dört düzenin dördü de editörde duruyor ve ölçülebiliyor; sıkı düzen tek
+    ekrana sığan seçenek olarak menüde kaldı.
 - [ ] **T14 (P2, human: ~1g / CC: ~25dk)** — GymEntra — metin listesi + listeden şemaya vurgulama
   - Surfaced by: Tasarım Pass 6 — şemadaki kaslar 44pt dokunma hedefinin altında; liste satırı değil
   - Files: GymEntra kas şeması bileşeni

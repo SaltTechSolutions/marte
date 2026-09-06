@@ -712,7 +712,7 @@ function renderExList() {
       `${issues ? `<span class="bad">${issues}</span>` : ''}` +
       `${DATA[k].view === 'front' ? '<span class="front">ÖNDEN</span>' : ''}` +
       `<b>${label}</b><small>${names.length > 1 ? names.slice(1).join(', ') + ' · ' : ''}${k}</small>`;
-    b.onclick = () => { key = k; kfIndex = 0; playing = false; scrubT = null; renderAll(); };
+    b.onclick = () => { key = k; kfIndex = 0; playing = false; scrubT = null; phonePlayT = 0; renderAll(); };
     host.appendChild(b);
   });
   if (!host.children.length) host.innerHTML = '<p class="hint">Eşleşen hareket yok.</p>';
@@ -1106,20 +1106,27 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 let last = 0;
+/**
+ * Faz duvar saatinden DEĞİL, biriken süreden çıkıyor.
+ *
+ * Eskiden `now / dur` idi: hareket değiştirince `dur` da değiştiği için faz
+ * zıplıyordu, yani listeden bir harekete geçtiğinde figür tekrarın rastgele
+ * bir yerinden başlıyordu. Birikimli sayaç her harekete tekrarın başından
+ * başlatıyor.
+ */
 function tick(now) {
-  // Önizleme her zaman oynuyor; ana sahne yalnızca "Oynat" açıkken.
-  if (now - last > 33) {
-    phonePlayT = ((now / ex().dur) % 1 + 1) % 1;
-    if (!playing) drawPhoneFigure();
-  }
-  if (playing && now - last > 33) {
-    last = now;
-    playT = phonePlayT;
-    draw();
+  const dt = last ? Math.min(100, now - last) : 0;
+  last = now;
+  if (dt) {
+    phonePlayT = (phonePlayT + dt / ex().dur) % 1;
+    // Önizleme her zaman oynuyor; ana sahne yalnızca "Oynat" açıkken.
     drawPhoneFigure();
-    $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
+    if (playing) {
+      playT = phonePlayT;
+      draw();
+      $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
+    }
   }
-  if (now - last > 33 && !playing) last = now;
   requestAnimationFrame(tick);
 }
 
