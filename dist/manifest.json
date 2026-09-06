@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-06T11:07:45.484Z",
+  "generated": "2026-09-06T11:17:02.777Z",
   "source": {
-    "commit": "8edfa16",
+    "commit": "5ddaea3",
     "dirty": true
   },
   "counts": {
@@ -14,25 +14,25 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "6ca71e870c7f47afb661f71e978ef88d9f9f74854abe69c72771b569cdf5e8ab",
+      "sha256": "ca9b2ea88c8be3f9e6e865e56041849ef49c4d345f1397a4befbaeef7259baec",
       "bytes": 23381,
       "from": "src/rig.ts",
       "what": "motor"
     },
     "rigAudit.ts": {
-      "sha256": "314924eea991a059d225c0ef6220f1036a5694a541cdfa5c7894a340f5609acd",
+      "sha256": "11ea875886eb4df7471b7f73e92cd97e10d753a508c1b9f24840cf6e0d6c2720",
       "bytes": 10920,
       "from": "src/rigAudit.ts",
       "what": "denetim kuralları"
     },
     "rigSchema.ts": {
-      "sha256": "f9b98e0df8e246111775f8ff32b61486514eb28740d35d21ad5cbd95f5a8a163",
-      "bytes": 12080,
+      "sha256": "c49d066018847dbb846ec14f887dfa7c6f48a3a86233158474a1b51cb914e1b6",
+      "bytes": 14253,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması"
     },
     "muscles.ts": {
-      "sha256": "5e56670dd0e80e5d66ceeba88c18288cf0e0582ccb9904a61ec3eec5f929f08b",
+      "sha256": "feaa23fc0ef3161dc9219f2f3dfb5d2e5764190b3c2bb10452b0012a79de841d",
       "bytes": 4203,
       "from": "src/muscles.ts",
       "what": "kanonik kas sözlüğü"
@@ -54,6 +54,12 @@
       "bytes": 8636,
       "from": "data/rigMuscles.json",
       "what": "hareket başına kaslar"
+    },
+    "anatomy.json": {
+      "sha256": "b550f2efb4a137ad469bc6f6038c58e24a33c430d3a1b6c02b4f963b33c55b5a",
+      "bytes": 7619,
+      "from": "data/anatomy.json",
+      "what": "kas haritası yolları"
     }
   }
 }

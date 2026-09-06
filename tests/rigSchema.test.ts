@@ -3,12 +3,14 @@ import { describe, expect, it } from 'vitest';
 import rawArchetypes from '../data/rigArchetypes.json';
 import rawExercises from '../data/exercises.json';
 import rawMuscles from '../data/rigMuscles.json';
+import rawAnatomy from '../data/anatomy.json';
 import { B } from '../src/rig';
 import { MUSCLES, groupsOf, labelsOf } from '../src/muscles';
 import {
   MIN_DUR,
   assertArchetypes,
   validateArchetypes,
+  validateAnatomy,
   validateBundle,
   validateExercises,
   validateMuscles,
@@ -391,3 +393,48 @@ describe('validateBundle — devir paketi', () => {
     expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(30);
   });
 });
+
+describe('validateAnatomy — kas haritası yolları', () => {
+  const ok = () => JSON.parse(JSON.stringify(rawAnatomy)) as Record<string, unknown>;
+
+  it('gerçek anatomi verisi geçiyor', () => {
+    expect(validateAnatomy(rawAnatomy)).toEqual([]);
+  });
+
+  it('sözlükteki her kasın en az bir yolu var', () => {
+    // Sözlükte olup yolu olmayan bir kas veride yazılabilir ama ekranda hiç
+    // boyanmaz — sessiz kayıp. Denetim bunu yakalıyor.
+    const used = new Set<string>();
+    (['front', 'back'] as const).forEach((v) => {
+      (rawAnatomy[v] as { muscle: string | null }[]).forEach((p) => p.muscle && used.add(p.muscle));
+    });
+    expect(Object.keys(MUSCLES).filter((id) => !used.has(id))).toEqual([]);
+  });
+
+  const cases: [string, (a: Record<string, any>) => void, string][] = [
+    ['viewBox yok', (a) => delete a.viewBox, 'viewBox'],
+    ['mirror yok', (a) => delete a.mirror, 'mirror'],
+    ['front dizisi yok', (a) => (a.front = []), 'front yol dizisi yok'],
+    ['d boş', (a) => (a.front[0].d = '  '), 'd boş'],
+    ['bilinmeyen kas', (a) => (a.front[3].muscle = 'yok-boyle'), 'bilinmeyen kas'],
+    ['bilinmeyen alan', (a) => (a.back[0].renk = 'mavi'), 'bilinmeyen alan'],
+    ['yolu silinen kas', (a) => (a.back = a.back.filter((p: any) => p.muscle !== 'lat')), 'hiçbir yolu yok'],
+  ];
+  cases.forEach(([name, mutate, needle]) => {
+    it(`${name} reddediliyor`, () => {
+      const a = ok();
+      mutate(a as Record<string, any>);
+      const e = validateAnatomy(a);
+      expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e.slice(0, 2))}`).toBeGreaterThan(0);
+      expect(e.join(' ')).toContain(needle);
+    });
+  });
+
+  it('validateBundle anatomi verilmezse sessiz, verilirse denetliyor', () => {
+    const base = { archetypes: rawArchetypes, exercises: rawExercises, muscles: rawMuscles };
+    expect(validateBundle(base)).toEqual([]);
+    expect(validateBundle({ ...base, anatomy: rawAnatomy })).toEqual([]);
+    expect(validateBundle({ ...base, anatomy: { front: [] } }).length).toBeGreaterThan(0);
+  });
+});
+

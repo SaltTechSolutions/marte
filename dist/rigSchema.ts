@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (8edfa16+kirli), 2026-09-06T11:07:45.484Z
+// Kaynak: antrenman-simulatoru v1.0.0 (5ddaea3+kirli), 2026-09-06T11:17:02.777Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -238,11 +238,60 @@ export function validateMuscles(data: unknown, exerciseKeys: string[]): string[]
  * doğrulama ÜRETİM ZAMANINDA yapılıyor, uygulama runtime'da hiçbir şey
  * kontrol etmiyor ve kas verisini kinematik olmadan yükleyebiliyor.
  */
-export function validateBundle(b: { archetypes: unknown; exercises: unknown; muscles: unknown }): string[] {
+export function validateBundle(b: {
+  archetypes: unknown;
+  exercises: unknown;
+  muscles: unknown;
+  anatomy?: unknown;
+}): string[] {
   const errs = validateArchetypes(b.archetypes);
   const archetypeKeys = isObj(b.archetypes) ? Object.keys(b.archetypes) : [];
   errs.push(...validateExercises(b.exercises, archetypeKeys));
   const exerciseKeys = isObj(b.exercises) ? Object.keys(b.exercises) : [];
   errs.push(...validateMuscles(b.muscles, exerciseKeys));
+  if (b.anatomy !== undefined) errs.push(...validateAnatomy(b.anatomy));
+  return errs;
+}
+
+/**
+ * Kas haritasının anatomi yolları.
+ *
+ * Yollar gövdenin YARISINI çiziyor; diğer yarı aynı yolların ayna dönüşümüyle
+ * çiziliyor. Bu bir boyut hilesi değil: sol ve sağ tarafın garanti simetrik
+ * kalmasını sağlıyor, yani bir gölgelendirme düzeltmesi asla tek tarafa inemez.
+ *
+ * Denetlenen şey çizimin güzelliği değil BÜTÜNLÜĞÜ: her yolun bir `d`'si var
+ * mı, kasa bağlı yolların kimliği sözlükte var mı, ve her kasın en az bir yolu
+ * var mı. Sonuncusu önemli: sözlükte olup yolu olmayan bir kas, veride
+ * yazılabilir ama ekranda hiç boyanmaz — sessiz bir kayıp.
+ */
+export function validateAnatomy(data: unknown): string[] {
+  const errs: string[] = [];
+  if (!isObj(data)) return ['anatomi: kök nesne bekleniyor'];
+  if (typeof data.viewBox !== 'string' || !data.viewBox.trim()) errs.push('anatomi: viewBox yok');
+  if (typeof data.mirror !== 'string' || !data.mirror.trim()) errs.push('anatomi: mirror dönüşümü yok');
+
+  const seen = new Set<string>();
+  (['front', 'back'] as const).forEach((view) => {
+    const list = data[view];
+    if (!Array.isArray(list) || list.length === 0) return errs.push(`anatomi: ${view} yol dizisi yok`);
+    list.forEach((p: unknown, i: number) => {
+      const at = `anatomi ${view}[${i}]`;
+      if (!isObj(p)) return errs.push(`${at}: nesne değil`);
+      Object.keys(p).forEach((k) => {
+        if (k !== 'd' && k !== 'muscle') errs.push(`${at}: bilinmeyen alan "${k}"`);
+      });
+      if (typeof p.d !== 'string' || p.d.trim() === '') errs.push(`${at}: d boş`);
+      if (p.muscle === null || p.muscle === undefined) return;
+      if (typeof p.muscle !== 'string') return errs.push(`${at}: muscle metin ya da null olmalı`);
+      if (!MUSCLES[p.muscle]) errs.push(`${at}: bilinmeyen kas "${p.muscle}"`);
+      else seen.add(p.muscle);
+    });
+  });
+
+  Object.keys(MUSCLES)
+    .filter((id) => !seen.has(id))
+    .forEach((id) => errs.push(`anatomi: "${id}" sözlükte var ama hiçbir yolu yok — veride yazılabilir, ekranda boyanmaz`));
+
   return errs;
 }

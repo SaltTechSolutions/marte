@@ -53,6 +53,8 @@ let NAMES = {};
 let CATALOG = {};
 /** Hareket başına kaslar: kimlik → { status, primary, secondary }. */
 let MUSCLEDATA = {};
+/** Kas haritası yolları: viewBox, ayna dönüşümü, ön ve arka yollar. */
+let ANATOMY = null;
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -192,9 +194,17 @@ function renderPhone() {
     // okuyucunun tek yolu, renk körü kullanıcının yedek kanalı, ve anatomi
     // SVG'si gelene kadar tek gösterim.
     push(`<div class="card"><h4>Çalışan kaslar</h4>
+        ${ANATOMY ? `<div class="maps">
+          <figure>${muscleMapSvg('front', mus)}<figcaption>Ön</figcaption></figure>
+          <figure>${muscleMapSvg('back', mus)}<figcaption>Arka</figcaption></figure>
+        </div>
+        <div class="key">
+          <span><i style="background:${MUSCLE_FILL.primary}"></i>Birincil</span>
+          <span><i style="background:${MUSCLE_FILL.secondary}"></i>İkincil (taramalı)</span>
+          <span><i style="background:${MUSCLE_FILL.rest}"></i>Pasif</span>
+        </div>` : ''}
         <div class="mus"><span>Birincil</span><b>${labelsOf(mus.primary).join(', ')}</b></div>
         ${mus.secondary.length ? `<div class="mus"><span>İkincil</span><b>${labelsOf(mus.secondary).join(', ')}</b></div>` : ''}
-        <p class="none" style="margin-top:6px">Anatomi çizimi henüz yok; şema uygulamanın SVG yolları alınınca gelecek.</p>
       </div>`);
   } else {
     push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi yok.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
@@ -221,6 +231,45 @@ function renderPhone() {
       ? `<b style="color:var(--warn)">${over}px kaydırma gerekiyor</b> — içerik ${need}px, ekran ${dev.h}px. Alttaki içerik ilk bakışta görünmüyor.`
       : `<b style="color:var(--p)">Hepsi katlamanın üstünde</b> — içerik ${need}px, ekran ${dev.h}px.`) +
     `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
+}
+
+/**
+ * Kas yoğunluğunun ÜÇ KANALLI kodlaması.
+ *
+ * Renk körlüğü hue ayrımını bozar, LUMINANSI bozmaz. Bu yüzden birincil ve
+ * ikincil iki ton yeşille değil, bir parlaklık merdiveniyle ayrılıyor; üstüne
+ * ikincil kaslara tarama deseni (renkten bağımsız şekil kanalı) ve altına
+ * metin listesi geliyor. Hiçbiri tek başına taşımıyor.
+ *
+ * Ölçüldü (Machado 2009 matrisleri, linearRGB): merdivenin komşu adımları üç
+ * renk körlüğü türünde de en kötü 2.27:1 kontrast veriyor. Uygulamanın bugünkü
+ * paleti tek hue'nun üç tonu ve bu ayrımı taşımıyor.
+ */
+const MUSCLE_FILL = { primary: '#10B981', secondary: '#0E6B4C', rest: '#1D2536' };
+
+/** Bir görünümün (ön/arka) kas haritasını çizer. */
+function muscleMapSvg(view, mus) {
+  if (!ANATOMY) return '';
+  const level = {};
+  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
+  (mus.secondary || []).forEach((m) => (level[m] = 'secondary'));
+  const paths = ANATOMY[view] || [];
+  const half = paths
+    .map((p) => {
+      const lv = p.muscle ? level[p.muscle] : undefined;
+      // İkincil kaslar tarama desenli: renk körü kullanıcı için parlaklık
+      // farkının yanında ikinci bir kanal.
+      const fill = lv === 'secondary' ? 'url(#hatch)' : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
+      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="0.7"/>`;
+    })
+    .join('');
+  return `<svg viewBox="${ANATOMY.viewBox}" preserveAspectRatio="xMidYMid meet">
+      <defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="7" height="7" fill="${MUSCLE_FILL.secondary}"/>
+        <rect width="2.4" height="7" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
+      </pattern></defs>
+      <g>${half}</g><g transform="${ANATOMY.mirror}">${half}</g>
+    </svg>`;
 }
 
 /**
@@ -1005,12 +1054,14 @@ function tick(now) {
 }
 
 const boot = async () => {
-  const [data, names, muscles] = await Promise.all([
+  const [data, names, muscles, anatomy] = await Promise.all([
     fetch('/data').then((r) => r.json()),
     fetch('/names').then((r) => r.json()).catch(() => ({})),
     fetch('/muscles').then((r) => r.json()).catch(() => ({})),
+    fetch('/anatomy').then((r) => r.json()).catch(() => null),
   ]);
   MUSCLEDATA = muscles;
+  ANATOMY = anatomy && anatomy.front ? anatomy : null;
   DATA = data;
   // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
   // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için

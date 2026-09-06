@@ -41,10 +41,11 @@ hesaplayan kod yalnızca burada yaşıyor, uygulamaya kopyalanıyor.
 dist/rig.ts               motor
 dist/rigAudit.ts          denetim kuralları
 dist/rigSchema.ts         veri biçim doğrulaması
-dist/muscles.ts           kanonik kas sözlüğü (36 grup, 31'i çalıştırılabilir)
+dist/muscles.ts           kas bölgesi sözlüğü (39 bölge, Türkçe etiketler)
 dist/rigArchetypes.json   30 arketipin kare verisi
 dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
 dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
+dist/anatomy.json         kas haritasının ön/arka çizim yolları
 dist/manifest.json        sürüm, tarih, git commit'i, her dosyanın sha256'sı
 ```
 
