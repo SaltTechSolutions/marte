@@ -251,6 +251,30 @@ function drawPose(svg, e, p) {
   push(limb(S.elbow, S.hand, 18, 18, 12, .3));
   push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
   push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
+
+  // Perspektif barbell: çubuk derinliğe doğru uzanıyor, iki uçtaki tabaklar
+  // eğik görüldüğü için daire değil ELİPS. Onaylanan mockup B'de derinlik
+  // hissini veren şey buydu; editörün ana sahnesi tek bir daire çiziyor.
+  //
+  // Bu bir ÇİZİM konvansiyonu, model değişikliği değil: figür hâlâ yan
+  // görünüm ve gövde rotasyonu poz olarak temsil edilemiyor (bkz. README).
+  // Uygulama da aynı konvansiyonu uygulamak zorunda, yoksa önizleme yalan söyler.
+  if (S.bar) {
+    const metal = css('--metal'), accent = css('--p');
+    const dx = 58, dy = 17;                    // derinlik ekseni
+    const deg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+    const ends = [[S.bar[0] - dx, S.bar[1] + dy], [S.bar[0] + dx, S.bar[1] - dy]];
+    push([el('line', {
+      x1: ends[0][0], y1: ends[0][1], x2: ends[1][0], y2: ends[1][1],
+      stroke: metal, 'stroke-width': 7, 'stroke-linecap': 'round',
+    })]);
+    ends.forEach(([x, y]) => push([
+      el('ellipse', { cx: x, cy: y, rx: 15, ry: 34, fill: metal, stroke: accent, 'stroke-width': 2,
+                      transform: `rotate(${deg} ${x} ${y})` }),
+      el('ellipse', { cx: x, cy: y, rx: 6, ry: 14, fill: 'none', stroke: line,
+                      transform: `rotate(${deg} ${x} ${y})` }),
+    ]));
+  }
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
