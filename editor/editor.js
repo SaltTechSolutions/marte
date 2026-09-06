@@ -618,11 +618,14 @@ function draw() {
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   push([
-    el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }),
+    // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
+    // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
+    // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
+    ...(useParts ? [] : [el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` })]),
     ...[trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax)].filter(Boolean),
     ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
-    el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }),
-    seg(S.thorax, S.neck, 21, 19),
+    ...(useParts ? [] : [el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` })]),
+    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)].filter(Boolean) : [seg(S.thorax, S.neck, 21, 19)]),
     // Deltoid kaması: omuz topu tek başına gövdeye teğet bir daire gibi
     // duruyordu, bu onu göğüs kafesine bağlıyor.
     el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }),
