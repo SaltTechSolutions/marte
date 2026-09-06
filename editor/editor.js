@@ -72,10 +72,13 @@ let phoneSize = 0;
 /** 'phases' = iki evre yan yana (onaylanan tasarım), 'live' = canlı figür. */
 let phoneMode = 'phases';
 /**
- * Düzen. Varsayılan `compact`, çünkü ölçüm tek onun üç cihazda da sığdığını
- * gösterdi (SE'de 652/667). `stack` bugünkü hâl ve SE'de 231px taşıyor.
+ * Düzen. Varsayılan `full`: kullanıcı ekranı kaydırabildiği için katlama sert
+ * bir kısıt değil ve okunurluğu ona feda etmenin anlamı yok. `compact` SE'ye
+ * sığan sıkı hâl, ölçüm için duruyor.
  */
-let phoneLayout = 'compact';
+let phoneLayout = 'full';
+/** Önizleme kendi başına oynuyor: uygulamadaki figür de öyle. */
+let phonePlayT = 0;
 /** Sekme düzeninde hangi görünüm açık. */
 let phoneView = 'front';
 // Geri alma yığını: sürükleme yıkıcı ve anında; kaçan bir hamlenin
@@ -183,9 +186,23 @@ function renderPhone() {
 
   push(`<h3>${title}</h3>`);
   if (authored) push(`<span class="chip">${groupsOf(mus.primary).slice(0, 3).join(' · ')}</span>`);
-  if (phoneMode === 'phases') {
-    const [i0, i1] = keyPhases(e);
-    const lab = (i) => e.kf[i].tr || `%${(e.kf[i].t * 100).toFixed(0)}`;
+  const [pi0, pi1] = keyPhases(e);
+  const plab = (i) => e.kf[i].tr || `%${(e.kf[i].t * 100).toFixed(0)}`;
+  if (phoneLayout === 'full') {
+    // Canlı figür üstte, iki evre altta referans olarak: hareketin kendisi
+    // uygulamada oynuyor, ama başlangıç ve tepe noktasını yan yana görmek
+    // onaylanan tasarımın taşıdığı bilgi. İkisi birbirinin yerine geçmiyor.
+    push(`<div class="card"><h4>Hareket</h4>
+        <div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="thumbs">
+          <div><svg id="phA" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">1. ${plab(pi0)}</div></div>
+          <div class="arrow">›</div>
+          <div><svg id="phB" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">2. ${plab(pi1)}</div></div>
+        </div>
+      </div>`);
+  } else if (phoneMode === 'phases') {
+    const [i0, i1] = [pi0, pi1];
+    const lab = plab;
     push(`<div class="card"><h4>Hareket</h4><div class="phases">
         <div class="ph${kfIndex === i0 ? ' sel' : ''}"><svg id="phA" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">1. ${lab(i0)}</div></div>
         <div class="arrow">›</div>
@@ -248,16 +265,18 @@ function renderPhone() {
   // "kas paneli SE'de kaydırmadan görünmüyor" bulgusunun sınandığı yer burası.
   const need = body.scrollHeight + $('phone').querySelector('.status').offsetHeight;
   const over = need - dev.h;
-  host.classList.toggle('over', over > 0);
   // "Aynı çizim" bilgisi telefonun DIŞINDA: editör bilgisi, uygulamada
   // olmayacak. İçeride tutmak katlama ölçümünü şişiriyordu.
   const shared = others.length
     ? `<br><span style="color:var(--sub)">Aynı çizimi paylaşan: ${others.join(' · ')} — kas verileri farklı olabilir.</span>`
     : '';
+  // Kaydırma bir HATA değil, bir ÖLÇÜ: kullanıcı ekranı kaydırabiliyor, o
+  // yüzden okunurluğu katlamaya feda etmiyoruz. Sayı yine de duruyor —
+  // ilk bakışta neyin görünmediğini bilmek düzen kararını besliyor.
   $('phoneNote').innerHTML =
     (over > 0
-      ? `<b style="color:var(--warn)">${over}px kaydırma gerekiyor</b> — içerik ${need}px, ekran ${dev.h}px. Alttaki içerik ilk bakışta görünmüyor.`
-      : `<b style="color:var(--p)">Hepsi katlamanın üstünde</b> — içerik ${need}px, ekran ${dev.h}px.`) +
+      ? `İlk bakışta görünen: <b>${dev.h}px</b> · altta kalan <b>${over}px</b> (içerik ${need}px).`
+      : `<b style="color:var(--p)">Hepsi tek ekranda</b> — içerik ${need}px, ekran ${dev.h}px.`) +
     shared +
     `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
 }
@@ -380,7 +399,10 @@ function drawPose(svg, e, p) {
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
 function drawPhoneFigure() {
   const e = ex();
-  if (phoneMode === 'phases') {
+  // Canlı figür KENDİ zamanında: editörün oynatma durumundan bağımsız, çünkü
+  // uygulamadaki figür de düzenleme diye bir şey bilmeden oynuyor.
+  if ($('phoneFig')) drawPose($('phoneFig'), e, poseAt(e, phonePlayT).p);
+  if (phoneLayout === 'full' || phoneMode === 'phases') {
     if (!$('phA')) return;
     const [i0, i1] = keyPhases(e);
     drawPose($('phA'), e, fillPose(e.kf[i0].p));
@@ -390,9 +412,6 @@ function drawPhoneFigure() {
     const boxes = $('phone').querySelectorAll('.ph');
     if (boxes[0]) boxes[0].classList.toggle('sel', editable() && kfIndex === i0);
     if (boxes[1]) boxes[1].classList.toggle('sel', editable() && kfIndex === i1);
-  } else {
-    if (!$('phoneFig')) return;
-    drawPose($('phoneFig'), e, currentPose());
   }
 }
 
@@ -1061,7 +1080,8 @@ PHONES.forEach((d, i) => {
   $('phoneSize').appendChild(o);
 });
 const LAYOUTS = [
-  ['stack', 'Bugünkü düzen'],
+  ['full', 'Geniş: canlı + evreler'],
+  ['stack', 'Yalnız evreler'],
   ['compact', 'Sıkı: animasyon küçük'],
   ['tabs', 'Sekme: ön / arka'],
   ['compact tabs', 'Sıkı + sekme'],
@@ -1087,13 +1107,19 @@ window.addEventListener('beforeunload', (e) => {
 
 let last = 0;
 function tick(now) {
+  // Önizleme her zaman oynuyor; ana sahne yalnızca "Oynat" açıkken.
+  if (now - last > 33) {
+    phonePlayT = ((now / ex().dur) % 1 + 1) % 1;
+    if (!playing) drawPhoneFigure();
+  }
   if (playing && now - last > 33) {
     last = now;
-    playT = ((now / ex().dur) % 1 + 1) % 1;
+    playT = phonePlayT;
     draw();
     drawPhoneFigure();
     $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
   }
+  if (now - last > 33 && !playing) last = now;
   requestAnimationFrame(tick);
 }
 
