@@ -151,6 +151,25 @@ const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
   return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)];
 };
 
+/**
+ * Eklem topu üreticisi.
+ *
+ * Kapsül kipinde eklemler açık renkli, dış çizgili dairelerle işaretleniyor.
+ * Parça kipinde bunlar SESSİZLEŞİYOR: kontrastlı bir daire silueti kesiyor ve
+ * figürü eklemli bir manken gibi gösteriyor. Gerçek bir uzuvda eklem yerinde
+ * kontrastlı bir top yok — top hâlâ çiziliyor (eklem boşluğunu dolduruyor)
+ * ama ten rengiyle, dış çizgisiz.
+ *
+ * Sürükleme tutamakları bundan etkilenmiyor; onlar `drawHandles`'ta ayrı
+ * çiziliyor ve editörde görünür kalıyor.
+ */
+const mkBall = () => (c, r, far) =>
+  el('circle', {
+    cx: c[0], cy: c[1], r,
+    fill: far ? css('--skinFar') : useParts ? css('--skin') : css('--joint'),
+    stroke: useParts ? null : css('--line'),
+  });
+
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
@@ -386,7 +405,7 @@ function drawPose(svg, e, p) {
   svg.innerHTML = '';
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
-  const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
+  const ball = mkBall();
   const limb = mkLimb(seg);
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
@@ -482,7 +501,7 @@ function draw() {
   const line = css('--line'), metal = css('--metal'), floor = css('--floor'), surf2 = css('--surf2'), accent = css('--p');
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
-  const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
+  const ball = mkBall();
   const limb = mkLimb(seg);
   const db = (c, from, far) => {
     const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
