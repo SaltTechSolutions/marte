@@ -92,3 +92,33 @@ getirir ve dinamik yazı boyutuna kendiliğinden uyar. Bunlar gerçek kayıplar.
 
 **Bağlı:** GymEntra deposuna erişim. Bir DESIGN.md yazılacaksa (bugün yok) bu
 karar oraya ait.
+
+---
+
+## Poz modeline derinlik ekseni ekle (3/4 açılı figür)
+
+**Ne:** `RigPose`'a bir yatay düzlem (derinlik) ekseni eklemek, `skeleton()`'ın
+izdüşümü hesaplaması ve figürün gerçek 3/4 açıyla çizilebilmesi.
+
+**Neden:** Onaylanan mockup B'deki açılı figür motorla üretilemiyor. README'nin
+yazdığı sınır bu: bağımsız bir 3B model yok, gövde rotasyonu poz olarak temsil
+edilemiyor. 2B yan görünümü döndürmek ya da eğmek 3/4 vermiyor — uzuvlar
+kısalmadığı için yamuk bir yan görünüm çıkıyor, derinlik oluşmuyor.
+
+**Bağlam:** `/plan-design-review` 2026-09-06'da B varyantı onaylandı; oradaki
+derinlik hissinin iki kaynağı vardı. Biri **perspektif barbell** (çubuk
+derinliğe uzanıyor, uçlardaki tabaklar elips) ve o yapıldı — mobil önizlemede
+çizim konvansiyonu olarak duruyor. Diğeri figürün kendi açısıydı ve o bu kayda
+kaldı. Kullanıcı bunu bilerek erteledi (2026-09-06).
+
+**Artı:** Hareketin okunurluğu artar; yan görünümde üst üste binen uzuvlar
+ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir çözüme kavuşur.
+**Eksi:** En pahalı ve en yayılan değişiklik. Devir sözleşmesini kırar,
+30 arketibin kare verisi etkilenir, `rigAudit`'in ROM bantları yeni eksene de
+bakmak zorunda kalır ve uygulamanın `RigFigure.tsx`'i de yeniden yazılır.
+
+**Bağlı:** Ayak bileği açısı kaydıyla aynı kök sorunda buluşuyor — modelin
+anatomik ifade gücü. İkisi birlikte planlanmalı; ayrı ayrı yapmak `RigPose`'u
+iki kez kırar. Devir sözleşmesinin sürümlenmesi (manifest, 2026-09-06) bu
+değişikliği güvenli kılan ön koşul.
+
