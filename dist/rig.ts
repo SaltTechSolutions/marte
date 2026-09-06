@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (a9db676+kirli), 2026-09-06T12:43:41.602Z
+// Kaynak: antrenman-simulatoru v1.0.0 (1c7c1a1+kirli), 2026-09-06T12:58:42.619Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -731,6 +731,28 @@ export function shoulderWedge(thorax: Vec, sh: Vec, w = 20): string {
     `A ${w * 0.75} ${w * 0.75} 0 0 0 ${sh[0] - nx * w * 0.75} ${sh[1] - ny * w * 0.75} ` +
     `L ${thorax[0] - nx * w} ${thorax[1] - ny * w} Z`
   );
+}
+
+/**
+ * Bir uzuv parçasını kemiğine oturtan SVG dönüşümü.
+ *
+ * Parçalar YEREL uzayda çiziliyor: kemik (0,0)'dan (0,len)'e uzanır, +X
+ * figürün baktığı yön. Bu dönüşüm parçayı kemiğin dünya konumuna ve yönüne
+ * taşıyor. Kemik boyları sabit olduğu için (`B`) ölçekleme yok — her parça
+ * kendi kemiğinin boyunda çiziliyor.
+ *
+ * Neden yerel uzay: parçaların NEREDEN geldiği bu sözleşmeyi değiştirmiyor.
+ * Bugünkü kaba taslak da, bir 3B modelden seçilen açıyla render edilip
+ * uzuvlara bölünmüş gerçek anatomik siluet de aynı yere oturuyor; kod aynı
+ * kalıyor, yalnızca `data/bodyParts.json` değişiyor.
+ */
+export function partTransform(a: Vec, b: Vec): string {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const l = Math.hypot(dx, dy) || 1;
+  // Yerel +Y'yi kemik yönüne çeviren açı.
+  const deg = (Math.atan2(-dx / l, dy / l) * 180) / Math.PI;
+  return `translate(${a[0]} ${a[1]}) rotate(${deg})`;
 }
 
 /**

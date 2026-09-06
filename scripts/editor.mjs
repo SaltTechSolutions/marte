@@ -85,6 +85,7 @@ const readBundle = (archetypes) => ({
   exercises: JSON.parse(readFileSync(join(ROOT, 'data/exercises.json'), 'utf8')),
   muscles: JSON.parse(readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8')),
   anatomy: JSON.parse(readFileSync(join(ROOT, 'data/anatomy.json'), 'utf8')),
+  bodyParts: JSON.parse(readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8')),
 });
 
 const server = createServer((req, res) => {
@@ -126,6 +127,13 @@ const server = createServer((req, res) => {
     // bunu okuyor; uygulamadan taşındı, anahtarı uygulamanın egzersiz kimliği.
     try {
       return send(res, 200, readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8'), TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/parts') {
+    try {
+      return send(res, 200, readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8'), TYPES['.json']);
     } catch {
       return send(res, 200, '{}', TYPES['.json']);
     }

@@ -4,6 +4,7 @@ import rawArchetypes from '../data/rigArchetypes.json';
 import rawExercises from '../data/exercises.json';
 import rawMuscles from '../data/rigMuscles.json';
 import rawAnatomy from '../data/anatomy.json';
+import rawParts from '../data/bodyParts.json';
 import { B } from '../src/rig';
 import { MUSCLES, groupsOf, labelsOf } from '../src/muscles';
 import {
@@ -11,6 +12,7 @@ import {
   assertArchetypes,
   validateArchetypes,
   validateAnatomy,
+  validateBodyParts,
   validateBundle,
   validateExercises,
   validateMuscles,
@@ -438,3 +440,36 @@ describe('validateAnatomy — kas haritası yolları', () => {
   });
 });
 
+
+describe('validateBodyParts — uzuv siluet parçaları', () => {
+  const ok = () => JSON.parse(JSON.stringify(rawParts)) as Record<string, any>;
+
+  it('gerçek parça verisi geçiyor', () => {
+    expect(validateBodyParts(rawParts, B)).toEqual([]);
+  });
+
+  it('her parçanın boyu kemik boyuyla aynı', () => {
+    // Boy uyuşmazsa parça kemiğinden kısa ya da uzun çizilir ve eklemde boşluk
+    // açılır. Figür yine de çizildiği için bu sessiz bir kusur.
+    Object.entries((rawParts as any).parts as Record<string, { len: number }>).forEach(([name, q]) => {
+      expect(q.len, name).toBe((B as Record<string, number>)[name]);
+    });
+  });
+
+  const cases: [string, (a: Record<string, any>) => void, string][] = [
+    ['parts yok', (a) => delete a.parts, 'parts nesnesi yok'],
+    ['d boş', (a) => (a.parts.thigh.d = '  '), 'd boş'],
+    ['len yanlış', (a) => (a.parts.thigh.len = 90), 'eklemde boşluk açılır'],
+    ['kemik olmayan ad', (a) => (a.parts.kanat = { len: 10, d: 'M0 0 Z' }), 'bir kemik adı değil'],
+    ['bilinmeyen alan', (a) => (a.parts.shin.renk = 'mavi'), 'bilinmeyen alan'],
+  ];
+  cases.forEach(([name, mutate, needle]) => {
+    it(`${name} reddediliyor`, () => {
+      const a = ok();
+      mutate(a);
+      const e = validateBodyParts(a, B);
+      expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
+      expect(e.join(' ')).toContain(needle);
+    });
+  });
+});

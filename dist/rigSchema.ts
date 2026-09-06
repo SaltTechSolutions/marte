@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (a9db676+kirli), 2026-09-06T12:43:41.602Z
+// Kaynak: antrenman-simulatoru v1.0.0 (1c7c1a1+kirli), 2026-09-06T12:58:42.619Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -243,6 +243,7 @@ export function validateBundle(b: {
   exercises: unknown;
   muscles: unknown;
   anatomy?: unknown;
+  bodyParts?: unknown;
 }): string[] {
   const errs = validateArchetypes(b.archetypes);
   const archetypeKeys = isObj(b.archetypes) ? Object.keys(b.archetypes) : [];
@@ -250,6 +251,7 @@ export function validateBundle(b: {
   const exerciseKeys = isObj(b.exercises) ? Object.keys(b.exercises) : [];
   errs.push(...validateMuscles(b.muscles, exerciseKeys));
   if (b.anatomy !== undefined) errs.push(...validateAnatomy(b.anatomy));
+  if (b.bodyParts !== undefined) errs.push(...validateBodyParts(b.bodyParts, B));
   return errs;
 }
 
@@ -292,6 +294,42 @@ export function validateAnatomy(data: unknown): string[] {
   Object.keys(MUSCLES)
     .filter((id) => !seen.has(id))
     .forEach((id) => errs.push(`anatomi: "${id}" sözlükte var ama hiçbir yolu yok — veride yazılabilir, ekranda boyanmaz`));
+
+  return errs;
+}
+
+/**
+ * Uzuv siluet parçaları.
+ *
+ * Parçalar YEREL uzayda: kemik (0,0)'dan (0,len)'e uzanır. Denetlenen şey
+ * çizimin güzelliği değil SÖZLEŞMEye uyması: parça adı gerçek bir kemik mi ve
+ * `len` o kemiğin boyuyla aynı mı. Boy uyuşmazsa parça kemiğinden kısa ya da
+ * uzun çizilir ve eklemde boşluk açılır — sessiz bir kusur, çünkü figür yine
+ * de çizilir.
+ *
+ * Bu dosya bugün elle çizilmiş kaba bir taslak. Gerçek anatomik parçalar (CC0
+ * bir 3B modelden seçilen açıyla render edilip uzuvlara bölünerek) aynı
+ * biçimde buraya girecek; denetim ikisini de aynı kurala tabi tutuyor.
+ */
+export function validateBodyParts(data: unknown, bones: Record<string, number>): string[] {
+  const errs: string[] = [];
+  if (!isObj(data)) return ['uzuv parçaları: kök nesne bekleniyor'];
+  const parts = data.parts;
+  if (!isObj(parts)) return ['uzuv parçaları: parts nesnesi yok'];
+  if (Object.keys(parts).length === 0) errs.push('uzuv parçaları: parts boş');
+
+  Object.keys(parts).forEach((name) => {
+    const bad = (msg: string) => errs.push(`uzuv parçası "${name}": ${msg}`);
+    const q = parts[name];
+    if (!isObj(q)) return bad('nesne değil');
+    Object.keys(q).forEach((k) => {
+      if (k !== 'len' && k !== 'd') bad(`bilinmeyen alan "${k}"`);
+    });
+    if (typeof q.d !== 'string' || q.d.trim() === '') bad('d boş');
+    if (!num(q.len)) return bad('len sayı olmalı');
+    if (!(name in bones)) bad(`"${name}" bir kemik adı değil (${Object.keys(bones).join(', ')})`);
+    else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
+  });
 
   return errs;
 }

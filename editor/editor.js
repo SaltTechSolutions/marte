@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
-  frontPoints, frontTorsoPath, frontTrunk, lerpP, poseAt, shoulderWedge, showFarLeg, skeleton,
+  frontPoints, frontTorsoPath, frontTrunk, lerpP, partTransform, poseAt, shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -55,6 +55,10 @@ let CATALOG = {};
 let MUSCLEDATA = {};
 /** Kas haritası yolları: viewBox, ayna dönüşümü, ön ve arka yollar. */
 let ANATOMY = null;
+/** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
+let PARTS = null;
+/** Çizim kipi: kapsül mü parça mı. */
+let useParts = false;
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -121,6 +125,38 @@ const restore = (json) => {
 };
 
 // --- çizim ---------------------------------------------------------------
+
+/**
+ * Uzuv çizici üreticisi.
+ *
+ * Parça kipinde `data/bodyParts.json`'daki siluet kemiğe oturtuluyor, kapsül
+ * kipinde bugünkü iki kapsüllü çizim. İkisi de aynı çağrıyı kullanıyor, yani
+ * gerçek anatomik parçalar geldiğinde çizim kodunda hiçbir şey değişmiyor —
+ * yalnızca veri dosyası değişiyor.
+ *
+ * Ana sahne ve önizleme aynı üreticiyi kullanıyor; iki yere ayrı yazmak bu
+ * dosyada bir kez denendi ve `draw()` ile `drawPose()` ayrıştı.
+ */
+const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
+  const q = useParts && name && PARTS && PARTS[name];
+  if (q) {
+    return [el('path', {
+      d: q.d,
+      transform: partTransform(a, b),
+      fill: far ? css('--skinFar') : css('--skin'),
+      stroke: css('--line'),
+    })];
+  }
+  const m = lerpP(a, b, at);
+  return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)];
+};
+
+/** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
+const trunkPart = (name, a, b) => {
+  const q = useParts && PARTS && PARTS[name];
+  return q ? el('path', { d: q.d, transform: partTransform(a, b), fill: css('--skin'), stroke: css('--line') }) : null;
+};
+
 
 /* --- mobil önizleme ------------------------------------------------------ */
 
@@ -351,7 +387,7 @@ function drawPose(svg, e, p) {
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
-  const limb = (a, b, wa, wm, wb, at, far) => { const m = lerpP(a, b, at); return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)]; };
+  const limb = mkLimb(seg);
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   if (showFarLeg(e)) {
@@ -447,7 +483,7 @@ function draw() {
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
-  const limb = (a, b, wa, wm, wb, at, far) => { const m = lerpP(a, b, at); return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)]; };
+  const limb = mkLimb(seg);
   const db = (c, from, far) => {
     const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
     const fill = far ? skinFar : metal;
@@ -551,11 +587,11 @@ function draw() {
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
     push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true)); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
+    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
     push([ball(S.kneeF, 12, true)]);
   }
   if (!e.hideFarArm) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true)); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
     push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
   }
   if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
@@ -563,7 +599,8 @@ function draw() {
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   push([
     el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }),
-    seg(S.pelvis, S.lumbar, 40, 33),
+    ...[trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax)].filter(Boolean),
+    ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
     el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }),
     seg(S.thorax, S.neck, 21, 19),
     // Deltoid kaması: omuz topu tek başına gövdeye teğet bir daire gibi
@@ -572,9 +609,9 @@ function draw() {
     ball(S.sh, 17),
   ]);
   push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42)); push(limb(S.knee, S.ankle, 26, 28, 13, .34));
+  push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5)); push(limb(S.elbow, S.hand, 18, 18, 12, .3));
+  push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
   if (e.bar === 'hands') push(plate(S.bar));
   push([el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
@@ -994,6 +1031,13 @@ $('kfTime').onchange = () => {
 $('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
 $('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
 
+$('parts').onclick = () => {
+  useParts = !useParts;
+  $('parts').setAttribute('aria-pressed', String(useParts));
+  $('parts').textContent = useParts ? 'Parça' : 'Kapsül';
+  draw();
+};
+
 $('onion').onclick = () => {
   onion = !onion;
   $('onion').setAttribute('aria-pressed', String(onion));
@@ -1141,14 +1185,16 @@ function tick(now) {
 }
 
 const boot = async () => {
-  const [data, names, muscles, anatomy] = await Promise.all([
+  const [data, names, muscles, anatomy, parts] = await Promise.all([
     fetch('/data').then((r) => r.json()),
     fetch('/names').then((r) => r.json()).catch(() => ({})),
     fetch('/muscles').then((r) => r.json()).catch(() => ({})),
     fetch('/anatomy').then((r) => r.json()).catch(() => null),
+    fetch('/parts').then((r) => r.json()).catch(() => null),
   ]);
   MUSCLEDATA = muscles;
   ANATOMY = anatomy && anatomy.front ? anatomy : null;
+  PARTS = parts && parts.parts ? parts.parts : null;
   DATA = data;
   // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
   // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için

@@ -65,6 +65,7 @@ const CONTRACT = [
   { out: 'exercises.json', src: 'data/exercises.json', banner: false, what: 'hareket kataloğu' },
   { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar' },
   { out: 'anatomy.json', src: 'data/anatomy.json', banner: false, what: 'kas haritası yolları' },
+  { out: 'bodyParts.json', src: 'data/bodyParts.json', banner: false, what: 'uzuv siluet parçaları' },
 ];
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -80,6 +81,7 @@ const bundleErrors = loadSchema().validateBundle({
   exercises: readJson('data/exercises.json'),
   muscles: readJson('data/rigMuscles.json'),
   anatomy: readJson('data/anatomy.json'),
+  bodyParts: readJson('data/bodyParts.json'),
 });
 if (bundleErrors.length) {
   console.error(`✗ devir paketi geçersiz, hiçbir şey yazılmadı:\n  ${bundleErrors.join('\n  ')}`);
