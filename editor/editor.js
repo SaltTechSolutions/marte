@@ -228,11 +228,17 @@ const proj = (q, az) => {
 /** Karşılaştırma hücresi için figür SVG'si. */
 function cmpFigure(e, p, mode) {
   const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
-  const az = mode === 'depth' ? 26 : 0;
-  const S3 = skel3(e, p);
+  // Derinlik kestirmesi YALNIZ 'depth' kipinde. 'flat' de bir ara buradan
+  // geçiyordu ve bu bir hataydı: az=0'da izdüşüm birim dönüşüm, ama `skel3`
+  // uzak taraf eklemlerine koşulsuz 16–18px sahte kaydırma ekliyor. O kaydırma
+  // "Parça · 2B" hücresine sızıyordu — ölçüldü, bench_press.kneeF'te 18.2px —
+  // ve panel ana sahnedeki figüre benzemiyordu. Dört hücrenin ikisi birden 3B
+  // gibi duruyordu; oysa hücrenin işi bugünkü 2B çizimi OLDUĞU GİBİ göstermek.
+  const depth = mode === 'depth';
+  const S3 = depth ? skel3(e, p) : null;
   const P = {}, Z = {};
-  for (const k in S3) { const r = proj(S3[k], az); P[k] = r.p; Z[k] = r.z; }
-  const S = mode === 'capsule' ? skeleton(e, p) : P;
+  if (depth) for (const k in S3) { const r = proj(S3[k], 26); P[k] = r.p; Z[k] = r.z; }
+  const S = depth ? P : skeleton(e, p);
   const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}" fill="${f}" stroke="${line}"/>` : '');
   const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
   const limbOf = (n, a, b, w1, w2, w3, at, f) =>
@@ -249,7 +255,7 @@ function cmpFigure(e, p, mode) {
     { z: Z.elbow, d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
   ];
   // Derinlik kipinde uzak olan önce çiziliyor; 2B'de sabit sıra.
-  if (mode === 'depth') groups.sort((a, b) => a.z - b.z);
+  if (depth) groups.sort((a, b) => a.z - b.z);
   let g = groups.map((x) => x.d).join('');
   const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
   g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
@@ -258,7 +264,7 @@ function cmpFigure(e, p, mode) {
     : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
-    const end = (sgn) => (mode === 'depth' ? proj([S3.bar[0], S3.bar[1], sgn * 70], az).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
+    const end = (sgn) => (depth ? proj([S3.bar[0], S3.bar[1], sgn * 70], 26).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
     const A = end(-1), Bp = end(1);
     g += `<line x1="${A[0]}" y1="${A[1]}" x2="${Bp[0]}" y2="${Bp[1]}" stroke="${metal}" stroke-width="7" stroke-linecap="round"/>`;
     [A, Bp].forEach((q) => { g += `<ellipse cx="${q[0]}" cy="${q[1]}" rx="15" ry="34" fill="${metal}" fill-opacity=".62" stroke="${accent}" stroke-width="2"/>`; });
