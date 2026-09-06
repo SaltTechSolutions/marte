@@ -255,10 +255,11 @@ Bu incelemenin bulgularından türetildi. Kutucukları ilerledikçe işaretle.
   - Surfaced by: Bölüm 1 D1/T6, Codex T1 — 30 arketip 34 hareketi temsil ediyor
   - Files: `src/rigSchema.ts`, `data/rigMuscles.json`, `data/muscleVocabulary.ts`
   - Verify: bilinmeyen kas kimliği reddediliyor; 34 anahtar zorunlu
-- [ ] **T5 (P1, human: ~4sa / CC: ~30dk)** — tests — rigSchema'nın ilk test dosyası
+- [x] **T5 (P1, human: ~4sa / CC: ~30dk)** — tests — rigSchema'nın ilk test dosyası
   - Surfaced by: Bölüm 3 — bu oturumda yazıldı, hiç testi yok
   - Files: `tests/rigSchema.test.ts`
   - Verify: her reddetme sınıfı için bir test
+  - **YAPILDI 2026-09-06:** `tests/rigSchema.test.ts`, 39 test, her reddetme sınıfı kapsandı. Mutasyonla sınandı: `dur` kontrolü, bilinmeyen poz alanı kontrolü ve `prop: box` muafiyeti tek tek devre dışı bırakıldı, üçünde de testler düştü.
 - [x] **T6 (P2, human: ~1sa / CC: ~10dk)** — editor — `boundsFor` çağrısını `draw()` dışına çıkar
   - Surfaced by: Bölüm 4 + Codex T3 — 0.11 ms, bir karenin tamamının 7 katı ([editor/editor.js:110](editor/editor.js:110))
   - Files: `editor/editor.js`
