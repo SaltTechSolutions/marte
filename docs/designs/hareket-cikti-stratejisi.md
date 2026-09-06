@@ -109,9 +109,13 @@ Kör inceleme fikri Açık Sorular altında yaşıyor.
    yalnızca 1'i kırılıyor (`seated_overhead_press`, 161°); geniş banda geçildiği
    için sorun daha da küçülüyor.
 3. **Kas veri şeması — 34 hareket anahtarı.** `rigSchema.ts` genişletilir. Anahtar
-   arketip DEĞİL, `exerciseNames.json`'daki gerçek hareket. Sözlük BİZE ait kanonik
-   36 grup; Muscle-Map slug'ları yalnızca çizim anında eşlenir, böylece renderer
-   değişirse veri değil eşleme tablosu değişir.
+   arketip DEĞİL, gerçek hareket. Sözlük BİZE ait kanonik 36 grup; Muscle-Map
+   slug'ları yalnızca çizim anında eşlenir, böylece renderer değişirse veri
+   değil eşleme tablosu değişir.
+   **Uygulama sırasında çıkan blokaj:** `exerciseNames.json` yalnızca
+   `{arketip: [ad]}` tutuyordu; 34 hareketin stabil kimliği yoktu ve o dosya
+   devir sözleşmesinde bile değildi. Kararla (2026-09-06) kimlikleri bu depo
+   sahiplendi: `data/exercises.json` her harekete ASCII slug veriyor.
 4. **`rigMuscles.json` — 34 kayıt.** 10'u yazılı, 24'ü `status: "pending"` ve boş
    listelerle. Kayıt sessizce düşemez; kalan iş dosyadan sayılarak görülür.
 5. **Anahtar doğrulaması ÜRETİM ZAMANINDA.** Export ve editör kaydetme anında
@@ -166,7 +170,7 @@ yazmak bu oturumda B'yi reddetme gerekçesinin ta kendisiydi.
 | Piksel/derece ayrımı deseni | `OFFSET_KEYS` ([src/rigAudit.ts:138](src/rigAudit.ts:138)) | Hayır, aynı ders uygulanıyor |
 | İçerik anahtarlı önbellek deseni | `SHIFT` ([src/rig.ts:325](src/rig.ts:325)) | **Kullanılmıyor** — `boundsFor` için çağrıyı kaldırmak daha doğru |
 | Önden/arkadan kas SVG'si | — | Hayır, MIT kütüphane vendor'lanıyor |
-| Hareket adı → arketip eşlemesi | `exerciseNames.json` (30 anahtar, 34 ad) | Hayır, kas anahtarı olarak kullanılıyor |
+| Hareket adı → arketip eşlemesi | `exerciseNames.json` (30 anahtar, 34 ad) | **Yeniden kuruldu** → `data/exercises.json`, kimlik başına |
 
 ## Open Questions
 
@@ -251,10 +255,11 @@ Bu incelemenin bulgularından türetildi. Kutucukları ilerledikçe işaretle.
   - Files: `tests/rigAudit.test.ts`
   - Verify: bir bandı kasten devre dışı bırak, ilgili test düşmeli
   - **YAPILDI 2026-09-06:** `tests/rigAudit.test.ts` `ROM_BANDS`'ten veri güdümlü üretiliyor; probu olmayan bir band eklemek testi düşürüyor. `arm: 'floor'` üç harekette dirseğin 160°'ye geometrik olarak ulaşamadığı ölçülüp sabitlendi (tavan 51°/59°/21°).
-- [ ] **T4 (P1, human: ~1g / CC: ~40dk)** — rigSchema — kas alanları + 34 hareket anahtarı + kanonik 36 grup sözlüğü
+- [x] **T4 (P1, human: ~1g / CC: ~40dk)** — rigSchema — kas alanları + 34 hareket anahtarı + kanonik 36 grup sözlüğü
   - Surfaced by: Bölüm 1 D1/T6, Codex T1 — 30 arketip 34 hareketi temsil ediyor
   - Files: `src/rigSchema.ts`, `data/rigMuscles.json`, `data/muscleVocabulary.ts`
   - Verify: bilinmeyen kas kimliği reddediliyor; 34 anahtar zorunlu
+  - **YAPILDI 2026-09-06:** `data/exercises.json` (34 hareket, ASCII slug kimlik), `src/muscles.ts` (36 grup, 31'i çalıştırılabilir; `head`/`hands`/`feet`/`knees`/`ankles` şemada reddediliyor), `data/rigMuscles.json` (34 kayıt, hepsi `pending`). Blokaj çıktı ve karara bağlandı: hareketlerin stabil kimliği yoktu, bu depo sahiplendi.
 - [x] **T5 (P1, human: ~4sa / CC: ~30dk)** — tests — rigSchema'nın ilk test dosyası
   - Surfaced by: Bölüm 3 — bu oturumda yazıldı, hiç testi yok
   - Files: `tests/rigSchema.test.ts`
@@ -270,10 +275,11 @@ Bu incelemenin bulgularından türetildi. Kutucukları ilerledikçe işaretle.
   - Files: `scripts/export.mjs`, `package.json`
   - Verify: `npm run export` manifest üretiyor, hash'ler doğru
   - **YAPILDI 2026-09-06:** sözleşme 3 → 5 dosya (`rigSchema.ts` + `manifest.json`). Manifest sürüm, tarih, git commit'i, `source.dirty` ve dosya başına sha256 taşıyor; export yazdığını geri okuyup doğruluyor. Bağımsız olarak sınandı: hash'ler tutuyor, elle düzenlenen kopya yakalanıyor.
-- [ ] **T8 (P2, human: ~2sa / CC: ~15dk)** — export/editor — anahtar doğrulaması üretim zamanında
+- [x] **T8 (P2, human: ~2sa / CC: ~15dk)** — export/editor — anahtar doğrulaması üretim zamanında
   - Surfaced by: Codex T5 — runtime doğrulama ayrı dosya avantajını iptal ediyordu
   - Files: `src/rigSchema.ts`, `scripts/export.mjs`, `scripts/editor.mjs`
   - Verify: eksik ya da fazla anahtarla export başarısız oluyor
+  - **YAPILDI 2026-09-06:** `scripts/schema.mjs` paylaşılan yükleyici; editör kaydetme ve `npm run export` aynı `validateBundle`'ı çağırıyor. Tarayıcıda sınandı: `plank_prone` arketibini silen kayıt, katalog ona bağlı olduğu için reddediliyor.
 - [ ] **T9 (P1, human: ~1h / CC: ~20dk)** — GymEntra — `RigFigure.tsx` mimari tespiti
   - Surfaced by: Bölüm 1 D2 — setState mi Reanimated mi, P2'nin cevabı burada
   - Files: GymEntra `src/.../RigFigure.tsx` (başka depo)

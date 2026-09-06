@@ -41,9 +41,17 @@ hesaplayan kod yalnızca burada yaşıyor, uygulamaya kopyalanıyor.
 dist/rig.ts               motor
 dist/rigAudit.ts          denetim kuralları
 dist/rigSchema.ts         veri biçim doğrulaması
+dist/muscles.ts           kanonik kas sözlüğü (36 grup, 31'i çalıştırılabilir)
 dist/rigArchetypes.json   30 arketipin kare verisi
+dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
+dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
 dist/manifest.json        sürüm, tarih, git commit'i, her dosyanın sha256'sı
 ```
+
+Arketip ile hareket aynı şey değil: 30 arketip 34 hareketi çiziyor.
+`unilateral_lunge` üçüne birden hizmet ediyor (lunge + rotasyon, walking,
+reverse) ama kas profilleri farklı, o yüzden kas verisi arketibe değil
+**harekete** bağlı. Hareket kimliklerini bu depo sahipleniyor.
 
 Uygulamada bunlar `src/vendor/rig/` altına kopyalanır ve başlarındaki
 "üretilmiştir, elle düzenleme" satırı orada da durur. **Tek yön vardır:**
@@ -70,7 +78,7 @@ yakalayabilir. Manifest ayrıca üretimin commit edilmemiş bir çalışma ağac
 
 ## Editör
 
-Solda hareketler (Türkçe adlar `data/exerciseNames.json`'dan), ortada figür ve
+Solda hareketler (Türkçe adlar `data/exercises.json`'dan), ortada figür ve
 zaman çubuğu, sağda denetim + ekipman + açılar.
 
 - Eklemi tut ve sürükle. Kemik boyu sabit: eklem hedefe bakan yöne döner.

@@ -1,4 +1,5 @@
 import { B, RigExercise, RigPose } from './rig';
+import { MUSCLES } from './muscles';
 
 /**
  * Kare verisinin biçim denetimi.
@@ -112,4 +113,127 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
   const errs = validateArchetypes(data);
   if (errs.length) throw new Error(`rigArchetypes.json geçersiz:\n  ${errs.join('\n  ')}`);
   return data as Record<string, RigExercise>;
+}
+
+/* ------------------------------------------------------------------------ *
+ * Hareket kataloğu ve kas verisi
+ * ------------------------------------------------------------------------ */
+
+/** Kimlikler ASCII slug: URL'de, dosya adında ve anahtar olarak sorun çıkarmaz. */
+const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+const CATALOG_KEYS = ['name', 'archetype'];
+const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source'];
+const STATUSES = ['pending', 'authored'];
+
+const strList = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+/**
+ * Hareket kataloğu: kimlik → görünen ad + hangi arketiple çizildiği.
+ *
+ * Kimlikleri bu depo sahipleniyor. `data/exerciseNames.json` yalnızca
+ * `{arketip: [ad]}` tutuyordu ve 34 hareketin stabil bir anahtarı yoktu; kas
+ * verisini görünen ada bağlamak, adı düzelten ilk kişide veriyi sahipsiz
+ * bırakırdı.
+ */
+export function validateExercises(data: unknown, archetypeKeys: string[]): string[] {
+  const errs: string[] = [];
+  if (!isObj(data)) return ['hareket kataloğu: kök nesne bekleniyor'];
+  const keys = Object.keys(data);
+  if (keys.length === 0) return ['hareket kataloğu boş'];
+
+  keys.forEach((id) => {
+    const bad = (msg: string) => errs.push(`hareket "${id}": ${msg}`);
+    if (!SLUG.test(id)) bad('kimlik küçük harf ASCII slug olmalı (a-z, 0-9, tire)');
+    const e = data[id];
+    if (!isObj(e)) return bad('nesne değil');
+    Object.keys(e).forEach((k) => {
+      if (!CATALOG_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
+    });
+    if (typeof e.name !== 'string' || e.name.trim() === '') bad('name boş olmayan metin olmalı');
+    if (typeof e.archetype !== 'string') bad('archetype metin olmalı');
+    else if (!archetypeKeys.includes(e.archetype)) bad(`archetype "${e.archetype}" rigArchetypes.json'da yok`);
+  });
+
+  // Aynı adın iki kimliğe düşmesi, katalogda bir kopyanın kaçtığını gösterir.
+  const names = keys.map((k) => (isObj(data[k]) ? data[k].name : undefined)).filter((n) => typeof n === 'string');
+  const dupes = names.filter((n, i) => names.indexOf(n) !== i);
+  [...new Set(dupes)].forEach((n) => errs.push(`hareket adı "${String(n)}" birden fazla kimlikte`));
+
+  return errs;
+}
+
+/**
+ * Kas verisi.
+ *
+ * AYRI DOSYA olduğu için anahtar sürüklenmesine açık: `walking-lunge` yerine
+ * `walking-lunges` yazmak iki dosyayı da tek başına geçerli bırakır ve
+ * kullanıcı boş kas şeması görür. Bu yüzden anahtar kümesi katalogla BİREBİR
+ * eşit olmak zorunda — kararın (`d7ad5288`) zorunlu kıldığı azaltma bu.
+ *
+ * Yazılmamış hareketler dosyada `status: "pending"` olarak DURUYOR, yok
+ * sayılmıyor: bir kaydın sessizce düşmesi ile hiç yazılmamış olması aynı
+ * görünmemeli.
+ */
+export function validateMuscles(data: unknown, exerciseKeys: string[]): string[] {
+  const errs: string[] = [];
+  if (!isObj(data)) return ['kas verisi: kök nesne bekleniyor'];
+
+  const keys = Object.keys(data);
+  const eksik = exerciseKeys.filter((k) => !keys.includes(k));
+  const fazla = keys.filter((k) => !exerciseKeys.includes(k));
+  if (eksik.length) errs.push(`kas verisi eksik hareket: ${eksik.join(', ')}`);
+  if (fazla.length) errs.push(`kas verisinde katalogda olmayan hareket: ${fazla.join(', ')}`);
+
+  keys.forEach((id) => {
+    const bad = (msg: string) => errs.push(`kas verisi "${id}": ${msg}`);
+    const m = data[id];
+    if (!isObj(m)) return bad('nesne değil');
+    Object.keys(m).forEach((k) => {
+      if (!MUSCLE_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
+    });
+    if (typeof m.status !== 'string' || !STATUSES.includes(m.status)) {
+      bad(`status "${String(m.status)}" geçersiz (${STATUSES.join(', ')})`);
+    }
+    // Yerel değişkene bağlanıyor: tip daraltması özellik erişiminde değil
+    // yerelde çalışıyor.
+    const primary = m.primary;
+    const secondary = m.secondary;
+    if (!strList(primary)) return bad('primary metin dizisi olmalı');
+    if (!strList(secondary)) return bad('secondary metin dizisi olmalı');
+
+    ([['primary', primary], ['secondary', secondary]] as [string, string[]][]).forEach(([which, list]) => {
+      list.forEach((id2) => {
+        if (!MUSCLES[id2]) bad(`${which}: bilinmeyen kas "${id2}"`);
+        else if (!MUSCLES[id2].trainable) bad(`${which}: "${id2}" çalıştırılabilir bir kas grubu değil`);
+      });
+      const dup = list.filter((x, i) => list.indexOf(x) !== i);
+      [...new Set(dup)].forEach((x) => bad(`${which}: "${x}" iki kez yazılmış`));
+    });
+    primary.filter((x) => secondary.includes(x)).forEach((x) => bad(`"${x}" hem birincil hem ikincil`));
+
+    if (m.status === 'authored') {
+      if (primary.length === 0) bad('authored ama birincil kas yazılmamış');
+      if (typeof m.source !== 'string' || m.source.trim() === '') bad('authored ama source (kaynak/güven notu) yok');
+    } else {
+      if (primary.length || secondary.length) bad('pending ama kas yazılmış — status authored olmalı');
+      if (m.source !== undefined) bad('pending ama source yazılmış');
+    }
+  });
+
+  return errs;
+}
+
+/**
+ * Devir paketinin tamamı. `export` ve editör kaydetmesi bunu çağırıyor:
+ * doğrulama ÜRETİM ZAMANINDA yapılıyor, uygulama runtime'da hiçbir şey
+ * kontrol etmiyor ve kas verisini kinematik olmadan yükleyebiliyor.
+ */
+export function validateBundle(b: { archetypes: unknown; exercises: unknown; muscles: unknown }): string[] {
+  const errs = validateArchetypes(b.archetypes);
+  const archetypeKeys = isObj(b.archetypes) ? Object.keys(b.archetypes) : [];
+  errs.push(...validateExercises(b.exercises, archetypeKeys));
+  const exerciseKeys = isObj(b.exercises) ? Object.keys(b.exercises) : [];
+  errs.push(...validateMuscles(b.muscles, exerciseKeys));
+  return errs;
 }

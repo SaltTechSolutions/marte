@@ -1,38 +1,59 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-06T09:05:48.363Z",
+  "generated": "2026-09-06T09:21:50.698Z",
   "source": {
-    "commit": "26eff06",
+    "commit": "d45ab12",
     "dirty": true
   },
   "counts": {
-    "arketip": 30
+    "arketip": 30,
+    "hareket": 34,
+    "kasVerisiYazilan": 0,
+    "kasVerisiBekleyen": 34
   },
   "files": {
     "rig.ts": {
-      "sha256": "27d64f57943d4498144ad8f926cc34ee5f3b4f1373b730c35c5dab897190f358",
+      "sha256": "21214b9c89facde6ea3f7e0b18c5c125a891e946152e8dbe5acb51958e2e02a6",
       "bytes": 23381,
       "from": "src/rig.ts",
       "what": "motor"
     },
     "rigAudit.ts": {
-      "sha256": "d42ee2a8d913b18aa24b7d09a739600068eb3a603a6d097c5b86f0abc3ea4151",
+      "sha256": "90a1410b008143f332067985e1a7c227a5c987666226be74982c5e24003fe5d0",
       "bytes": 10920,
       "from": "src/rigAudit.ts",
       "what": "denetim kuralları"
     },
     "rigSchema.ts": {
-      "sha256": "e5f14d2cf6fc1f12d0e0b95b0adc278b7a789a2063934ec8d481a950c637d50f",
-      "bytes": 5921,
+      "sha256": "41812ff53522a9e6e0b16d823094582c790f93372421cf72c90b53bfb92b3599",
+      "bytes": 11767,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması"
+    },
+    "muscles.ts": {
+      "sha256": "83b12ad22674995c8c0b4369a984d26e0696d2f2082fc9620235942aef26a6eb",
+      "bytes": 4278,
+      "from": "src/muscles.ts",
+      "what": "kanonik kas sözlüğü"
     },
     "rigArchetypes.json": {
       "sha256": "6b6141c1dab0d12e501ea0261dcc80a093a882be72dab066ec5439cfdfbd39c0",
       "bytes": 38220,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi"
+    },
+    "exercises.json": {
+      "sha256": "b4f13295a34284b37859aacf96026b2b8dd0a75b7fc14690068dbf42368e029c",
+      "bytes": 3049,
+      "from": "data/exercises.json",
+      "what": "hareket kataloğu"
+    },
+    "rigMuscles.json": {
+      "sha256": "d258563a899fa4142c6a8f022775b2f456efb4f1332a684df80a4e9bf2c3bd60",
+      "bytes": 3065,
+      "from": "data/rigMuscles.json",
+      "what": "hareket başına kaslar"
     }
   }
 }

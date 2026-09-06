@@ -23,6 +23,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadSchema } from './schema.mjs';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
 
@@ -58,10 +60,29 @@ const CONTRACT = [
   { out: 'rig.ts', src: 'src/rig.ts', banner: true, what: 'motor' },
   { out: 'rigAudit.ts', src: 'src/rigAudit.ts', banner: true, what: 'denetim kuralları' },
   { out: 'rigSchema.ts', src: 'src/rigSchema.ts', banner: true, what: 'veri biçim doğrulaması' },
+  { out: 'muscles.ts', src: 'src/muscles.ts', banner: true, what: 'kanonik kas sözlüğü' },
   { out: 'rigArchetypes.json', src: 'data/rigArchetypes.json', banner: false, what: 'kare verisi' },
+  { out: 'exercises.json', src: 'data/exercises.json', banner: false, what: 'hareket kataloğu' },
+  { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar' },
 ];
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
+
+const readJson = (rel) => JSON.parse(readFileSync(join(ROOT, rel), 'utf8'));
+
+// Doğrulama ÜRETİM ZAMANINDA. Uygulama runtime'da hiçbir şey kontrol etmiyor
+// ve kas verisini kinematik olmadan yükleyebiliyor; ayrı dosya seçiminin tek
+// gerekçesi böyle korunuyor. Kurallar `src/rigSchema.ts`'te — editörün
+// kaydetme anında okuduğu yerin aynısı.
+const bundleErrors = loadSchema().validateBundle({
+  archetypes: readJson('data/rigArchetypes.json'),
+  exercises: readJson('data/exercises.json'),
+  muscles: readJson('data/rigMuscles.json'),
+});
+if (bundleErrors.length) {
+  console.error(`✗ devir paketi geçersiz, hiçbir şey yazılmadı:\n  ${bundleErrors.join('\n  ')}`);
+  process.exit(1);
+}
 
 mkdirSync(DIST, { recursive: true });
 
@@ -73,13 +94,20 @@ for (const f of CONTRACT) {
   files[f.out] = { sha256: sha256(out), bytes: out.length, from: f.src, what: f.what };
 }
 
-const archetypes = JSON.parse(readFileSync(join(DIST, 'rigArchetypes.json'), 'utf8'));
+const archetypes = readJson('data/rigArchetypes.json');
+const muscles = readJson('data/rigMuscles.json');
+const authored = Object.values(muscles).filter((m) => m.status === 'authored').length;
 const manifest = {
   name: pkg.name,
   version: pkg.version,
   generated,
   source: { commit, dirty },
-  counts: { arketip: Object.keys(archetypes).length },
+  counts: {
+    arketip: Object.keys(archetypes).length,
+    hareket: Object.keys(readJson('data/exercises.json')).length,
+    kasVerisiYazilan: authored,
+    kasVerisiBekleyen: Object.keys(muscles).length - authored,
+  },
   files,
 };
 writeFileSync(join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
@@ -93,7 +121,8 @@ if (bad.length) {
 }
 
 const list = CONTRACT.map((f) => f.out).join(', ');
-console.log(`✓ dist/ hazır: ${list}, manifest.json (${manifest.counts.arketip} arketip)
+console.log(`✓ dist/ hazır: ${list}, manifest.json
+  ${manifest.counts.arketip} arketip · ${manifest.counts.hareket} hareket · kas verisi ${manifest.counts.kasVerisiYazilan} yazılı / ${manifest.counts.kasVerisiBekleyen} bekliyor
   sürüm ${pkg.version} · ${commit}${dirty ? ' · KİRLİ ÇALIŞMA AĞACI' : ''}
 ${dirty ? '\n  Uyarı: commit edilmemiş değişikliklerle üretildi; manifest bunu kaydetti.\n' : ''}
 Uygulamaya almak için:

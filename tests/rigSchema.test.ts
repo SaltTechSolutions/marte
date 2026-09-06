@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import raw from '../data/rigArchetypes.json';
+import rawArchetypes from '../data/rigArchetypes.json';
+import rawExercises from '../data/exercises.json';
+import rawMuscles from '../data/rigMuscles.json';
 import { B } from '../src/rig';
-import { MIN_DUR, assertArchetypes, validateArchetypes } from '../src/rigSchema';
+import { MUSCLES, TRAINABLE, coarse, rendererSlug } from '../src/muscles';
+import {
+  MIN_DUR,
+  assertArchetypes,
+  validateArchetypes,
+  validateBundle,
+  validateExercises,
+  validateMuscles,
+} from '../src/rigSchema';
 
 /**
  * Şema doğrulamasının testleri.
@@ -51,7 +61,7 @@ const errs = (mutate: (d: Fixture) => void): string[] => {
 
 describe('rigSchema — geçerli veri', () => {
   it('gerçek rigArchetypes.json geçiyor', () => {
-    expect(validateArchetypes(raw)).toEqual([]);
+    expect(validateArchetypes(rawArchetypes)).toEqual([]);
   });
 
   it('en küçük geçerli arketip geçiyor', () => {
@@ -195,6 +205,196 @@ describe('rigSchema — hata toplama ve assert', () => {
   });
 
   it('assertArchetypes geçerli veriyi aynen döndürüyor', () => {
-    expect(Object.keys(assertArchetypes(raw))).toEqual(Object.keys(raw));
+    expect(Object.keys(assertArchetypes(rawArchetypes))).toEqual(Object.keys(rawArchetypes));
+  });
+});
+
+/* -------------------------------------------------------------------------- *
+ * Hareket kataloğu ve kas verisi
+ * -------------------------------------------------------------------------- */
+
+type Catalog = Record<string, Record<string, unknown>>;
+type Muscles = Record<string, Record<string, unknown>>;
+
+const ARCH_KEYS = Object.keys(rawArchetypes);
+
+const catalog = (): Catalog => ({
+  'back-squat': { name: 'Back squat', archetype: 'squat' },
+  plank: { name: 'Plank', archetype: 'plank_prone' },
+});
+const musclesOf = (c: Catalog): Muscles =>
+  Object.fromEntries(Object.keys(c).map((k) => [k, { status: 'pending', primary: [], secondary: [] }]));
+
+const catErrs = (mutate: (c: Catalog) => void): string[] => {
+  const c = catalog();
+  mutate(c);
+  return validateExercises(c, ARCH_KEYS);
+};
+const musErrs = (mutate: (m: Muscles) => void): string[] => {
+  const c = catalog();
+  const m = musclesOf(c);
+  mutate(m);
+  return validateMuscles(m, Object.keys(c));
+};
+
+describe('muscles.ts — kanonik sözlük', () => {
+  it('36 grup, 31 tanesi çalıştırılabilir', () => {
+    expect(Object.keys(MUSCLES)).toHaveLength(36);
+    expect(TRAINABLE).toHaveLength(31);
+  });
+
+  it('çalıştırılamayan gruplar yalnızca vücut bölgeleri', () => {
+    const notTrainable = Object.keys(MUSCLES).filter((k) => !MUSCLES[k].trainable);
+    expect(notTrainable.sort()).toEqual(['ankles', 'feet', 'hands', 'head', 'knees']);
+  });
+
+  it('her parent sözlükte var ve kendisi parent değil', () => {
+    Object.entries(MUSCLES).forEach(([id, g]) => {
+      if (!g.parent) return;
+      expect(MUSCLES[g.parent], `${id} → ${g.parent}`).toBeDefined();
+      expect(MUSCLES[g.parent].parent, `${g.parent} kendi de alt grup olmamalı`).toBeUndefined();
+    });
+  });
+
+  it('coarse alt grubu üstüne topluyor, üstü olmayanı bırakıyor', () => {
+    expect(coarse('upper-chest')).toBe('chest');
+    expect(coarse('chest')).toBe('chest');
+    expect(coarse('biceps')).toBe('biceps');
+  });
+
+  it('rendererSlug bilinen kimliği veriyor, bilinmeyene null', () => {
+    // Bugün birebir. Seam burada olduğu için renderer değişince dokunulacak
+    // yer bu fonksiyon, 34 kayıtlık veri değil.
+    expect(rendererSlug('lower-chest')).toBe('lower-chest');
+    expect(rendererSlug('yok-boyle')).toBeNull();
+  });
+
+  it('her grubun Türkçe etiketi var', () => {
+    Object.entries(MUSCLES).forEach(([id, g]) => {
+      expect(g.label.trim(), id).not.toBe('');
+    });
+  });
+});
+
+describe('validateExercises — hareket kataloğu', () => {
+  it('gerçek katalog geçiyor', () => {
+    expect(validateExercises(rawExercises, ARCH_KEYS)).toEqual([]);
+  });
+
+  it('en küçük geçerli katalog geçiyor', () => {
+    expect(catErrs(() => {})).toEqual([]);
+  });
+
+  const cases: [string, (c: Catalog) => void, string][] = [
+    ['slug olmayan kimlik', (c) => (c['Back Squat'] = c['back-squat']), 'slug'],
+    ['bilinmeyen alan', (c) => (c.plank.renk = 'mavi'), 'bilinmeyen alan'],
+    ['name yok', (c) => delete c.plank.name, 'name'],
+    ['name boş', (c) => (c.plank.name = '   '), 'name'],
+    ['archetype metin değil', (c) => (c.plank.archetype = 7), 'archetype'],
+    ['archetype arketiplerde yok', (c) => (c.plank.archetype = 'yok_boyle'), "rigArchetypes.json'da yok"],
+    ['aynı ad iki kimlikte', (c) => (c['plank-2'] = { name: 'Plank', archetype: 'plank_prone' }), 'birden fazla kimlikte'],
+  ];
+  cases.forEach(([name, mutate, needle]) => {
+    it(`${name} reddediliyor`, () => {
+      const e = catErrs(mutate);
+      expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
+      expect(e.join(' ')).toContain(needle);
+    });
+  });
+
+  it('nesne olmayan kök ve boş katalog reddediliyor', () => {
+    expect(validateExercises(null, ARCH_KEYS).length).toBeGreaterThan(0);
+    expect(validateExercises({}, ARCH_KEYS)[0]).toContain('boş');
+  });
+});
+
+describe('validateMuscles — kas verisi', () => {
+  it('gerçek kas verisi geçiyor', () => {
+    expect(validateMuscles(rawMuscles, Object.keys(rawExercises))).toEqual([]);
+  });
+
+  it('yazılmış (authored) kayıt geçiyor', () => {
+    expect(
+      musErrs((m) => {
+        m.plank = { status: 'authored', primary: ['abs'], secondary: ['obliques'], source: 'antrenör incelemesi' };
+      }),
+    ).toEqual([]);
+  });
+
+  const cases: [string, (m: Muscles) => void, string][] = [
+    ['eksik hareket', (m) => delete m.plank, 'eksik hareket'],
+    ['katalogda olmayan hareket', (m) => (m['yok-boyle'] = { status: 'pending', primary: [], secondary: [] }), 'katalogda olmayan'],
+    ['bilinmeyen alan', (m) => (m.plank.not = 'x'), 'bilinmeyen alan'],
+    ['geçersiz status', (m) => (m.plank.status = 'belki'), 'status'],
+    ['primary dizi değil', (m) => (m.plank.primary = 'abs'), 'primary metin dizisi'],
+    ['secondary dizi değil', (m) => (m.plank.secondary = 3), 'secondary metin dizisi'],
+    [
+      'bilinmeyen kas kimliği',
+      (m) => (m.plank = { status: 'authored', primary: ['karin'], secondary: [], source: 'x' }),
+      'bilinmeyen kas',
+    ],
+    [
+      'çalıştırılamayan grup',
+      (m) => (m.plank = { status: 'authored', primary: ['head'], secondary: [], source: 'x' }),
+      'çalıştırılabilir bir kas grubu değil',
+    ],
+    [
+      'aynı kas iki kez',
+      (m) => (m.plank = { status: 'authored', primary: ['abs', 'abs'], secondary: [], source: 'x' }),
+      'iki kez yazılmış',
+    ],
+    [
+      'hem birincil hem ikincil',
+      (m) => (m.plank = { status: 'authored', primary: ['abs'], secondary: ['abs'], source: 'x' }),
+      'hem birincil hem ikincil',
+    ],
+    [
+      'authored ama birincil yok',
+      (m) => (m.plank = { status: 'authored', primary: [], secondary: ['abs'], source: 'x' }),
+      'birincil kas yazılmamış',
+    ],
+    [
+      'authored ama source yok',
+      (m) => (m.plank = { status: 'authored', primary: ['abs'], secondary: [] }),
+      'source (kaynak/güven notu) yok',
+    ],
+    ['pending ama kas yazılmış', (m) => (m.plank.primary = ['abs']), 'status authored olmalı'],
+    ['pending ama source yazılmış', (m) => (m.plank.source = 'x'), 'pending ama source'],
+  ];
+  cases.forEach(([name, mutate, needle]) => {
+    it(`${name} reddediliyor`, () => {
+      const e = musErrs(mutate);
+      expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
+      expect(e.join(' ')).toContain(needle);
+    });
+  });
+});
+
+describe('validateBundle — devir paketi', () => {
+  it('depodaki gerçek paket geçiyor', () => {
+    expect(validateBundle({ archetypes: rawArchetypes, exercises: rawExercises, muscles: rawMuscles })).toEqual([]);
+  });
+
+  it('anahtar sürüklenmesi yakalanıyor', () => {
+    // Ayrı dosya seçiminin (karar d7ad5288) açık bıraktığı tek risk buydu ve
+    // zorunlu kılınan azaltma da bu kontroldü.
+    const drift: Muscles = JSON.parse(JSON.stringify(rawMuscles));
+    drift['walking-lunges'] = drift['walking-lunge'];
+    delete drift['walking-lunge'];
+    const e = validateBundle({ archetypes: rawArchetypes, exercises: rawExercises, muscles: drift });
+    expect(e.join(' ')).toContain('walking-lunge');
+  });
+
+  it('katalogdaki her hareket gerçek bir arketibe bağlı', () => {
+    Object.entries(rawExercises as Record<string, { archetype: string }>).forEach(([id, e]) => {
+      expect(Object.keys(rawArchetypes), `${id}`).toContain(e.archetype);
+    });
+  });
+
+  it('34 hareket, 30 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+    expect(Object.keys(rawExercises)).toHaveLength(34);
+    expect(Object.keys(rawArchetypes)).toHaveLength(30);
+    const used = new Set(Object.values(rawExercises as Record<string, { archetype: string }>).map((e) => e.archetype));
+    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(30);
   });
 });

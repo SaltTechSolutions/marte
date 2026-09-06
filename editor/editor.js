@@ -767,7 +767,13 @@ const boot = async () => {
     fetch('/names').then((r) => r.json()).catch(() => ({})),
   ]);
   DATA = data;
-  NAMES = names;
+  // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
+  // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
+  // (unilateral_lunge üç hareket) ters çeviriyoruz.
+  NAMES = {};
+  for (const e of Object.values(names)) {
+    (NAMES[e.archetype] ||= []).push(e.name);
+  }
   key = Object.keys(DATA)[0];
   renderAll();
   requestAnimationFrame(tick);
