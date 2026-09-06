@@ -473,7 +473,16 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
 
   const bar: Vec | null =
     ex.bar === 'back'
-      ? add(thorax, D(p.thoraxA + 201), 18)
+      ? // Sırttaki bar TRAPEZ hizasında, ensenin arkasında durur — ve el onu
+        // tutabilmeli. Eski konum gövdeden aşağı-geriye 18px idi: bar omuza
+        // 21px düşüyor ve el oraya ancak 165° dirsekle uzanıyordu. İnsan
+        // dirseği o kadar katlanmadığı için el barı hiç tutamıyor, hareket
+        // "eller arkada tutuluyor" gibi okunuyordu.
+        //
+        // Çapa artık BOYUN: bar ensenin 14px arkasında. Omuz-bar 40-43px,
+        // gereken dirsek 146-149°, sınırın altında. Yön gövdeyle döndüğü için
+        // figür öne eğilirken bar trapezde kalıyor.
+        add(neck, D(p.thoraxA + 270), 14)
       : ex.bar === 'hands'
         ? [hand![0], hand![1]]
         : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
-import { RigExercise, RigPose, fillPose, poseAt } from '../src/rig';
-import { ROM_BANDS, auditFrame } from '../src/rigAudit';
+import { RigExercise, RigPose, fillPose, poseAt, skeleton } from '../src/rig';
+import { ROM_BANDS, auditExercise, auditFrame } from '../src/rigAudit';
 
 /**
  * ROM bantlarının ATEŞLEDİĞİNİ doğrulayan testler.
@@ -110,5 +110,35 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
       }
       expect(max, `${k} için dirsek uyarısı beklenmiyordu`).toBe(0);
     });
+  });
+});
+
+describe('tutuş kuralı — el barı tutuyor mu', () => {
+  // `bar: 'hands'` olanlarda tutuş yapı gereği garanti: bar elin konumuna
+  // çiziliyor. `bar: 'back'` ise bar GÖVDEDEN hesaplanıyor ve elin ona ulaşıp
+  // ulaşmadığını hiçbir şey kontrol etmiyordu.
+  it('sırttaki barı tutmayan el yakalanıyor', () => {
+    const ex = RIG_ARCHETYPES.squat;
+    // Kolu bardan uzaklaştır: üst kolu aşağı sarkıt.
+    const p = fillPose({ ...poseAt(ex, 0).p, upperA: 180, foreA: 180 });
+    const issues = auditFrame(ex, p).filter((i) => i.rule === 'tutuş');
+    expect(issues.length, `tutuş uyarısı bekleniyordu, çıkan: ${JSON.stringify(auditFrame(ex, p).map((i) => i.message))}`).toBeGreaterThan(0);
+  });
+
+  it('gerçek squat verisi tutuş kuralından geçiyor', () => {
+    const ex = RIG_ARCHETYPES.squat;
+    expect(auditExercise(ex).filter((i) => i.rule === 'tutuş')).toEqual([]);
+  });
+
+  it('bar elde olan hareketlerde tutuş zaten garanti', () => {
+    Object.entries(RIG_ARCHETYPES)
+      .filter(([, ex]) => ex.bar === 'hands')
+      .forEach(([k, ex]) => {
+        for (let i = 0; i <= 10; i++) {
+          const p = poseAt(ex, i / 10).p;
+          const S = skeleton(ex, p);
+          expect(Math.hypot(S.hand[0] - S.bar![0], S.hand[1] - S.bar![1]), k).toBeLessThan(0.001);
+        }
+      });
   });
 });

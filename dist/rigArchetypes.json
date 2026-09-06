@@ -3,7 +3,7 @@
     "mode": "stand",
     "arm": "angles",
     "bar": "back",
-    "bend": 1,
+    "bend": -1,
     "dur": 3600,
     "kf": [
       {
@@ -15,8 +15,8 @@
           "torso": 5,
           "thoraxA": 1,
           "neckA": 3,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -28,8 +28,8 @@
           "torso": 40,
           "thoraxA": 36,
           "neckA": 24,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -41,8 +41,8 @@
           "torso": 40,
           "thoraxA": 36,
           "neckA": 24,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -54,11 +54,12 @@
           "torso": 5,
           "thoraxA": 1,
           "neckA": 3,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       }
-    ]
+    ],
+    "note": "Back squat: bar sirtta, eller bari tutuyor. Dirsek ASAGI bakar (bend -1); yukari bakan dirsek squat durusu degil. Eller eskiden bardan 56px otede havada duruyordu ve hareket 'eller arkada tutuluyor' gibi okunuyordu."
   },
   "squat_goblet": {
     "note": "Ağırlık göğüste: gövde squat'tan dik, derinlik biraz daha az.",

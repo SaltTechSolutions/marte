@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (6cf95cd+kirli), 2026-09-06T13:26:59.789Z
+// Kaynak: antrenman-simulatoru v1.0.0 (bac20f6+kirli), 2026-09-06T13:47:22.424Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -174,6 +174,16 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   if (ex.mode === 'quad' || ex.mode === 'supine') {
     const lowest = Math.max(S.ankle[1], S.ankleF[1], S.knee[1], S.kneeF[1], S.hand[1], S.handF[1], S.pelvis[1], S.head[1]);
     if (lowest < GROUND - 30) add('temas', 'hiçbir yeri yere değmiyor');
+  }
+
+  // Sırttaki bar GÖVDEDEN hesaplanıyor, elden değil — yani elin ona ulaşıp
+  // ulaşmadığını hiçbir şey kontrol etmiyordu. `bar: 'hands'` olanlarda tutuş
+  // yapı gereği garanti (bar elin konumuna çiziliyor), burada değil. Squat'ta
+  // el bardan 56px ötede havada duruyordu ve hareket "eller arkada tutuluyor"
+  // gibi okunuyordu.
+  if (ex.bar === 'back' && S.bar) {
+    const reach = len(S.hand, S.bar);
+    if (reach > 30) add('tutuş', `el bardan ${Math.round(reach)}px uzakta — barı tutmuyor`);
   }
 
   if (ex.mode === 'hang') {

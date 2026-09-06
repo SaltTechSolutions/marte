@@ -171,6 +171,16 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     if (lowest < GROUND - 30) add('temas', 'hiçbir yeri yere değmiyor');
   }
 
+  // Sırttaki bar GÖVDEDEN hesaplanıyor, elden değil — yani elin ona ulaşıp
+  // ulaşmadığını hiçbir şey kontrol etmiyordu. `bar: 'hands'` olanlarda tutuş
+  // yapı gereği garanti (bar elin konumuna çiziliyor), burada değil. Squat'ta
+  // el bardan 56px ötede havada duruyordu ve hareket "eller arkada tutuluyor"
+  // gibi okunuyordu.
+  if (ex.bar === 'back' && S.bar) {
+    const reach = len(S.hand, S.bar);
+    if (reach > 30) add('tutuş', `el bardan ${Math.round(reach)}px uzakta — barı tutmuyor`);
+  }
+
   if (ex.mode === 'hang') {
     if (S.hand[1] > 140) add('bar', 'el bardan kopmuş');
     if (S.ankle[1] > GROUND - 20) add('asılı', 'ayak yere değiyor');
