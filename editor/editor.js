@@ -10,7 +10,8 @@
 
 import {
   BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
-  frontPoints, frontTorsoPath, frontTrunk, lerpP, partTransform, poseAt, shoulderWedge, showFarLeg, skeleton,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
+  shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -58,7 +59,7 @@ let ANATOMY = null;
 /** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
 let PARTS = null;
 /** Çizim kipi: kapsül mü parça mı. */
-let useParts = false;
+let useParts = true;
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -633,15 +634,37 @@ function draw() {
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
   if (e.bar === 'hands') push(plate(S.bar));
-  push([el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
-  if (!e.hideFarArm) push([el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
+  // kullanıyoruz, böylece elin yönü kemikten geliyor.
+  const hand = (wrist, elbow, far) => {
+    const dx = wrist[0] - elbow[0];
+    const dy = wrist[1] - elbow[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return el('path', {
+      d: handPath(),
+      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
+      fill: far ? skinFar : skin,
+      stroke: line,
+    });
+  };
+  push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
+  if (!e.hideFarArm) {
+    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+  }
   if (e.load === 'dumbbell') {
     if (!e.hideFarArm) push(db(S.handF, S.elbowF, true));
     push(db(S.hand, S.elbow, false));
   }
-  svg.appendChild(el('g', { transform: `rotate(${p.neckA} ${S.head[0]} ${S.head[1]})` }, [
-    el('ellipse', { cx: S.head[0], cy: S.head[1] - 3, rx: 23, ry: 26, fill: skin, stroke: line }),
-    el('path', { d: `M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`, fill: skin, stroke: line })]));
+  svg.appendChild(
+    useParts
+      ? el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})` }, [
+          el('path', { d: headProfile(), fill: skin, stroke: line }),
+        ])
+      : el('g', { transform: `rotate(${p.neckA} ${S.head[0]} ${S.head[1]})` }, [
+          el('ellipse', { cx: S.head[0], cy: S.head[1] - 3, rx: 23, ry: 26, fill: skin, stroke: line }),
+          el('path', { d: `M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`, fill: skin, stroke: line }),
+        ]),
+  );
 
   drawHandles(svg, e, S, view);
 }

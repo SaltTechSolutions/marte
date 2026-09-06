@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (7a7e46d+kirli), 2026-09-06T13:22:27.435Z
+// Kaynak: antrenman-simulatoru v1.0.0 (6cf95cd+kirli), 2026-09-06T13:26:59.789Z
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -731,6 +731,43 @@ export function shoulderWedge(thorax: Vec, sh: Vec, w = 20): string {
     `A ${w * 0.75} ${w * 0.75} 0 0 0 ${sh[0] - nx * w * 0.75} ${sh[1] - ny * w * 0.75} ` +
     `L ${thorax[0] - nx * w} ${thorax[1] - ny * w} Z`
   );
+}
+
+/**
+ * Yandan baş profili.
+ *
+ * Yerel uzay: merkez `(0,0)`, **+X yüzün baktığı yön**. Çizim `neckA` ile
+ * döndürülüyor, yani baş boyunla birlikte eğiliyor.
+ *
+ * Düz bir daire yerine profil, çünkü baş figürün en tanınır parçası: alın,
+ * burun, çene ve ense çizgisi olmadan figür manken gibi okunuyordu. Yüz
+ * ayrıntısı YOK — göz, kulak, ağız çizilmiyor. Spor hareketi simülasyonunda
+ * bunlar bilgi taşımıyor ve küçük ölçekte gürültüye dönüşüyor.
+ */
+export function headProfile(): string {
+  return (
+    'M 0 -30 ' +
+    'C 11 -30 20 -22 22 -10 ' + // alın
+    'C 23 -5 21 -2 19 0 ' + // kaş
+    'C 22 3 23 7 20 9 ' + // burun
+    'C 17 10 16 11 16 14 ' + // burun altı
+    'C 18 16 18 20 15 23 ' + // dudak → çene
+    'C 11 27 5 29 0 29 ' + // çene ucu
+    'C -9 29 -18 22 -22 11 ' + // çene hattı → ense
+    'C -25 0 -24 -16 -14 -24 ' + // ense → kafatası
+    'C -9 -28 -5 -30 0 -30 Z'
+  );
+}
+
+/**
+ * El. Yerel uzay: bilek `(0,0)`, el `(0,18)` yönünde uzanır.
+ *
+ * Parmak yok — spor hareketinde parmak ayrıntısı bilgi taşımıyor (README'nin
+ * kapsam kararı). Ama daire yerine eldiven biçimi, elin hangi yöne baktığını
+ * gösteriyor ve bu bar tutuşunda okunuyor.
+ */
+export function handPath(): string {
+  return 'M -7 -1 C -10 5 -9 13 -5 17 C -1 20 4 20 7 16 C 10 11 10 3 8 -1 C 4 -4 -3 -4 -7 -1 Z';
 }
 
 /**
