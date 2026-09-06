@@ -59,7 +59,9 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "rig": "node scripts/rig-editor.mjs"
+    "rig": "node scripts/rig-editor.mjs",
+    "build:android:local": "ANDROID_HOME=$HOME/Library/Android/sdk eas build --platform android --profile production --local",
+    "build:ios:local": "eas build --platform ios --profile production --local"
   },
   "private": true
 }

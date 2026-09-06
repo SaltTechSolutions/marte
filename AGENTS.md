@@ -194,12 +194,37 @@ Her değişiklikten sonra, iddia etmeden önce çalıştır:
 npx tsc --noEmit && npx expo lint
 ```
 
-- Yeni **native modül** veya `app.json` plugin değişikliği → yeni EAS build
+- Yeni **native modül** veya `app.json` plugin değişikliği → yeni build
   gerekir. Sadece JS değişikliği → yeniden yükleme yeterli. Kullanıcıya
   hangisinin gerektiğini açıkça söyle.
 - Simülatörde görsel doğrulama yapılabiliyorsa yap. Dokunmalar kaydedilmiyorsa
   körlemesine tıklama yapma — kullanıcıdan doğrulama iste.
 - Test hesabı şifresi: `48162026` (tüm test hesapları).
+
+**Build önce yerelde alınır.** *(Karar: kullanıcı, 6 Eylül 2026.)* EAS'ın
+ücretli üyelik kotası doluyor ve kotanın üstü pahalı. Bu makinede build için
+gereken her şey var (JDK 17, Android SDK 36 + NDK 27/28, Xcode 26.6,
+fastlane), yani:
+
+```bash
+npm run build:android:local     # .aab, proje kökünde
+npm run build:ios:local         # .ipa
+```
+
+`--local` yalnızca derlemeyi buraya taşır: imzalama anahtarı yine EAS'tan
+çekilir, sürüm kodu yine uzaktan artar. Yani çıkan paket EAS'ta derlenenle
+aynı imzayı taşır — mağaza tarafında hiçbir şey değişmez.
+
+İki uyarı:
+
+- **Disk.** Yerel build birkaç GB Gradle/Xcode türetilmiş dosyası üretir.
+  Bu makinede boş alan ~12 GB (%98 dolu); build'den önce bakılmalı, yoksa
+  yarıda "no space left" ile düşer.
+- `ANDROID_HOME` kabuk profilinde tanımlı değil, bu yüzden npm script'i
+  kendi içinde veriyor. Elle `eas build --local` çalıştıracaksan sen de ver.
+
+Yerel build'in mümkün olmadığı tek durum: makinenin meşgul olması ya da
+kullanıcının açıkça EAS istemesi. Kotayı harcamadan önce sor.
 
 **İki salon, iki amaç — karıştırma.**
 

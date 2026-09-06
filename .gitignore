@@ -10,6 +10,11 @@ web-build/
 expo-env.d.ts
 
 # Native
+# `eas build --local` prebuild'i geçici dizinde yapıyor, ama `expo prebuild`
+# elle çalıştırılırsa bunlar repoya düşer — CNG projesinde ikisi de üretilmiş
+# dosya, kaynak değil.
+/android/
+/ios/
 .kotlin/
 *.orig.*
 *.jks
@@ -49,3 +54,8 @@ example
 # whatever extension — is covered before anyone has to remember a rule.
 secrets/
 .rig-editor/
+
+# Yerel build çıktıları
+*.aab
+*.apk
+*.ipa
