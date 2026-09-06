@@ -1,0 +1,94 @@
+# TODOS
+
+Ertelenen işler. Her kayıt neden ertelendiğini ve nereden başlanacağını taşır.
+Kaynak: `/plan-eng-review` 2026-09-06.
+
+---
+
+## Omuz ve boyun ROM formülünü doğrula, sonra tabloya ekle
+
+**Ne:** `toLocal()` türetmesinin omuz ve boyun için klinik eklem açısıyla aynı
+referans eksenini kullanıp kullanmadığını doğrulamak; doğruysa iki eklemi de
+`rigAudit.ts`'teki ROM tablosuna eklemek.
+
+**Neden:** Denetim bugün 4 eklem kapsıyor (diz, kalça, dirsek, gövde). Omuz ve
+boyun dışarıda, çünkü omuz türetmesi yatık pozlarda şüpheli değerler üretti.
+
+**Bağlam:** Ölçüm (2026-09-06, 30 arketip × 21 kare): `hip_thrust`,
+`glute_bridge` ve `bird_dog` omuzda −150°..−153° okundu, AAOS ekstansiyon bandı
+−60°. Bu bir sarmalama hatası mı yoksa gerçek anatomik sorun mu belirsiz;
+inceleme bu türetmeye 5/10 güven verdi. Boyun ölçümünde hiç ihlal çıkmadı.
+Kullanılan formül: `omuz = norm(180 - (upperA - thoraxA))`,
+`boyun = norm(neckA - thoraxA)`.
+
+**Artı:** ROM tablosu altı eklemi kapsar; `hip_thrust` şüphesi kapanır.
+**Eksi:** Anatomi bilgisi gerektiriyor, koddan tek başına çözülmüyor.
+
+**Bağlı:** Önce sagittal düzlem referans ekseninin açıkça tanımlanması gerekiyor.
+Önden görünüm ayrı bir sorun: `frontElbow()` ([src/rig.ts:472](src/rig.ts:472))
+dirseği anatomik açıyla değil sezgisel bir kuralla yerleştiriyor, yani önden
+görünümde eklem açısı zaten anlamlı değil.
+
+---
+
+## Ayak bileği açısını modele ekle
+
+**Ne:** `RigPose`'a gerçek bir ayak bileği eklem açısı eklemek.
+
+**Neden:** Model bugün ayak bileği açısı taşımıyor. Ayak yönü
+`footDirFor(mode)` sabiti ([src/rig.ts:669](src/rig.ts:669)), topuk kalkışı ise
+piksel cinsinden `ankleLift`. Bu yüzden ayak bileği ROM denetimi model
+değişmeden imkânsız.
+
+**Bağlam:** İnceleme sırasında "7 eklem denetlenecek" denmişti; doğrusu 6, ve
+ayak bileği o 6'nın dışında. Codex bu hatayı yakaladı. Dorsi/plantar fleksiyon
+topuk kalkışında, çömelme derinliğinde ve şınav duruşunda gerçekten anlamlı.
+
+**Artı:** Topuk kalkışı piksel yerine açıyla ifade edilir, model tutarlılaşır.
+**Eksi:** Geriye uyumsuz. 30 arketibin verisini ve devir sözleşmesini etkiler.
+
+**Bağlı:** Devir sözleşmesinin sürümlenmesi (bu turda ekleniyor) bu değişikliği
+güvenli kılan ön koşul.
+
+---
+
+## Vendored Muscle-Map kopyasının bakımı
+
+**Ne:** `Muscle-Map-for-React-Native` deposunun kopyalanan halini sürdürmek;
+React Native sürüm yükseltmelerinde kırılırsa düzeltmek.
+
+**Neden:** Kütüphane npm'de değil, kurulumu klasör kopyalamak ve depo 5
+commit'lik. Bakım borcu bilerek üstlenildi (karar `d1`, 2026-09-05).
+
+**Bağlam:** Alternatif `react-native-body-highlighter@3.2.0` npm'de ve bakımlı
+ama 24 slug taşıyor ve alt bölge ayrımı yok (upper/lower chest yok). Bu turda
+kanonik 36 gruplu sözlük BİZE ait olacak ve renderer'a eşlenecek, yani kütüphane
+ölürse veri değil yalnızca eşleme tablosu değişir. Çıkış yolu budur.
+
+**Artı:** RN yükseltmesi kırdığında panik yerine plan olur.
+**Eksi:** Henüz gerçekleşmemiş bir risk.
+
+**Bağlı:** Eşleme tablosu (bu turda yazılıyor) olmadan renderer değişimi ucuz olmaz.
+
+---
+
+## Uygulamaya gerçek bir yazı tipi seç
+
+**Ne:** GymEntra için sistem fontu yerine gerçek bir yazı tipi ailesi seçmek ve
+bir tipografi ölçeği tanımlamak.
+
+**Neden:** Hem editör hem onaylanan mockup `-apple-system` kullanıyor. Tasarım
+kural listesi bunu açıkça "tipografiden vazgeçtim sinyali" sayıyor: ürün her
+uygulamaya benziyor, hiçbir karakter taşımıyor.
+
+**Bağlam:** `/plan-design-review` 2026-09-06, Pass 4. Kas şeması işinin parçası
+değil, ayrı bir marka kararı olduğu için ertelendi. GymEntra'nın hâlihazırda bir
+yazı tipi olabilir; görmeden seçmek geri alınacak bir karar üretir.
+
+**Artı:** Ürün görsel kimlik kazanır, tipografi kararı ne kadar geç alınırsa o
+kadar çok ekranı etkiler.
+**Eksi:** Sistem fontu her cihazda mükemmel render olur, sıfır yükleme maliyeti
+getirir ve dinamik yazı boyutuna kendiliğinden uyar. Bunlar gerçek kayıplar.
+
+**Bağlı:** GymEntra deposuna erişim. Bir DESIGN.md yazılacaksa (bugün yok) bu
+karar oraya ait.

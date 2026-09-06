@@ -1,0 +1,38 @@
+{
+  "name": "antrenman-simulatoru",
+  "version": "1.0.0",
+  "generated": "2026-09-06T09:05:48.363Z",
+  "source": {
+    "commit": "26eff06",
+    "dirty": true
+  },
+  "counts": {
+    "arketip": 30
+  },
+  "files": {
+    "rig.ts": {
+      "sha256": "27d64f57943d4498144ad8f926cc34ee5f3b4f1373b730c35c5dab897190f358",
+      "bytes": 23381,
+      "from": "src/rig.ts",
+      "what": "motor"
+    },
+    "rigAudit.ts": {
+      "sha256": "d42ee2a8d913b18aa24b7d09a739600068eb3a603a6d097c5b86f0abc3ea4151",
+      "bytes": 10920,
+      "from": "src/rigAudit.ts",
+      "what": "denetim kuralları"
+    },
+    "rigSchema.ts": {
+      "sha256": "e5f14d2cf6fc1f12d0e0b95b0adc278b7a789a2063934ec8d481a950c637d50f",
+      "bytes": 5921,
+      "from": "src/rigSchema.ts",
+      "what": "veri biçim doğrulaması"
+    },
+    "rigArchetypes.json": {
+      "sha256": "6b6141c1dab0d12e501ea0261dcc80a093a882be72dab066ec5439cfdfbd39c0",
+      "bytes": 38220,
+      "from": "data/rigArchetypes.json",
+      "what": "kare verisi"
+    }
+  }
+}

@@ -6,7 +6,7 @@ Hareket figürünün motoru, kare editörü ve mekanik denetimi. Kendi başına
 ```bash
 npm install
 npm run editor      # http://127.0.0.1:8123 — hareketleri düzenle
-npm test            # mekanik denetim (29 test)
+npm test            # mekanik denetim + şema + ROM bantları (48 test)
 npm run export      # uygulamaya devredilecek dosyaları dist/ altına üretir
 ```
 
@@ -24,6 +24,7 @@ sokuyordu.
 | Motor (`src/rig.ts`) | Aynısının kopyası (`dist/` üzerinden) |
 | Sürükleme çözücüsü (`src/rigEdit.ts`) | **Yok** — yalnızca editörün işi |
 | Denetim kuralları (`src/rigAudit.ts`) | Aynısının kopyası |
+| Şema doğrulaması (`src/rigSchema.ts`) | Aynısının kopyası |
 | Kare verisi (`data/rigArchetypes.json`) | Aynısının kopyası |
 | Editör (`editor/`, `scripts/editor.mjs`) | **Yok** |
 | React Native çizimi | **Yalnızca uygulamada** (`RigFigure.tsx`) |
@@ -34,18 +35,26 @@ hesaplayan kod yalnızca burada yaşıyor, uygulamaya kopyalanıyor.
 
 ## Devir sözleşmesi
 
-`npm run export` üç dosya üretir:
+`npm run export` (typecheck ve testlerin arkasında) beş dosya üretir:
 
 ```
 dist/rig.ts               motor
 dist/rigAudit.ts          denetim kuralları
+dist/rigSchema.ts         veri biçim doğrulaması
 dist/rigArchetypes.json   30 arketipin kare verisi
+dist/manifest.json        sürüm, tarih, git commit'i, her dosyanın sha256'sı
 ```
 
 Uygulamada bunlar `src/vendor/rig/` altına kopyalanır ve başlarındaki
 "üretilmiştir, elle düzenleme" satırı orada da durur. **Tek yön vardır:**
 simülatörden uygulamaya. Uygulamada düzeltilen bir açı, bir sonraki devirde
 sessizce geri gelir.
+
+Kopyalama elle yapılıyor, yani atomik değil: birini eski üretimden almak
+sessiz bir hata olurdu. `manifest.json` bunu görünür kılıyor — uygulama
+açılışta dosyaların sha256'sını manifestle karşılaştırıp karışık sürümü
+yakalayabilir. Manifest ayrıca üretimin commit edilmemiş bir çalışma ağacından
+çıkıp çıkmadığını (`source.dirty`) kaydeder.
 
 ## Modeli bilmeden dokunma
 
@@ -80,8 +89,20 @@ diff'inde görünür.
 
 `src/rigAudit.ts` hem testlerde hem editörde çalışır: editörde kırmızı görünen
 bir şey testte de düşer. Kurallar mekaniği koruyor — eklem zeminin altına
-geçemez, basan ayak kalkamaz, diz ve dirsek ters kırılamaz, desteğe yaslanan
-hareketlerde omuz kaymaz, döngü kapanmak zorunda.
+geçemez, topuk ayak boyundan fazla kalkamaz (basamak hariç: orada yükselten
+şey ayak değil), desteğe yaslanan hareketlerde omuz kaymaz, döngü kapanmak
+zorunda.
+
+Eklem açısı sınırları `ROM_BANDS` tablosunda veri olarak duruyor: diz, dirsek,
+kalça ve gövde. Sayılar "normal aralık" değil **anatomik imkânsızlık** eşiği —
+derin çömelme klinik normalleri zaten aşar, onları sınır yapmak doğru
+hareketleri hata sayardı. Omuz, boyun ve ayak bileği tabloda yok; gerekçeleri
+`TODOS.md`'de.
+
+Verinin ŞEKLİ ayrı bir soru: `src/rigSchema.ts` yüklenirken ve editör
+kaydederken çalışır. Bilinmeyen bir `mode`, sıfırdan başlamayan bir kare
+dizisi ya da 2000ms altı bir süre motora hiç ulaşamaz — mekanik denetim
+elinde düzgün biçimli bir hareket olduğunu varsayıyor.
 
 ## Sırada ne var
 

@@ -100,6 +100,24 @@ const restore = (json) => {
 
 // --- çizim ---------------------------------------------------------------
 
+/**
+ * Kadrajı tazeler.
+ *
+ * `draw()` içinde DEĞİL. `boundsFor` 25 örnek karenin birleşimini alıyor ve
+ * sonuç yalnızca kare verisi, mod, kol türü ya da düzlem değişince değişiyor —
+ * oynatma sırasında hiçbiri değişmiyor ama `draw()` saniyede 30 kez
+ * çağrılıyordu. Ölçüm: `boundsFor` 0.11 ms, bir karenin poz + iskelet + 20 path
+ * işinin tamamı 16.1 mikrosaniye; yani kadraj hesabı çizdiği figürün yedi
+ * katına mal oluyordu.
+ *
+ * Bedeli: veriyi değiştiren her yol burayı çağırmak ZORUNDA, yoksa kadraj
+ * bayatlar ve sürüklenen eklem çerçevenin dışına taşar. Bugün çağıran yollar:
+ * `renderAll` (bütün veri değişiklikleri), sürükleme, kaydırıcı ve düzlem
+ * düğmeleri. Oynatma ile zaman çubuğu veriyi değiştirmediği için çağırmıyor.
+ */
+const syncViewBox = () => $('stage').setAttribute('viewBox', boundsFor(ex(), plane));
+
+
 function draw() {
   const svg = $('stage');
   const e = ex();
@@ -107,7 +125,6 @@ function draw() {
   const S = skeleton(e, p);
   const S0 = skeleton(e, poseAt(e, 0).p);
   const view = plane;
-  svg.setAttribute('viewBox', boundsFor(e, view));
   svg.innerHTML = '';
 
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint');
@@ -306,6 +323,7 @@ function moveDrag(evt) {
   if (Object.keys(patch).length === 0) return;
   frame().p = applyPatch(frame().p, patch);
   markDirty();
+  syncViewBox();
   draw();
   renderSliders();
   renderIssues();
@@ -344,6 +362,23 @@ function syncHistoryButtons() {
   $('redo').disabled = redoStack.length === 0;
 }
 
+/**
+ * Listedeki uyarı rozeti.
+ *
+ * Denetim pahalı: 30 arketip × 21 kare, tek geçiş ~64ms. Zaman çubuğunu
+ * sürüklerken bu her `input` olayında yeniden koşuyordu ve çubuk takılıyordu.
+ * Sonuç hareketin kendi verisine bağlı, o yüzden veri değişmedikçe duruyor.
+ */
+const issueCounts = new Map();
+function issueCountFor(k) {
+  const sig = JSON.stringify(DATA[k]);
+  const hit = issueCounts.get(k);
+  if (hit && hit.sig === sig) return hit.n;
+  const n = auditExercise(DATA[k]).length + auditLoop(DATA[k]).length;
+  issueCounts.set(k, { sig, n });
+  return n;
+}
+
 function renderExList() {
   const host = $('exList');
   host.innerHTML = '';
@@ -354,7 +389,7 @@ function renderExList() {
     const label = names[0] || k;
     const hay = (label + ' ' + names.join(' ') + ' ' + k).toLowerCase();
     if (filter && !hay.includes(filter)) return;
-    const issues = auditExercise(DATA[k]).length + auditLoop(DATA[k]).length;
+    const issues = issueCountFor(k);
     const b = document.createElement('button');
     b.setAttribute('aria-pressed', String(k === key));
     b.innerHTML =
@@ -442,6 +477,7 @@ function renderSliders() {
       if (from !== 'range') range.value = String(v);
       if (from !== 'num') num.value = String(v);
       markDirty();
+      syncViewBox();
       draw();
       renderIssues();
     };
@@ -536,7 +572,20 @@ function renderEquipment() {
     renderAll();
   };
   $('dur').value = String(e.dur);
-  $('dur').onchange = () => { const n = Number($('dur').value); if (n > 500) { e.dur = n; markDirty(); } };
+  // Alt sınır şemadan geliyor (`src/rigSchema.ts` MIN_DUR): editörün daha
+  // gevşek olması, burada kaydedilip testte düşen veri demekti.
+  $('dur').onchange = () => {
+    const n = Number($('dur').value);
+    if (!(n > 2000)) {
+      $('dur').value = String(e.dur);
+      $('savedMsg').textContent = 'süre 2000ms üstü olmalı';
+      $('savedMsg').style.color = css('--warn');
+      return;
+    }
+    snapshot();
+    e.dur = n;
+    markDirty();
+  };
 }
 
 function renderAll() {
@@ -545,6 +594,7 @@ function renderAll() {
   renderSliders();
   renderEquipment();
   renderIssues();
+  syncViewBox();
   draw();
 }
 
@@ -583,19 +633,38 @@ $('closeLoop').onclick = () => {
   renderAll();
 };
 $('kfTime').onchange = () => {
+  const e = ex();
   const t = Number($('kfTime').value);
-  if (!(t >= 0 && t <= 1)) return;
+  const reject = (why) => {
+    $('kfTime').value = String(frame().t);
+    $('savedMsg').textContent = why;
+    $('savedMsg').style.color = css('--warn');
+  };
+  if (!(t >= 0 && t <= 1)) return reject('kare zamanı 0 ile 1 arasında olmalı');
+  // Uçlar döngünün tanımı: ilk kare %0'da, son kare %100'de. Ortadaki bir
+  // kareyi uca taşımak, editörde kaydedilip `npm test`'te düşen veri
+  // üretiyordu.
+  const isFirst = kfIndex === 0;
+  const isLast = kfIndex === e.kf.length - 1;
+  if (isFirst && t !== 0) return reject('ilk kare %0’da kalmalı — döngü orada kapanıyor');
+  if (isLast && t !== 1) return reject('son kare %100’de kalmalı — döngü orada kapanıyor');
+  if (!isFirst && !isLast && (t === 0 || t === 1)) return reject('ara kare uçlara oturamaz');
+
   snapshot();
-  frame().t = t;
-  ex().kf.sort((a, b) => a.t - b.t);
+  const moved = frame();
+  moved.t = t;
+  e.kf.sort((a, b) => a.t - b.t);
+  // Sıralama kareleri yer değiştiriyor; seçim İNDİSE değil KAREYE bağlı
+  // kalmalı, yoksa bir sonraki düzenleme sessizce başka bir kareye gidiyor.
+  kfIndex = e.kf.indexOf(moved);
   markDirty();
   renderAll();
 };
 
 // --- üst çubuk -----------------------------------------------------------
 
-$('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); draw(); };
-$('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); draw(); };
+$('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
+$('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
 
 $('onion').onclick = () => {
   onion = !onion;
@@ -631,7 +700,12 @@ $('revert').onclick = async () => {
 
 $('scrub').oninput = () => {
   goToTime(Number($('scrub').value) / 1000);
-  renderAll();
+  // Zaman çubuğunda gezinmek ne hareket listesini ne ekipmanı değiştiriyor;
+  // `renderAll` burada boşuna iş yapıyordu.
+  renderKf();
+  renderSliders();
+  renderIssues();
+  draw();
 };
 
 $('play').onclick = () => {

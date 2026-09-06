@@ -24,6 +24,7 @@ import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -64,6 +65,46 @@ function buildEngine() {
   console.log('✓ motor derlendi →', OUT);
 }
 
+/**
+ * Şema denetimini SUNUCU için ayrı derler.
+ *
+ * Tarayıcı derlemesi uzantısız ES modülü üretiyor (`./rig`); Node bunu
+ * çözemiyor. Aynı kaynağı bir kez de CommonJS'e derleyip buradan okuyoruz —
+ * kuralları elle kopyalamak, editörün testlerin reddettiği veriyi yazmasına
+ * yol açan şeyin ta kendisiydi.
+ */
+function loadValidator() {
+  const dir = join(OUT, 'cjs');
+  mkdirSync(dir, { recursive: true });
+  // package.json'da "type": "module" var; bu klasör onun dışında kalmalı.
+  writeFileSync(join(dir, 'package.json'), '{ "type": "commonjs" }\n');
+  const cfg = join(OUT, 'tsconfig.server.json');
+  writeFileSync(
+    cfg,
+    JSON.stringify(
+      {
+        compilerOptions: {
+          target: 'es2020',
+          module: 'commonjs',
+          moduleResolution: 'node',
+          outDir: './cjs',
+          skipLibCheck: true,
+          esModuleInterop: true,
+        },
+        files: ['../src/rigSchema.ts'],
+      },
+      null,
+      2,
+    ),
+  );
+  const res = spawnSync('npx', ['tsc', '-p', cfg], { cwd: ROOT, encoding: 'utf8' });
+  if (res.status !== 0) {
+    console.error(res.stdout || res.stderr);
+    throw new Error('şema denetimi derlenemedi');
+  }
+  return createRequire(import.meta.url)(join(dir, 'rigSchema.js')).validateArchetypes;
+}
+
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -76,6 +117,7 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
 };
 
 buildEngine();
+const validateArchetypes = loadValidator();
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -119,9 +161,12 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const parsed = JSON.parse(body);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('nesne bekleniyor');
+        // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
+        // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
+        // okuduğu yerde.
+        const errs = validateArchetypes(parsed);
+        if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
         const count = Object.keys(parsed).length;
-        if (count === 0) throw new Error('boş veri — kayıt reddedildi');
         writeFileSync(DATA, JSON.stringify(parsed, null, 2) + '\n');
         console.log(`✓ kaydedildi: ${count} arketip → data/rigArchetypes.json`);
         send(res, 200, JSON.stringify({ ok: true, count }), TYPES['.json']);

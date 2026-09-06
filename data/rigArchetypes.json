@@ -807,8 +807,8 @@
           "torso": 6,
           "thoraxA": 3,
           "neckA": 8,
-          "hx": 26,
-          "hy": -4
+          "hx": 70,
+          "hy": -20
         }
       },
       {
@@ -872,11 +872,12 @@
           "torso": 6,
           "thoraxA": 3,
           "neckA": 8,
-          "hx": 26,
-          "hy": -4
+          "hx": 70,
+          "hy": -20
         }
       }
-    ]
+    ],
+    "note": "Oturarak omuz presi. 'Omuzda' karesinde el omuzdan 73px uzakta: bar cene hizasinda, dirsek ~121 derece. Eskiden el omzun ustundeydi (26px) ve dirsek 161 dereceye katlaniyordu, yani insanin yapamayacagi bir poz."
   },
   "standing_row_hinged": {
     "note": "--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.",

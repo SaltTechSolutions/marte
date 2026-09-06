@@ -1,6 +1,7 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru (npm run export). Değişiklik orada yapılır,
-// buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı motor doğurur.
+// Kaynak: antrenman-simulatoru v1.0.0 (26eff06+kirli), 2026-09-06T09:05:48.363Z
+// Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
+// motor doğurur. Bütünlük kontrolü: manifest.json.
 
 /**
  * Eklemli kukla — ileri kinematik + kollar için ters kinematik.
@@ -133,6 +134,8 @@ export interface RigExercise {
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;
+  /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
+  note?: string;
   kf: RigKeyframe[];
 }
 
@@ -319,32 +322,44 @@ const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
  * oturtulur. Bu son adım olmadan plank'ın ayakları havada kalıyordu.
  */
 /**
- * Kadraj kaydırması, harekete BİR KEZ hesaplanır.
+ * Kadraj kaydırması, TEKRARIN TAMAMI için bir kez hesaplanır.
  *
  * Kare başına hesaplanan bir kaydırma figürü ortalar ama sahnenin geri
  * kalanını — zemin çizgisini, sehpayı, basamağı — figürle birlikte
  * sürükler: bar yukarı çıkarken yer yana kayıyordu. Dünya sabit durmalı,
  * içinde insan hareket etmeli.
+ *
+ * Önbellek nesne KİMLİĞİNE değil İÇERİĞE bağlı. Editör kareleri yerinde
+ * değiştiriyor (aynı nesne, yeni açılar); kimliğe bağlı bir önbellek orada
+ * bayatlıyor ve editördeki figür uygulamadakinden ~11px kayıyordu — aynı
+ * veri, iki ayrı görüntü.
  */
-const SHIFT = new WeakMap<RigExercise, number>();
+const SHIFT = new Map<string, number>();
+
+/** Kaydırmayı belirleyen her şey: kareler ve zinciri kuran ayarlar. */
+const shiftKey = (ex: RigExercise): string =>
+  `${ex.mode}|${ex.arm}|${ex.bar}|${ex.bend}|${JSON.stringify(ex.kf)}`;
 
 function centeringShift(ex: RigExercise): number {
-  const cached = SHIFT.get(ex);
+  const key = shiftKey(ex);
+  const cached = SHIFT.get(key);
   if (cached !== undefined) return cached;
-  if (ex.mode === 'hang') {
-    SHIFT.set(ex, 0);
-    return 0;
+  let dx = 0;
+  if (ex.mode !== 'hang') {
+    let sum = 0;
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const { p } = poseAt(ex, i / N);
+      const S = build(ex, p);
+      const anchor = S.bar ? (S.bar[0] + S.pelvis[0] * 1.4) / 2.4 : S.pelvis[0];
+      sum += CENTER_X - anchor;
+    }
+    dx = sum / N;
   }
-  let sum = 0;
-  const N = 12;
-  for (let i = 0; i < N; i++) {
-    const { p } = poseAt(ex, i / N);
-    const S = build(ex, p);
-    const anchor = S.bar ? (S.bar[0] + S.pelvis[0] * 1.4) / 2.4 : S.pelvis[0];
-    sum += CENTER_X - anchor;
-  }
-  const dx = sum / N;
-  SHIFT.set(ex, dx);
+  // Editörde her sürükleme yeni bir anahtar üretiyor; yığılmasın diye
+  // kütüphaneden birkaç kat büyüdüğünde tamamen boşaltılıyor.
+  if (SHIFT.size > 512) SHIFT.clear();
+  SHIFT.set(key, dx);
   return dx;
 }
 
