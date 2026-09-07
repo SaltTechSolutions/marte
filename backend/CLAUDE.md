@@ -1,18 +1,15 @@
-# Marte — Üye ve Ders Yönetimi
+# backend — Gymentra arka ucu
 
-Spor salonu/yoga stüdyoları için üye ve ders yönetim sistemi (PWA).
+Firebase (Auth/Firestore/Storage/Functions) arka ucu; istemci
+`apps/gymentra-mobile`. Web arayüzü yok (2026-09-07'de kaldırıldı).
 
 ## Yığın
-- **Vite + React + TypeScript**, Firebase (Auth/Firestore) backend — yerel sunucu yok.
+- Cloud Functions: TypeScript, `functions/src`, `npm --prefix functions run build`.
+- Kurallar: `firestore.rules`, `storage.rules`; testler emülatörde
+  (`npm run test:rules`, JDK 21+; `scripts/with-jdk.cjs` bulur).
 
-## Port
-- `FRONTEND_PORT=9051` (`.env`'den okunur, bkz. `Codes/PORTS.md`).
-
-## Çalıştırma
-```bash
-./run.sh            # interaktif menü (logo, durum, log)
-./run.sh start|stop|restart|status|logs
-```
-
-## Not
-`Codes/Marte/` hem kendisi hem `marte06/` alt klasörü ayrı ayrı git repoları — proje kodu `marte06/` içinde, üstteki `Marte/.git` muhtemelen eski/artık kullanılmayan bir repo. Silinmeden önce kullanıcıya danışılmalı.
+## Kurallar
+- Kural ya da callable imzası değişince mobildeki yansımaları da güncelle
+  (`apps/gymentra-mobile/src/data/seats.ts`, `membershipRepo.ts`).
+- `secrets/`, `.env`, `archive/` asla commit edilmez.
+- Deploy üretime gider (`tarabyamarte`); onaysız deploy yapma.
