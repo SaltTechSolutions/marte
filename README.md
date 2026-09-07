@@ -54,16 +54,29 @@ Arketip ile hareket aynı şey değil: 30 arketip 34 hareketi çiziyor.
 reverse) ama kas profilleri farklı, o yüzden kas verisi arketibe değil
 **harekete** bağlı. Hareket kimliklerini bu depo sahipleniyor.
 
-Uygulamada bunlar `src/vendor/rig/` altına kopyalanır ve başlarındaki
-"üretilmiştir, elle düzenleme" satırı orada da durur. **Tek yön vardır:**
-simülatörden uygulamaya. Uygulamada düzeltilen bir açı, bir sonraki devirde
-sessizce geri gelir.
+Export hedefi biliyorsa dosyaları uygulamanın **gerçekten ithal ettiği**
+yerlere yazıyor (`src/utils/`, `src/data/`) ve başlarındaki "üretilmiştir,
+elle düzenleme" satırı orada da duruyor. **Tek yön vardır:** simülatörden
+uygulamaya. Uygulamada düzeltilen bir açı, bir sonraki devirde sessizce geri
+gelir — bu yüzden export onu sessizce geri getirmiyor, önce durup söylüyor.
 
-Kopyalama elle yapılıyor, yani atomik değil: birini eski üretimden almak
-sessiz bir hata olurdu. `manifest.json` bunu görünür kılıyor — uygulama
-açılışta dosyaların sha256'sını manifestle karşılaştırıp karışık sürümü
-yakalayabilir. Manifest ayrıca üretimin commit edilmemiş bir çalışma ağacından
-çıkıp çıkmadığını (`source.dirty`) kaydeder.
+```
+npm run export                                  # yalnızca dist/
+npm run export -- --to /yol/gymentra-mobile     # dist/ + hedef
+npm run export -- --to ... --dry                # ne yazılacağını göster
+npm run export -- --to ... --force              # hedefteki elle değişiklikleri ez
+```
+
+Yol `--to`, `GYMENTRA_DIR` ya da `.export-target` dosyasından okunuyor
+(sonuncusu gitignore'da: makineye özel). Hedefin `package.json` adı
+`gymentra-mobile` değilse yazılmıyor.
+
+Her export hedefe bir alındı bırakıyor: `src/data/rigManifest.json`, dosya
+başına sha256. Bir sonraki export hedefteki dosyaları o alındıyla
+karşılaştırıyor; biri export dışında değişmişse HİÇBİR ŞEY yazılmıyor ve
+hangisi olduğu söyleniyor. Aynı alındı uygulamanın runtime'da okuyabileceği
+manifest: karışık sürüm de orada görünür. Manifest ayrıca üretimin commit
+edilmemiş bir çalışma ağacından çıkıp çıkmadığını (`source.dirty`) kaydeder.
 
 ## Modeli bilmeden dokunma
 
@@ -115,7 +128,9 @@ elinde düzgün biçimli bir hareket olduğunu varsayıyor.
 
 ## Sırada ne var
 
-- Uygulama tarafını `src/vendor/rig/` düzenine geçirmek (bugün kendi
-  kopyasını taşıyor; devir sözleşmesi henüz bağlanmadı).
+- Uygulamanın `RigFigure.tsx`'ini yeni şekillere bağlamak: `footPath` ve
+  `capsule` motordan geliyor, ama `headProfile`, `handPath`,
+  `shoulderWedge` ve uzuv siluetleri henüz çağrılmıyor — bileşen o
+  bölgeleri kendi iç SVG'siyle çiziyor.
 - Hareket başına kaslar ve anlatım metni de buradan devredilebilir — bugün
   onlar uygulamanın kütüphanesinde.

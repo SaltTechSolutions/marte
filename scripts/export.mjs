@@ -4,17 +4,29 @@
  *
  * Uygulamanın ihtiyacı olan şey motor, denetim kuralları, ŞEMA DOĞRULAMASI ve
  * veri. Editör, sürükleme çözücüsü ve testler burada kalır; uygulamaya
- * taşınmaz.
+ * taşınmaz. Tek yön vardır: simülatörden uygulamaya.
  *
- * Çıktı `dist/` altına yazılır ve başına "üretilmiştir, elle düzenleme"
- * başlığı konur. Uygulama tarafında bunlar `src/vendor/rig/` içine
- * kopyalanır; böylece iki projede iki ayrı motor gelişmez — tek yön vardır,
- * simülatörden uygulamaya.
+ * İki çıktı yeri var:
  *
- * Dosyalar ELLE kopyalandığı için kopyalama atomik değil: birini eski
- * üretimden almak sessiz bir hata. `manifest.json` bunu görünür kılıyor —
- * her dosyanın sha256'sı, üretimin sürümü, tarihi ve git commit'i orada.
- * Uygulama açılışta manifesti okuyup karışık sürümü yakalayabilir.
+ * 1. `dist/` — her zaman yazılır, gözden geçirilebilir bir üretim kopyası.
+ * 2. Hedef uygulama — yalnızca yol verilmişse (`--to`, `GYMENTRA_DIR` ya da
+ *    `.export-target`). Dosyalar uygulamanın gerçekten ithal ettiği yerlere
+ *    yazılır (`src/utils/`, `src/data/`), yoksa export tiyatro olurdu:
+ *    kimsenin okumadığı bir dizine yazmak bir sonraki build'i değiştirmez.
+ *
+ * Hedefe yazmanın iki koruması var:
+ *
+ * - **Kimlik.** Hedefin `package.json` adı `gymentra-mobile` değilse durulur.
+ *   Yanlış dizine dokuz dosya yazmak sessiz ve geri alması zor bir hata.
+ * - **Drift.** Hedefteki dosyalar ÜRETİLMİŞ dosyalar; orada yapılan bir
+ *   düzenleme bir sonraki export'ta kaybolurdu. Her export hedefe bir alındı
+ *   bırakıyor (`src/data/rigManifest.json`, dosya başına sha256) ve bir
+ *   sonraki export hedefteki hâli o alındıyla karşılaştırıyor. Tutmuyorsa
+ *   HİÇBİR ŞEY yazılmıyor ve hangi dosya olduğu söyleniyor. Bilerek ezmek
+ *   için `--force`; ne yazılacağını görmek için `--dry`.
+ *
+ * Alındı aynı zamanda uygulamanın runtime'da okuyabileceği manifest: karışık
+ * sürüm (bir dosyayı eski üretimden almak) orada görünür hâle geliyor.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -27,6 +39,26 @@ import { loadSchema } from './schema.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
+
+const argv = process.argv.slice(2);
+const has = (n) => argv.includes(n);
+const val = (n) => (argv.indexOf(n) >= 0 ? argv[argv.indexOf(n) + 1] : undefined);
+const DRY = has('--dry');
+const FORCE = has('--force');
+
+/**
+ * Hedef uygulama dizini. Sırayla: `--to`, `GYMENTRA_DIR`, `.export-target`.
+ * Hiçbiri yoksa yalnızca `dist/` üretilir — yol makineye özel olduğu için
+ * depoya yazılmıyor, `.export-target` gitignore'da.
+ */
+const TARGET = val('--to') || process.env.GYMENTRA_DIR || (() => {
+  try { return readFileSync(join(ROOT, '.export-target'), 'utf8').trim(); } catch { return ''; }
+})();
+
+/** Hedefin gerçekten o uygulama olduğunu doğrulamak için. */
+const APP_NAME = 'gymentra-mobile';
+/** Hedefteki alındı: bir önceki export'un ne yazdığı. Drift bununla ölçülüyor. */
+const RECEIPT = 'src/data/rigManifest.json';
 
 const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 
@@ -42,8 +74,12 @@ const commit = git('rev-parse', '--short', 'HEAD') || 'unknown';
 const dirty = git('status', '--porcelain') !== '';
 const generated = new Date().toISOString();
 
+// Damga ÜRETİM ZAMANINI TAŞIMIYOR, yalnızca sürüm ve commit: zaman damgası
+// banner'a girdiğinde kaynak hiç değişmese bile her export dört .ts dosyasını
+// bayt düzeyinde değiştiriyordu — hedefin git diff'i her seferinde kirleniyor,
+// "değişti/aynı" raporu anlamsızlaşıyordu. Üretim zamanı manifestte duruyor.
 const BANNER = `// ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v${pkg.version} (${commit}${dirty ? '+kirli' : ''}), ${generated}
+// Kaynak: antrenman-simulatoru v${pkg.version} (${commit}${dirty ? '+kirli' : ''})
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 `;
@@ -57,15 +93,15 @@ const BANNER = `// ÜRETİLMİŞ DOSYA — elle düzenleme.
  * bütünlükleri yalnızca manifestten doğrulanır.
  */
 const CONTRACT = [
-  { out: 'rig.ts', src: 'src/rig.ts', banner: true, what: 'motor' },
-  { out: 'rigAudit.ts', src: 'src/rigAudit.ts', banner: true, what: 'denetim kuralları' },
-  { out: 'rigSchema.ts', src: 'src/rigSchema.ts', banner: true, what: 'veri biçim doğrulaması' },
-  { out: 'muscles.ts', src: 'src/muscles.ts', banner: true, what: 'kanonik kas sözlüğü' },
-  { out: 'rigArchetypes.json', src: 'data/rigArchetypes.json', banner: false, what: 'kare verisi' },
-  { out: 'exercises.json', src: 'data/exercises.json', banner: false, what: 'hareket kataloğu' },
-  { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar' },
-  { out: 'anatomy.json', src: 'data/anatomy.json', banner: false, what: 'kas haritası yolları' },
-  { out: 'bodyParts.json', src: 'data/bodyParts.json', banner: false, what: 'uzuv siluet parçaları' },
+  { out: 'rig.ts', src: 'src/rig.ts', banner: true, what: 'motor', to: 'src/utils/rig.ts' },
+  { out: 'rigAudit.ts', src: 'src/rigAudit.ts', banner: true, what: 'denetim kuralları', to: 'src/utils/rigAudit.ts' },
+  { out: 'rigSchema.ts', src: 'src/rigSchema.ts', banner: true, what: 'veri biçim doğrulaması', to: 'src/utils/rigSchema.ts' },
+  { out: 'muscles.ts', src: 'src/muscles.ts', banner: true, what: 'kanonik kas sözlüğü', to: 'src/utils/muscles.ts' },
+  { out: 'rigArchetypes.json', src: 'data/rigArchetypes.json', banner: false, what: 'kare verisi', to: 'src/data/rigArchetypes.json' },
+  { out: 'exercises.json', src: 'data/exercises.json', banner: false, what: 'hareket kataloğu', to: 'src/data/rigExercises.json' },
+  { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar', to: 'src/data/rigMuscles.json' },
+  { out: 'anatomy.json', src: 'data/anatomy.json', banner: false, what: 'kas haritası yolları', to: 'src/data/rigAnatomy.json' },
+  { out: 'bodyParts.json', src: 'data/bodyParts.json', banner: false, what: 'uzuv siluet parçaları', to: 'src/data/rigBodyParts.json' },
 ];
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
@@ -91,11 +127,15 @@ if (bundleErrors.length) {
 mkdirSync(DIST, { recursive: true });
 
 const files = {};
+/** Üretilen baytlar. dist'e ve hedefe AYNI tampon yazılıyor; alındıdaki
+ *  sha256 bu yüzden hedefteki dosyayla birebir karşılaştırılabiliyor. */
+const outputs = {};
 for (const f of CONTRACT) {
   const src = readFileSync(join(ROOT, f.src));
   const out = f.banner ? Buffer.from(BANNER + '\n' + src.toString('utf8'), 'utf8') : src;
   writeFileSync(join(DIST, f.out), out);
-  files[f.out] = { sha256: sha256(out), bytes: out.length, from: f.src, what: f.what };
+  outputs[f.out] = out;
+  files[f.out] = { sha256: sha256(out), bytes: out.length, from: f.src, what: f.what, to: f.to };
 }
 
 const archetypes = readJson('data/rigArchetypes.json');
@@ -114,7 +154,8 @@ const manifest = {
   },
   files,
 };
-writeFileSync(join(DIST, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+const manifestJson = JSON.stringify(manifest, null, 2) + '\n';
+writeFileSync(join(DIST, 'manifest.json'), manifestJson);
 
 // Yazdığını hemen geri okuyup doğrula: yarım yazılmış bir dosya manifestte
 // doğru görünüp diskte bozuk olursa hata uygulamada patlar, burada değil.
@@ -127,11 +168,126 @@ if (bad.length) {
 const list = CONTRACT.map((f) => f.out).join(', ');
 console.log(`✓ dist/ hazır: ${list}, manifest.json
   ${manifest.counts.arketip} arketip · ${manifest.counts.hareket} hareket · kas verisi ${manifest.counts.kasVerisiYazilan} yazılı / ${manifest.counts.kasVerisiBekleyen} bekliyor
-  sürüm ${pkg.version} · ${commit}${dirty ? ' · KİRLİ ÇALIŞMA AĞACI' : ''}
-${dirty ? '\n  Uyarı: commit edilmemiş değişikliklerle üretildi; manifest bunu kaydetti.\n' : ''}
-Uygulamaya almak için:
-  cp dist/*.ts dist/*.json <gymentra-mobile>/src/vendor/rig/
+  sürüm ${pkg.version} · ${commit}${dirty ? ' · KİRLİ ÇALIŞMA AĞACI' : ''}${dirty ? '\n\n  Uyarı: commit edilmemiş değişikliklerle üretildi; manifest bunu kaydetti.' : ''}`);
 
-Uygulama açılışta manifest.json'daki sha256'ları doğrulayarak karışık sürüm
-kopyalamayı yakalayabilir.
+/* --- hedefe yazma -------------------------------------------------------- */
+
+if (!TARGET) {
+  console.log(`
+Hedefe otomatik yazma kapalı; yalnızca dist/ üretildi. Açmak için biri:
+  npm run export -- --to /yol/gymentra-mobile
+  GYMENTRA_DIR=/yol/gymentra-mobile npm run export
+  echo /yol/gymentra-mobile > .export-target
 `);
+  process.exit(0);
+}
+
+// Yanlış dizine yazmak sessiz ve geri alınması zor bir hata: hedefin gerçekten
+// o uygulama olduğunu package.json'dan doğruluyoruz.
+let targetPkg;
+try {
+  targetPkg = JSON.parse(readFileSync(join(TARGET, 'package.json'), 'utf8'));
+} catch {
+  console.error(`✗ hedefte package.json okunamadı: ${TARGET}`);
+  process.exit(1);
+}
+if (targetPkg.name !== APP_NAME) {
+  console.error(`✗ hedef "${targetPkg.name}", beklenen "${APP_NAME}" — yanlış dizine yazmamak için durdum:\n  ${TARGET}`);
+  process.exit(1);
+}
+
+/**
+ * Drift koruması.
+ *
+ * Hedefteki dosyalar ÜRETİLMİŞ dosyalar; orada yapılan bir düzenleme bir
+ * sonraki export'ta sessizce kaybolur. Bunu görünür kılmak için her export
+ * hedefe bir alındı bırakıyor (`rigManifest.json`) ve bir sonraki export
+ * hedefteki dosyaların sha256'sını o alındıyla karşılaştırıyor. Tutmuyorsa
+ * dosya export dışında değişmiş demektir ve hiçbir şey yazılmıyor.
+ *
+ * dist'e ve hedefe aynı tampon yazıldığı için karşılaştırma birebir; damga
+ * satırı da tampona dahil olduğundan ayrıca ayıklamak gerekmiyor.
+ */
+let receipt = null;
+try {
+  receipt = JSON.parse(readFileSync(join(TARGET, RECEIPT), 'utf8'));
+} catch {
+  /* alındı yok: ya ilk kurulum ya da elle kopyalanmış eski bir hâl */
+}
+
+const drifted = [];
+const plan = [];
+for (const f of CONTRACT) {
+  const dst = join(TARGET, f.to);
+  let cur = null;
+  try {
+    cur = readFileSync(dst);
+  } catch {
+    plan.push({ f, state: 'yeni' });
+    continue;
+  }
+  const curHash = sha256(cur);
+  const known = receipt && receipt.files && receipt.files[f.out] && receipt.files[f.out].sha256;
+  if (!known) drifted.push(`${f.to} — bu üretimin alındısı yok (elle kopyalanmış olabilir)`);
+  else if (curHash !== known) drifted.push(`${f.to} — son export'tan sonra elle değişmiş`);
+  plan.push({ f, state: curHash === files[f.out].sha256 ? 'aynı' : 'değişti' });
+}
+
+if (drifted.length && !FORCE) {
+  console.error(`
+✗ hedefte export dışında değişmiş dosyalar var — hiçbir şey yazılmadı:
+  ${drifted.join('\n  ')}
+
+Bunlar üretilmiş dosyalar: düzeltme simülatörde yapılır, buraya kopyalanır.
+Hedefteki değişiklikleri BİLEREK ezmek istiyorsan:
+  npm run export -- --to ${TARGET} --force
+`);
+  process.exit(1);
+}
+
+const changed = plan.filter((x) => x.state !== 'aynı');
+if (DRY) {
+  console.log(`\n— deneme (--dry), hedefe yazılmadı: ${TARGET}`);
+} else {
+  for (const f of CONTRACT) {
+    const dst = join(TARGET, f.to);
+    mkdirSync(dirname(dst), { recursive: true });
+    writeFileSync(dst, outputs[f.out]);
+  }
+  writeFileSync(join(TARGET, RECEIPT), manifestJson);
+  // dist'te olduğu gibi geri okuyup doğrula: yarım yazılmış bir dosya alındıda
+  // doğru görünüp diskte bozuk olursa hata uygulamada patlar, burada değil.
+  const bad = CONTRACT.filter((f) => sha256(readFileSync(join(TARGET, f.to))) !== files[f.out].sha256);
+  if (bad.length) {
+    console.error(`✗ hedef doğrulaması başarısız: ${bad.map((f) => f.to).join(', ')}`);
+    process.exit(1);
+  }
+  console.log(`\n✓ hedefe yazıldı: ${TARGET}${FORCE && drifted.length ? '  (--force: hedefteki ' + drifted.length + ' elle değişikliğin ÜZERİNE YAZILDI)' : ''}`);
+}
+for (const { f, state } of plan) console.log(`  ${state.padEnd(8)} ${f.to}`);
+console.log(`  alındı   ${RECEIPT}`);
+if (!changed.length) console.log('\n  Hiçbir dosya değişmedi.');
+
+// Motora bağlı ama bizim üretmediğimiz dosyalar: motor 285 satır değiştiyse
+// bunlar derlenmeyebilir. Export bunu bilemez, ama görünür kılabilir.
+const managed = new Set([...CONTRACT.map((f) => f.to), RECEIPT]);
+let dependents = [];
+try {
+  dependents = execFileSync(
+    'grep',
+    ['-rl', '-e', "utils/rig'", '-e', "from './rig'", '-e', 'utils/rigAudit', '-e', "from './rigAudit'", join(TARGET, 'src')],
+    { encoding: 'utf8' },
+  )
+    .trim().split('\n').filter(Boolean)
+    .map((p) => p.slice(TARGET.length + 1))
+    .filter((p) => !managed.has(p));
+} catch {
+  /* eşleşme yoksa grep 1 ile çıkıyor */
+}
+if (dependents.length) {
+  console.log(`
+  Motora bağlı ama export'un yönetmediği dosyalar:
+    ${dependents.join('\n    ')}
+  Bunlar hedefin kendi dosyaları; motor değiştiğinde derleme kırılabilir.
+  Hedefte tip kontrolü çalıştırmak iyi olur.`);
+}
