@@ -123,3 +123,44 @@ bakmak zorunda kalır ve uygulamanın `RigFigure.tsx`'i de yeniden yazılır.
 baldıra göre, ROM bandıyla). O kayıt modelin anatomik ifade gücüyle ilgiliydi ve
 kapandı; derinlik ekseni aynı sorunun kalan yarısı. Devir sözleşmesinin
 sürümlenmesi (manifest) bu değişikliği güvenli kılan ön koşul.
+---
+
+## ROM bantları MuJoCo ile karşılaştırıldı (2026-09-07)
+
+Kaynak: [MuJoCo humanoid.xml](https://github.com/google-deepmind/mujoco/blob/main/model/humanoid/humanoid.xml),
+Apache 2.0 — ticari kullanım serbest. Fizik simülasyonu için basitleştirilmiş
+bir gövde; anatomi atlası değil, ama eklem aralıkları bağımsız bir referans.
+
+| bant | bizim | MuJoCo | fark |
+|---|---|---|---|
+| diz | —..160 | —..160 | **tam tutuyor** |
+| uzak diz | —..160 | —..160 | **tam tutuyor** |
+| bilek | −35..50 | −50..50 | bizimki daha dar (bilerek) |
+| diz ters yönde | −15.. | −2.. | bizimki 13° gevşek |
+| kalça | −35..150 | −20..150 | üst tam, alt 15° gevşek |
+| gövde | −45..90 | −30..75 | iki uçta da 15° gevşek |
+| dirsek | —..160 | —..150 | 10° gevşek |
+
+Diz fleksiyonunun 160'ta birebir tutması iyi işaret: iki kaynak da gerçek
+anatomiye dayanıyor.
+
+**Gevşek uçlar SIKILMADI, çünkü sıkmak doğru pozları yakalardı.** Ölçüldü —
+MuJoCo'nun sınırlarıyla üç arketip düşüyor ve üçü de o aralığa ulaşmayı
+AMAÇLAYAN hareketler:
+
+- `glute_bridge` kalçayı 23° açıyor (MuJoCo 20) — köprünün tanımı bu
+- `quadruped_spine` gövdeyi 32° geriye açıyor (MuJoCo 30) — kedi-deve'nin
+  "deve" evresi
+- `seated_overhead_press` dizde 8° hiperekstansiyon (MuJoCo 2) — oturmuş
+  bacakta gevşek diz; insanlarda 5-10° fizyolojik normal
+
+MuJoCo'nun aralıkları yürüyen bir robotun kararlı simülasyonu için seçilmiş,
+egzersizin uç pozları için değil.
+
+**Ama karşılaştırma gerçek bir açık buldu.** Dirsek 162-163°ye çıkan bir kare
+vardı ve denetim SUSUYORDU: `auditExercise` 21 kare örneklüyordu ve ihlal iki
+örnek arasında kalıyordu. Kaba örnekleme, olmayan bir kuraldan farksız.
+
+Düzeltildi: örnekleme 41'e çıktı (31 arketibin tam taraması 84ms → 157ms) ve
+`lunge_reach`e dönüş süpürmesi karesi eklendi — el omuza 23px yaklaşıp dirseği
+katlıyordu. Gidiş yolunda böyle bir kare vardı, dönüşe konmamıştı.

@@ -2348,6 +2348,23 @@
         }
       },
       {
+        "t": 0.93,
+        "tr": "Kapanış",
+        "p": {
+          "shinA": 183.4,
+          "thighA": 143.4,
+          "torso": 14,
+          "thoraxA": 8.4,
+          "neckA": -9.6,
+          "hx": -95,
+          "hy": 10,
+          "thighF": 189.2,
+          "shinF": 235.6,
+          "ankle": -5.4,
+          "ankleF": -11.5
+        }
+      },
+      {
         "t": 1,
         "tr": "Ayakta",
         "p": {

@@ -295,7 +295,17 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
  * geçiş yüzünden iki doğru karenin arası pekâlâ yanlış olabiliyor (kolun
  * uzun yoldan dönüp yerin içinden geçmesi böyle yakalandı).
  */
-export function auditExercise(ex: RigExercise, samples = 21): RigIssue[] {
+/**
+ * Hareketin tamamını tarar.
+ *
+ * 41 örnek, 21 değil. Ölçüldü: 21 örnek `lunge_reach`in 163°lik dirsek
+ * ihlalini KAÇIRIYORDU — ihlal iki örnek arasında kalıyor ve kural sessiz
+ * kalıyordu. Kaba örnekleme, olmayan bir kuraldan farksız.
+ *
+ * Bedeli ölçüldü: 31 arketibin tam taraması 84ms yerine 157ms. Bu bir
+ * geliştirme zamanı kontrolü, çalışma zamanı değil.
+ */
+export function auditExercise(ex: RigExercise, samples = 41): RigIssue[] {
   const seen = new Set<string>();
   const issues: RigIssue[] = [];
   for (let i = 0; i < samples; i++) {
