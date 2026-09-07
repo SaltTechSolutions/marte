@@ -1,4 +1,4 @@
-import { B, RigExercise, RigPose, Skeleton, Vec, angleOf, ik } from './rig';
+import { B, FrontPoints, RigExercise, RigPose, Skeleton, Vec, angleOf, ik } from './rig';
 
 /**
  * Figür üstünde sürükleyerek poz verme.
@@ -162,4 +162,66 @@ export function applyPatch(frame: Partial<RigPose>, patch: Partial<RigPose>): Pa
     next[k] = k === 'hx' || k === 'hy' || k === 'shLift' || k === 'ankleLift' || k === 'armAz' || k === 'armAzF' || k === 'foreAz' || k === 'foreAzF' || k === 'toe' || k === 'toeF' ? Math.round(v) : tidyAngle(v);
   });
   return next;
+}
+
+/* --- önden görünümde sürükleme -------------------------------------------- */
+
+export type FrontJoint = 'elbow' | 'hand' | 'elbowF' | 'handF';
+
+/**
+ * Önden görünümde tutulabilen eklemler: dirsek ve el, iki taraf. Kol düzlemi
+ * (`armAz`) ve yükselme buradan geliyor; bacak ve gövde yan çözümden türediği
+ * için önden tutamakları yok.
+ */
+export function frontDragHandles(ex: RigExercise, F: FrontPoints): { joint: FrontJoint; at: Vec; label: string; far: boolean }[] {
+  const angles = ex.arm === 'angles';
+  return [
+    ...(angles ? [{ joint: 'elbow' as FrontJoint, at: F.L.elbow, label: 'Dirsek', far: false }] : []),
+    { joint: 'hand', at: F.L.hand, label: angles ? 'El' : 'El (düzlem)', far: false },
+    ...(angles ? [{ joint: 'elbowF' as FrontJoint, at: F.R.elbow, label: 'Uzak dirsek', far: true }] : []),
+    { joint: 'handF', at: F.R.hand, label: angles ? 'Uzak el' : 'Uzak el (düzlem)', far: true },
+  ];
+}
+
+/**
+ * Önden görünümde bir eklemi hedefe çekmek: ekrandaki (yanal, dikey) ikilisi
+ * ile kemik boyu, kolun 3B yönünü belirliyor — ileri bileşen kalan uzunluktan
+ * çıkıyor, işareti bugünkü pozdan (kol öne mi arkaya mı bakıyordu).
+ *
+ *   yükselme  sag = acos(−dy / L)
+ *   düzlem    az  = atan2(yanal, ileri)
+ *
+ * `angles` kipinde dirsek `upperA`+`armAz`, el `foreA`+`foreAz` yazar. Ters
+ * kinematik kiplerinde sagital açı çözümün sonucu; el yalnız düzlemi yazar.
+ */
+export function dragFront(ex: RigExercise, p: RigPose, S: Skeleton, F: FrontPoints, joint: FrontJoint, target: Vec): Partial<RigPose> {
+  const far = joint === 'elbowF' || joint === 'handF';
+  const side = far ? F.R : F.L;
+  const sgn = far ? 1 : -1;
+  const isHand = joint === 'hand' || joint === 'handF';
+  const from = isHand ? side.elbow : side.sh;
+  const L = isHand ? B.fore : B.upper;
+  const curSag = isHand
+    ? angleOf(far ? S.elbowF : S.elbow, far ? S.handF : S.hand)
+    : angleOf(far ? S.shF : S.sh, far ? S.elbowF : S.elbow);
+  const curAz = isHand ? (far ? p.foreAzF : p.foreAz) : (far ? p.armAzF : p.armAz);
+  const deg = (r: number) => (r * 180) / Math.PI;
+  const rad = (d: number) => (d * Math.PI) / 180;
+
+  let lat = sgn * (target[0] - from[0]);
+  let dy = target[1] - from[1];
+  const r = Math.hypot(lat, dy);
+  // Tam uzanmış kol: hedef kol boyunu aşıyorsa kola oturt, ileri bileşen sıfır.
+  if (r > L) { lat *= L / r; dy *= L / r; }
+  const fwdSign = Math.sin(rad(curSag)) * Math.cos(rad(curAz)) < 0 ? -1 : 1;
+  const fwd = fwdSign * Math.sqrt(Math.max(0, L * L - lat * lat - dy * dy));
+  const az = Math.round(deg(Math.atan2(lat, fwd)));
+  const sag = Math.round(deg(Math.acos(Math.max(-1, Math.min(1, -dy / L)))) * 10) / 10;
+
+  if (ex.arm !== 'angles') {
+    // Düzlem iki kemikte birden: ters kinematikte kol tek düzlemde çalışır.
+    return far ? { armAzF: az, foreAzF: az } : { armAz: az, foreAz: az };
+  }
+  if (isHand) return far ? { foreF: sag, foreAzF: az } : { foreA: sag, foreAz: az };
+  return far ? { upperF: sag, armAzF: az } : { upperA: sag, armAz: az };
 }

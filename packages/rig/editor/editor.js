@@ -10,10 +10,10 @@
 
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath, footPinned, toeOf,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, lerpP, partTransform, partTransformScaled, poseAt,
+  footFrontPath, frontPoints, frontTorsoPath, frontTrunk, handPath, lerpP, partTransform, partTransformScaled, poseAt,
   shoulderWedge, showFarArm, showFarLeg, skeleton,
 } from '/engine/rig.js';
-import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
+import { applyPatch, dragFront, dragHandles, dragJoint, frontDragHandles } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
 import { groupsOf, labelsOf } from '/engine/muscles.js';
 
@@ -637,7 +637,7 @@ function drawFigure(svg, e, p, view, opts = {}) {
     if (e.bar === 'back') push(bar());
     // Sıra: bacaklar → gövde → kafa → kollar (kol gövdenin önünden geçebilir) → yük.
     [[F.L, true], [F.R, false]].forEach(([s, mirror]) => {
-      push([el('rect', { x: s.ankle[0] - 15, y: GROUND - 13, width: 30, height: 13, rx: 5, fill: skin, stroke: line })]);
+      push([el('path', { d: footFrontPath(s.ankle), fill: skin, stroke: line })]);
       if (FP) push([fpart('thigh', s.hip, s.knee, mirror), fpart('shin', s.knee, s.ankle, mirror)]);
       else { push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34)); push([ball(s.knee, 13), ball(s.ankle, 9)]); }
     });
@@ -764,13 +764,17 @@ function draw() {
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */
 function drawHandles(svg, e, S, view) {
-  if (!editable() || view === 'front') return;
+  if (!editable()) return;
   const accent = css('--p');
   const hiddenJoints = new Set([
     ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF']),
     ...(showFarArm(e) ? [] : ['elbowF', 'handF']),
   ]);
-  dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
+  // Önden görünümde tutamaklar dirsek ve el: kol düzlemi ve yükselme.
+  const handles = view === 'front'
+    ? frontDragHandles(e, frontPoints(e, fillPose(frame().p), S))
+    : dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint));
+  handles.forEach((h) => {
     const g = el('g', { class: 'handle', 'data-joint': h.joint });
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 15, fill: 'transparent' }));
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 7, fill: 'none', stroke: accent, 'stroke-width': 2, opacity: h.far ? .5 : 1 }));
@@ -815,8 +819,11 @@ function startDrag(evt) {
 function moveDrag(evt) {
   if (!dragging) return;
   const e = ex();
-  const S = skeleton(e, fillPose(frame().p));
-  const patch = dragJoint(e, S, dragging, toWorld(evt));
+  const fp = fillPose(frame().p);
+  const S = skeleton(e, fp);
+  const patch = plane === 'front'
+    ? dragFront(e, fp, S, frontPoints(e, fp, S), dragging, toWorld(evt))
+    : dragJoint(e, S, dragging, toWorld(evt));
   if (Object.keys(patch).length === 0) return;
   frame().p = applyPatch(frame().p, patch);
   markDirty();
@@ -923,10 +930,7 @@ function renderKf() {
   $('kfName').value = frame().tr ?? '';
   $('kfPlantF').checked = !!frame().plantF;
   $('kfTime').value = String(frame().t);
-  // Önden görünüm yan çözümden türeyen şematik bir izdüşüm: orada sürüklenecek
-  // bağımsız bir eklem yok. Bunu söylemek, tutamakları arayan birini
-  // "bozuk mu?" sorusundan kurtarıyor.
-  const planeNote = plane === 'front' ? ' · önden görünümde sürükleme yok, açıları sağdan düzenle' : '';
+  const planeNote = plane === 'front' ? ' · önden: dirsek ve el sürüklenir (kol düzlemi + yükselme)' : '';
   $('frameInfo').textContent = playing
     ? `oynuyor · %${(playT * 100).toFixed(0)}`
     : scrubT !== null

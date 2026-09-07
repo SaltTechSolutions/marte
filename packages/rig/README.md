@@ -122,6 +122,9 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 
 - Eklemi tut ve sürükle. Kemik boyu sabit: eklem hedefe bakan yöne döner.
   Kalçayı sürüklemek iki kemiği birden çözer (çömelme derinliği).
+- Önden görünümde dirsek ve el sürüklenir: ekrandaki yanal/dikey konum ile
+  kemik boyundan kolun 3B yönü çıkar (yükselme `upperA`/`foreA`, düzlem
+  `armAz`/`foreAz`); ileri bileşenin işareti bugünkü pozdan gelir.
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
 - Gölge komşu karelerin izini çizer.

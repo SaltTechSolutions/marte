@@ -1206,6 +1206,28 @@ export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1, toeD
 }
 
 /**
+ * Önden ayak: ayak bileğinden zemine, topuk dar, parmak tabanı geniş.
+ * Genişlik `FOOT` ile aynı ölçekten: ayak eni ≈ 10 cm = 25px. Yan görünümdeki
+ * gibi prosedürel — mesh'ten ayrı bir ayak parçası taşımaya değmez, ayak
+ * önden neredeyse hep aynı görünür.
+ */
+export function footFrontPath(ankle: Vec): string {
+  const x = ankle[0];
+  const top = ankle[1] - 4;
+  const bot = GROUND;
+  const wt = 9;   // bilek hizasında yarı genişlik
+  const wb = 13;  // tabanda yarı genişlik
+  return (
+    `M ${x - wt} ${top} ` +
+    `C ${x - wt - 2} ${top + 6} ${x - wb} ${bot - 9} ${x - wb} ${bot - 4} ` +
+    `C ${x - wb} ${bot - 1} ${x - wb + 3} ${bot} ${x - wb + 5} ${bot} ` +
+    `L ${x + wb - 5} ${bot} ` +
+    `C ${x + wb - 3} ${bot} ${x + wb} ${bot - 1} ${x + wb} ${bot - 4} ` +
+    `C ${x + wb} ${bot - 9} ${x + wt + 2} ${top + 6} ${x + wt} ${top} Z`
+  );
+}
+
+/**
  * Gövde aynalanmış mı?
  *
  * Yan görünümde figür +x'e bakar. Sırt üstü kiplerde (`bench`, `supine`) baş

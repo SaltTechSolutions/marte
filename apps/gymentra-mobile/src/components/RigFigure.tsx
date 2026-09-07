@@ -18,6 +18,7 @@ import {
   capsule,
   facingFlip,
   footDirOf,
+  footFrontPath,
   footPath,
   footPinned,
   toeOf,
@@ -378,7 +379,7 @@ function FrontBody({
   );
   const legs = (key: string, s: typeof F.L, mirror: boolean) => (
     <G key={key}>
-      <Rect x={s.ankle[0] - 15} y={GROUND - 13} width={30} height={13} rx={5} fill={c.skin} stroke={c.line} />
+      <Path d={footFrontPath(s.ankle)} fill={c.skin} stroke={c.line} />
       {part('t', 'thigh', s.hip, s.knee, mirror)}
       {part('s', 'shin', s.knee, s.ankle, mirror)}
     </G>
