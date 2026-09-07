@@ -1486,6 +1486,7 @@
   },
   "band_pull_apart_front": {
     "mode": "stand",
+    "load": "band",
     "arm": "angles",
     "bar": null,
     "bend": 1,
@@ -1556,6 +1557,7 @@
   },
   "band_ext_rotation_front": {
     "mode": "stand",
+    "load": "band",
     "arm": "angles",
     "bar": null,
     "bend": 1,

@@ -45,7 +45,7 @@ const OPTIONS = {
   mode: [['stand', 'Ayakta'], ['quad', 'Dört ayak'], ['bench', 'Sehpa'], ['supine', 'Sırtüstü'], ['hang', 'Barda asılı']],
   arm: [['angles', 'Açıyla'], ['ik', 'Hedefe (ters kinematik)'], ['floor', 'Yerde']],
   bar: [['', 'Yok'], ['back', 'Sırtta'], ['hands', 'Elde'], ['hips', 'Kalçada']],
-  load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl']],
+  load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl'], ['band', 'Lastik']],
   prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası']],
   view: [['side', 'Yandan'], ['front', 'Önden']],
   bend: [['1', 'İleri (+1)'], ['-1', 'Geri (−1)']],
@@ -420,7 +420,7 @@ function renderPhone() {
 
   push(`<div class="card stats">
       <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
-      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.bar ? 'Halter' : 'Yok'}</b></div>
+      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.load === 'band' ? 'Lastik' : e.bar ? 'Halter' : 'Yok'}</b></div>
       <div>Süre<b>${(e.dur / 1000).toFixed(1)} sn</b></div>
     </div>`);
 
@@ -516,46 +516,9 @@ function keyPhases(e) {
 
 /** Tek bir pozu verilen SVG'ye çizer. */
 function drawPose(svg, e, p) {
-  CUR_MODE = e.mode;
-  const S = skeleton(e, p);
-  svg.setAttribute('viewBox', boundsFor(e, 'side'));
-  svg.innerHTML = '';
-  const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
-  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
-  const ball = mkBall();
-  const limb = mkLimb(seg);
-  const db = mkDumbbell();
-  const plate = mkPlate();
-  const push = (arr) => arr.forEach((n) => svg.appendChild(n));
-  push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
-  if (showFarLeg(e)) {
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true));
-    push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
-  }
-  if (showFarArm(e)) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true));
-    push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
-    // Uzak eldeki ağırlık gövdeden ÖNCE: figürün arkasında kalıyor. Sona
-    // konulsaydı gövdenin önünde belirir, yakın el iki ağırlık tutuyormuş
-    // gibi görünürdü.
-    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
-  }
-  push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode), toeOf(p)), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42));
-  push(limb(S.knee, S.ankle, 26, 28, 13, .34));
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5));
-  push(limb(S.elbow, S.hand, 18, 18, 12, .3));
-  push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
-  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
-  push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
-
-  // Halter ana sahnedekiyle AYNI: düz, saydam tabak. Önizlemenin işi
-  // uygulamada ne çıkacağını göstermek — uygulama da düz tabak çiziyor.
-  // Burada bir süre PERSPEKTİF halter vardı (derinliğe uzanan çubuk, uçlarda
-  // eğik elipsler); uygulamada öyle bir şey yok, yani önizleme olmayan bir
-  // görüntüyü vaat ediyordu.
-  push(plate(S.bar));
+  const view = e.view ?? 'side';
+  svg.setAttribute('viewBox', boundsFor(e, view));
+  drawFigure(svg, e, p, view, { ghost: false, handles: false });
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
@@ -595,14 +558,15 @@ function drawPhoneFigure() {
 const syncViewBox = () => $('stage').setAttribute('viewBox', boundsFor(ex(), plane));
 
 
-function draw() {
-  CUR_MODE = ex().mode;
-  const svg = $('stage');
-  const e = ex();
-  const p = currentPose();
+/**
+ * Figürü çizen TEK yer: ana sahne de, telefon önizlemesi de buradan geçer.
+ * Önizlemenin ayrı bir kopyası vardı (`drawPose`): kapsül, yalnız yan görünüm,
+ * daire kafa — ön arketipleri bile yandan gösteriyordu. Kopya silindi.
+ */
+function drawFigure(svg, e, p, view, opts = {}) {
+  CUR_MODE = e.mode;
   const S = skeleton(e, p);
   const S0 = skeleton(e, poseAt(e, 0).p);
-  const view = plane;
   svg.innerHTML = '';
 
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint');
@@ -612,6 +576,8 @@ function draw() {
   const ball = mkBall();
   const limb = mkLimb(seg);
   const db = mkDumbbell();
+  // Lastik: temel renklerden ayrı (--band), iki elin arasında gergin.
+  const band = (a, b) => el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: css('--band'), 'stroke-width': 6, 'stroke-linecap': 'round' });
   // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
   // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
   // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
@@ -630,7 +596,7 @@ function draw() {
 
   // Gölge: bir önceki ve bir sonraki karenin izi. Çömelmenin dibini yazarken
   // tepesini görmek, iki kareyi ilişkilendirmenin tek yolu.
-  if (onion && editable()) {
+  if (opts.ghost) {
     const ghost = css('--ghost');
     [kfIndex - 1, kfIndex + 1].forEach((i) => {
       const k = e.kf[i];
@@ -692,8 +658,10 @@ function draw() {
       push([el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
       if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
     });
+    if (e.load === 'band') push([band(F.L.hand, F.R.hand)]);
     if (e.bar === 'hands') push(bar());
-    return drawHandles(svg, e, S, view);
+    if (opts.handles) drawHandles(svg, e, S, view);
+    return;
   }
 
   if (e.prop === 'bar') push([
@@ -783,8 +751,15 @@ function draw() {
   // koymak diski yarısı kesik gösteriyordu. Saydamlık kafanın konumunu
   // görünür bırakıyor, yani öne almak bilgi kaybettirmiyor.
   push(plate(S.bar));
+  // Lastik iki el arasında; yan görünümde eller üst üste düşünce kısa bir
+  // parça olarak görünür — ekipmanın varlığı yine okunur.
+  if (e.load === 'band') push([band(S.hand, S.handF)]);
 
-  drawHandles(svg, e, S, view);
+  if (opts.handles) drawHandles(svg, e, S, view);
+}
+
+function draw() {
+  drawFigure($('stage'), ex(), currentPose(), plane, { ghost: onion && editable(), handles: true });
 }
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */

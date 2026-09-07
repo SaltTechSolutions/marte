@@ -18,7 +18,7 @@ const MODES = ['stand', 'quad', 'bench', 'supine', 'hang'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
 const PROPS = ['bench', 'box', 'bar', 'hipbench'];
-const LOADS = ['barbell', 'dumbbell'];
+const LOADS = ['barbell', 'dumbbell', 'band'];
 const VIEWS = ['side', 'front'];
 
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */

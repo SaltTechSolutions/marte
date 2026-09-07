@@ -105,6 +105,8 @@ export function RigFigure({
   const skinFar = mix(colors.surf2, colors.bg0, light ? -0.18 : 0.35);
   const joint = mix(colors.surf2, colors.txt, light ? 0.32 : 0.16);
   const line = colors.line;
+  /** Lastik (direnç bandı): temel renklerden ayrı, iki temada da okunur amber. */
+  const bandC = '#E0A030';
   const metal = mix(colors.bg0, colors.txt, light ? 0.55 : 0.04);
   const floorC = mix(colors.surf, colors.txt, light ? 0.25 : 0.12);
 
@@ -213,7 +215,7 @@ export function RigFigure({
 
   const body =
     plane === 'front' ? (
-      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC, accent: colors.p }} />
+      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC, accent: colors.p, band: bandC }} />
     ) : (
       <>
         <G key="floor">
@@ -335,6 +337,8 @@ export function RigFigure({
             konunca diski yarısı kesik çıkıyordu. Saydamlık kafayı görünür
             bıraktığı için öne almak bilgi kaybettirmiyor. */}
         {plate(S.bar)}
+        {/* Lastik iki el arasında; yan görünümde eller üst üste düşünce kısa bir parça. */}
+        {rig.load === 'band' && <Line x1={S.hand[0]} y1={S.hand[1]} x2={S.handF[0]} y2={S.handF[1]} stroke={bandC} strokeWidth={6} strokeLinecap="round" />}
       </>
     );
 
@@ -360,7 +364,7 @@ function FrontBody({
   rig: RigExercise;
   p: RigPose;
   S: Skeleton;
-  colors: { skin: string; joint: string; line: string; metal: string; floorC: string; accent: string };
+  colors: { skin: string; joint: string; line: string; metal: string; floorC: string; accent: string; band: string };
 }) {
   const F = frontPoints(rig, p, S);
   const cx = F.cx;
@@ -423,6 +427,7 @@ function FrontBody({
       </G>
       {arms('armL', F.L, true)}
       {arms('armR', F.R, false)}
+      {rig.load === 'band' && <Line x1={F.L.hand[0]} y1={F.L.hand[1]} x2={F.R.hand[0]} y2={F.R.hand[1]} stroke={c.band} strokeWidth={6} strokeLinecap="round" />}
       {rig.bar === 'hands' && bar('barhands')}
     </>
   );

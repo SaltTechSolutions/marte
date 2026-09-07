@@ -164,7 +164,8 @@ export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | null;
  * ağırlık. Dambıl hareketlerinde barbell tabağı çizmek yükü olduğundan çok
  * daha büyük gösteriyordu.
  */
-export type RigLoad = 'barbell' | 'dumbbell' | null;
+/** Yük: halter, dambıl ya da lastik (direnç bandı — iki el arasında, kütlesi yok). */
+export type RigLoad = 'barbell' | 'dumbbell' | 'band' | null;
 
 export interface RigExercise {
   mode: RigMode;
@@ -791,7 +792,7 @@ export function centerOfMass(ex: RigExercise, S: Skeleton): Vec {
     m += w; x += w * (A[0] + (Bp[0] - A[0]) * f); y += w * (A[1] + (Bp[1] - A[1]) * f);
   }
   const load = loadOf(ex);
-  if (load) {
+  if (load && load !== 'band') {
     const at = load === 'barbell' && S.bar ? S.bar : S.hand;
     const w = LOAD_MASS[load];
     m += w; x += w * at[0]; y += w * at[1];
