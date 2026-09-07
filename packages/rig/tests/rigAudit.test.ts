@@ -27,6 +27,16 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   // Uzak diz de ters yöne kırılamaz. Bu sınır bir süre YOKTU ve `carry`nin
   // 30° geriye bükülen dizi denetimden sessizce geçiyordu.
   [key('uzak diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 155 } },
+  // Ayak bileği kaval kemiğine bu kadar katlanamaz (dorsi fleksiyon).
+  [key('bilek', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { ankle: -50 } },
+  // Parmak ucu bu kadar uzatılamaz (plantar fleksiyon).
+  [key('bilek', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { ankle: 70 } },
+  // Uzak bilek de aynı sınırlara tabi. Bu bant EKLENMEDEN ÖNCE model bileği
+  // hiç taşımıyordu: ayak yönü kip başına sabitti ve baldırı takip etmiyordu,
+  // o yüzden `bulgarian_split_squat`ta uzak bilek −116°ye kadar dönüyor ve
+  // hiçbir kural görmüyordu.
+  [key('uzak bilek', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: -50 } },
+  [key('uzak bilek', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: 70 } },
   // Ön kol pazuya gömülemez. Ters kinematikli kolda açı POZDA YOK, iskeletten
   // geliyor: el hedefini omzun üstüne koymak dirseği tam katlıyor.
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },

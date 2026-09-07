@@ -16,7 +16,9 @@
           "thoraxA": 1,
           "neckA": 3,
           "upperA": 260.5,
-          "foreA": 49.8
+          "foreA": 49.8,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -29,7 +31,9 @@
           "thoraxA": 36,
           "neckA": 24,
           "upperA": 260.5,
-          "foreA": 49.8
+          "foreA": 49.8,
+          "ankle": -25,
+          "ankleF": -20
         }
       },
       {
@@ -42,7 +46,9 @@
           "thoraxA": 36,
           "neckA": 24,
           "upperA": 260.5,
-          "foreA": 49.8
+          "foreA": 49.8,
+          "ankle": -25,
+          "ankleF": -20
         }
       },
       {
@@ -55,7 +61,9 @@
           "thoraxA": 1,
           "neckA": 3,
           "upperA": 260.5,
-          "foreA": 49.8
+          "foreA": 49.8,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ],
@@ -80,7 +88,9 @@
           "thoraxA": 3,
           "neckA": 3,
           "upperA": 205,
-          "foreA": 62
+          "foreA": 62,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -93,7 +103,9 @@
           "thoraxA": 24,
           "neckA": 14,
           "upperA": 205,
-          "foreA": 62
+          "foreA": 62,
+          "ankle": -24,
+          "ankleF": -19
         }
       },
       {
@@ -106,7 +118,9 @@
           "thoraxA": 24,
           "neckA": 14,
           "upperA": 205,
-          "foreA": 62
+          "foreA": 62,
+          "ankle": -24,
+          "ankleF": -19
         }
       },
       {
@@ -119,7 +133,9 @@
           "thoraxA": 3,
           "neckA": 3,
           "upperA": 205,
-          "foreA": 62
+          "foreA": 62,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -145,7 +161,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 230,
-          "shinF": 240
+          "shinF": 240,
+          "ankle": -2,
+          "ankleF": -35
         }
       },
       {
@@ -159,7 +177,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 195,
-          "shinF": 270
+          "shinF": 270,
+          "ankle": -9.2,
+          "ankleF": -35
         },
         "tr": "İniş"
       },
@@ -175,7 +195,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 187,
-          "shinF": 294
+          "shinF": 294,
+          "ankle": -16,
+          "ankleF": -35
         }
       },
       {
@@ -190,7 +212,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 187,
-          "shinF": 294
+          "shinF": 294,
+          "ankle": -16,
+          "ankleF": -35
         }
       },
       {
@@ -204,7 +228,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 195,
-          "shinF": 270
+          "shinF": 270,
+          "ankle": -9.7,
+          "ankleF": -35
         },
         "tr": "Çıkış"
       },
@@ -220,7 +246,9 @@
           "upperA": 186,
           "foreA": 184,
           "thighF": 230,
-          "shinF": 240
+          "shinF": 240,
+          "ankle": -2,
+          "ankleF": -35
         }
       }
     ]
@@ -245,7 +273,9 @@
           "upperA": 182,
           "foreA": 180,
           "thighF": 180,
-          "shinF": 200.5
+          "shinF": 200.5,
+          "ankle": 0,
+          "ankleF": -35
         }
       },
       {
@@ -259,8 +289,10 @@
           "neckA": 4,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 200.5,
-          "shinF": 267.8
+          "thighF": 196,
+          "shinF": 280,
+          "ankle": -12,
+          "ankleF": 30
         }
       },
       {
@@ -274,8 +306,10 @@
           "neckA": 4,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 200.5,
-          "shinF": 268.1
+          "thighF": 196,
+          "shinF": 280,
+          "ankle": -12,
+          "ankleF": 30
         }
       },
       {
@@ -290,7 +324,9 @@
           "upperA": 182,
           "foreA": 180,
           "thighF": 180,
-          "shinF": 200.5
+          "shinF": 200.5,
+          "ankle": 0,
+          "ankleF": -35
         }
       }
     ]
@@ -317,7 +353,9 @@
           "upperA": 184,
           "foreA": 182,
           "thighF": 193.1,
-          "shinF": 197.3
+          "shinF": 197.3,
+          "ankle": -22,
+          "ankleF": -19.3
         }
       },
       {
@@ -333,7 +371,9 @@
           "upperA": 184,
           "foreA": 182,
           "thighF": 60,
-          "shinF": 150
+          "shinF": 150,
+          "ankle": 0,
+          "ankleF": 28
         }
       },
       {
@@ -349,7 +389,9 @@
           "upperA": 184,
           "foreA": 182,
           "thighF": 60,
-          "shinF": 150
+          "shinF": 150,
+          "ankle": 0,
+          "ankleF": 28
         }
       },
       {
@@ -365,7 +407,9 @@
           "upperA": 184,
           "foreA": 182,
           "thighF": 193.1,
-          "shinF": 197.3
+          "shinF": 197.3,
+          "ankle": -22,
+          "ankleF": -19.3
         }
       }
     ]
@@ -387,7 +431,9 @@
           "thoraxA": 68,
           "neckA": 54,
           "upperA": 181,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": -20,
+          "ankleF": -15
         }
       },
       {
@@ -400,7 +446,9 @@
           "thoraxA": 66,
           "neckA": 52,
           "upperA": 181,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": -19,
+          "ankleF": -14
         }
       },
       {
@@ -413,7 +461,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 182
+          "foreA": 182,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -426,7 +476,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 182
+          "foreA": 182,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -439,7 +491,9 @@
           "thoraxA": 68,
           "neckA": 54,
           "upperA": 181,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": -20,
+          "ankleF": -15
         }
       }
     ]
@@ -463,7 +517,9 @@
           "thoraxA": 3,
           "neckA": 3,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -476,7 +532,9 @@
           "thoraxA": 70,
           "neckA": 56,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": -8,
+          "ankleF": -3
         }
       },
       {
@@ -489,7 +547,9 @@
           "thoraxA": 70,
           "neckA": 56,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": -8,
+          "ankleF": -3
         }
       },
       {
@@ -502,7 +562,9 @@
           "thoraxA": 3,
           "neckA": 3,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -526,7 +588,9 @@
           "thoraxA": 292,
           "neckA": 286,
           "upperA": 262,
-          "foreA": 292
+          "foreA": 292,
+          "ankle": 6,
+          "ankleF": 11
         }
       },
       {
@@ -539,7 +603,9 @@
           "thoraxA": 273,
           "neckA": 270,
           "upperA": 262,
-          "foreA": 292
+          "foreA": 292,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -552,7 +618,9 @@
           "thoraxA": 273,
           "neckA": 270,
           "upperA": 262,
-          "foreA": 292
+          "foreA": 292,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -565,7 +633,9 @@
           "thoraxA": 292,
           "neckA": 286,
           "upperA": 262,
-          "foreA": 292
+          "foreA": 292,
+          "ankle": 6,
+          "ankleF": 11
         }
       }
     ]
@@ -588,7 +658,9 @@
           "thoraxA": 270,
           "neckA": 268,
           "upperA": 250,
-          "foreA": 250
+          "foreA": 250,
+          "ankle": 8,
+          "ankleF": 13
         }
       },
       {
@@ -601,7 +673,9 @@
           "thoraxA": 250,
           "neckA": 255,
           "upperA": 250,
-          "foreA": 250
+          "foreA": 250,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -614,7 +688,9 @@
           "thoraxA": 250,
           "neckA": 255,
           "upperA": 250,
-          "foreA": 250
+          "foreA": 250,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -627,7 +703,9 @@
           "thoraxA": 270,
           "neckA": 268,
           "upperA": 250,
-          "foreA": 250
+          "foreA": 250,
+          "ankle": 8,
+          "ankleF": 13
         }
       }
     ]
@@ -650,7 +728,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -664,7 +744,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 4,
+          "ankleF": 9
         }
       },
       {
@@ -678,7 +760,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 4,
+          "ankleF": 9
         }
       },
       {
@@ -692,7 +776,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ],
@@ -716,7 +802,9 @@
           "thoraxA": 92,
           "neckA": 96,
           "hx": -46,
-          "hy": -58
+          "hy": -58,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -729,7 +817,9 @@
           "thoraxA": 92,
           "neckA": 94,
           "hx": -34,
-          "hy": -148
+          "hy": -148,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -742,7 +832,9 @@
           "thoraxA": 92,
           "neckA": 94,
           "hx": -34,
-          "hy": -148
+          "hy": -148,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -755,7 +847,9 @@
           "thoraxA": 92,
           "neckA": 96,
           "hx": -46,
-          "hy": -58
+          "hy": -58,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       }
     ]
@@ -779,7 +873,9 @@
           "thoraxA": 72,
           "neckA": 76,
           "hx": -40,
-          "hy": -52
+          "hy": -52,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -792,7 +888,9 @@
           "thoraxA": 72,
           "neckA": 74,
           "hx": -26,
-          "hy": -134
+          "hy": -134,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -805,7 +903,9 @@
           "thoraxA": 72,
           "neckA": 74,
           "hx": -26,
-          "hy": -134
+          "hy": -134,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       },
       {
@@ -818,7 +918,9 @@
           "thoraxA": 72,
           "neckA": 76,
           "hx": -40,
-          "hy": -52
+          "hy": -52,
+          "ankle": 0.3,
+          "ankleF": -4.7
         }
       }
     ]
@@ -840,7 +942,9 @@
           "thoraxA": 3,
           "neckA": 8,
           "hx": 70,
-          "hy": -20
+          "hy": -20,
+          "ankle": 2,
+          "ankleF": 7
         }
       },
       {
@@ -853,7 +957,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 12,
-          "hy": -72
+          "hy": -72,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -866,7 +972,9 @@
           "thoraxA": 1,
           "neckA": -2,
           "hx": 0,
-          "hy": -142
+          "hy": -142,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -879,7 +987,9 @@
           "thoraxA": 1,
           "neckA": -2,
           "hx": 0,
-          "hy": -142
+          "hy": -142,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -892,7 +1002,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 12,
-          "hy": -72
+          "hy": -72,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -905,7 +1017,9 @@
           "thoraxA": 3,
           "neckA": 8,
           "hx": 70,
-          "hy": -20
+          "hy": -20,
+          "ankle": 2,
+          "ankleF": 7
         }
       }
     ],
@@ -929,7 +1043,9 @@
           "thoraxA": 62,
           "neckA": 50,
           "hx": 6,
-          "hy": 96
+          "hy": 96,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -942,7 +1058,9 @@
           "thoraxA": 60,
           "neckA": 48,
           "hx": -8,
-          "hy": 34
+          "hy": 34,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -955,7 +1073,9 @@
           "thoraxA": 60,
           "neckA": 48,
           "hx": -8,
-          "hy": 34
+          "hy": 34,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -968,7 +1088,9 @@
           "thoraxA": 62,
           "neckA": 50,
           "hx": 6,
-          "hy": 96
+          "hy": 96,
+          "ankle": -10,
+          "ankleF": -5
         }
       }
     ]
@@ -991,7 +1113,9 @@
           "thoraxA": 2,
           "neckA": 3,
           "thighA": 186,
-          "shinA": 214
+          "shinA": 214,
+          "ankle": -35,
+          "ankleF": -31
         }
       },
       {
@@ -1004,7 +1128,9 @@
           "thoraxA": 4,
           "neckA": 4,
           "thighA": 96,
-          "shinA": 152
+          "shinA": 152,
+          "ankle": 26,
+          "ankleF": 31
         }
       },
       {
@@ -1017,7 +1143,9 @@
           "thoraxA": 4,
           "neckA": 4,
           "thighA": 96,
-          "shinA": 152
+          "shinA": 152,
+          "ankle": 26,
+          "ankleF": 31
         }
       },
       {
@@ -1030,7 +1158,9 @@
           "thoraxA": 2,
           "neckA": 3,
           "thighA": 186,
-          "shinA": 214
+          "shinA": 214,
+          "ankle": -35,
+          "ankleF": -31
         }
       }
     ]
@@ -1054,7 +1184,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 178
+          "foreA": 178,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1067,7 +1199,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 40
+          "foreA": 40,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1080,7 +1214,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 40
+          "foreA": 40,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1093,7 +1229,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 184,
-          "foreA": 178
+          "foreA": 178,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1118,7 +1256,9 @@
           "neckA": 1,
           "upperA": 176,
           "foreA": 176,
-          "hxF": 44
+          "hxF": 44,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1132,7 +1272,9 @@
           "neckA": 1,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 138
+          "hxF": 138,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1146,7 +1288,9 @@
           "neckA": 1,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 138
+          "hxF": 138,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1160,7 +1304,9 @@
           "neckA": 1,
           "upperA": 176,
           "foreA": 176,
-          "hxF": 44
+          "hxF": 44,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1182,7 +1328,9 @@
           "torso": 2,
           "upperA": 178,
           "foreA": 178,
-          "hxF": 42
+          "hxF": 42,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1194,7 +1342,9 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 132
+          "hxF": 132,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1206,7 +1356,9 @@
           "torso": 2,
           "upperA": 8,
           "foreA": 8,
-          "hxF": 64
+          "hxF": 64,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1218,7 +1370,9 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 132
+          "hxF": 132,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1230,7 +1384,9 @@
           "torso": 2,
           "upperA": 178,
           "foreA": 178,
-          "hxF": 42
+          "hxF": 42,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1252,7 +1408,9 @@
           "torso": 2,
           "upperA": 94,
           "foreA": 92,
-          "hxF": 56
+          "hxF": 56,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1264,7 +1422,9 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 142
+          "hxF": 142,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1276,7 +1436,9 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 142
+          "hxF": 142,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1288,7 +1450,9 @@
           "torso": 2,
           "upperA": 94,
           "foreA": 92,
-          "hxF": 56
+          "hxF": 56,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1310,7 +1474,9 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 28
+          "hxF": 28,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1322,7 +1488,9 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 78
+          "hxF": 78,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1334,7 +1502,9 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 78
+          "hxF": 78,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1346,7 +1516,9 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 28
+          "hxF": 28,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1370,7 +1542,9 @@
           "upperA": 180,
           "foreA": 180,
           "hxF": 52,
-          "shLift": 0
+          "shLift": 0,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1383,7 +1557,9 @@
           "upperA": 180,
           "foreA": 180,
           "hxF": 52,
-          "shLift": 16
+          "shLift": 16,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1396,7 +1572,9 @@
           "upperA": 180,
           "foreA": 180,
           "hxF": 52,
-          "shLift": 16
+          "shLift": 16,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1409,7 +1587,9 @@
           "upperA": 180,
           "foreA": 180,
           "hxF": 52,
-          "shLift": 0
+          "shLift": 0,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1435,7 +1615,9 @@
           "neckA": 54,
           "upperA": 176,
           "foreA": 174,
-          "hxF": 46
+          "hxF": 46,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -1449,7 +1631,9 @@
           "neckA": 54,
           "upperA": 116,
           "foreA": 112,
-          "hxF": 150
+          "hxF": 150,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -1463,7 +1647,9 @@
           "neckA": 54,
           "upperA": 116,
           "foreA": 112,
-          "hxF": 150
+          "hxF": 150,
+          "ankle": -10,
+          "ankleF": -5
         }
       },
       {
@@ -1477,7 +1663,9 @@
           "neckA": 54,
           "upperA": 176,
           "foreA": 174,
-          "hxF": 46
+          "hxF": 46,
+          "ankle": -10,
+          "ankleF": -5
         }
       }
     ]
@@ -1499,7 +1687,9 @@
           "torso": 74,
           "thoraxA": 74,
           "neckA": 78,
-          "hx": 0
+          "hx": 0,
+          "ankle": 29,
+          "ankleF": 34
         }
       },
       {
@@ -1511,7 +1701,9 @@
           "torso": 75,
           "thoraxA": 75,
           "neckA": 80,
-          "hx": 0
+          "hx": 0,
+          "ankle": 29,
+          "ankleF": 34
         }
       },
       {
@@ -1523,7 +1715,9 @@
           "torso": 74,
           "thoraxA": 74,
           "neckA": 78,
-          "hx": 0
+          "hx": 0,
+          "ankle": 29,
+          "ankleF": 34
         }
       }
     ]
@@ -1550,7 +1744,9 @@
           "thighF": 239,
           "shinF": 239,
           "upperF": 2,
-          "foreF": 0
+          "foreF": 0,
+          "ankle": 29,
+          "ankleF": 29
         }
       },
       {
@@ -1567,7 +1763,9 @@
           "thighF": 240,
           "shinF": 240,
           "upperF": 2,
-          "foreF": 0
+          "foreF": 0,
+          "ankle": 28,
+          "ankleF": 28
         }
       },
       {
@@ -1584,7 +1782,9 @@
           "thighF": 239,
           "shinF": 239,
           "upperF": 2,
-          "foreF": 0
+          "foreF": 0,
+          "ankle": 29,
+          "ankleF": 29
         }
       }
     ]
@@ -1605,7 +1805,9 @@
           "torso": 76,
           "thoraxA": 76,
           "neckA": 84,
-          "hx": 24
+          "hx": 24,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1617,7 +1819,9 @@
           "torso": 60,
           "thoraxA": 92,
           "neckA": 128,
-          "hx": 20
+          "hx": 20,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1629,7 +1833,9 @@
           "torso": 60,
           "thoraxA": 92,
           "neckA": 128,
-          "hx": 20
+          "hx": 20,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1641,7 +1847,9 @@
           "torso": 92,
           "thoraxA": 60,
           "neckA": 44,
-          "hx": 28
+          "hx": 28,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1653,7 +1861,9 @@
           "torso": 92,
           "thoraxA": 60,
           "neckA": 44,
-          "hx": 28
+          "hx": 28,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1665,7 +1875,9 @@
           "torso": 76,
           "thoraxA": 76,
           "neckA": 84,
-          "hx": 24
+          "hx": 24,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1692,7 +1904,9 @@
           "thighF": 180,
           "shinF": 268,
           "upperF": 172,
-          "foreF": 176
+          "foreF": 176,
+          "ankle": 0,
+          "ankleF": 0
         }
       },
       {
@@ -1709,7 +1923,9 @@
           "thighF": 266,
           "shinF": 262,
           "upperF": 172,
-          "foreF": 176
+          "foreF": 176,
+          "ankle": 0,
+          "ankleF": 6
         }
       },
       {
@@ -1726,7 +1942,9 @@
           "thighF": 266,
           "shinF": 262,
           "upperF": 172,
-          "foreF": 176
+          "foreF": 176,
+          "ankle": 0,
+          "ankleF": 6
         }
       },
       {
@@ -1743,7 +1961,9 @@
           "thighF": 180,
           "shinF": 268,
           "upperF": 172,
-          "foreF": 176
+          "foreF": 176,
+          "ankle": 0,
+          "ankleF": 0
         }
       }
     ]
@@ -1765,7 +1985,9 @@
           "torso": 62,
           "thoraxA": 62,
           "neckA": 66,
-          "hx": 10
+          "hx": 10,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1777,7 +1999,9 @@
           "torso": 86,
           "thoraxA": 84,
           "neckA": 80,
-          "hx": 120
+          "hx": 120,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1789,7 +2013,9 @@
           "torso": 86,
           "thoraxA": 84,
           "neckA": 80,
-          "hx": 120
+          "hx": 120,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1801,7 +2027,9 @@
           "torso": 62,
           "thoraxA": 62,
           "neckA": 66,
-          "hx": 10
+          "hx": 10,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1824,7 +2052,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 22,
-          "hy": 40
+          "hy": 40,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1837,7 +2067,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 96,
-          "hy": 24
+          "hy": 24,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1850,7 +2082,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 96,
-          "hy": 24
+          "hy": 24,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1863,7 +2097,9 @@
           "thoraxA": 2,
           "neckA": 2,
           "hx": 22,
-          "hy": 40
+          "hy": 40,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -1889,7 +2125,9 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 205
+          "shinF": 205,
+          "ankle": -26,
+          "ankleF": -27
         }
       },
       {
@@ -1904,7 +2142,9 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 200,
-          "shinF": 270
+          "shinF": 270,
+          "ankle": 2,
+          "ankleF": -35
         }
       },
       {
@@ -1919,7 +2159,9 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 205
+          "shinF": 205,
+          "ankle": -26,
+          "ankleF": -27
         }
       }
     ]
@@ -1942,7 +2184,9 @@
           "thoraxA": 2,
           "neckA": 8,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1955,7 +2199,9 @@
           "thoraxA": 2,
           "neckA": 30,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1968,7 +2214,9 @@
           "thoraxA": 2,
           "neckA": 30,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       },
       {
@@ -1981,7 +2229,9 @@
           "thoraxA": 2,
           "neckA": 8,
           "upperA": 180,
-          "foreA": 180
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 5
         }
       }
     ]
@@ -2007,7 +2257,9 @@
           "hx": -4,
           "hy": 140,
           "thighF": 180,
-          "shinF": 200.5
+          "shinF": 200.5,
+          "ankle": 0,
+          "ankleF": -34
         }
       },
       {
@@ -2022,7 +2274,9 @@
           "thoraxA": 58,
           "neckA": 45,
           "hx": -47,
-          "hy": 133
+          "hy": 133,
+          "ankle": -12,
+          "ankleF": 16
         }
       },
       {
@@ -2037,7 +2291,9 @@
           "thoraxA": 58,
           "neckA": 45,
           "hx": -47,
-          "hy": 133
+          "hy": 133,
+          "ankle": -12,
+          "ankleF": 16
         }
       },
       {
@@ -2052,7 +2308,9 @@
           "thoraxA": 38,
           "neckA": 10,
           "hx": -95,
-          "hy": 10
+          "hy": 10,
+          "ankle": -12,
+          "ankleF": 16
         }
       },
       {
@@ -2067,7 +2325,9 @@
           "thoraxA": 15,
           "neckA": -25,
           "hx": -40,
-          "hy": -125
+          "hy": -125,
+          "ankle": -12,
+          "ankleF": 16
         }
       },
       {
@@ -2082,7 +2342,9 @@
           "thoraxA": 15,
           "neckA": -25,
           "hx": -40,
-          "hy": -125
+          "hy": -125,
+          "ankle": -12,
+          "ankleF": 16
         }
       },
       {
@@ -2097,7 +2359,9 @@
           "hx": -4,
           "hy": 140,
           "thighF": 180,
-          "shinF": 200.5
+          "shinF": 200.5,
+          "ankle": 0,
+          "ankleF": -34
         }
       }
     ]

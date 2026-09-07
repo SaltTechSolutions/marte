@@ -25,6 +25,8 @@ const VIEWS = ['side', 'front'];
 const POSE_KEYS: (keyof RigPose)[] = [
   'shinA', 'thighA', 'torso', 'thoraxA', 'neckA', 'upperA', 'foreA',
   'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
+  // Ayak bileği eklem açısı, taraf başına. Bkz. `RigPose.ankle`.
+  'ankle', 'ankleF',
 ];
 
 const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'note', 'kf'];

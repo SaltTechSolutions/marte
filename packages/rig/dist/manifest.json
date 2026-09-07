@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-07T14:49:50.770Z",
+  "generated": "2026-09-07T16:12:20.290Z",
   "source": {
-    "commit": "f15f6167",
+    "commit": "f3456af8",
     "dirty": true
   },
   "counts": {
@@ -14,22 +14,22 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "8da27ae27bc9d814e8f9ecec84cb33e71f329d246def49dfec25315a89899061",
-      "bytes": 35905,
+      "sha256": "69a93fceeee0b3ad9900c8675b8d5d523c08e4241419496d2c22bea38de27bd1",
+      "bytes": 38455,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
     },
     "rigAudit.ts": {
-      "sha256": "9254da3e8aa2af8222dc05f0cf838ecb1772a1147a61b21852ce07dff8283a34",
-      "bytes": 15263,
+      "sha256": "348a5c2656775a27598e4f274fdccf44d0c7fd2cb0aaebbab0f4577a2b145432",
+      "bytes": 16315,
       "from": "src/rigAudit.ts",
       "what": "denetim kuralları",
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "d8af2072e297a249f8cb65cdceb54ae71ab802ba1a7e6887fbbf55dc30cbacc7",
-      "bytes": 16053,
+      "sha256": "0c5487d71dc50a021f76a5f4cf3335b5653557e7eef3253ae575bad050cb5cd0",
+      "bytes": 16146,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "0388a681afa81959cce0475665dd893771a028b54f4b548e58572b1cea0ac772",
-      "bytes": 42049,
+      "sha256": "e23553b310cec09620a0faed039f58ecba5cfee19fb9234c9478637d8c6ac535",
+      "bytes": 48182,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
@@ -91,8 +91,8 @@
       "to": "src/utils/rig.test.ts"
     },
     "rigAudit.test.ts": {
-      "sha256": "0a12936ec3908a27af3b64956324f0302350061b77b02ef48b12589136194f69",
-      "bytes": 10130,
+      "sha256": "88cec94f6a25b9e75a60fc8f2c9a5a21da28f7bc6ce0920aab3a75a015265597",
+      "bytes": 10887,
       "from": "tests/rigAudit.test.ts",
       "what": "denetim testleri",
       "to": "src/utils/rigAudit.test.ts"

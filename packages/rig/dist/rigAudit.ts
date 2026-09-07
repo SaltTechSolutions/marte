@@ -7,7 +7,7 @@ import {
   B,
   MAX_ANKLE_LIFT,
   facingFlip,
-  footDirFor,
+  footDirOf,
   footLowestY,
   FrontSide,
   GROUND,
@@ -131,6 +131,33 @@ export const ROM_BANDS: RomBand[] = [
     skip: (ex) => ex.mode !== 'stand' || !showFarLeg(ex),
   },
   {
+    // Ayak bileği ROM'u. `lo` = dorsi fleksiyon (parmak yukarı), `hi` = plantar
+    // fleksiyon (parmak aşağı, topuk yukarı).
+    //
+    // Sınırlar AAOS'un istirahat değerleri DEĞİL, işlevsel aralık: derin
+    // çömelmede topuk yerdeyken dorsi fleksiyon 30-35°ye çıkıyor (ölçüldü,
+    // `squat` dibinde −25°), oysa AAOS 20 diyor. 20 alsaydık doğru çizilmiş
+    // çömelmeler uyarı verirdi. Plantar tarafta 50 ayak parmakları üstünde
+    // durmayı (plank, topuk kalkışı) kapsıyor.
+    //
+    // Bu bandın ölçebileceği bir açı MODELDE YOKTU: ayak yönü kip başına
+    // sabitti ve baldırı takip etmiyordu. Açı eklendiğinde ilk taramada 160
+    // değerin 30'u (%19) aralık dışında çıktı, hepsi uzak tarafta.
+    rule: 'bilek',
+    label: 'bilek',
+    angle: (p) => p.ankle,
+    lo: -35,
+    hi: 50,
+  },
+  {
+    rule: 'bilek',
+    label: 'uzak bilek',
+    angle: (p) => p.ankleF,
+    lo: -35,
+    hi: 50,
+    skip: (ex) => !showFarLeg(ex),
+  },
+  {
     rule: 'dirsek',
     label: 'dirsek',
     // Poz DEĞİL iskelet. `arm` 'ik' ya da 'floor' iken kareler `upperA`/`foreA`
@@ -203,12 +230,14 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // Ölçüldü: `bench_press` ve `incline_press` ayağı 6.4px gömüyordu; diğer 28
   // arketip temizdi. Tolerans 2px, yuvarlama payı.
   {
-    const dir = footDirFor(ex.mode);
     const flip = facingFlip(ex.mode);
     const pin = ex.prop !== 'box' && p.ankleLift > 0;
-    const feet: [string, Vec][] = [['ayak', S.ankle], ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF]] as [string, Vec][]) : [])];
-    feet.forEach(([ad, ankle]) => {
-      const pen = footLowestY(ankle, dir, pin, flip) - GROUND;
+    const feet: [string, Vec, boolean][] = [
+      ['ayak', S.ankle, false],
+      ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF, true]] as [string, Vec, boolean][]) : []),
+    ];
+    feet.forEach(([ad, ankle, far]) => {
+      const pen = footLowestY(ankle, footDirOf(ex, p, far), pin, flip) - GROUND;
       if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
     });
   }

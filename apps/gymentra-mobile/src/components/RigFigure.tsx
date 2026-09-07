@@ -17,7 +17,7 @@ import {
   boundsFor,
   capsule,
   facingFlip,
-  footDirFor,
+  footDirOf,
   footPath,
   frontPoints,
   frontTrunk,
@@ -284,7 +284,7 @@ export function RigFigure({
         <G key="far" opacity={0.95}>
           {farLeg && (
             <>
-              <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe, flip)} fill={skinFar} stroke={line} />
+              <Path d={footPath(S.ankleF, footDirOf(rig, p, true), pinToe, flip)} fill={skinFar} stroke={line} />
               {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
               {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
               {ball('fk', S.kneeF, 12, true)}
@@ -311,7 +311,7 @@ export function RigFigure({
           <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirFor(rig.mode), pinToe, flip)} fill={skin} stroke={line} />
+          <Path d={footPath(S.ankle, footDirOf(rig, p), pinToe, flip)} fill={skin} stroke={line} />
           {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
           {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
           {ball('k', S.knee, 13)}

@@ -31,51 +31,6 @@ görünümde eklem açısı zaten anlamlı değil.
 
 ---
 
-## Ayak bileği açısını modele ekle
-
-**Ne:** `RigPose`'a gerçek bir ayak bileği eklem açısı eklemek.
-
-**Neden:** Model bugün ayak bileği açısı taşımıyor. Ayak yönü
-`footDirFor(mode)` sabiti ([src/rig.ts:669](src/rig.ts:669)), topuk kalkışı ise
-piksel cinsinden `ankleLift`. Bu yüzden ayak bileği ROM denetimi model
-değişmeden imkânsız.
-
-**Bağlam:** İnceleme sırasında "7 eklem denetlenecek" denmişti; doğrusu 6, ve
-ayak bileği o 6'nın dışında. Codex bu hatayı yakaladı. Dorsi/plantar fleksiyon
-topuk kalkışında, çömelme derinliğinde ve şınav duruşunda gerçekten anlamlı.
-
-**Artı:** Topuk kalkışı piksel yerine açıyla ifade edilir, model tutarlılaşır.
-**Eksi:** Geriye uyumsuz. 30 arketibin verisini ve devir sözleşmesini etkiler.
-
-**Bağlı:** Devir sözleşmesinin sürümlenmesi (bu turda ekleniyor) bu değişikliği
-güvenli kılan ön koşul.
-
-**Ölçülen bedel (2026-09-07).** `ankleLift` tek alan ve yalnız YAKIN ayağa
-uygulanıyor (`rig.ts`, `ankle = [ANKLE_X, GROUND - 12 - ankleLift]`), yani
-uzak ayağın topuğu hiç kalkamıyor. İki hareket bunun bedelini ödüyor:
-
-- **`unilateral_lunge`** — gerçek hamlede arka topuk kalkıktır, ayak parmak
-  ucuyla basar, ayak bileği yerden ~10cm yukarıda durur. Bizim ayağımız düz
-  çizildiği için ya ayak havada kalıyor ya da bastırınca BALDIR YERE YATIYOR
-  (kalça dipte yerden 117px, bacak 205px). Bugünkü uzlaşma: ayak dipte 19px
-  (7.5cm) yukarıda duruyor — "topuk kalkık" izlenimi veriyor. Düzeltmeden
-  önce 59px (23cm) havadaydı, yani bacak sallanıyordu.
-- **`carry`** — leğen salınımı EKLENDİ (2026-09-07): basan dizi canlandırmak
-  leğeni kendiliğinden indiriyor, çünkü `stand` kipinde zincir ayak
-  bileğinden yukarı kuruluyor. Salınım 9.7px (3.9cm), doğru fazda — çift
-  destekte alçak, tek destekte yüksek. Basan diz artık 14°→0° arası
-  çalışıyor (eskiden −5°de donmuştu, üstelik hafif ters bükülü).
-
-  KALAN: salınan dizin alt ucu 45°, gerçekte ~5° olmalı. Ölçülen takas —
-  salınım yoksa alt uç 25°, 4.1px salınımda 35°, 9.7px salınımda 45°. Sebep
-  ayağın yatay olarak SABİT olması: figür ilerlemediği için bacak öne
-  geldiğinde düz bir diz ayağı zemine sokuyor. Taraf başına ayak bileği
-  açısı ve/veya figürün ilerlemesi bu son eksiği kapatır.
-
-Taraf başına ayak bileği açısı bu iki uzlaşmayı birden kaldırır.
-
----
-
 ## Vendored Muscle-Map kopyasının bakımı
 
 **Ne:** `Muscle-Map-for-React-Native` deposunun kopyalanan halini sürdürmek;
@@ -151,7 +106,7 @@ ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir 
 30 arketibin kare verisi etkilenir, `rigAudit`'in ROM bantları yeni eksene de
 bakmak zorunda kalır ve uygulamanın `RigFigure.tsx`'i de yeniden yazılır.
 
-**Bağlı:** Ayak bileği açısı kaydıyla aynı kök sorunda buluşuyor — modelin
-anatomik ifade gücü. İkisi birlikte planlanmalı; ayrı ayrı yapmak `RigPose`'u
-iki kez kırar. Devir sözleşmesinin sürümlenmesi (manifest, 2026-09-06) bu
-değişikliği güvenli kılan ön koşul.
+**Bağlı:** Ayak bileği açısı 2026-09-07de EKLENDİ (taraf başına `ankle`/`ankleF`,
+baldıra göre, ROM bandıyla). O kayıt modelin anatomik ifade gücüyle ilgiliydi ve
+kapandı; derinlik ekseni aynı sorunun kalan yarısı. Devir sözleşmesinin
+sürümlenmesi (manifest) bu değişikliği güvenli kılan ön koşul.

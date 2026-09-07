@@ -87,6 +87,19 @@ export interface RigPose {
   shLift: number;
   /** Topuğun yerden kalkması (calf raise) ya da ayağın basamağa çıkması (step-up). */
   ankleLift: number;
+  /**
+   * Ayak bileği eklem açısı, derece. 0 = anatomik nötr (ayak baldıra dik).
+   * Pozitif = PLANTAR fleksiyon (parmak aşağı, topuk yukarı), negatif =
+   * DORSİ fleksiyon (parmak yukarı, kaval kemiğine doğru).
+   *
+   * Açı BALDIRA GÖRE, dünyaya göre değil: baldır dönünce ayak onunla döner.
+   * Eskiden ayak yönü `footDirFor(mode)` sabitiydi ve baldırı hiç takip
+   * etmiyordu; ölçüldü, `carry`de uzak ayak bileği hareket boyunca 65°,
+   * `unilateral_lunge`da 67° dönüyordu — basan bir ayağın yapamayacağı şey,
+   * ve hiçbir kural görmüyordu çünkü model açıyı taşımıyordu.
+   */
+  ankle: number;
+  ankleF: number;
 }
 
 export interface RigKeyframe {
@@ -152,6 +165,8 @@ const BASE = {
   hxF: 66,
   shLift: 0,
   ankleLift: 0,
+  ankle: 0,
+  ankleF: 0,
 };
 
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
@@ -206,6 +221,10 @@ interface LocalPose {
   hxF: number;
   shLift: number;
   ankleLift: number;
+  // Bilek açısı ZATEN eklem-yerel (baldıra göre), o yüzden dünya→yerel
+  // dönüşümünde olduğu gibi taşınıyor. Diğer açılar gibi çıkarma gerekmiyor.
+  ankle: number;
+  ankleF: number;
 }
 
 /**
@@ -232,6 +251,8 @@ export const toLocal = (p: RigPose): LocalPose => ({
   hxF: p.hxF,
   shLift: p.shLift,
   ankleLift: p.ankleLift,
+  ankle: p.ankle,
+  ankleF: p.ankleF,
 });
 
 export const toWorld = (l: LocalPose): RigPose => {
@@ -258,6 +279,8 @@ export const toWorld = (l: LocalPose): RigPose => {
     hxF: l.hxF,
     shLift: l.shLift,
     ankleLift: l.ankleLift,
+    ankle: l.ankle,
+    ankleF: l.ankleF,
   };
 };
 
@@ -955,4 +978,38 @@ export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): str
  */
 export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
-export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);
+/**
+ * Ayak bileği NÖTR açısı: baldır yönünden ayak yönüne, kip başına.
+ *
+ * Ölçüldü, 31 arketibin bütün kareleri: `stand` ve `hang` kiplerinde ayak yönü
+ * ile baldır yönü arasındaki fark −86°de kümeleniyor (statik pozların hepsi
+ * TAM −86), `bench`te +125, `quad`ta −18. Bu sayılar keyfi değil, bugünkü
+ * çizimin kendisi; nötr olarak alınınca mevcut duruşlar `ankle = 0` oluyor.
+ *
+ * `quad` iki kümeye ayrılıyordu (+11 plank, −18 dört ayak) çünkü tek bir sabit
+ * ikisini birden anlatamıyordu. Nötr −18 (dört ayak, ayak düz) alındı; plank
+ * farkı artık VERİDE duruyor — plank ayak parmakları üstünde, yani +29°
+ * plantar fleksiyon. Model kazandığı için ifade edilebilir oldu.
+ */
+const ANKLE_NEUTRAL: Record<RigMode, number> = {
+  stand: -86,
+  hang: -86,
+  bench: 125,
+  supine: 125,
+  quad: -18,
+};
+
+/**
+ * Ayağın DÜNYA yönü: baldır + nötr + bilek açısı.
+ *
+ * Eskiden bu bir sabitti (`footDirFor(mode)`) ve baldırı hiç takip etmiyordu.
+ * Sonucu ölçüldü: bacak salınırken ayak dünyada sabit kaldığı için bilek
+ * eklemi hareket boyunca dönüyordu — `carry` 65°, `unilateral_lunge` 67°,
+ * `bulgarian_split_squat` 116°. Hiçbir kural görmüyordu, çünkü model o açıyı
+ * taşımıyordu; şimdi taşıyor ve denetlenebiliyor.
+ *
+ * `facingFlip` çarpanı sırt üstü kiplerde işareti çeviriyor: aynalanmış
+ * figürde plantar fleksiyon ters yöne döner (bkz. `facingFlip`).
+ */
+export const footDirOf = (ex: RigExercise, p: RigPose, far = false): number =>
+  (far ? p.shinF : p.shinA) + ANKLE_NEUTRAL[ex.mode] + (far ? p.ankleF : p.ankle) * facingFlip(ex.mode);
