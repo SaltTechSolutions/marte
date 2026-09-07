@@ -9,5 +9,3 @@ build/
 .env*
 .DS_Store
 
-# Antrenman simülatörü kendi deposu — buraya gömülmesin (Faz 3'te kalkacak)
-antrenman-simulatoru/
