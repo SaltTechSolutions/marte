@@ -632,6 +632,20 @@ function draw() {
       el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
     ])];
   };
+  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
+  // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
+  // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
+  const hand = (wrist, elbow, far) => {
+    const dx = wrist[0] - elbow[0];
+    const dy = wrist[1] - elbow[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return el('path', {
+      d: handPath(),
+      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
+      fill: far ? skinFar : skin,
+      stroke: line,
+    });
+  };
   // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
   // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
   // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
@@ -732,6 +746,12 @@ function draw() {
   if (!e.hideFarArm) {
     push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
     push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
+    // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
+    // arkasında kalıyor. Önceden ikisi de en sona, gövdenin üstüne
+    // çiziliyordu; uzak dambıl gövdenin önünde belirdiği için yakın el iki
+    // ağırlık tutuyormuş gibi görünüyordu.
+    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
   if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
 
@@ -760,27 +780,8 @@ function draw() {
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
   if (e.bar === 'hands') push(plate(S.bar));
-  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
-  // kullanıyoruz, böylece elin yönü kemikten geliyor.
-  const hand = (wrist, elbow, far) => {
-    const dx = wrist[0] - elbow[0];
-    const dy = wrist[1] - elbow[1];
-    const l = Math.hypot(dx, dy) || 1;
-    return el('path', {
-      d: handPath(),
-      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
-      fill: far ? skinFar : skin,
-      stroke: line,
-    });
-  };
   push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
-  if (!e.hideFarArm) {
-    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
-  }
-  if (e.load === 'dumbbell') {
-    if (!e.hideFarArm) push(db(S.handF, S.elbowF, true));
-    push(db(S.hand, S.elbow, false));
-  }
+  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   svg.appendChild(
     useParts
       ? el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})` }, [
