@@ -184,3 +184,71 @@ describe('rig hareket denetimi', () => {
     });
   });
 });
+
+import { FOOT, GROUND as G2, centerOfMass, footLowestY, footPinned, footSpan, footDirOf as fdo, facingFlip as ff, poseAt as pa2, showFarArm, skeleton as sk2 } from '../src/rig';
+import { RIG_ARCHETYPES as A2 } from '../src/archetypes';
+
+describe('yan görünüm saf ortografik', () => {
+  it('uzak kalça ve omuz yakının tam arkasında', () => {
+    const ex = A2.squat;
+    const S = sk2(ex, pa2(ex, 0.5).p);
+    expect(S.hipF).toEqual(S.pelvis);
+    expect(S.shF).toEqual(S.sh);
+  });
+  it('özdeş hareket yapan uzak kol çizilmez, çapraz hareketteki çizilir', () => {
+    expect(showFarArm(A2.squat)).toBe(false);
+    expect(showFarArm(A2.seated_overhead_press)).toBe(false);
+    expect(showFarArm(A2.bird_dog)).toBe(true);
+  });
+});
+
+describe('basılı uzak ayak (plantF)', () => {
+  it('iki basılı kare arasında ayak yerinden kıpırdamaz', () => {
+    const ex = A2.unilateral_lunge;
+    const rel = (t: number) => { const S = sk2(ex, pa2(ex, t).p); return [S.ankleF[0] - S.ankle[0], S.ankleF[1] - S.ankle[1]]; };
+    const r0 = rel(0.22);
+    for (let t = 0.22; t <= 0.78; t += 0.02) {
+      const r = rel(t);
+      expect(Math.hypot(r[0] - r0[0], r[1] - r0[1]), `t=${t.toFixed(2)}`).toBeLessThan(1.5);
+    }
+  });
+  it('sehpadaki ayak (Bulgar) hiç kaymaz', () => {
+    const ex = A2.bulgarian_split_squat;
+    const xs = Array.from({ length: 41 }, (_, i) => sk2(ex, pa2(ex, i / 40).p).ankleF[0]);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(1.5);
+  });
+});
+
+describe('parmak eklemi', () => {
+  it('topuk kalkınca ayak topu yerde kalır, parmaklar yere gömülmez', () => {
+    const ex = A2.calf_raise;
+    let kalkti = 0;
+    for (let i = 0; i <= 40; i++) {
+      const p = pa2(ex, i / 40).p;
+      const S = sk2(ex, p);
+      if (!footPinned(ex, p, S, false)) continue;
+      kalkti++;
+      const low = footLowestY(S.ankle, fdo(ex, p), true, ff(ex.mode));
+      expect(Math.abs(low - G2), `t=${(i / 40).toFixed(2)}`).toBeLessThan(1);
+    }
+    expect(kalkti).toBeGreaterThan(5);
+  });
+  it('ayak anatomik boyda: 64px ≈ 25.5cm', () => {
+    expect(FOOT.toe - FOOT.heel).toBe(64);
+    const [lo, hi] = footSpan([0, G2 - FOOT.sole], 90, false, 1);
+    expect(hi - lo).toBeGreaterThan(55);
+  });
+});
+
+describe('ağırlık merkezi', () => {
+  it('dik duran figürde iki ayağın arasında ve gövde hizasında', () => {
+    const ex = A2.squat;
+    const S = sk2(ex, pa2(ex, 0).p);
+    const [x, y] = centerOfMass(ex, S);
+    const [lo, hi] = footSpan(S.ankle, fdo(ex, pa2(ex, 0).p), false, 1);
+    expect(x).toBeGreaterThan(lo);
+    expect(x).toBeLessThan(hi);
+    expect(y).toBeGreaterThan(S.thorax[1]);
+    expect(y).toBeLessThan(S.knee[1]);
+  });
+});

@@ -4,6 +4,9 @@ import {
   facingFlip,
   footDirOf,
   footLowestY,
+  footPinned,
+  footSpan,
+  centerOfMass,
   FrontSide,
   GROUND,
   RigExercise,
@@ -14,6 +17,7 @@ import {
   frontPoints,
   frontTrunk,
   poseAt,
+  showFarArm,
   showFarLeg,
   skeleton,
 } from './rig';
@@ -189,7 +193,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // Gizli uzuv çizilmiyor: zeminin altında olması görünür bir kusur değil.
   const hidden = new Set<keyof Skeleton>([
     ...(showFarLeg(ex) ? [] : (['hipF', 'kneeF', 'ankleF'] as (keyof Skeleton)[])),
-    ...(ex.hideFarArm ? (['shF', 'elbowF', 'handF'] as (keyof Skeleton)[]) : []),
+    ...(showFarArm(ex) ? [] : (['shF', 'elbowF', 'handF'] as (keyof Skeleton)[])),
   ]);
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
     const v = S[k];
@@ -232,7 +236,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
       ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF, true]] as [string, Vec, boolean][]) : []),
     ];
     feet.forEach(([ad, ankle, far]) => {
-      const pen = footLowestY(ankle, footDirOf(ex, p, far), pin, flip) - GROUND;
+      const pen = footLowestY(ankle, footDirOf(ex, p, far), footPinned(ex, p, S, far), flip) - GROUND;
       if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
     });
   }
@@ -240,6 +244,38 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   if (ex.mode === 'quad' || ex.mode === 'supine') {
     const lowest = Math.max(S.ankle[1], S.ankleF[1], S.knee[1], S.kneeF[1], S.hand[1], S.handF[1], S.pelvis[1], S.head[1]);
     if (lowest < GROUND - 30) add('temas', 'hiçbir yeri yere değmiyor');
+  }
+
+  // DENGE: ağırlık merkezi (vücut + yük) destek tabanının içinde olmalı.
+  //
+  // Ana kriter hareketi doğru anlatmak; ağırlık merkezi tabanın dışındaysa
+  // figür gerçekte düşer, yani gösterilen poz yapılamaz. Ölçülüp bulundu:
+  // step_up'ta tek destek basamaktaki ayakken merkez 18px geride, goblet
+  // squat dibinde 13px topukların gerisinde.
+  //
+  // Taban: yere ya da sehpaya basan ayakların taban aralığı. Yerden 20px'e
+  // kadar yükselmiş ayak da sayılıyor — yürüyüşte (carry) merkez, inmek
+  // üzere olan ayağa doğru öne geçer; bu düşme değil adım. Yalnız ayakta
+  // kipte; sırt sehpadayken (hip thrust) taban ayak değil.
+  // Gövde yerdeyse (glute bridge) taban ayak değil, sırt: atla.
+  if (ex.mode === 'stand' && ex.prop !== 'hipbench' && S.thorax[1] < GROUND - 140) {
+    const flip = facingFlip(ex.mode);
+    const feet: [number, number][] = [];
+    const cand: [Vec, boolean][] = [[S.ankle, false], ...(showFarLeg(ex) ? ([[S.ankleF, true]] as [Vec, boolean][]) : [])];
+    for (const [ankle, far] of cand) {
+      const dir = footDirOf(ex, p, far);
+      const pin = footPinned(ex, p, S, far);
+      const low = footLowestY(ankle, dir, pin, flip);
+      const onProp = (ex.prop === 'box' && !far) || (ex.prop === 'bench' && far);
+      if (GROUND - low <= 20 || onProp) feet.push(footSpan(ankle, dir, pin, flip));
+    }
+    if (feet.length) {
+      const lo = Math.min(...feet.map((f) => f[0]));
+      const hi = Math.max(...feet.map((f) => f[1]));
+      const cx = centerOfMass(ex, S)[0];
+      const out = cx < lo ? cx - lo : cx > hi ? cx - hi : 0;
+      if (Math.abs(out) > 8) add('denge', `ağırlık merkezi tabanın ${Math.round(Math.abs(out))}px ${out < 0 ? 'gerisinde' : 'önünde'} — figür düşer`);
+    }
   }
 
   // Sırttaki bar GÖVDEDEN hesaplanıyor, elden değil — yani elin ona ulaşıp

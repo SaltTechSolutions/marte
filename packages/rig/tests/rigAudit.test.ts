@@ -195,3 +195,22 @@ describe('sehpaya basan ayak kaymıyor', () => {
     expect(Math.min(...acilar), 'arka diz ters yöne kırılmamalı').toBeGreaterThan(0);
   });
 });
+
+/**
+ * Denge: ağırlık merkezi destek tabanının dışına çıkınca kural KONUŞMALI.
+ * Kural yokken step_up'ta merkez 18px geride, goblet squat dibinde 13px
+ * topukların gerisindeydi ve hiçbir şey söylemiyordu.
+ */
+describe('denge kuralı', () => {
+  it('öne devrilen figürü yakalar', () => {
+    // Ayakta, gövde 80° öne katlı, kalça geri gitmemiş: merkez parmak ucunun önüne düşer.
+    const ex = RIG_ARCHETYPES.hinge;
+    const p = fillPose({ ...poseAt(ex, 0).p, shinA: 178, thighA: 183, torso: 85, thoraxA: 80, neckA: 60 });
+    const rules = auditFrame(ex, p, 0).map((i) => i.rule);
+    expect(rules).toContain('denge');
+  });
+  it('dik duran figürde susar', () => {
+    const ex = RIG_ARCHETYPES.hinge;
+    expect(auditFrame(ex, poseAt(ex, 0).p, 0).filter((i) => i.rule === 'denge')).toEqual([]);
+  });
+});

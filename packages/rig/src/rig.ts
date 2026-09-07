@@ -44,6 +44,19 @@ export const CENTER_X = 210;
  */
 export const BAR_Y = 56;
 
+/**
+ * YAN GÖRÜNÜM SAF ORTOGRAFİK — perspektif yok, uzak taraf kaydırılmaz.
+ *
+ * Uzak kalça yakın kalçanın, uzak omuz yakın omuzun TAM arkasında (aynı
+ * ekran noktası). Eskiden uzak taraf (−18, +3) ve (−16, +5) kaydırılıyordu;
+ * tek amacı özdeş iki uzvu ayırt ettirmekti ve yan etkisi uzak ayağın zemine
+ * gömülmesiydi. Özdeş uzuvlar artık çizilmiyor (`showFarLeg`/`showFarArm`),
+ * farklı hareket yapan uzak uzuv ise kendi açısıyla zaten x'te ayrı düşüyor
+ * — hamlede geride, carry'de öbür adımda. Çakışan kısmı yakının arkasında
+ * kalır; gerçek bir yan görünüm de böyle görünür. Uzak ayak yakınla aynı
+ * zemine basar, ayrı zemin çizgisi yok.
+ */
+
 export const rad = (d: number): number => (d * Math.PI) / 180;
 export const D = (d: number): Vec => [Math.sin(rad(d)), -Math.cos(rad(d))];
 export const add = (p: Vec, v: Vec, s: number): Vec => [p[0] + v[0] * s, p[1] + v[1] * s];
@@ -101,6 +114,15 @@ export interface RigKeyframe {
   t: number;
   tr: string;
   p: Partial<RigPose>;
+  /**
+   * Uzak ayak bu karede YERE (ya da sehpaya) BASILI. Ardışık iki kare de
+   * basılıysa aradaki her anda uzak bacak, ayağı karelerdeki yerinde tutacak
+   * şekilde ters kinematikle çözülür; `thighF`/`shinF` yalnız ayağın yerini
+   * tarif eder. Basılı ayak bir kısıttır, kare değil: açı interpolasyonu
+   * ayağı yay çizdirir (ölçüldü: hamlede 20-48px havaya kalkıyor, Bulgar
+   * squat'ta sehpada 90px kayıyordu) ve bunu ara kareyle avlamak bitmez.
+   */
+  plantF?: boolean;
 }
 
 export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang';
@@ -338,7 +360,54 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   (Object.keys(la) as (keyof LocalPose)[]).forEach((k) => {
     l[k] = la[k] + (lb[k] - la[k]) * u;
   });
-  return { p: toWorld(l), phase: u < 0.5 ? a : b };
+  let p = toWorld(l);
+  if (a.plantF && b.plantF) p = plantFarFoot(ex, p, a, b, u);
+  return { p, phase: u < 0.5 ? a : b };
+}
+
+/**
+ * Uzak ayağı iki kare arasında yerinde tutar (bkz. `RigKeyframe.plantF`).
+ *
+ * Ayağın yeri YAKIN AYAK BİLEĞİNE göreli tutuluyor: kadraj kaydırması ve
+ * zemine oturtma tüm iskeleti birlikte taşıdığı için göreli konum onlardan
+ * bağımsız. Hedef, iki karenin kendi ayak konumları arasında interpolasyon —
+ * ikisi aynıysa ayak kıpırdamaz.
+ */
+function plantFarFoot(ex: RigExercise, p: RigPose, a: RigKeyframe, b: RigKeyframe, u: number): RigPose {
+  const relOf = (k: RigKeyframe): Vec => {
+    const S = build(ex, fillPose(k.p));
+    return [S.ankleF[0] - S.ankle[0], S.ankleF[1] - S.ankle[1]];
+  };
+  const ra = relOf(a);
+  const rb = relOf(b);
+  const S = build(ex, p);
+  const target: Vec = [S.ankle[0] + ra[0] + (rb[0] - ra[0]) * u, S.ankle[1] + ra[1] + (rb[1] - ra[1]) * u];
+  return { ...p, ...legIk(S.hipF, target) };
+}
+
+/**
+ * Bacak için ters kinematik: kalçadan hedefe, diz ÖNE kırık. İki çözümden
+ * dizi daha önde (+x) olanı seçiliyor; bacak geriye uzansa da diz arkaya
+ * kırılmaz.
+ */
+export function legIk(hip: Vec, target: Vec): { thighF: number; shinF: number } {
+  const L1 = B.thigh;
+  const L2 = B.shin;
+  let dx = target[0] - hip[0];
+  let dy = target[1] - hip[1];
+  // Kırpma payı çok küçük: `ik()` 3px pay bırakıyor ve bacak gerginken ayağı
+  // 2-4px kaydırıyordu (ölçüldü, testte). Basılı ayak kıpırdamamalı.
+  const d0 = Math.hypot(dx, dy) || 0.001;
+  const d = Math.min(L1 + L2 - 0.25, Math.max(Math.abs(L1 - L2) + 0.25, d0));
+  dx *= d / d0;
+  dy *= d / d0;
+  const T: Vec = [hip[0] + dx, hip[1] + dy];
+  const a = Math.acos(Math.max(-1, Math.min(1, (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d))));
+  const base = Math.atan2(dx, -dy);
+  const knees = [base + a, base - a].map((th): Vec => [hip[0] + Math.sin(th) * L1, hip[1] - Math.cos(th) * L1]);
+  const knee = knees[0][0] >= knees[1][0] ? knees[0] : knees[1];
+  const norm = (deg: number) => ((deg % 360) + 360) % 360;
+  return { thighF: norm(angleOf(hip, knee)), shinF: norm(angleOf(knee, T)) };
 }
 
 export interface Skeleton {
@@ -453,7 +522,8 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
     knee = add(pelvis, D(p.thighA), B.thigh);
     ankle = add(knee, D(p.shinA), B.shin);
   } else if (ex.mode === 'stand') {
-    ankle = [ANKLE_X, GROUND - 12 - p.ankleLift];
+    // Bilek tabanın kalınlığı kadar yukarıda: taban tam yerde. (12 idi, taban 13 — 1px gömülüyordu.)
+    ankle = [ANKLE_X, GROUND - FOOT.sole - p.ankleLift];
     knee = sub(ankle, D(p.shinA), B.shin);
     pelvis = sub(knee, D(p.thighA), B.thigh);
   } else {
@@ -462,7 +532,7 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
     ankle = add(knee, D(p.shinA), B.shin);
   }
 
-  const hipF: Vec = [pelvis[0] - 18, pelvis[1] + 3];
+  const hipF: Vec = [pelvis[0], pelvis[1]];
   const kneeF = add(hipF, D(p.thighF), B.thigh);
   const ankleF = add(kneeF, D(p.shinF), B.shin);
 
@@ -472,17 +542,17 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
   const head = add(neck, D(p.neckA), 28);
 
   if (!sh) sh = add(thorax, D(p.thoraxA + 118), 14);
-  const shF: Vec = [sh[0] - 16, sh[1] + 5];
+  const shF: Vec = [sh[0], sh[1]];
   let elbowF: Vec;
   let handF: Vec;
   if (ex.mode === 'hang') {
-    const a2 = ik(shF, [hand![0] - 13, hand![1] + 3], B.upper, B.fore, ex.bend);
+    const a2 = ik(shF, hand!, B.upper, B.fore, ex.bend);
     elbowF = a2.elbow;
     handF = a2.hand;
   } else if (ex.arm === 'ik' || ex.arm === 'floor') {
     const T: Vec = ex.arm === 'floor' ? [sh[0] + p.hx, GROUND - 12] : [sh[0] + p.hx, sh[1] + p.hy];
     const a1 = ik(sh, T, B.upper, B.fore, ex.bend);
-    const a2 = ik(shF, [T[0] - 11, T[1] + 4], B.upper, B.fore, ex.bend);
+    const a2 = ik(shF, T, B.upper, B.fore, ex.bend);
     elbow = a1.elbow;
     hand = a1.hand;
     elbowF = a2.elbow;
@@ -631,6 +701,46 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
   return F;
 }
 
+/** Yük: yazılmadıysa bar varsa halter, yoksa yok. */
+export const loadOf = (ex: RigExercise): RigLoad => ex.load ?? (ex.bar ? 'barbell' : null);
+
+/**
+ * Parça kütle oranları (Dempster, vücut ağırlığının payı) ve kütle merkezinin
+ * parça üstündeki yeri (başlangıçtan oran). Her iki taraf ayrı sayılıyor;
+ * uzak taraf çizilmese de kütlesi var.
+ */
+const MASS: [keyof Skeleton, keyof Skeleton, number, number][] = [
+  ['neck', 'head', 0.081, 0.6],
+  ['pelvis', 'thorax', 0.497, 0.5],
+  ['sh', 'elbow', 0.028, 0.44], ['elbow', 'hand', 0.022, 0.55],
+  ['shF', 'elbowF', 0.028, 0.44], ['elbowF', 'handF', 0.022, 0.55],
+  ['pelvis', 'knee', 0.1, 0.43], ['knee', 'ankle', 0.0465, 0.43], ['ankle', 'ankle', 0.0145, 0.5],
+  ['hipF', 'kneeF', 0.1, 0.43], ['kneeF', 'ankleF', 0.0465, 0.43], ['ankleF', 'ankleF', 0.0145, 0.5],
+];
+/** Yükün vücut ağırlığına oranı: halter ~25 kg / 70 kg, dambıl ~7 kg. */
+const LOAD_MASS: Record<'barbell' | 'dumbbell', number> = { barbell: 0.35, dumbbell: 0.1 };
+
+/**
+ * Ağırlık merkezi (vücut + yük). Hareketin doğru anlatımı için tek sayı:
+ * bu nokta destek tabanının dışına düşerse figür, gerçekte düşecek bir pozda.
+ */
+export function centerOfMass(ex: RigExercise, S: Skeleton): Vec {
+  let m = 0;
+  let x = 0;
+  let y = 0;
+  for (const [a, b, w, f] of MASS) {
+    const A = S[a] as Vec, Bp = S[b] as Vec;
+    m += w; x += w * (A[0] + (Bp[0] - A[0]) * f); y += w * (A[1] + (Bp[1] - A[1]) * f);
+  }
+  const load = loadOf(ex);
+  if (load) {
+    const at = load === 'barbell' && S.bar ? S.bar : S.hand;
+    const w = LOAD_MASS[load];
+    m += w; x += w * at[0]; y += w * at[1];
+  }
+  return [x / m, y / m];
+}
+
 /**
  * Uzak bacağın yakınından ayrı sayılması için gereken en küçük fark.
  *
@@ -664,6 +774,30 @@ export function farLegDistinct(ex: RigExercise, samples = 21): boolean {
 /** Uzak bacak çizilecek mi: elle yazılan değer varsa o, yoksa kural. */
 export const showFarLeg = (ex: RigExercise): boolean =>
   ex.hideFarLeg === undefined ? farLegDistinct(ex) : !ex.hideFarLeg;
+
+/**
+ * Uzak kolun kendi hareketi var mı? Bacakla aynı ilke: iki uzuv aynı şeyi
+ * yapıyorsa yalnız öndeki çizilir — squat'ta, preste, kürekte ikinci kol
+ * bilgi değil gürültü. Bird-dog gibi çapraz hareketlerde uzak kol kendi
+ * açısını taşır ve görünür.
+ *
+ * Ters kinematik kiplerinde (`ik`, `floor`, `hang`) uzak el yakınının aynı
+ * hedefine gider — tanım gereği aynı hareket, gizli. Sadece `angles` kipinde
+ * uzak kolun ayrı açısı olabilir.
+ */
+export function farArmDistinct(ex: RigExercise, samples = 21): boolean {
+  if (ex.mode === 'hang' || ex.arm !== 'angles') return false;
+  for (let i = 0; i < samples; i++) {
+    const { p } = poseAt(ex, i / (samples - 1));
+    if (Math.abs(p.upperF - p.upperA) > FAR_LEG_EPSILON) return true;
+    if (Math.abs(p.foreF - p.foreA) > FAR_LEG_EPSILON) return true;
+  }
+  return false;
+}
+
+/** Uzak kol çizilecek mi: elle yazılan değer varsa o, yoksa kural. */
+export const showFarArm = (ex: RigExercise): boolean =>
+  ex.hideFarArm === undefined ? farArmDistinct(ex) : !ex.hideFarArm;
 
 /**
  * Önden görünümde gövde elipsi.
@@ -869,63 +1003,104 @@ export function capsule(a: Vec, b: Vec, wa: number, wb: number): string {
 /**
  * Ayak ölçüleri, ayak bileği orijin alınarak.
  *
- * Ayak bileği ayağın arkadan yaklaşık dörtte birinde durur; topuk arkada,
- * parmak ucu önde. Bu sayılar `footPath`'in ve `MAX_ANKLE_LIFT`'in ortak
- * kaynağı — ikisi ayrı yazılsaydı denetim, çizimin yapamayacağı bir kalkışa
- * izin verirdi. Nitekim veriyordu.
+ * Topuk geride 16, parmak tabanı (ayak topu, MTP eklemi) önde 34, parmak ucu
+ * 48 → 64px = 25.5 cm (2.51 px/cm). Eskiden 46px = 18 cm'di; denge denetimi
+ * gelince anlaşıldı — küçük tabanda ağırlık merkezi sürekli dışarı taşıyordu.
+ *
+ * Bu sayılar `footPath`, `footLowestY`, `footSpan` ve `MAX_ANKLE_LIFT`'in
+ * ortak kaynağı — ayrı yazılsalardı denetim, çizimin yapamayacağı bir
+ * kalkışa izin verirdi. Nitekim veriyordu.
  */
-export const FOOT = { heel: -12, toe: 34, sole: 13 } as const;
+export const FOOT = { heel: -16, ball: 34, toe: 48, sole: 13 } as const;
 
 /**
  * Topuğun kalkabileceği en yüksek nokta.
  *
- * Topuk kalkarken ayak parmak ucu etrafında döner, yani parmak yerde kalır.
- * Ayak bileği ancak parmak ucuna olan mesafesi kadar yükselebilir; ötesinde
- * parmak yerden kopar ve figür havada yürür.
- *
- * Ölçüldü: `calf_raise` 38px kaldırıyordu ama sınır 23px. Aradaki fark
- * çizimde ayağı dörtgen gibi deforme ediyordu, çünkü `pinToe` parmağı zorla
- * yerde tutmaya çalışıyordu. Eski denetim sınırı ayak BOYUYDU (46) — çizimin
- * yapabildiğinden iki kat gevşek.
+ * Topuk kalkarken ayak PARMAK TABANI (ayak topu) etrafında döner; parmaklar
+ * yerde düz kalır. Ayak bileği ancak topa olan mesafesi kadar yükselebilir;
+ * ötesinde top yerden kopar ve figür havada yürür.
  */
-export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.sole);
+export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.ball, FOOT.sole) - FOOT.sole);
 
 /**
- * Ayak profili.
- *
- * Topuk yuvarlak ve arkada, taban ortada hafif kavisli (ayak tabanı düz
- * değil), parmak ucu öne incelir. Eskiden dört köşeli bir dörtgendi ve eğim
- * değişince hangi ucun parmak olduğu okunmuyordu.
- *
- * `pinToe`: topuk kalkarken ayak PARMAK UCU ETRAFINDA döner — topuk
- * kalkışının tanımı bu. Dönüş açısı ayak bileğinin yerden yüksekliğinden
- * çıkıyor, yani şekil deforme olmuyor, katı kalıp dönüyor.
- */
-/**
- * Ayağın yerel çerçevesi: `(u, v)` → dünya noktası.
+ * Ayağın yerel çerçeveleri: `(u, v)` → dünya noktası.
  *
  * `+u` parmak yönü, `+v` taban tarafı. `flip = -1` yerel x eksenini aynalıyor
  * (bkz. `facingFlip`): parmak yönü aynı kalır, taban karşı tarafa geçer.
- * Topuk kalkış dönüşü de işaret değiştirir, çünkü aynalanan çerçevede parmak
- * ucu etrafındaki dönüş ters yöne gider.
  *
- * `footPath` ile `footLowestY` bu çerçeveyi PAYLAŞIYOR: ayrı yazılsalardı
- * denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
+ * İKİ çerçeve, çünkü ayağın bir eklemi var: `arka` topuktan parmak tabanına
+ * (ayak topu) kadar olan katı parça, `parmak` toptan parmak ucuna kadar olan
+ * parça. Topuk kalkışında (`pinToe`) arka parça TOP etrafında döner, parmaklar
+ * yerde düz kalır — kalf raise'in gerçek görünümü bu. Eskiden ayak tek katı
+ * kalıp parmak UCU etrafında dönüyordu; parmak ucunda dikilen bir ayak gibi
+ * duruyordu. Dönüş açısı ayak bileğinin yerden yüksekliğinden çıkıyor.
+ *
+ * `footPath`, `footLowestY` ve `footSpan` bu çerçeveleri PAYLAŞIYOR: ayrı
+ * yazılsalardı denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
  */
-function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
-  const r = Math.hypot(FOOT.toe, FOOT.sole);
-  let extra = 0;
-  if (pinToe) {
-    // Parmak yerde kalsın diye gereken ek dönüş.
-    const h = Math.min(r, GROUND - ankle[1]);
-    extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
-  }
-  const a = rad(dir) + extra * flip;
-  const ux = Math.sin(a);
-  const uy = -Math.cos(a);
-  const vx = -uy * flip;
-  const vy = ux * flip;
-  return (u, v) => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+function footFrames(ankle: Vec, dir: number, pinToe: boolean, flip: number): {
+  arka: (u: number, v: number) => Vec;
+  parmak: (u: number, v: number) => Vec;
+} {
+  const frame = (a: number) => {
+    const ux = Math.sin(a);
+    const uy = -Math.cos(a);
+    const vx = -uy * flip;
+    const vy = ux * flip;
+    return (u: number, v: number): Vec => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+  };
+  const duz = frame(rad(dir));
+  if (!pinToe) return { arka: duz, parmak: duz };
+  // Top yerde kalsın diye gereken ek dönüş: topun bilekten uzaklığı r, bilek
+  // yerden h yüksekte → top tam yerde olacak şekilde arka parça döner.
+  //
+  // Dönüş MUTLAK: parmakları yerde olan ayağın yönü yalnız bilek
+  // yüksekliğinden çıkar, `dir`den değil. Eskiden `dir`in üstüne ekleniyordu
+  // ve plantar fleksiyonlu ayakta (hamlede arka ayak) top yerin altına
+  // iniyordu — ölçüldü, 11px.
+  const r = Math.hypot(FOOT.ball, FOOT.sole);
+  const h = Math.max(0, Math.min(r, GROUND - ankle[1]));
+  const extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.ball);
+  const arka = frame(Math.PI / 2 + extra * flip);
+  // Parmaklar YERE DÜZ (taban yatay) ama TOPA menteşeli: yatay çerçevenin
+  // top noktasını dönmüş çerçevenin top noktasına taşı. Ayak bileği açısı
+  // parmakları aşağı çevirse bile yerdeki parmak yere gömülmez, yatar.
+  const yatay = frame(Math.PI / 2);
+  const topYatay = yatay(FOOT.ball, FOOT.sole);
+  const topArka = arka(FOOT.ball, FOOT.sole);
+  const parmak = (u: number, v: number): Vec => {
+    const q = yatay(u, v);
+    return [q[0] - topYatay[0] + topArka[0], q[1] - topYatay[1] + topArka[1]];
+  };
+  return { arka, parmak };
+}
+
+/**
+ * Topuk kalkmış mı — ayak topu yerde, arka parça dönük?
+ *
+ * Üç durum: (1) `ankleLift` yazılmış (kalf raise), (2) ayak olduğu gibi
+ * çizilse yere gömülecek (baldır öne eğik, bilek yüksek: hamlede arka ayak),
+ * (3) ayak yere 6px içinde yaklaşmış ve top yere yetişiyor — yere basan bir
+ * ayak birkaç piksel havada asılı kalmasın, otursun. Sallanan ayak (carry)
+ * yere yaklaşınca topu bir an yere sürer; bu düşme değil, adım.
+ * Sehpa üstündeki ayak (kutu, Bulgar sehpası) zemine göre ölçülmez.
+ */
+export function footPinned(ex: RigExercise, p: RigPose, S: Skeleton, far: boolean): boolean {
+  if (ex.mode !== 'stand') return false;
+  if ((ex.prop === 'box' && !far) || (ex.prop === 'bench' && far)) return false;
+  if (!far && p.ankleLift > 0) return true;
+  const ankle = far ? S.ankleF : S.ankle;
+  const h = GROUND - ankle[1];
+  // Topuk gerçekten kalkmış olmalı (bilek duruş yüksekliğinin üstünde) ve top yere yetişmeli.
+  if (h <= FOOT.sole + 0.5 || h > Math.hypot(FOOT.ball, FOOT.sole)) return false;
+  return footLowestY(ankle, footDirOf(ex, p, far), false, facingFlip(ex.mode)) > GROUND - 6;
+}
+
+/** Çizilen tabanın yatay aralığı `[sol, sağ]` — denge denetiminin destek tabanı. */
+export function footSpan(ankle: Vec, dir: number, pinToe = false, flip = 1): [number, number] {
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+  const xs = [arka(FOOT.heel + 1, FOOT.sole - 1)[0], parmak(FOOT.toe - 2, FOOT.sole - 1)[0]];
+  return [Math.min(...xs), Math.max(...xs)];
 }
 
 /**
@@ -938,28 +1113,37 @@ function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: 
  * Yeni ayak katı bir şekil; kırpma yok, hata görünür.
  */
 export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1): number {
-  const P = footFrame(ankle, dir, pinToe, flip);
-  const { heel, toe, sole } = FOOT;
-  const sample: [number, number][] = [
-    [heel + 1, sole - 1], [heel + 6, sole + 1], [2, sole - 3], [10, sole - 2],
-    [18, sole], [26, sole], [toe - 2, sole - 1], [toe + 2, sole - 5],
-  ];
-  return Math.max(...sample.map(([u, v]) => P(u, v)[1]));
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+  const { heel, ball, toe, sole } = FOOT;
+  const arkaOrnek: [number, number][] = [[heel + 1, sole - 1], [heel + 6, sole + 1], [2, sole - 3], [10, sole - 2], [20, sole], [ball, sole]];
+  const parmakOrnek: [number, number][] = [[ball, sole], [toe - 2, sole - 1], [toe + 2, sole - 5]];
+  return Math.max(...arkaOrnek.map(([u, v]) => arka(u, v)[1]), ...parmakOrnek.map(([u, v]) => parmak(u, v)[1]));
 }
 
-
+/**
+ * Ayak profili: arka parça (topuk → top) ve parmaklar (top → uç), iki alt yol.
+ *
+ * Topuk yuvarlak ve arkada, taban ortada hafif kavisli (ayak tabanı düz
+ * değil), parmaklar öne incelir. Topuk kalkışında parmaklar yerde kalır,
+ * arka parça toptan kırılır (bkz. `footFrames`).
+ */
 export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): string {
-  const P = footFrame(ankle, dir, pinToe, flip);
-  const pt = (u: number, v: number) => { const q = P(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
-  const { heel, toe, sole } = FOOT;
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+  const pa = (u: number, v: number) => { const q = arka(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
+  const pp = (u: number, v: number) => { const q = parmak(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
+  const { heel, ball, toe, sole } = FOOT;
   return (
-    `M ${pt(heel + 2, -9)} ` +
-    `C ${pt(heel - 3, -4)} ${pt(heel - 4, 6)} ${pt(heel + 1, sole - 1)} ` + // topuk arkası, yuvarlak
-    `C ${pt(heel + 6, sole + 1)} ${pt(2, sole - 3)} ${pt(10, sole - 2)} ` + // taban kavisi
-    `C ${pt(18, sole)} ${pt(26, sole)} ${pt(toe - 2, sole - 1)} ` + // topuk-parmak arası taban
-    `C ${pt(toe + 2, sole - 5)} ${pt(toe + 1, 3)} ${pt(toe - 7, 1)} ` + // parmak ucu
-
-    `C ${pt(18, -2)} ${pt(6, -6)} ${pt(heel + 2, -9)} Z`
+    `M ${pa(heel + 2, -9)} ` +
+    `C ${pa(heel - 3, -4)} ${pa(heel - 4, 6)} ${pa(heel + 1, sole - 1)} ` + // topuk arkası, yuvarlak
+    `C ${pa(heel + 6, sole + 1)} ${pa(2, sole - 3)} ${pa(10, sole - 2)} ` + // taban kavisi
+    `C ${pa(20, sole)} ${pa(ball - 4, sole)} ${pa(ball, sole)} ` + // taban → top
+    `L ${pa(ball, 2)} ` + // top üstü
+    `C ${pa(20, -2)} ${pa(6, -6)} ${pa(heel + 2, -9)} Z ` +
+    // Parmaklar: toptan uca, taban düz, üstü incelerek
+    `M ${pp(ball, sole)} ` +
+    `L ${pp(toe - 2, sole - 1)} ` +
+    `C ${pp(toe + 2, sole - 5)} ${pp(toe + 1, 1)} ${pp(toe - 6, -1)} ` + // parmak ucu
+    `L ${pp(ball, 2)} Z`
   );
 }
 

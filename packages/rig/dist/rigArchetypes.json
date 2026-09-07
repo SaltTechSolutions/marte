@@ -164,7 +164,8 @@
           "shinF": 240,
           "ankle": -2,
           "ankleF": -35
-        }
+        },
+        "plantF": true
       },
       {
         "t": 0.23,
@@ -176,12 +177,13 @@
           "neckA": 6.1,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 195,
-          "shinF": 270,
+          "thighF": 195.2,
+          "shinF": 270.3,
           "ankle": -9.2,
           "ankleF": -35
         },
-        "tr": "İniş"
+        "tr": "İniş",
+        "plantF": true
       },
       {
         "t": 0.45,
@@ -194,11 +196,12 @@
           "neckA": 8,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 187,
-          "shinF": 294,
+          "thighF": 187.2,
+          "shinF": 294.9,
           "ankle": -16,
           "ankleF": -35
-        }
+        },
+        "plantF": true
       },
       {
         "t": 0.57,
@@ -211,11 +214,12 @@
           "neckA": 8,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 187,
-          "shinF": 294,
+          "thighF": 187.2,
+          "shinF": 294.9,
           "ankle": -16,
           "ankleF": -35
-        }
+        },
+        "plantF": true
       },
       {
         "t": 0.77,
@@ -227,12 +231,13 @@
           "neckA": 6.2,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 195,
-          "shinF": 270,
+          "thighF": 194,
+          "shinF": 271.8,
           "ankle": -9.7,
           "ankleF": -35
         },
-        "tr": "Çıkış"
+        "tr": "Çıkış",
+        "plantF": true
       },
       {
         "t": 1,
@@ -249,7 +254,8 @@
           "shinF": 240,
           "ankle": -2,
           "ankleF": -35
-        }
+        },
+        "plantF": true
       }
     ]
   },
@@ -279,6 +285,24 @@
         }
       },
       {
+        "t": 0.22,
+        "tr": "Arka ayak bastı",
+        "p": {
+          "shinA": 186.4,
+          "thighA": 121.39999999999999,
+          "torso": 7.1,
+          "thoraxA": 4.4,
+          "neckA": 3.7,
+          "upperA": 182,
+          "foreA": 180,
+          "thighF": 208.2,
+          "shinF": 240.3,
+          "ankle": -8.4,
+          "ankleF": 45
+        },
+        "plantF": true
+      },
+      {
         "t": 0.45,
         "tr": "Alt",
         "p": {
@@ -289,11 +313,12 @@
           "neckA": 4,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 196,
-          "shinF": 280,
+          "thighF": 195.4,
+          "shinF": 273.2,
           "ankle": -12,
-          "ankleF": 30
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.57,
@@ -306,11 +331,30 @@
           "neckA": 4,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 196,
-          "shinF": 280,
+          "thighF": 195.4,
+          "shinF": 273.2,
           "ankle": -12,
-          "ankleF": 30
-        }
+          "ankleF": 45
+        },
+        "plantF": true
+      },
+      {
+        "t": 0.78,
+        "tr": "Arka ayak bastı",
+        "p": {
+          "shinA": 186.4,
+          "thighA": 121.39999999999999,
+          "torso": 7.1,
+          "thoraxA": 4.4,
+          "neckA": 3.7,
+          "upperA": 182,
+          "foreA": 180,
+          "thighF": 208.2,
+          "shinF": 240.3,
+          "ankle": -8.4,
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 1,
@@ -356,11 +400,31 @@
           "shinF": 197.3,
           "ankle": -22,
           "ankleF": -19.3
-        }
+        },
+        "plantF": true
+      },
+      {
+        "t": 0.2,
+        "tr": "İtiş",
+        "p": {
+          "ankleLift": 92,
+          "shinA": 216,
+          "thighA": 104,
+          "torso": 30,
+          "thoraxA": 22,
+          "neckA": 8,
+          "upperA": 184,
+          "foreA": 182,
+          "thighF": 187.9,
+          "shinF": 220.7,
+          "ankle": -22,
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.45,
-        "tr": "Yukarı",
+        "tr": "Üstte",
         "p": {
           "ankleLift": 92,
           "shinA": 178,
@@ -378,7 +442,7 @@
       },
       {
         "t": 0.57,
-        "tr": "Yukarı",
+        "tr": "Üstte",
         "p": {
           "ankleLift": 92,
           "shinA": 178,
@@ -393,6 +457,25 @@
           "ankle": 0,
           "ankleF": 28
         }
+      },
+      {
+        "t": 0.8,
+        "tr": "İniş",
+        "p": {
+          "ankleLift": 92,
+          "shinA": 216,
+          "thighA": 104,
+          "torso": 30,
+          "thoraxA": 22,
+          "neckA": 8,
+          "upperA": 184,
+          "foreA": 182,
+          "thighF": 187.9,
+          "shinF": 220.7,
+          "ankle": -22,
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 1,
@@ -410,7 +493,8 @@
           "shinF": 197.3,
           "ankle": -22,
           "ankleF": -19.3
-        }
+        },
+        "plantF": true
       }
     ]
   },
@@ -1609,7 +1693,7 @@
         "tr": "Aşağıda",
         "p": {
           "shinA": 188,
-          "thighA": 152,
+          "thighA": 150,
           "torso": 70,
           "thoraxA": 66,
           "neckA": 54,
@@ -1625,7 +1709,7 @@
         "tr": "Açık",
         "p": {
           "shinA": 188,
-          "thighA": 152,
+          "thighA": 150,
           "torso": 70,
           "thoraxA": 66,
           "neckA": 54,
@@ -1641,7 +1725,7 @@
         "tr": "Açık",
         "p": {
           "shinA": 188,
-          "thighA": 152,
+          "thighA": 150,
           "torso": 70,
           "thoraxA": 66,
           "neckA": 54,
@@ -1657,7 +1741,7 @@
         "tr": "Aşağıda",
         "p": {
           "shinA": 188,
-          "thighA": 152,
+          "thighA": 150,
           "torso": 70,
           "thoraxA": 66,
           "neckA": 54,
@@ -2263,21 +2347,40 @@
         }
       },
       {
+        "t": 0.12,
+        "tr": "Arka ayak bastı",
+        "p": {
+          "shinA": 187.6,
+          "thighA": 112.59999999999998,
+          "torso": 50.60000000000001,
+          "thoraxA": 47.00000000000001,
+          "neckA": 36.60000000000001,
+          "hx": -4,
+          "hy": 140,
+          "thighF": 210.9,
+          "shinF": 247.4,
+          "ankle": -9.600000000000001,
+          "ankleF": 45
+        },
+        "plantF": true
+      },
+      {
         "t": 0.28,
         "tr": "El yerde",
         "p": {
           "shinA": 190,
           "thighA": 95,
-          "thighF": 200.5,
-          "shinF": 278.5,
+          "thighF": 204,
+          "shinF": 269.6,
           "torso": 62,
           "thoraxA": 58,
           "neckA": 45,
           "hx": -47,
           "hy": 133,
           "ankle": -12,
-          "ankleF": 16
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.42,
@@ -2285,16 +2388,17 @@
         "p": {
           "shinA": 190,
           "thighA": 95,
-          "thighF": 200.5,
-          "shinF": 278.5,
+          "thighF": 204,
+          "shinF": 269.6,
           "torso": 62,
           "thoraxA": 58,
           "neckA": 45,
           "hx": -47,
           "hy": 133,
           "ankle": -12,
-          "ankleF": 16
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.55,
@@ -2302,16 +2406,17 @@
         "p": {
           "shinA": 190,
           "thighA": 95,
-          "thighF": 200.5,
-          "shinF": 278.5,
+          "thighF": 204,
+          "shinF": 269.6,
           "torso": 45,
           "thoraxA": 38,
           "neckA": 10,
           "hx": -95,
           "hy": 10,
           "ankle": -12,
-          "ankleF": 16
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.72,
@@ -2319,16 +2424,17 @@
         "p": {
           "shinA": 190,
           "thighA": 95,
-          "thighF": 200.5,
-          "shinF": 278.5,
+          "thighF": 204,
+          "shinF": 269.6,
           "torso": 25,
           "thoraxA": 15,
           "neckA": -25,
           "hx": -40,
           "hy": -125,
           "ankle": -12,
-          "ankleF": 16
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.85,
@@ -2336,33 +2442,35 @@
         "p": {
           "shinA": 190,
           "thighA": 95,
-          "thighF": 200.5,
-          "shinF": 278.5,
+          "thighF": 204,
+          "shinF": 269.6,
           "torso": 25,
           "thoraxA": 15,
           "neckA": -25,
           "hx": -40,
           "hy": -125,
           "ankle": -12,
-          "ankleF": 16
-        }
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 0.93,
-        "tr": "Kapanış",
+        "tr": "Arka ayak bastı",
         "p": {
-          "shinA": 183.4,
-          "thighA": 143.4,
-          "torso": 14,
-          "thoraxA": 8.4,
-          "neckA": -9.6,
-          "hx": -95,
-          "hy": 10,
-          "thighF": 189.2,
-          "shinF": 235.6,
-          "ankle": -5.4,
-          "ankleF": -11.5
-        }
+          "shinA": 187.6,
+          "thighA": 112.59999999999998,
+          "torso": 50.60000000000001,
+          "thoraxA": 47.00000000000001,
+          "neckA": 36.60000000000001,
+          "hx": -4,
+          "hy": 140,
+          "thighF": 210.9,
+          "shinF": 247.4,
+          "ankle": -9.600000000000001,
+          "ankleF": 45
+        },
+        "plantF": true
       },
       {
         "t": 1,

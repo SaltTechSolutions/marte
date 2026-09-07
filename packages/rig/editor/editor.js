@@ -9,9 +9,9 @@
  */
 
 import {
-  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath, footPinned,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
-  shoulderWedge, showFarLeg, skeleton,
+  shoulderWedge, showFarArm, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -225,81 +225,29 @@ const trunkPart = (name, a, b) => {
 /* --- karşılaştırma ekranı ------------------------------------------------ */
 
 /**
- * Derinlik izdüşümü — DENENDİ VE YETMEDİ.
- *
- * Fikir şuydu: uzak uzuvlar bugün 2B'de sahte kaydırmayla ayrılıyor
- * (`hipF = pelvis[0] - 18`); o sahte kaydırmayı gerçek bir Z koordinatına
- * çevirip kamerayı döndürmek ucuza 3/4 görünüm verir sanmıştım.
- *
- * VERMİYOR. Ölçüldü (standing_row_hinged, 0° → 26°): uyluk 105.0 → 102.4,
- * baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Figürün şekli neredeyse hiç
- * değişmiyor.
- *
- * Sebep yapısal: modelde bir taraftaki BÜTÜN eklemler aynı derinlikte, çünkü
- * poz sagittal düzlemde yazılıyor. Aynı derinlikteki noktaları döndürmek
- * onları göreli olarak değiştirmiyor. Olan tek şey yatay sıkıştırma
- * (cos 26° = 0.90) ve derinlik düzlemleri arasında ~17px kayma. Barbell
- * farklı görünüyor çünkü ona ±70 birimlik GERÇEK derinlik verildi; vücutta
- * öyle bir şey yok.
- *
- * Gerçek 3/4 için eklem BAŞINA enine düzlem açısı gerekiyor — yani yeni poz
- * alanları, 3B denetim, ve uygulamada yeni izdüşüm. TODOS.md'deki pahalı yol
- * bu; ucuz kestirme diye bir şey yok. Panel kanıt olarak duruyor ki aynı
- * kestirme bir daha denenmesin.
+ * Derinlik/3-4 denemesi buradan KALDIRILDI. Yan görünüm saf ortografik
+ * (bkz. src/rig.ts, "YAN GÖRÜNÜM SAF ORTOGRAFİK"); burada uzak taraf
+ * sabitlerinin ikinci bir kopyası duruyordu ve kayıyordu.
  */
-const HIPZ = 19;
-const SHZ = 17;
-function skel3(e, p) {
-  const S = skeleton(e, p);
-  const out = {};
-  ['pelvis', 'knee', 'ankle', 'lumbar', 'thorax', 'neck', 'head', 'sh', 'elbow', 'hand'].forEach((k) => {
-    const z = k === 'pelvis' || k === 'knee' || k === 'ankle' ? HIPZ : k === 'sh' || k === 'elbow' || k === 'hand' ? SHZ : 0;
-    out[k] = [S[k][0], S[k][1], z];
-  });
-  ['hipF', 'kneeF', 'ankleF', 'shF', 'elbowF', 'handF'].forEach((f) => {
-    const leg = f === 'hipF' || f === 'kneeF' || f === 'ankleF';
-    out[f] = [S[f][0] + (leg ? 18 : 16), S[f][1] - (leg ? 3 : 5), leg ? -HIPZ : -SHZ];
-  });
-  if (S.bar) out.bar = [S.bar[0], S.bar[1], 0];
-  return out;
-}
-const proj = (q, az) => {
-  const c = Math.cos((az * Math.PI) / 180);
-  const s2 = Math.sin((az * Math.PI) / 180);
-  return { p: [CENTER_X + (q[0] - CENTER_X) * c + q[2] * s2, q[1]], z: -(q[0] - CENTER_X) * s2 + q[2] * c };
-};
-
 /** Karşılaştırma hücresi için figür SVG'si. */
 function cmpFigure(e, p, mode) {
   const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
-  // Derinlik kestirmesi YALNIZ 'depth' kipinde. 'flat' de bir ara buradan
-  // geçiyordu ve bu bir hataydı: az=0'da izdüşüm birim dönüşüm, ama `skel3`
-  // uzak taraf eklemlerine koşulsuz 16–18px sahte kaydırma ekliyor. O kaydırma
-  // "Parça · 2B" hücresine sızıyordu — ölçüldü, bench_press.kneeF'te 18.2px —
-  // ve panel ana sahnedeki figüre benzemiyordu. Dört hücrenin ikisi birden 3B
-  // gibi duruyordu; oysa hücrenin işi bugünkü 2B çizimi OLDUĞU GİBİ göstermek.
-  const depth = mode === 'depth';
-  const S3 = depth ? skel3(e, p) : null;
-  const P = {}, Z = {};
-  if (depth) for (const k in S3) { const r = proj(S3[k], 26); P[k] = r.p; Z[k] = r.z; }
-  const S = depth ? P : skeleton(e, p);
+  const S = skeleton(e, p);
   const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}" fill="${f}" stroke="${line}"/>` : '');
   const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
   const limbOf = (n, a, b, w1, w2, w3, at, f) =>
     mode === 'capsule' ? (() => { const m = lerpP(a, b, at); return cap(a, m, w1, w2, f) + cap(m, b, w2, w3, f); })() : pc(n, a, b, f);
   const groups = [
-    { z: Z.kneeF, d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
-    { z: Z.elbowF, d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
-    { z: 0, d: (mode === 'capsule'
+    { d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
+    { d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
+    { d: (mode === 'capsule'
         ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
         : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
       + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
-    { z: Z.knee, d: `<path d="${footPath(S.ankle, footDirOf(e, p), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
+    { d: `<path d="${footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
         + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
-    { z: Z.elbow, d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
+    { d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
   ];
-  // Derinlik kipinde uzak olan önce çiziliyor; 2B'de sabit sıra.
-  if (depth) groups.sort((a, b) => a.z - b.z);
   let g = groups.map((x) => x.d).join('');
   const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
   g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
@@ -308,7 +256,7 @@ function cmpFigure(e, p, mode) {
     : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
-    const end = (sgn) => (depth ? proj([S3.bar[0], S3.bar[1], sgn * 70], 26).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
+    const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
     const A = end(-1), Bp = end(1);
     g += `<line x1="${A[0]}" y1="${A[1]}" x2="${Bp[0]}" y2="${Bp[1]}" stroke="${metal}" stroke-width="7" stroke-linecap="round"/>`;
     [A, Bp].forEach((q) => { g += `<ellipse cx="${q[0]}" cy="${q[1]}" rx="15" ry="34" fill="${metal}" fill-opacity=".62" stroke="${accent}" stroke-width="2"/>`; });
@@ -329,11 +277,6 @@ function renderCompare() {
   $('cmpGrid').innerHTML =
     cell('Kapsül', 'Bugünkü eski çizim. Uzuvlar iki kapsülden, eklemler kontrastlı toplarla.', cmpFigure(e, p, 'capsule')) +
     cell('Parça · 2B', 'Bugünkü varsayılan. Uzuv siluetleri veriden, eklemler sessiz, yan görünüm.', cmpFigure(e, p, 'flat')) +
-    cell(
-      'Derinlik denemesi · YETMEDİ',
-      'Kamera 26°. Ölçüldü: uyluk 105→102, diz açısı 38°→35°. Şekil değişmiyor; yalnızca %10 yatay sıkışma ve barın tabakları ayrışıyor. Gerçek 3/4 için eklem başına derinlik gerekiyor.',
-      cmpFigure(e, p, 'depth'),
-    ) +
     cell(
       'Kas haritası',
       mus && mus.status === 'authored' ? `Birincil: ${labelsOf(mus.primary).join(', ')}` : 'Bu hareket için kas verisi yok.',
@@ -579,7 +522,7 @@ function drawPose(svg, e, p) {
     push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true));
     push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
   }
-  if (!e.hideFarArm) {
+  if (showFarArm(e)) {
     push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true));
     push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
     // Uzak eldeki ağırlık gövdeden ÖNCE: figürün arkasında kalıyor. Sona
@@ -588,7 +531,7 @@ function drawPose(svg, e, p) {
     if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
   push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42));
   push(limb(S.knee, S.ankle, 26, 28, 13, .34));
   push(limb(S.sh, S.elbow, 25, 22, 17, .5));
@@ -754,14 +697,13 @@ function draw() {
     el('rect', { x: S0.ankleF[0] - 70, y: S0.ankleF[1] + 16, width: 150, height: 16, rx: 8, fill: surf2, stroke: line }),
   ]);
 
-  const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirOf(e, p, true), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
+    push([el('path', { d: footPath(S.ankleF, footDirOf(e, p, true), footPinned(e, p, S, true), facingFlip(e.mode)), fill: skinFar, stroke: line })]);
     push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
     push([ball(S.kneeF, 12, true)]);
   }
-  if (!e.hideFarArm) {
+  if (showFarArm(e)) {
     push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
     push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
     // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
@@ -791,7 +733,7 @@ function draw() {
       ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
       : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
@@ -828,7 +770,7 @@ function drawHandles(svg, e, S, view) {
   const accent = css('--p');
   const hiddenJoints = new Set([
     ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF']),
-    ...(e.hideFarArm ? ['elbowF', 'handF'] : []),
+    ...(showFarArm(e) ? [] : ['elbowF', 'handF']),
   ]);
   dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
     const g = el('g', { class: 'handle', 'data-joint': h.joint });
@@ -981,6 +923,7 @@ function renderKf() {
   });
   $('scrub').value = String(Math.round(currentT() * 1000));
   $('kfName').value = frame().tr ?? '';
+  $('kfPlantF').checked = !!frame().plantF;
   $('kfTime').value = String(frame().t);
   // Önden görünüm yan çözümden türeyen şematik bir izdüşüm: orada sürüklenecek
   // bağımsız bir eklem yok. Bunu söylemek, tutamakları arayan birini
@@ -1120,13 +1063,17 @@ function renderEquipment() {
     renderAll();
   };
 
+  // Uzak kol da üç durumlu, aynı kural: ayrı hareketi yoksa çizilmez.
   const arm = $('farArm');
-  arm.textContent = e.hideFarArm ? 'Gizli' : 'Görünür';
-  arm.setAttribute('aria-pressed', String(!e.hideFarArm));
+  const autoArm = showFarArm({ ...e, hideFarArm: undefined });
+  arm.textContent =
+    e.hideFarArm === undefined ? `Kural: ${autoArm ? 'görünür' : 'gizli'}` : e.hideFarArm ? 'Elle: gizli' : 'Elle: görünür';
+  arm.setAttribute('aria-pressed', String(showFarArm(e)));
   arm.onclick = () => {
     snapshot();
-    if (e.hideFarArm) delete e.hideFarArm;
-    else e.hideFarArm = true;
+    if (e.hideFarArm === undefined) e.hideFarArm = autoArm;
+    else if (e.hideFarArm) e.hideFarArm = false;
+    else delete e.hideFarArm;
     markDirty();
     renderAll();
   };
@@ -1166,7 +1113,7 @@ $('addKf').onclick = () => {
   const cur = e.kf[kfIndex];
   const next = e.kf[kfIndex + 1];
   const t = next ? (cur.t + next.t) / 2 : Math.min(1, cur.t + 0.1);
-  e.kf.splice(kfIndex + 1, 0, { t: Math.round(t * 100) / 100, tr: cur.tr, p: { ...cur.p } });
+  e.kf.splice(kfIndex + 1, 0, { t: Math.round(t * 100) / 100, tr: cur.tr, p: { ...cur.p }, ...(cur.plantF ? { plantF: true } : {}) });
   kfIndex += 1;
   markDirty();
   renderAll();
@@ -1183,6 +1130,7 @@ $('delKf').onclick = () => {
 };
 
 $('kfName').onchange = () => { snapshot(); frame().tr = $('kfName').value; markDirty(); renderKf(); };
+$('kfPlantF').onchange = () => { snapshot(); if ($('kfPlantF').checked) frame().plantF = true; else delete frame().plantF; markDirty(); renderAll(); };
 
 // Hareket sonsuz döner: son kare ilkinden farklıysa her tekrarda zıplıyor.
 $('closeLoop').onclick = () => {

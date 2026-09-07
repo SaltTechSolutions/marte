@@ -79,6 +79,7 @@ export function validateArchetypes(data: unknown): string[] {
       if (!isObj(k)) return bad(`kf[${i}] nesne değil`);
       if (!num(k.t) || k.t < 0 || k.t > 1) bad(`kf[${i}].t ${String(k.t)} geçersiz (0..1)`);
       if (typeof k.tr !== 'string') bad(`kf[${i}].tr metin olmalı`);
+      if ('plantF' in k && typeof k.plantF !== 'boolean') bad(`kf[${i}].plantF doğru/yanlış olmalı`);
       if (!isObj(k.p)) return bad(`kf[${i}].p nesne değil`);
       Object.entries(k.p).forEach(([f, v]) => {
         if (!POSE_KEYS.includes(f as keyof RigPose)) bad(`kf[${i}].p bilinmeyen alan "${f}"`);

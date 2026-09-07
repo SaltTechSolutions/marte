@@ -74,55 +74,25 @@ karar oraya ait.
 
 ---
 
-## Poz modeline derinlik ekseni ekle (3/4 açılı figür)
+## Poz modeline derinlik ekseni ekle (3/4 açılı figür) — KAPANDI (2026-09-07)
 
-**Ne:** `RigPose`'a bir yatay düzlem (derinlik) ekseni eklemek, `skeleton()`'ın
-izdüşümü hesaplaması ve figürün gerçek 3/4 açıyla çizilebilmesi.
+**Karar:** 2B yan görünümde kalındı. 3/4 açılı figür hedefi bırakıldı.
 
-**Neden:** Onaylanan mockup B'deki açılı figür motorla üretilemiyor. README'nin
-yazdığı sınır bu: bağımsız bir 3B model yok, gövde rotasyonu poz olarak temsil
-edilemiyor. 2B yan görünümü döndürmek ya da eğmek 3/4 vermiyor — uzuvlar
-kısalmadığı için yamuk bir yan görünüm çıkıyor, derinlik oluşmuyor.
+**Neden:** Üç kez denendi, üçü de aynı tavana çarptı: (1) uzak uzuvların sahte
+kaydırmasını gerçek Z'ye çevirip kamerayı döndürmek — figür şekil değiştirmedi;
+(2) yan siluetten kesit varsayımıyla (gövde dikdörtgen, uzuvlar elips) açılı
+parça setleri üretmek — "sakat bir insan gibi"; (3) MakeHuman CC0 mesh'inden
+50° siluet üretmek — parçalar düzeldi ama figür hâlâ düzgün insan vermedi.
+Asıl engel parça kalitesi değil yapı: katı kartlar eklemde dönüyor, kameraya
+uzanan uzuv kısalıp yuvarlanmıyor, kafa/el/ayak yan profil kalıyor. 2B parça
+rig'i 3/4 görünüm veremiyor; gerçek çözüm deri ağırlıklı 3B (three.js) olurdu
+ve o ayrı bir ürün kararı.
 
-**Bağlam:** `/plan-design-review` 2026-09-06'da B varyantı onaylandı; oradaki
-derinlik hissinin iki kaynağı vardı. Biri **perspektif barbell** (çubuk
-derinliğe uzanıyor, uçlardaki tabaklar elips) ve o yapıldı — mobil önizlemede
-çizim konvansiyonu olarak duruyor. Diğeri figürün kendi açısıydı ve o bu kayda
-kaldı. Kullanıcı bunu bilerek erteledi (2026-09-06).
-
-**İKİ KEZ ÖLÇÜLDÜ. Kayıt düzeltildi (2026-09-07).**
-
-İlk deneme (2026-09-06) uzak uzuvların 2B'deki sahte kaydırmasını gerçek bir
-Z'ye çevirip kamerayı döndürmüştü ve "şekil değişmiyor" diye kapatılmıştı.
-O ölçüm YANLIŞ SAYIYLA yapılmış: omuz derinliği 17px alınmış, oysa anatomik
-doğrusu 40px (16cm, figür ölçeği 2.51 px/cm) — 2.4 kat küçük. Doğru değerle
-30° kamerada iki omuz 17px değil 40px ayrışıyor, yani omuz dairesinin çapı
-kadar.
-
-Doğru sayılarla yeniden ölçüldü ve ASIL ENGEL BAŞKA ÇIKTI. Eklem derinliği
-eklemek uzuvları doğru ayrıştırıyor, ama figür yine 3/4 görünmüyor: her uzuv
-KAMERAYA BAKAN DÜZ BİR SİLUET. Eklemleri derinlikte gezdirmek parçaları
-yerinden oynatıyor, ama parçanın kendisi düz karton kalıyor. Gerçek 3/4'te
-gövde hem yanını hem önünü gösterir; kapsül bunu yapamaz.
-
-Kalınlıkları `cos(kamera)` ile kısaltmak da denendi (25° ve 40°): figür
-DARALIYOR ama yine yan görünüm. Dört panelli karşılaştırma üretildi.
-
-**Yani sıra yanlıştı:** poz modeline derinlik eklemek pahalı VE tek başına
-hedefi vermiyor. Önce parçaların 3/4 siluetleri gerekiyor (varlık işi,
-`bodyParts.json` gibi ama açı başına), sonra poz derinliği onları doğru
-yerleştirmek için anlamlı hâle geliyor.
-
-**Artı:** Hareketin okunurluğu artar; yan görünümde üst üste binen uzuvlar
-ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir çözüme kavuşur.
-**Eksi:** En pahalı ve en yayılan değişiklik. Devir sözleşmesini kırar,
-30 arketibin kare verisi etkilenir, `rigAudit`'in ROM bantları yeni eksene de
-bakmak zorunda kalır ve uygulamanın `RigFigure.tsx`'i de yeniden yazılır.
-
-**Bağlı:** Ayak bileği açısı 2026-09-07de EKLENDİ (taraf başına `ankle`/`ankleF`,
-baldıra göre, ROM bandıyla). O kayıt modelin anatomik ifade gücüyle ilgiliydi ve
-kapandı; derinlik ekseni aynı sorunun kalan yarısı. Devir sözleşmesinin
-sürümlenmesi (manifest) bu değişikliği güvenli kılan ön koşul.
+**Ne kazanıldı:** Mesh'ten üretilen yan siluetler kaldı (`npm run parts:mesh`).
+Perspektif de kaldırıldı — uzak tarafın kaydırılmasının tek amacı özdeş uzuvları
+ayırmaktı; artık özdeş hareket yapan uzak uzuv çizilmiyor (`showFarLeg`,
+`showFarArm`), farklı hareket yapan zaten x'te ayrı düşüyor. Yan görünüm saf
+ortografik. Önden görünüm ayrı işte gerçek yapılıyor.
 ---
 
 ## ROM bantları MuJoCo ile karşılaştırıldı (2026-09-07)

@@ -131,7 +131,16 @@ diff'inde görünür.
 bir şey testte de düşer. Kurallar mekaniği koruyor — eklem zeminin altına
 geçemez, topuk ayak boyundan fazla kalkamaz (basamak hariç: orada yükselten
 şey ayak değil), desteğe yaslanan hareketlerde omuz kaymaz, döngü kapanmak
-zorunda.
+zorunda, **ağırlık merkezi** (vücut + yük, Dempster oranları) ayakta dururken
+destek tabanının içinde kalmak zorunda (`denge`) — dışına çıkan figür gerçekte
+düşer, yani gösterilen poz yapılamaz.
+
+Yan görünüm **saf ortografik**: uzak taraf kaydırılmaz, perspektif yok. Özdeş
+hareket yapan uzak uzuv çizilmez (`showFarLeg`/`showFarArm` kural, elle
+geçersiz kılınabilir); farklı hareket yapan zaten x'te ayrı düşer. Basılı arka
+ayak bir **kısıt**: karede `plantF` işaretliyse motor arka bacağı ayağı
+yerinde tutacak şekilde çözer (hamle, step-up, Bulgar squat). Ayakta parmak
+tabanı eklemi var: topuk kalkınca ayak topu yerde kalır, parmaklar düz.
 
 Eklem açısı sınırları `ROM_BANDS` tablosunda veri olarak duruyor: diz, dirsek,
 kalça ve gövde. Sayılar "normal aralık" değil **anatomik imkânsızlık** eşiği —
