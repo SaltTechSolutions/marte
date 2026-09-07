@@ -169,6 +169,8 @@ koleksiyonları kendi `isAdmin()` kontrollerini korur.
 | `userDisplayName` / `userEmail` | string? | Denormalize — istemci başka kullanıcının Auth profilini okuyamaz, onay ekranı bu kopyaya muhtaç |
 | `shortCode` | string? | 6 haneli elle giriş kodu (kiracı içinde tekil) |
 | `phone` / `birthDate` | string? / Timestamp? | Yalnızca marte06'dan taşınan üyelerde — bkz. aşağı |
+| `heightCm` | number? | 100–250. **Ölçüm değil, profil alanı**: yetişkinde sabit, her ölçüme kopyalansa kilo serisini kirletirdi. Kilo profilde en son `measurements`'tan okunur (PER-20) |
+| `photoUrl` | string? | Token'lı indirme adresi. Storage nesnesi (`members/{uid}/avatar.jpg`) kuralla tamamen kapalı; adresteki token erişimin kendisi. `uploadMemberPhoto` callable yazar (telefonda 512×512 JPEG'e küçültülür, geçici dosya silinir), `deleteMemberPhoto` siler, `deleteMyAccount` cascade'i de siler |
 | `requestedAt` / `approvedAt` | Timestamp | |
 
 **Kurallar:** okuma = kendisi veya kiracı personeli (`isTenantStaff`);
