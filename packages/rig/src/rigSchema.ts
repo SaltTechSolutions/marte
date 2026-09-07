@@ -328,5 +328,33 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
     else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
   });
 
+  // Açılı (3/4) set: `scripts/angle-part.mjs` üretiyor. İsteğe bağlı — yoksa
+  // yalnız yan siluetler var. Varsa YAN SETLE AYNI parçaları taşımak zorunda:
+  // eksik bir parça figürü çizilmez yapmıyor, o uzvu yan siluetiyle bırakıp
+  // ötekileri açılı çiziyor — yani sessizce karışık bir figür.
+  const ang = data.angled;
+  if (ang !== undefined) {
+    if (!isObj(ang)) errs.push('uzuv parçaları: angled nesne değil');
+    else {
+      if (!num(ang.az) || ang.az < 0 || ang.az > 89) errs.push(`angled: az ${ang.az} geçersiz (0..89)`);
+      const ap = ang.parts;
+      if (!isObj(ap)) errs.push('angled: parts nesnesi yok');
+      else {
+        const yan = Object.keys(parts).sort().join(',');
+        const acili = Object.keys(ap).sort().join(',');
+        if (yan !== acili) errs.push(`angled: parça kümesi yan setle aynı olmalı (yan: ${yan} · açılı: ${acili})`);
+        Object.keys(ap).forEach((name) => {
+          const bad = (msg: string) => errs.push(`açılı parça "${name}": ${msg}`);
+          const q = ap[name];
+          if (!isObj(q)) return bad('nesne değil');
+          Object.keys(q).forEach((k) => { if (k !== 'len' && k !== 'd') bad(`bilinmeyen alan "${k}"`); });
+          if (typeof q.d !== 'string' || q.d.trim() === '') bad('d boş');
+          if (!num(q.len)) return bad('len sayı olmalı');
+          if (name in bones && q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]}`);
+        });
+      }
+    }
+  }
+
   return errs;
 }

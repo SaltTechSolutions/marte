@@ -141,32 +141,41 @@ görünmüyor, ama sıfırlanmıyor.
 Deformasyon isteniyorsa yol mesh tabanlı deri (skinning) — o zaman parça değil
 ağırlık haritası gerekir ve mobil maliyeti tamamen başka bir tartışma açar.
 
-## Açılı (3/4) görünüm — DENENDİ, ŞİMDİLİK KAPALI
+## Açılı (3/4) set — üretiliyor, elle çizilmiyor
 
-Açılı bakış 2026-09-07'de denendi ve kullanıcı reddetti: "açılı görünümler
-sakat bir insan gibi". Neyin ölçüldüğü ve neyin eksik kaldığı burada, çünkü
-aynı yol bir daha denenecekse bu bilgiyle denenmeli.
+```bash
+npm run parts:angled -- --az 50
+```
 
-**Ölçülenler**
+Sonuç `data/bodyParts.json`'ın `angled` bloğuna yazılıyor; yan set
+dokunulmadan kalıyor. Yan siluetleri değiştirirsen bunu YENİDEN ÇALIŞTIR —
+üretilmiş veri, elle düzenleme.
 
-- Uzuv siluetleri açıyla neredeyse hiç değişmiyor: 45°'de uyluk ×1.03, pazu
-  ×1.00, baldır ×0.97, ön kol ×0.96. Kesitleri yuvarlak olduğu için. Yani
-  uzuvlar için ikinci bir siluet seti gereksiz.
-- Değişen tek şey GÖVDE: yandan dar, açılı bakışta geniş (thorax ×1.25 @45°,
-  ×1.36 @60°). Elips kesitten: `sqrt(cos²α + ratio²sin²α)`, ratio = yanal
-  genişlik / ön-arka derinlik (thorax 1.455, lumbar 1.400).
-- Omuz derinliği ±40px (16cm), kalça ±21px (8.5cm). Daha eski bir deneme
-  omuz için 17px kullanmıştı — 2.4 kat küçük, o yüzden "hiçbir şey
-  değişmiyor" sonucuna varmıştı.
+**Neden üretiliyor.** Ölçüldü: uzuvların silueti açıyla neredeyse hiç
+değişmiyor (50°'de pazu ×1.00, uyluk ×1.04, baldır ×0.95) çünkü kesitleri
+yuvarlak. Elle ikinci set çizmek o parçalarda aynı şekli tekrar çizmek
+olurdu. Değişen tek şey GÖVDE (thorax ×1.29, lumbar ×1.25) ve o hesaplanabilir.
 
-**Neyin eksik olduğu**
+**Model.** Her parça, kemik boyunca dizilmiş ELİPS kesitlerden oluşuyor. Yan
+siluet her kemik istasyonunda kesitin ön (+X) ve arka (−X) sınırını veriyor:
 
-1. Ortografik izdüşüm derinliği yalnızca yana kaydırıyor; uzak uzuv yakınla
-   AYNI büyüklükte kalıyor. Perspektif eklendi (mesafe 700px, yakın taraf
-   %12 büyük) — düzeldi ama yetmedi.
-2. Parçalar kameraya bakan düz siluetler. Gerçek 3/4'te gövde hem yanını hem
-   önünü gösterir; genişlemiş bir yan siluet bunu vermiyor.
+| | yan siluetten | α açısında |
+|---|---|---|
+| yarı genişlik | `a = (ön − arka)/2` | `a · sqrt(cos²α + oran²·sin²α)` |
+| merkez kaçıklığı | `c = (ön + arka)/2` | `c · cos α` |
 
-**Bir daha denenecekse:** işe parçaların gerçekten açılı çizilmesinden
-başlanmalı (yukarıdaki adımlarla, kamera 45-60°'de ikinci bir set), sonra
-perspektif ve derinlik onları yerleştirir. Ters sıra denendi ve yürümedi.
+İki farklı çarpan: genişlik BÜYÜR, kaçıklık KÜÇÜLÜR. Tek bir ölçekle
+yapılamaz — daha önce `cos(α)` ile hepsini daraltmak denenip yanlış
+çıkmıştı (gövde yandan dar, açılı bakışta geniştir).
+
+Kesit oranları (yanal genişlik / ön-arka derinlik, yetişkin ortalaması)
+script'in içinde: gövde 1.4-1.46, uzuvlar 0.88-1.06. Veriye yazılmıyorlar —
+kullanılmayan bir alan olarak kalıp sonraki turda yanlış karar verdirirdi.
+
+**Şema ne zorluyor:** açılı set varsa yan setle AYNI parçaları taşımak
+zorunda ve `len`ler kemik boylarıyla uyuşmalı. Eksik bir parça figürü
+çizilmez yapmıyor, o uzvu yan siluetiyle bırakıyor — sessizce karışık figür.
+
+**Sınır.** Dönüşüm siluetin GENİŞLİĞİNİ ve KAÇIKLIĞINI düzeltiyor, kesitin
+gerçek şeklini değil. Elips varsayımı gövdede iyi, diz ve dirseğin kemikli
+çıkıntılarında kabaca doğru.
