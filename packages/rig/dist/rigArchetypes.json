@@ -1859,7 +1859,7 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 190
+          "shinF": 185
         }
       },
       {
@@ -1874,7 +1874,7 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 200,
-          "shinF": 230
+          "shinF": 265
         }
       },
       {
@@ -1889,7 +1889,7 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 190
+          "shinF": 185
         }
       }
     ]
