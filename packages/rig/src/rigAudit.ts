@@ -113,6 +113,19 @@ export const ROM_BANDS: RomBand[] = [
     skip: (ex) => !showFarLeg(ex),
   },
   {
+    // Bu bant `Math.abs` KULLANMIYOR, üstteki kullanıyor. Aradaki fark bir
+    // hatayı gizliyordu: mutlak değer ters bükülmeyi normal bükülmeden
+    // ayıramıyor, −30° geriye kırılan bir diz +30 olarak okunup bandın
+    // içinde kalıyordu. `carry` tam bunu yapıyordu — uzak diz salınımın
+    // yarısında 30° GERİYE bükülüyor, insan dizinin yapamayacağı şey. Yakın
+    // dizin böyle bir alt sınırı vardı, uzak dizinki eksikti.
+    rule: 'diz',
+    label: 'uzak diz ters yönde',
+    angle: (p) => norm(p.shinF - p.thighF),
+    lo: -15,
+    skip: (ex) => ex.mode !== 'stand' || !showFarLeg(ex),
+  },
+  {
     rule: 'dirsek',
     label: 'dirsek',
     // Poz DEĞİL iskelet. `arm` 'ik' ya da 'floor' iken kareler `upperA`/`foreA`

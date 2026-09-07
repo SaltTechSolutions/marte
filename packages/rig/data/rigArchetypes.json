@@ -214,8 +214,8 @@
           "neckA": 3,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 197.3,
-          "shinF": 170.5
+          "thighF": 180,
+          "shinF": 200.5
         }
       },
       {
@@ -259,8 +259,8 @@
           "neckA": 3,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 197.3,
-          "shinF": 170.5
+          "thighF": 180,
+          "shinF": 200.5
         }
       }
     ]
@@ -1874,7 +1874,7 @@
           "upperA": 180,
           "foreA": 180,
           "thighF": 200,
-          "shinF": 170
+          "shinF": 230
         }
       },
       {

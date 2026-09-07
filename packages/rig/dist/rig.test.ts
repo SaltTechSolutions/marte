@@ -69,26 +69,9 @@ describe('rig kinematics', () => {
 describe('rig hareket denetimi', () => {
   // Kurallar rigAudit.ts'te: aynı kurallar editörde de canlı çalışıyor, yani
   // burada geçen bir arketip editörde de temiz görünüyor.
-  /**
-   * Bilinen ve KAYITLI tek istisna.
-   *
-   * `carry`'nin uzak bacağı salınım ortasında düzleşiyor (t≈0.35'te diz
-   * neredeyse düz) ve ayak zemine 5.1px giriyor. Nokta yaması işe yaramıyor:
-   * t=0.35/0.65'e kare eklemek en kötüyü 5.1 → 4.9'a indiriyor, çünkü çukur
-   * geniş bir plato. İki açıyı birlikte kaydırmak da ±16° içinde çözüm
-   * vermiyor. Doğru düzeltme salınım boyunca diz bükülme profilini yeniden
-   * yazmak — yürüyüş kurgusu işi, TODOS.md'de kayıtlı.
-   *
-   * İstisna DAR: yalnızca bu arketibin uzak ayak zemin uyarısı. `carry`'de
-   * çıkacak başka her uyarı, ve diğer 29 arketipte çıkacak her uyarı, testi
-   * kırar.
-   */
-  const KAYITLI = (key: string, i: { rule: string; message: string }) =>
-    key === 'carry' && i.rule === 'zemin' && i.message.startsWith('uzak ayak zeminin');
-
   it('her arketip mekanik denetimden geçer', () => {
     entries.forEach(([key, ex]) => {
-      const issues = auditExercise(ex).filter((i) => !KAYITLI(key, i));
+      const issues = auditExercise(ex);
       expect(issues.map((i) => `@${i.t.toFixed(2)} ${i.rule}: ${i.message}`), key).toEqual([]);
     });
   });

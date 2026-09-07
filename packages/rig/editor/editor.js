@@ -171,6 +171,26 @@ const mkBall = () => (c, r, far) =>
     stroke: useParts ? null : css('--line'),
   });
 
+/**
+ * Dambıl üreticisi: kısa sap, iki ucunda ağırlık, ön kola DİK.
+ *
+ * Modül düzeyinde, çünkü hem ana sahne (`draw`) hem telefon önizlemesi
+ * (`drawPose`) çiziyor. Önce yalnızca `draw` içinde tanımlıydı ve önizleme
+ * onu göremediği için dambıllı 9 hareketin önizlemesi eli BOŞ gösteriyordu —
+ * barbell çiziliyor, dambıl çizilmiyordu. İkinci bir kopya yazmak bu dosyanın
+ * daha önce ayrışmasına yol açan hatanın aynısı olurdu.
+ */
+const mkDumbbell = () => (c, from, far) => {
+  const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
+  const fill = far ? css('--skinFar') : css('--metal');
+  const line = css('--line'), accent = css('--p');
+  return [el('g', { transform: `rotate(${deg} ${c[0]} ${c[1]})` }, [
+    el('rect', { x: c[0] - 17, y: c[1] - 4, width: 34, height: 8, rx: 4, fill, stroke: line }),
+    el('rect', { x: c[0] - 25, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
+    el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
+  ])];
+};
+
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
@@ -527,6 +547,7 @@ function drawPose(svg, e, p) {
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = mkBall();
   const limb = mkLimb(seg);
+  const db = mkDumbbell();
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   if (showFarLeg(e)) {
@@ -536,6 +557,10 @@ function drawPose(svg, e, p) {
   if (!e.hideFarArm) {
     push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true));
     push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+    // Uzak eldeki ağırlık gövdeden ÖNCE: figürün arkasında kalıyor. Sona
+    // konulsaydı gövdenin önünde belirir, yakın el iki ağırlık tutuyormuş
+    // gibi görünürdü.
+    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
   push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
   push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
@@ -544,6 +569,7 @@ function drawPose(svg, e, p) {
   push(limb(S.sh, S.elbow, 25, 22, 17, .5));
   push(limb(S.elbow, S.hand, 18, 18, 12, .3));
   push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
+  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
 
   // Perspektif barbell: çubuk derinliğe doğru uzanıyor, iki uçtaki tabaklar
@@ -623,15 +649,7 @@ function draw() {
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = mkBall();
   const limb = mkLimb(seg);
-  const db = (c, from, far) => {
-    const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
-    const fill = far ? skinFar : metal;
-    return [el('g', { transform: `rotate(${deg} ${c[0]} ${c[1]})` }, [
-      el('rect', { x: c[0] - 17, y: c[1] - 4, width: 34, height: 8, rx: 4, fill, stroke: line }),
-      el('rect', { x: c[0] - 25, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
-      el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
-    ])];
-  };
+  const db = mkDumbbell();
   // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
   // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
   // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
