@@ -60,9 +60,17 @@ uzak ayağın topuğu hiç kalkamıyor. İki hareket bunun bedelini ödüyor:
   (kalça dipte yerden 117px, bacak 205px). Bugünkü uzlaşma: ayak dipte 19px
   (7.5cm) yukarıda duruyor — "topuk kalkık" izlenimi veriyor. Düzeltmeden
   önce 59px (23cm) havadaydı, yani bacak sallanıyordu.
-- **`carry`** — salınan dizin alt ucu 25°, gerçekte ~5° olmalı. Bacak öne
-  geldiğinde daha düz bir diz ayağı zemine sokuyor, çünkü modelde kalça
-  YÜKSEKLİĞİ de sabit (leğen salınımı yok). Yakın bacak da hiç kımıldamıyor.
+- **`carry`** — leğen salınımı EKLENDİ (2026-09-07): basan dizi canlandırmak
+  leğeni kendiliğinden indiriyor, çünkü `stand` kipinde zincir ayak
+  bileğinden yukarı kuruluyor. Salınım 9.7px (3.9cm), doğru fazda — çift
+  destekte alçak, tek destekte yüksek. Basan diz artık 14°→0° arası
+  çalışıyor (eskiden −5°de donmuştu, üstelik hafif ters bükülü).
+
+  KALAN: salınan dizin alt ucu 45°, gerçekte ~5° olmalı. Ölçülen takas —
+  salınım yoksa alt uç 25°, 4.1px salınımda 35°, 9.7px salınımda 45°. Sebep
+  ayağın yatay olarak SABİT olması: figür ilerlemediği için bacak öne
+  geldiğinde düz bir diz ayağı zemine sokuyor. Taraf başına ayak bileği
+  açısı ve/veya figürün ilerlemesi bu son eksiği kapatır.
 
 Taraf başına ayak bileği açısı bu iki uzlaşmayı birden kaldırır.
 

@@ -1881,45 +1881,45 @@
         "t": 0,
         "tr": "Adım",
         "p": {
-          "shinA": 178,
-          "thighA": 183,
+          "shinA": 204,
+          "thighA": 190,
           "torso": 3,
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 185
+          "shinF": 205
         }
       },
       {
         "t": 0.5,
         "tr": "Adım",
         "p": {
-          "shinA": 178,
-          "thighA": 183,
+          "shinA": 176,
+          "thighA": 176,
           "torso": 3,
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
           "foreA": 180,
           "thighF": 200,
-          "shinF": 265
+          "shinF": 270
         }
       },
       {
         "t": 1,
         "tr": "Adım",
         "p": {
-          "shinA": 178,
-          "thighA": 183,
+          "shinA": 204,
+          "thighA": 190,
           "torso": 3,
           "thoraxA": 2,
           "neckA": 2,
           "upperA": 180,
           "foreA": 180,
           "thighF": 160,
-          "shinF": 185
+          "shinF": 205
         }
       }
     ]
