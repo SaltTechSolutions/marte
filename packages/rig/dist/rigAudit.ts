@@ -23,6 +23,7 @@ import {
   frontTrunk,
   poseAt,
   showFarArm,
+  toeOf,
   showFarLeg,
   skeleton,
 } from '@/utils/rig';
@@ -161,6 +162,9 @@ export const ROM_BANDS: RomBand[] = [
     hi: 50,
     skip: (ex) => !showFarLeg(ex),
   },
+  // Parmak eklemi (MTP): ekstansiyon ~70°, fleksiyon ~30°; ötesi kırık parmak.
+  { rule: 'parmak', label: 'parmak', angle: (p) => p.toe, lo: -30, hi: 70 },
+  { rule: 'parmak', label: 'uzak parmak', angle: (p) => p.toeF, lo: -30, hi: 70, skip: (ex) => !showFarLeg(ex) },
   {
     rule: 'dirsek',
     label: 'dirsek',
@@ -241,7 +245,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
       ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF, true]] as [string, Vec, boolean][]) : []),
     ];
     feet.forEach(([ad, ankle, far]) => {
-      const pen = footLowestY(ankle, footDirOf(ex, p, far), footPinned(ex, p, S, far), flip) - GROUND;
+      const pen = footLowestY(ankle, footDirOf(ex, p, far), footPinned(ex, p, S, far), flip, toeOf(p, far)) - GROUND;
       if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
     });
   }
@@ -270,9 +274,9 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     for (const [ankle, far] of cand) {
       const dir = footDirOf(ex, p, far);
       const pin = footPinned(ex, p, S, far);
-      const low = footLowestY(ankle, dir, pin, flip);
+      const low = footLowestY(ankle, dir, pin, flip, toeOf(p, far));
       const onProp = (ex.prop === 'box' && !far) || (ex.prop === 'bench' && far);
-      if (GROUND - low <= 20 || onProp) feet.push(footSpan(ankle, dir, pin, flip));
+      if (GROUND - low <= 20 || onProp) feet.push(footSpan(ankle, dir, pin, flip, toeOf(p, far)));
     }
     if (feet.length) {
       const lo = Math.min(...feet.map((f) => f[0]));
@@ -370,7 +374,7 @@ export function auditExercise(ex: RigExercise, samples = 41): RigIssue[] {
  * sarmalanırlarsa 360 birimlik bir kaçak sıfır görünür ve döngü kapalı
  * sanılır. `hy` tek başına 440 birim gezebiliyor.
  */
-const OFFSET_KEYS = new Set<keyof RigPose>(['hx', 'hy', 'shLift', 'ankleLift', 'armAz', 'armAzF', 'foreAz', 'foreAzF']);
+const OFFSET_KEYS = new Set<keyof RigPose>(['hx', 'hy', 'shLift', 'ankleLift', 'armAz', 'armAzF', 'foreAz', 'foreAzF', 'toe', 'toeF']);
 
 export function auditLoop(ex: RigExercise): RigIssue[] {
   const first = poseAt(ex, 0).p;

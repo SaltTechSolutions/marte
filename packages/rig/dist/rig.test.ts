@@ -194,7 +194,8 @@ describe('rig hareket denetimi', () => {
   });
 });
 
-import { FOOT, GROUND as G2, centerOfMass, footLowestY, footPinned, footSpan, footDirOf as fdo, facingFlip as ff, poseAt as pa2, showFarArm, skeleton as sk2 } from '@/utils/rig';
+import { auditFrame as af2 } from '@/utils/rigAudit';
+import { FOOT, GROUND as G2, centerOfMass, fillPose, footLowestY, footPinned, footSpan, footDirOf as fdo, facingFlip as ff, poseAt as pa2, showFarArm, skeleton as sk2 } from '@/utils/rig';
 import { RIG_ARCHETYPES as A2 } from '@/data/rigArchetypes';
 
 describe('yan görünüm saf ortografik', () => {
@@ -288,5 +289,24 @@ describe('önden görünüm', () => {
     const F1 = frontPoints(ex, pa2(ex, 0.5).p, sk2(ex, pa2(ex, 0.5).p));
     expect(Math.abs(F1.R.elbow[0] - F0.R.elbow[0])).toBeLessThan(2);
     expect(F1.R.hand[0] - F0.R.hand[0]).toBeGreaterThan(50);
+  });
+});
+
+describe('parmak eklemi kontrolü', () => {
+  it('havadaki ayakta toe parmakları yukarı çevirir, yerdeki ayakta parmaklar yere yatık kalır', () => {
+    // Havada: bilek yüksek, parmak açısı parmak ucunu kaldırır
+    // Parmaklar topa menteşeli yukarı dönünce ayağın yatay uzantısı kısalır
+    const A: Vec = [200, G2 - 80];
+    const w0 = footSpan(A, 90, false, 1, 0);
+    const w1 = footSpan(A, 90, false, 1, 50);
+    expect(w1[1] - w1[0]).toBeLessThan(w0[1] - w0[0] - 3);
+    // Yerde (topuk kalkmış, top yerde): toe ne olursa olsun en alt nokta zemin
+    const B2: Vec = [200, G2 - 30];
+    expect(Math.abs(footLowestY(B2, 90, true, 1, 50) - G2)).toBeLessThan(1);
+  });
+  it('bant: parmak ±30/70 dışını yakalar', () => {
+    const ex = A2.squat;
+    const p = fillPose({ ...poseAt(ex, 0).p, toe: 85 });
+    expect(af2(ex, p, 0).map((i) => i.rule)).toContain('parmak');
   });
 });

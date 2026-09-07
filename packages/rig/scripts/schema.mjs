@@ -48,5 +48,11 @@ export function loadSchema(outRoot = join(ROOT, '.editor-build')) {
     console.error(res.stdout || res.stderr);
     throw new Error('şema doğrulaması derlenemedi');
   }
-  return createRequire(import.meta.url)(join(dir, 'rigSchema.js'));
+  // Önbelleği temizle: editör sunucusu kaynak değişince yeniden yüklüyor,
+  // aksi hâlde ilk derlenen sürüm kalır.
+  const require = createRequire(import.meta.url);
+  const file = join(dir, 'rigSchema.js');
+  delete require.cache[require.resolve(file)];
+  Object.keys(require.cache).filter((k) => k.startsWith(dir)).forEach((k) => delete require.cache[k]);
+  return require(file);
 }

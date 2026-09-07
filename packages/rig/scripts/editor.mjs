@@ -22,7 +22,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,7 +78,24 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
 };
 
 buildEngine();
-const schema = loadSchema(OUT);
+let schema = loadSchema(OUT);
+let builtAt = Date.now();
+/**
+ * Kaynak, sunucu açıldıktan sonra değiştiyse (git pull, başka oturumda
+ * düzenleme) motor ve şema yeniden derlenir. Yaşandı: şemaya yeni poz
+ * alanları eklendi, açık kalan eski sunucu her kaydı "bilinmeyen alan" diye
+ * reddetti; kullanıcı için görünen şey "kaydedilemedi"ydi.
+ */
+function ensureFresh() {
+  const files = readdirSync(join(ROOT, 'src')).filter((f) => f.endsWith('.ts')).map((f) => join(ROOT, 'src', f));
+  const newest = Math.max(...files.map((f) => statSync(f).mtimeMs));
+  if (newest <= builtAt) return false;
+  console.log('… kaynak değişmiş, motor ve şema yeniden derleniyor');
+  buildEngine();
+  schema = loadSchema(OUT);
+  builtAt = Date.now();
+  return true;
+}
 /** Devir paketinin tamamı: kareler, hareket kataloğu ve kas verisi. */
 const readBundle = (archetypes) => ({
   archetypes,
@@ -154,11 +171,12 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const parsed = JSON.parse(body);
+        const rebuilt = ensureFresh();
         // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
         // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
         // okuduğu yerde.
         const errs = schema.validateBundle(readBundle(parsed));
-        if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
+        if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : '') + (rebuilt ? ' — motor yeniden derlendi, tarayıcıyı yenile' : ''));
         const count = Object.keys(parsed).length;
         writeFileSync(DATA, JSON.stringify(parsed, null, 2) + '\n');
         console.log(`✓ kaydedildi: ${count} arketip → data/rigArchetypes.json`);

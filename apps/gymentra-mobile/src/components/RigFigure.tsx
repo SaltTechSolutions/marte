@@ -20,6 +20,7 @@ import {
   footDirOf,
   footPath,
   footPinned,
+  toeOf,
   frontPoints,
   handPath,
   showFarArm,
@@ -143,7 +144,8 @@ export function RigFigure({
   const part = (key: string, name: string, a: Vec, b: Vec, far?: boolean) => {
     const q = PARTS[name];
     return q ? (
-      <Path key={key} d={q.d} transform={partTransform(a, b)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
+      // Aynalı kiplerde figürün tamamı aynalı; her parça yerel x'te aynalanır (bkz. facingFlip).
+      <Path key={key} d={q.d} transform={partTransform(a, b) + (flip < 0 ? ' scale(-1 1)' : '')} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
     ) : null;
   };
   /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
@@ -285,7 +287,7 @@ export function RigFigure({
         <G key="far" opacity={0.95}>
           {farLeg && (
             <>
-              <Path d={footPath(S.ankleF, footDirOf(rig, p, true), footPinned(rig, p, S, true), flip)} fill={skinFar} stroke={line} />
+              <Path d={footPath(S.ankleF, footDirOf(rig, p, true), footPinned(rig, p, S, true), flip, toeOf(p, true))} fill={skinFar} stroke={line} />
               {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
               {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
               {ball('fk', S.kneeF, 12, true)}
@@ -312,7 +314,7 @@ export function RigFigure({
           <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirOf(rig, p), footPinned(rig, p, S, false), flip)} fill={skin} stroke={line} />
+          <Path d={footPath(S.ankle, footDirOf(rig, p), footPinned(rig, p, S, false), flip, toeOf(p))} fill={skin} stroke={line} />
           {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
           {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
           {ball('k', S.knee, 13)}

@@ -37,6 +37,11 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   // hiçbir kural görmüyordu.
   [key('uzak bilek', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: -50 } },
   [key('uzak bilek', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: 70 } },
+  // Parmak eklemi kırılmaz: ekstansiyon 70°, fleksiyon 30° ötesi.
+  [key('parmak', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { toe: -45 } },
+  [key('parmak', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { toe: 85 } },
+  [key('uzak parmak', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { toeF: -45 } },
+  [key('uzak parmak', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { toeF: 85 } },
   // Ön kol pazuya gömülemez. Ters kinematikli kolda açı POZDA YOK, iskeletten
   // geliyor: el hedefini omzun üstüne koymak dirseği tam katlıyor.
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },

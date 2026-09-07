@@ -29,7 +29,7 @@ const VIEWS = ['side', 'front'];
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */
 const POSE_KEYS: (keyof RigPose)[] = [
   'shinA', 'thighA', 'torso', 'thoraxA', 'neckA', 'upperA', 'foreA',
-  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'armAz', 'armAzF', 'foreAz', 'foreAzF', 'shLift', 'ankleLift',
+  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'armAz', 'armAzF', 'foreAz', 'foreAzF', 'shLift', 'toe', 'toeF', 'ankleLift',
   // Ayak bileği eklem açısı, taraf başına. Bkz. `RigPose.ankle`.
   'ankle', 'ankleF',
 ];

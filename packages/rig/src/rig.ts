@@ -108,6 +108,14 @@ export interface RigPose {
   foreAzF: number;
   /** Önden görünümde omuz yükselmesi (shrug). */
   shLift: number;
+  /**
+   * Parmak eklemi (ayak topu, MTP): parmakların arka ayağa göre açısı, + yukarı
+   * (ekstansiyon). Yerdeki ayakta parmaklar zaten yere yatar (`footPinned`),
+   * bu alan HAVADAKİ ayağın parmak duruşunu verir — itiş sonrası, uzatılmış
+   * ayak. Bilek açısı (`ankle`) ayağı, bu parmakları çevirir.
+   */
+  toe: number;
+  toeF: number;
   /** Topuğun yerden kalkması (calf raise) ya da ayağın basamağa çıkması (step-up). */
   ankleLift: number;
   /**
@@ -199,6 +207,8 @@ const BASE = {
   foreAz: 0,
   foreAzF: 0,
   shLift: 0,
+  toe: 0,
+  toeF: 0,
   ankleLift: 0,
   ankle: 0,
   ankleF: 0,
@@ -238,6 +248,7 @@ export const fillPose = (p: Partial<RigPose>): RigPose => {
     foreF: p.foreF ?? f.foreA + 2,
     armAzF: p.armAzF ?? f.armAz,
     foreAzF: p.foreAzF ?? f.foreAz,
+    toeF: p.toeF ?? f.toe,
   };
 };
 
@@ -260,6 +271,8 @@ interface LocalPose {
   foreAz: number;
   foreAzF: number;
   shLift: number;
+  toe: number;
+  toeF: number;
   ankleLift: number;
   // Bilek açısı ZATEN eklem-yerel (baldıra göre), o yüzden dünya→yerel
   // dönüşümünde olduğu gibi taşınıyor. Diğer açılar gibi çıkarma gerekmiyor.
@@ -293,6 +306,8 @@ export const toLocal = (p: RigPose): LocalPose => ({
   foreAz: p.foreAz,
   foreAzF: p.foreAzF,
   shLift: p.shLift,
+  toe: p.toe,
+  toeF: p.toeF,
   ankleLift: p.ankleLift,
   ankle: p.ankle,
   ankleF: p.ankleF,
@@ -324,6 +339,8 @@ export const toWorld = (l: LocalPose): RigPose => {
     foreAz: l.foreAz,
     foreAzF: l.foreAzF,
     shLift: l.shLift,
+    toe: l.toe,
+    toeF: l.toeF,
     ankleLift: l.ankleLift,
     ankle: l.ankle,
     ankleF: l.ankleF,
@@ -1062,7 +1079,7 @@ export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.ball, FOOT.sole) - FOOT
  * `footPath`, `footLowestY` ve `footSpan` bu çerçeveleri PAYLAŞIYOR: ayrı
  * yazılsalardı denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
  */
-function footFrames(ankle: Vec, dir: number, pinToe: boolean, flip: number): {
+function footFrames(ankle: Vec, dir: number, pinToe: boolean, flip: number, toeDeg = 0): {
   arka: (u: number, v: number) => Vec;
   parmak: (u: number, v: number) => Vec;
 } {
@@ -1074,7 +1091,15 @@ function footFrames(ankle: Vec, dir: number, pinToe: boolean, flip: number): {
     return (u: number, v: number): Vec => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
   };
   const duz = frame(rad(dir));
-  if (!pinToe) return { arka: duz, parmak: duz };
+  if (!pinToe) {
+    if (!toeDeg) return { arka: duz, parmak: duz };
+    // Havadaki ayak: parmaklar TOPA menteşeli, arka ayağa göre `toe` kadar
+    // yukarı (ekstansiyon) döner.
+    const donuk = frame(rad(dir) - rad(toeDeg) * flip);
+    const top = duz(FOOT.ball, FOOT.sole);
+    const topD = donuk(FOOT.ball, FOOT.sole);
+    return { arka: duz, parmak: (u, v) => { const q = donuk(u, v); return [q[0] - topD[0] + top[0], q[1] - topD[1] + top[1]]; } };
+  }
   // Top yerde kalsın diye gereken ek dönüş: topun bilekten uzaklığı r, bilek
   // yerden h yüksekte → top tam yerde olacak şekilde arka parça döner.
   //
@@ -1109,6 +1134,9 @@ function footFrames(ankle: Vec, dir: number, pinToe: boolean, flip: number): {
  * yere yaklaşınca topu bir an yere sürer; bu düşme değil, adım.
  * Sehpa üstündeki ayak (kutu, Bulgar sehpası) zemine göre ölçülmez.
  */
+/** Tarafın parmak eklemi açısı. */
+export const toeOf = (p: RigPose, far = false): number => (far ? p.toeF : p.toe);
+
 export function footPinned(ex: RigExercise, p: RigPose, S: Skeleton, far: boolean): boolean {
   if (ex.mode !== 'stand') return false;
   if ((ex.prop === 'box' && !far) || (ex.prop === 'bench' && far)) return false;
@@ -1117,12 +1145,12 @@ export function footPinned(ex: RigExercise, p: RigPose, S: Skeleton, far: boolea
   const h = GROUND - ankle[1];
   // Topuk gerçekten kalkmış olmalı (bilek duruş yüksekliğinin üstünde) ve top yere yetişmeli.
   if (h <= FOOT.sole + 0.5 || h > Math.hypot(FOOT.ball, FOOT.sole)) return false;
-  return footLowestY(ankle, footDirOf(ex, p, far), false, facingFlip(ex.mode)) > GROUND - 6;
+  return footLowestY(ankle, footDirOf(ex, p, far), false, facingFlip(ex.mode), toeOf(p, far)) > GROUND - 6;
 }
 
 /** Çizilen tabanın yatay aralığı `[sol, sağ]` — denge denetiminin destek tabanı. */
-export function footSpan(ankle: Vec, dir: number, pinToe = false, flip = 1): [number, number] {
-  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+export function footSpan(ankle: Vec, dir: number, pinToe = false, flip = 1, toeDeg = 0): [number, number] {
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip, toeDeg);
   const xs = [arka(FOOT.heel + 1, FOOT.sole - 1)[0], parmak(FOOT.toe - 2, FOOT.sole - 1)[0]];
   return [Math.min(...xs), Math.max(...xs)];
 }
@@ -1136,8 +1164,8 @@ export function footSpan(ankle: Vec, dir: number, pinToe = false, flip = 1): [nu
  * zemine kırpıyordu, o yüzden veri yanlış olsa bile çizim doğru görünüyordu.
  * Yeni ayak katı bir şekil; kırpma yok, hata görünür.
  */
-export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1): number {
-  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1, toeDeg = 0): number {
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip, toeDeg);
   const { heel, ball, toe, sole } = FOOT;
   const arkaOrnek: [number, number][] = [[heel + 1, sole - 1], [heel + 6, sole + 1], [2, sole - 3], [10, sole - 2], [20, sole], [ball, sole]];
   const parmakOrnek: [number, number][] = [[ball, sole], [toe - 2, sole - 1], [toe + 2, sole - 5]];
@@ -1151,8 +1179,8 @@ export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1): 
  * değil), parmaklar öne incelir. Topuk kalkışında parmaklar yerde kalır,
  * arka parça toptan kırılır (bkz. `footFrames`).
  */
-export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): string {
-  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip);
+export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1, toeDeg = 0): string {
+  const { arka, parmak } = footFrames(ankle, dir, pinToe, flip, toeDeg);
   const pa = (u: number, v: number) => { const q = arka(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
   const pp = (u: number, v: number) => { const q = parmak(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
   const { heel, ball, toe, sole } = FOOT;
