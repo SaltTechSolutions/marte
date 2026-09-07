@@ -62,8 +62,11 @@ export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
       : []),
   ];
 
-  // Ayakta duran figürde ayak yere sabit; onu sürüklemek anlamsız.
-  const nearFiltered = ex.mode === 'stand' ? near.filter(([j]) => j !== 'ankle') : near;
+  // Ölü tutamak "bozuk mu?" sorusu doğuruyor, o yüzden hiç çizilmiyor:
+  // ayakta ayak yere sabit, asılıyken bel zincirin ortasında sabit.
+  const nearFiltered = near.filter(
+    ([j]) => !(ex.mode === 'stand' && j === 'ankle') && !(ex.mode === 'hang' && j === 'lumbar'),
+  );
   // Asılı figürde el barda sabit, kalça zincirin ucu.
   const armsFiltered = ex.mode === 'hang' ? arms.filter(([j]) => j !== 'hand') : arms;
 
@@ -108,7 +111,10 @@ export function dragJoint(ex: RigExercise, S: Skeleton, joint: DragJoint, target
     }
 
     case 'lumbar':
-      return hang ? { torso: angleOf(S.pelvis, target) } : { torso: angleOf(S.pelvis, target) };
+      // Asılı figürde zincir elden AŞAĞI kuruluyor: bel gövdenin ortasında,
+      // `torso` ne olursa olsun yerinde duruyor. Beli sürüklemek beli değil
+      // kalçayı savuruyordu; orada gövdeyi döndüren tutamak kalça.
+      return hang ? {} : { torso: angleOf(S.pelvis, target) };
 
     case 'thorax':
       return { thoraxA: angleOf(S.lumbar, target) };

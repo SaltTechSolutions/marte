@@ -1,7 +1,12 @@
-import { RigExercise } from './rig';
-import { assertArchetypes } from './rigSchema';
+// ÜRETİLMİŞ DOSYA — elle düzenleme.
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
+// Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
+// motor doğurur. Bütünlük kontrolü: manifest.json.
 
-import data from '../data/rigArchetypes.json';
+import { RigExercise } from '@/utils/rig';
+import { assertArchetypes } from '@/utils/rigSchema';
+
+import data from '@/data/rigArchetypes.json';
 
 /**
  * Hareketlerin açı kareleri.

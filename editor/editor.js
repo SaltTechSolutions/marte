@@ -9,11 +9,13 @@
  */
 
 import {
-  BAR_Y, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
-  frontPoints, frontTrunk, lerpP, poseAt, showFarLeg, skeleton,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footPath,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
+  shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
+import { groupsOf, labelsOf } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -48,6 +50,16 @@ const OPTIONS = {
 
 let DATA = {};
 let NAMES = {};
+/** Ham hareket kataloğu: kimlik → { name, archetype }. */
+let CATALOG = {};
+/** Hareket başına kaslar: kimlik → { status, primary, secondary }. */
+let MUSCLEDATA = {};
+/** Kas haritası yolları: viewBox, ayna dönüşümü, ön ve arka yollar. */
+let ANATOMY = null;
+/** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
+let PARTS = null;
+/** Çizim kipi: kapsül mü parça mı. */
+let useParts = true;
 let key = null;
 let kfIndex = 0;
 let plane = 'side';
@@ -59,6 +71,21 @@ let dragging = null;
 let dirty = false;
 let onion = true;
 let filter = '';
+/** Mobil önizleme: hangi cihaz ve açık mı. */
+let phoneOn = true;
+let phoneSize = 0;
+/** 'phases' = iki evre yan yana (onaylanan tasarım), 'live' = canlı figür. */
+let phoneMode = 'phases';
+/**
+ * Düzen. Varsayılan `full`: kullanıcı ekranı kaydırabildiği için katlama sert
+ * bir kısıt değil ve okunurluğu ona feda etmenin anlamı yok. `compact` SE'ye
+ * sığan sıkı hâl, ölçüm için duruyor.
+ */
+let phoneLayout = 'full';
+/** Önizleme kendi başına oynuyor: uygulamadaki figür de öyle. */
+let phonePlayT = 0;
+/** Sekme düzeninde hangi görünüm açık. */
+let phoneView = 'front';
 // Geri alma yığını: sürükleme yıkıcı ve anında; kaçan bir hamlenin
 // dönüşü olmazsa araç kullanılamaz.
 const undoStack = [];
@@ -100,6 +127,487 @@ const restore = (json) => {
 
 // --- çizim ---------------------------------------------------------------
 
+/**
+ * Uzuv çizici üreticisi.
+ *
+ * Parça kipinde `data/bodyParts.json`'daki siluet kemiğe oturtuluyor, kapsül
+ * kipinde bugünkü iki kapsüllü çizim. İkisi de aynı çağrıyı kullanıyor, yani
+ * gerçek anatomik parçalar geldiğinde çizim kodunda hiçbir şey değişmiyor —
+ * yalnızca veri dosyası değişiyor.
+ *
+ * Ana sahne ve önizleme aynı üreticiyi kullanıyor; iki yere ayrı yazmak bu
+ * dosyada bir kez denendi ve `draw()` ile `drawPose()` ayrıştı.
+ */
+const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
+  const q = useParts && name && PARTS && PARTS[name];
+  if (q) {
+    return [el('path', {
+      d: q.d,
+      transform: partTransform(a, b),
+      fill: far ? css('--skinFar') : css('--skin'),
+      stroke: css('--line'),
+    })];
+  }
+  const m = lerpP(a, b, at);
+  return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)];
+};
+
+/**
+ * Eklem topu üreticisi.
+ *
+ * Kapsül kipinde eklemler açık renkli, dış çizgili dairelerle işaretleniyor.
+ * Parça kipinde bunlar SESSİZLEŞİYOR: kontrastlı bir daire silueti kesiyor ve
+ * figürü eklemli bir manken gibi gösteriyor. Gerçek bir uzuvda eklem yerinde
+ * kontrastlı bir top yok — top hâlâ çiziliyor (eklem boşluğunu dolduruyor)
+ * ama ten rengiyle, dış çizgisiz.
+ *
+ * Sürükleme tutamakları bundan etkilenmiyor; onlar `drawHandles`'ta ayrı
+ * çiziliyor ve editörde görünür kalıyor.
+ */
+const mkBall = () => (c, r, far) =>
+  el('circle', {
+    cx: c[0], cy: c[1], r,
+    fill: far ? css('--skinFar') : useParts ? css('--skin') : css('--joint'),
+    stroke: useParts ? null : css('--line'),
+  });
+
+/** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
+const trunkPart = (name, a, b) => {
+  const q = useParts && PARTS && PARTS[name];
+  return q ? el('path', { d: q.d, transform: partTransform(a, b), fill: css('--skin'), stroke: css('--line') }) : null;
+};
+
+
+/* --- karşılaştırma ekranı ------------------------------------------------ */
+
+/**
+ * Derinlik izdüşümü — DENENDİ VE YETMEDİ.
+ *
+ * Fikir şuydu: uzak uzuvlar bugün 2B'de sahte kaydırmayla ayrılıyor
+ * (`hipF = pelvis[0] - 18`); o sahte kaydırmayı gerçek bir Z koordinatına
+ * çevirip kamerayı döndürmek ucuza 3/4 görünüm verir sanmıştım.
+ *
+ * VERMİYOR. Ölçüldü (standing_row_hinged, 0° → 26°): uyluk 105.0 → 102.4,
+ * baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Figürün şekli neredeyse hiç
+ * değişmiyor.
+ *
+ * Sebep yapısal: modelde bir taraftaki BÜTÜN eklemler aynı derinlikte, çünkü
+ * poz sagittal düzlemde yazılıyor. Aynı derinlikteki noktaları döndürmek
+ * onları göreli olarak değiştirmiyor. Olan tek şey yatay sıkıştırma
+ * (cos 26° = 0.90) ve derinlik düzlemleri arasında ~17px kayma. Barbell
+ * farklı görünüyor çünkü ona ±70 birimlik GERÇEK derinlik verildi; vücutta
+ * öyle bir şey yok.
+ *
+ * Gerçek 3/4 için eklem BAŞINA enine düzlem açısı gerekiyor — yani yeni poz
+ * alanları, 3B denetim, ve uygulamada yeni izdüşüm. TODOS.md'deki pahalı yol
+ * bu; ucuz kestirme diye bir şey yok. Panel kanıt olarak duruyor ki aynı
+ * kestirme bir daha denenmesin.
+ */
+const HIPZ = 19;
+const SHZ = 17;
+function skel3(e, p) {
+  const S = skeleton(e, p);
+  const out = {};
+  ['pelvis', 'knee', 'ankle', 'lumbar', 'thorax', 'neck', 'head', 'sh', 'elbow', 'hand'].forEach((k) => {
+    const z = k === 'pelvis' || k === 'knee' || k === 'ankle' ? HIPZ : k === 'sh' || k === 'elbow' || k === 'hand' ? SHZ : 0;
+    out[k] = [S[k][0], S[k][1], z];
+  });
+  ['hipF', 'kneeF', 'ankleF', 'shF', 'elbowF', 'handF'].forEach((f) => {
+    const leg = f === 'hipF' || f === 'kneeF' || f === 'ankleF';
+    out[f] = [S[f][0] + (leg ? 18 : 16), S[f][1] - (leg ? 3 : 5), leg ? -HIPZ : -SHZ];
+  });
+  if (S.bar) out.bar = [S.bar[0], S.bar[1], 0];
+  return out;
+}
+const proj = (q, az) => {
+  const c = Math.cos((az * Math.PI) / 180);
+  const s2 = Math.sin((az * Math.PI) / 180);
+  return { p: [CENTER_X + (q[0] - CENTER_X) * c + q[2] * s2, q[1]], z: -(q[0] - CENTER_X) * s2 + q[2] * c };
+};
+
+/** Karşılaştırma hücresi için figür SVG'si. */
+function cmpFigure(e, p, mode) {
+  const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
+  // Derinlik kestirmesi YALNIZ 'depth' kipinde. 'flat' de bir ara buradan
+  // geçiyordu ve bu bir hataydı: az=0'da izdüşüm birim dönüşüm, ama `skel3`
+  // uzak taraf eklemlerine koşulsuz 16–18px sahte kaydırma ekliyor. O kaydırma
+  // "Parça · 2B" hücresine sızıyordu — ölçüldü, bench_press.kneeF'te 18.2px —
+  // ve panel ana sahnedeki figüre benzemiyordu. Dört hücrenin ikisi birden 3B
+  // gibi duruyordu; oysa hücrenin işi bugünkü 2B çizimi OLDUĞU GİBİ göstermek.
+  const depth = mode === 'depth';
+  const S3 = depth ? skel3(e, p) : null;
+  const P = {}, Z = {};
+  if (depth) for (const k in S3) { const r = proj(S3[k], 26); P[k] = r.p; Z[k] = r.z; }
+  const S = depth ? P : skeleton(e, p);
+  const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}" fill="${f}" stroke="${line}"/>` : '');
+  const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
+  const limbOf = (n, a, b, w1, w2, w3, at, f) =>
+    mode === 'capsule' ? (() => { const m = lerpP(a, b, at); return cap(a, m, w1, w2, f) + cap(m, b, w2, w3, f); })() : pc(n, a, b, f);
+  const groups = [
+    { z: Z.kneeF, d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
+    { z: Z.elbowF, d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
+    { z: 0, d: (mode === 'capsule'
+        ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
+        : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
+      + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
+    { z: Z.knee, d: `<path d="${footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
+        + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
+    { z: Z.elbow, d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
+  ];
+  // Derinlik kipinde uzak olan önce çiziliyor; 2B'de sabit sıra.
+  if (depth) groups.sort((a, b) => a.z - b.z);
+  let g = groups.map((x) => x.d).join('');
+  const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
+  g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
+  g += mode === 'capsule'
+    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
+  if (S.bar) {
+    const metal = css('--metal'), accent = css('--p');
+    const end = (sgn) => (depth ? proj([S3.bar[0], S3.bar[1], sgn * 70], 26).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
+    const A = end(-1), Bp = end(1);
+    g += `<line x1="${A[0]}" y1="${A[1]}" x2="${Bp[0]}" y2="${Bp[1]}" stroke="${metal}" stroke-width="7" stroke-linecap="round"/>`;
+    [A, Bp].forEach((q) => { g += `<ellipse cx="${q[0]}" cy="${q[1]}" rx="15" ry="34" fill="${metal}" fill-opacity=".62" stroke="${accent}" stroke-width="2"/>`; });
+  }
+  return `<svg viewBox="${boundsFor(e, 'side')}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+}
+
+let cmpOn = false;
+
+function renderCompare() {
+  if (!cmpOn) return;
+  const e = ex();
+  const p = poseAt(e, phonePlayT).p;
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  $('cmpTitle').textContent = (CATALOG[mid] && CATALOG[mid].name) || key;
+  const cell = (h3, note, inner) => `<div class="cell"><h3>${h3}</h3><p>${note}</p><div class="box">${inner}</div></div>`;
+  $('cmpGrid').innerHTML =
+    cell('Kapsül', 'Bugünkü eski çizim. Uzuvlar iki kapsülden, eklemler kontrastlı toplarla.', cmpFigure(e, p, 'capsule')) +
+    cell('Parça · 2B', 'Bugünkü varsayılan. Uzuv siluetleri veriden, eklemler sessiz, yan görünüm.', cmpFigure(e, p, 'flat')) +
+    cell(
+      'Derinlik denemesi · YETMEDİ',
+      'Kamera 26°. Ölçüldü: uyluk 105→102, diz açısı 38°→35°. Şekil değişmiyor; yalnızca %10 yatay sıkışma ve barın tabakları ayrışıyor. Gerçek 3/4 için eklem başına derinlik gerekiyor.',
+      cmpFigure(e, p, 'depth'),
+    ) +
+    cell(
+      'Kas haritası',
+      mus && mus.status === 'authored' ? `Birincil: ${labelsOf(mus.primary).join(', ')}` : 'Bu hareket için kas verisi yok.',
+      mus && mus.status === 'authored' && ANATOMY
+        ? `<div class="two">${muscleMapSvg('front', mus)}${muscleMapSvg('back', mus)}</div>`
+        : '',
+    );
+}
+
+/* --- mobil önizleme ------------------------------------------------------ */
+
+/**
+ * Önizlenecek cihazlar.
+ *
+ * 375×667 (SE) tasarım incelemesinin ölçtüğü katlama riskinin yaşandığı yer:
+ * kas paneli orada kaydırmadan görünmüyordu. Listede ilk sırada duruyor ki
+ * en dar durum varsayılan olsun.
+ */
+const PHONES = [
+  { label: 'iPhone SE — 375×667', w: 375, h: 667 },
+  { label: 'iPhone 14 — 390×844', w: 390, h: 844 },
+  { label: 'Pro Max — 440×956', w: 440, h: 956 },
+];
+
+/** Sağ sütuna sığacak ölçek. */
+const phoneScale = (w) => Math.min(1, 268 / w);
+
+/**
+ * Mobil önizleme.
+ *
+ * Bu bir KOMPOZİSYON ve ÖLÇEK önizlemesi, piksel birebir render değil:
+ * burada tarayıcı SVG'si çiziyor, uygulamada `react-native-svg`. İkisi ayrı
+ * yazılmak zorunda (bkz. README). Cevapladığı sorular: figür 375pt'de okunuyor
+ * mu, kas paneli katlamanın altında mı kalıyor, hiyerarşi doğru mu.
+ */
+function renderPhone() {
+  const host = $('phone');
+  const wrap = host.parentElement;
+  if (!phoneOn) { wrap.style.display = 'none'; $('phoneNote').textContent = ''; return; }
+  wrap.style.display = 'flex';
+
+  const dev = PHONES[phoneSize];
+  const sc = phoneScale(dev.w);
+  host.className = 'phone' + (phoneLayout === 'stack' ? '' : ' ' + phoneLayout);
+  host.style.width = dev.w + 'px';
+  host.style.height = dev.h + 'px';
+  host.style.transform = `scale(${sc})`;
+  wrap.style.height = dev.h * sc + 'px';
+
+  const e = ex();
+  // Bir arketip birden çok harekete hizmet edebiliyor (30 arketip, 34 hareket).
+  // Önizleme hepsini gösteriyor: hangi hareketin bu çizimi paylaştığı görünür olsun.
+  const uses = Object.values(CATALOG).filter((c) => c.archetype === key);
+  const title = uses[0]?.name || key;
+  const others = uses.slice(1).map((c) => c.name);
+  const phase = editable() ? frame().tr : poseAt(e, currentT()).phase.tr;
+
+  host.innerHTML = '';
+  const add = (html) => host.insertAdjacentHTML('beforeend', html);
+  add(`<div class="status"><span>9:41</span><span>▪▪▪ ▪ ▮</span></div>`);
+  add('<div class="body" id="phoneBody"></div>');
+  const body = $('phoneBody');
+  const push = (html) => body.insertAdjacentHTML('beforeend', html);
+
+  // Bu arketibi kullanan hareketler farklı kas profilleri taşıyabiliyor
+  // (30 arketip, 34 hareket). Önizleme birincisini gösteriyor; diğerleri
+  // aşağıda ayrıca yazılı.
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  const authored = mus && mus.status === 'authored';
+
+  push(`<h3>${title}</h3>`);
+  if (authored) push(`<span class="chip">${groupsOf(mus.primary).slice(0, 3).join(' · ')}</span>`);
+  const [pi0, pi1] = keyPhases(e);
+  const plab = (i) => e.kf[i].tr || `%${(e.kf[i].t * 100).toFixed(0)}`;
+  if (phoneLayout === 'full') {
+    // Canlı figür üstte, iki evre altta referans olarak: hareketin kendisi
+    // uygulamada oynuyor, ama başlangıç ve tepe noktasını yan yana görmek
+    // onaylanan tasarımın taşıdığı bilgi. İkisi birbirinin yerine geçmiyor.
+    push(`<div class="card"><h4>Hareket</h4>
+        <div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div>
+        <div class="thumbs">
+          <div><svg id="phA" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">1. ${plab(pi0)}</div></div>
+          <div class="arrow">›</div>
+          <div><svg id="phB" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">2. ${plab(pi1)}</div></div>
+        </div>
+      </div>`);
+  } else if (phoneMode === 'phases') {
+    const [i0, i1] = [pi0, pi1];
+    const lab = plab;
+    push(`<div class="card"><h4>Hareket</h4><div class="phases">
+        <div class="ph${kfIndex === i0 ? ' sel' : ''}"><svg id="phA" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">1. ${lab(i0)}</div></div>
+        <div class="arrow">›</div>
+        <div class="ph${kfIndex === i1 ? ' sel' : ''}"><svg id="phB" preserveAspectRatio="xMidYMid meet"></svg><div class="lab">2. ${lab(i1)}</div></div>
+      </div></div>`);
+  } else {
+    push(`<div class="card"><h4>Hareket</h4><div class="figWrap"><svg id="phoneFig" preserveAspectRatio="xMidYMid meet"></svg></div><div class="phase" id="phonePhase"></div></div>`);
+  }
+
+  // Kas verisi yoksa panel HİÇ açılmıyor — tasarım incelemesinin kararı.
+  // Boş siluet "hiçbir kas çalışmıyor" olarak okunur, bu yanlış bilgi.
+  if (authored) {
+    // Harita bloğu önce değişkene kuruluyor: iç içe üç şablon dizisi okunmaz
+    // ve bir kez bozuldu.
+    // Kas paneli her zaman SEKMELİ: ön ve arka ayrı. Yan yana iki gövde daha
+    // az yer kaplıyor (ölçüldü) ama her biri yarı genişlikte kalıyor ve
+    // anatomi çizimi kaba olduğu için o boyutta okunmuyor. Kaydırma kabul
+    // edilebilir olduğuna göre okunurluk kazanıyor.
+    const maps = ANATOMY
+      ? `<div class="tabbar">
+          <button data-view="front" aria-pressed="${phoneView === 'front'}">ÖN</button>
+          <button data-view="back" aria-pressed="${phoneView === 'back'}">ARKA</button>
+        </div>
+        <div class="maps"><figure>${muscleMapSvg(phoneView, mus)}</figure></div>`
+      : '';
+    const key = ANATOMY
+      ? `<div class="key">
+          <span><i style="background:${MUSCLE_FILL.primary}"></i>Birincil</span>
+          <span><i style="background:${MUSCLE_FILL.secondary}"></i>İkincil (taramalı)</span>
+          <span><i style="background:${MUSCLE_FILL.rest}"></i>Pasif</span>
+        </div>`
+      : '';
+    // Metin listesi A varyantından ve üç işi birden görüyor: ekran okuyucunun
+    // tek yolu, renk körü kullanıcının yedek kanalı, ve haritanın okunmadığı
+    // her durumda yedek gösterim.
+    const list = `<div class="mus"><span>Birincil</span><b>${labelsOf(mus.primary).join(', ')}</b></div>` +
+      (mus.secondary.length ? `<div class="mus"><span>İkincil</span><b>${labelsOf(mus.secondary).join(', ')}</b></div>` : '');
+    push(`<div class="card"><h4>Çalışan kaslar</h4>${maps}${key}${list}</div>`);
+  } else {
+    push(`<div class="card"><h4>Çalışan kaslar</h4><p class="none">Bu hareket için kas verisi yok.<br>Panel veri geldiğinde açılacak; boş siluet gösterilmiyor.</p></div>`);
+  }
+
+  push(`<div class="card stats">
+      <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
+      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.bar ? 'Halter' : 'Yok'}</b></div>
+      <div>Süre<b>${(e.dur / 1000).toFixed(1)} sn</b></div>
+    </div>`);
+
+  host.querySelectorAll('.tabbar button').forEach((b) => {
+    b.onclick = () => { phoneView = b.dataset.view; renderPhone(); };
+  });
+
+  drawPhoneFigure();
+  if ($('phonePhase')) $('phonePhase').textContent = phase || '';
+
+  // Katlama: dekoratif bir çizgi değil, ÖLÇÜM. `.phone` taşanı kırpıyor, yani
+  // ekranın altına düşen içerik gerçekten görünmüyor — tasarım incelemesinin
+  // "kas paneli SE'de kaydırmadan görünmüyor" bulgusunun sınandığı yer burası.
+  const need = body.scrollHeight + $('phone').querySelector('.status').offsetHeight;
+  const over = need - dev.h;
+  // "Aynı çizim" bilgisi telefonun DIŞINDA: editör bilgisi, uygulamada
+  // olmayacak. İçeride tutmak katlama ölçümünü şişiriyordu.
+  const shared = others.length
+    ? `<br><span style="color:var(--sub)">Aynı çizimi paylaşan: ${others.join(' · ')} — kas verileri farklı olabilir.</span>`
+    : '';
+  // Kaydırma bir HATA değil, bir ÖLÇÜ: kullanıcı ekranı kaydırabiliyor, o
+  // yüzden okunurluğu katlamaya feda etmiyoruz. Sayı yine de duruyor —
+  // ilk bakışta neyin görünmediğini bilmek düzen kararını besliyor.
+  $('phoneNote').innerHTML =
+    (over > 0
+      ? `İlk bakışta görünen: <b>${dev.h}px</b> · altta kalan <b>${over}px</b> (içerik ${need}px).`
+      : `<b style="color:var(--p)">Hepsi tek ekranda</b> — içerik ${need}px, ekran ${dev.h}px.`) +
+    shared +
+    `<br>Kompozisyon ve ölçek önizlemesi: çizim burada tarayıcı SVG'si, uygulamada react-native-svg. İkisi ayrı yazılıyor, bu yüzden piksel birebir değil.`;
+}
+
+/**
+ * Kas yoğunluğunun ÜÇ KANALLI kodlaması.
+ *
+ * Renk körlüğü hue ayrımını bozar, LUMINANSI bozmaz. Bu yüzden birincil ve
+ * ikincil iki ton yeşille değil, bir parlaklık merdiveniyle ayrılıyor; üstüne
+ * ikincil kaslara tarama deseni (renkten bağımsız şekil kanalı) ve altına
+ * metin listesi geliyor. Hiçbiri tek başına taşımıyor.
+ *
+ * Ölçüldü (Machado 2009 matrisleri, linearRGB): merdivenin komşu adımları üç
+ * renk körlüğü türünde de en kötü 2.27:1 kontrast veriyor. Uygulamanın bugünkü
+ * paleti tek hue'nun üç tonu ve bu ayrımı taşımıyor.
+ */
+const MUSCLE_FILL = { primary: '#10B981', secondary: '#0E6B4C', rest: '#1D2536' };
+
+/** Bir görünümün (ön/arka) kas haritasını çizer. */
+function muscleMapSvg(view, mus) {
+  if (!ANATOMY) return '';
+  const level = {};
+  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
+  (mus.secondary || []).forEach((m) => (level[m] = 'secondary'));
+  const paths = ANATOMY[view] || [];
+  const half = paths
+    .map((p) => {
+      const lv = p.muscle ? level[p.muscle] : undefined;
+      // İkincil kaslar tarama desenli: renk körü kullanıcı için parlaklık
+      // farkının yanında ikinci bir kanal.
+      const fill = lv === 'secondary' ? 'url(#hatch)' : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
+      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="0.7"/>`;
+    })
+    .join('');
+  return `<svg viewBox="${ANATOMY.viewBox}" preserveAspectRatio="xMidYMid meet">
+      <defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="7" height="7" fill="${MUSCLE_FILL.secondary}"/>
+        <rect width="2.4" height="7" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
+      </pattern></defs>
+      <g>${half}</g><g transform="${ANATOMY.mirror}">${half}</g>
+    </svg>`;
+}
+
+/**
+ * Hareketi iki karede anlatan evre çifti.
+ *
+ * İlk kare ve ondan EN ÇOK AYRILAN kare. Elle "başlangıç ve tepe" işaretlemek
+ * yerine veriden çıkıyor: kareler değişince seçim de kendiliğinden değişir,
+ * unutulmuş bir bayrak yüzünden yanlış evre gösterilmez. Ayrılma iskelet
+ * üstünden ölçülüyor, poz alanları üstünden değil — hepsi piksel, birim
+ * karışması olmuyor.
+ */
+function keyPhases(e) {
+  const S0 = skeleton(e, fillPose(e.kf[0].p));
+  const joints = Object.keys(S0).filter((k) => k !== 'bar');
+  let best = Math.min(1, e.kf.length - 1);
+  let bestD = -1;
+  e.kf.forEach((k, i) => {
+    if (i === 0) return;
+    const S = skeleton(e, fillPose(k.p));
+    const d = joints.reduce((sum, j) => sum + Math.hypot(S[j][0] - S0[j][0], S[j][1] - S0[j][1]), 0);
+    if (d > bestD) { bestD = d; best = i; }
+  });
+  return [0, best];
+}
+
+/** Tek bir pozu verilen SVG'ye çizer. */
+function drawPose(svg, e, p) {
+  const S = skeleton(e, p);
+  svg.setAttribute('viewBox', boundsFor(e, 'side'));
+  svg.innerHTML = '';
+  const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
+  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
+  const ball = mkBall();
+  const limb = mkLimb(seg);
+  const push = (arr) => arr.forEach((n) => svg.appendChild(n));
+  push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
+  if (showFarLeg(e)) {
+    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true));
+    push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
+  }
+  if (!e.hideFarArm) {
+    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true));
+    push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+  }
+  push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
+  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push(limb(S.pelvis, S.knee, 42, 33, 26, .42));
+  push(limb(S.knee, S.ankle, 26, 28, 13, .34));
+  push(limb(S.sh, S.elbow, 25, 22, 17, .5));
+  push(limb(S.elbow, S.hand, 18, 18, 12, .3));
+  push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
+  push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
+
+  // Perspektif barbell: çubuk derinliğe doğru uzanıyor, iki uçtaki tabaklar
+  // eğik görüldüğü için daire değil ELİPS. Onaylanan mockup B'de derinlik
+  // hissini veren şey buydu; editörün ana sahnesi tek bir daire çiziyor.
+  //
+  // Bu bir ÇİZİM konvansiyonu, model değişikliği değil: figür hâlâ yan
+  // görünüm ve gövde rotasyonu poz olarak temsil edilemiyor (bkz. README).
+  // Uygulama da aynı konvansiyonu uygulamak zorunda, yoksa önizleme yalan söyler.
+  if (S.bar) {
+    const metal = css('--metal'), accent = css('--p');
+    const dx = 58, dy = 17;                    // derinlik ekseni
+    const deg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+    const ends = [[S.bar[0] - dx, S.bar[1] + dy], [S.bar[0] + dx, S.bar[1] - dy]];
+    push([el('line', {
+      x1: ends[0][0], y1: ends[0][1], x2: ends[1][0], y2: ends[1][1],
+      stroke: metal, 'stroke-width': 7, 'stroke-linecap': 'round',
+    })]);
+    ends.forEach(([x, y]) => push([
+      el('ellipse', { cx: x, cy: y, rx: 15, ry: 34, fill: metal, stroke: accent, 'stroke-width': 2,
+                      transform: `rotate(${deg} ${x} ${y})` }),
+      el('ellipse', { cx: x, cy: y, rx: 6, ry: 14, fill: 'none', stroke: line,
+                      transform: `rotate(${deg} ${x} ${y})` }),
+    ]));
+  }
+}
+
+/** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
+function drawPhoneFigure() {
+  const e = ex();
+  // Canlı figür KENDİ zamanında: editörün oynatma durumundan bağımsız, çünkü
+  // uygulamadaki figür de düzenleme diye bir şey bilmeden oynuyor.
+  if ($('phoneFig')) drawPose($('phoneFig'), e, poseAt(e, phonePlayT).p);
+  if (phoneLayout === 'full' || phoneMode === 'phases') {
+    if (!$('phA')) return;
+    const [i0, i1] = keyPhases(e);
+    drawPose($('phA'), e, fillPose(e.kf[i0].p));
+    drawPose($('phB'), e, fillPose(e.kf[i1].p));
+    // Seçili kare işareti burada tazeleniyor: paneli baştan kurmak zaman
+    // çubuğunda gezerken gereksiz iş olurdu.
+    const boxes = $('phone').querySelectorAll('.ph');
+    if (boxes[0]) boxes[0].classList.toggle('sel', editable() && kfIndex === i0);
+    if (boxes[1]) boxes[1].classList.toggle('sel', editable() && kfIndex === i1);
+  }
+}
+
+/**
+ * Kadrajı tazeler.
+ *
+ * `draw()` içinde DEĞİL. `boundsFor` 25 örnek karenin birleşimini alıyor ve
+ * sonuç yalnızca kare verisi, mod, kol türü ya da düzlem değişince değişiyor —
+ * oynatma sırasında hiçbiri değişmiyor ama `draw()` saniyede 30 kez
+ * çağrılıyordu. Ölçüm: `boundsFor` 0.11 ms, bir karenin poz + iskelet + 20 path
+ * işinin tamamı 16.1 mikrosaniye; yani kadraj hesabı çizdiği figürün yedi
+ * katına mal oluyordu.
+ *
+ * Bedeli: veriyi değiştiren her yol burayı çağırmak ZORUNDA, yoksa kadraj
+ * bayatlar ve sürüklenen eklem çerçevenin dışına taşar. Bugün çağıran yollar:
+ * `renderAll` (bütün veri değişiklikleri), sürükleme, kaydırıcı ve düzlem
+ * düğmeleri. Oynatma ile zaman çubuğu veriyi değiştirmediği için çağırmıyor.
+ */
+const syncViewBox = () => $('stage').setAttribute('viewBox', boundsFor(ex(), plane));
+
+
 function draw() {
   const svg = $('stage');
   const e = ex();
@@ -107,15 +615,14 @@ function draw() {
   const S = skeleton(e, p);
   const S0 = skeleton(e, poseAt(e, 0).p);
   const view = plane;
-  svg.setAttribute('viewBox', boundsFor(e, view));
   svg.innerHTML = '';
 
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint');
   const line = css('--line'), metal = css('--metal'), floor = css('--floor'), surf2 = css('--surf2'), accent = css('--p');
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
-  const ball = (c, r, far) => el('circle', { cx: c[0], cy: c[1], r, fill: far ? skinFar : joint, stroke: line });
-  const limb = (a, b, wa, wm, wb, at, far) => { const m = lerpP(a, b, at); return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)]; };
+  const ball = mkBall();
+  const limb = mkLimb(seg);
   const db = (c, from, far) => {
     const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
     const fill = far ? skinFar : metal;
@@ -125,9 +632,27 @@ function draw() {
       el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
     ])];
   };
+  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
+  // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
+  // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
+  const hand = (wrist, elbow, far) => {
+    const dx = wrist[0] - elbow[0];
+    const dy = wrist[1] - elbow[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return el('path', {
+      d: handPath(),
+      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
+      fill: far ? skinFar : skin,
+      stroke: line,
+    });
+  };
+  // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
+  // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
+  // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
+  // opak kalıyor ki tabağın sınırı belirsizleşmesin.
   const plate = (c) => (c ? [
-    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, stroke: accent, 'stroke-width': 2 }),
-    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line }),
+    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, 'fill-opacity': .62, stroke: accent, 'stroke-width': 2 }),
+    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line, opacity: .8 }),
     el('circle', { cx: c[0], cy: c[1], r: 11, fill: joint, stroke: accent, 'stroke-width': 2 }),
   ] : []);
 
@@ -171,18 +696,20 @@ function draw() {
     [F.L, F.R].forEach((s) => {
       push([el('rect', { x: s.ankle[0] - 15, y: GROUND - 13, width: 30, height: 13, rx: 5, fill: skin, stroke: line })]);
       push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34));
-      push([ball(s.knee, 13), ball(s.ankle, 9), ball(s.sh, 17)]);
+      push([ball(s.knee, 13), ball(s.ankle, 9)]);
       push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3));
       push([ball(s.elbow, 10), el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
       if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
     });
     push([
       el('ellipse', { cx, cy: F.pelvis[1] + 8, rx: 38, ry: 25, fill: skin, stroke: line }),
-      seg(F.pelvis, F.lumbar, 66, 56),
-      el('ellipse', { cx, cy: trunk.cy, rx: trunk.rx, ry: trunk.ry, fill: skin, stroke: line }),
+      // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
+      // omuz silkerken omuz gövdeden kopamıyor.
+      el('path', { d: frontTorsoPath(F), fill: skin, stroke: line }),
       seg(F.thorax, F.neck, 27, 24),
       el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: line }),
     ]);
+    [F.L, F.R].forEach((s2) => push([ball(s2.sh, 16)]));
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view);
   }
@@ -212,38 +739,63 @@ function draw() {
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true)); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true));
+    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
+    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
     push([ball(S.kneeF, 12, true)]);
   }
   if (!e.hideFarArm) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true)); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
+    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
     push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
+    // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
+    // arkasında kalıyor. Önceden ikisi de en sona, gövdenin üstüne
+    // çiziliyordu; uzak dambıl gövdenin önünde belirdiği için yakın el iki
+    // ağırlık tutuyormuş gibi görünüyordu.
+    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
   if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   push([
-    el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }),
-    seg(S.pelvis, S.lumbar, 40, 33),
-    el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }),
-    seg(S.thorax, S.neck, 21, 19), ball(S.sh, 17),
+    // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
+    // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
+    // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
+    ...(useParts ? [] : [el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` })]),
+    ...[trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax)].filter(Boolean),
+    ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
+    ...(useParts ? [] : [el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` })]),
+    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)].filter(Boolean) : [seg(S.thorax, S.neck, 21, 19)]),
+    // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
+    // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
+    // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
+    // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
+    // ayrı ayrı okunuyor.
+    ...(useParts
+      ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
+      : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42)); push(limb(S.knee, S.ankle, 26, 28, 13, .34));
+  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5)); push(limb(S.elbow, S.hand, 18, 18, 12, .3));
+  push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
   if (e.bar === 'hands') push(plate(S.bar));
-  push([el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
-  if (!e.hideFarArm) push([el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
-  if (e.load === 'dumbbell') {
-    if (!e.hideFarArm) push(db(S.handF, S.elbowF, true));
-    push(db(S.hand, S.elbow, false));
-  }
-  svg.appendChild(el('g', { transform: `rotate(${p.neckA} ${S.head[0]} ${S.head[1]})` }, [
-    el('ellipse', { cx: S.head[0], cy: S.head[1] - 3, rx: 23, ry: 26, fill: skin, stroke: line }),
-    el('path', { d: `M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`, fill: skin, stroke: line })]));
+  push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
+  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
+  // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
+  // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
+  const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
+  svg.appendChild(
+    useParts
+      ? el('g', { transform: headT }, [el('path', { d: headProfile(), fill: skin, stroke: line })])
+        // Kapsül kipinin çene kaması da YEREL koordinatta: eskiden mutlak
+        // noktalarla çizilip `rotate(a cx cy)` ile döndürülüyordu, o hâlde
+        // aynalanamıyordu. Sayılar birebir aynı, yalnızca kafa merkezine göre.
+      : el('g', { transform: headT }, [
+          el('ellipse', { cx: 0, cy: -3, rx: 23, ry: 26, fill: skin, stroke: line }),
+          el('path', { d: 'M -4 4 L 21 6 L 14 23 L -8 22 Z', fill: skin, stroke: line }),
+        ]),
+  );
 
   drawHandles(svg, e, S, view);
 }
@@ -306,7 +858,9 @@ function moveDrag(evt) {
   if (Object.keys(patch).length === 0) return;
   frame().p = applyPatch(frame().p, patch);
   markDirty();
+  syncViewBox();
   draw();
+  drawPhoneFigure();
   renderSliders();
   renderIssues();
 }
@@ -344,6 +898,23 @@ function syncHistoryButtons() {
   $('redo').disabled = redoStack.length === 0;
 }
 
+/**
+ * Listedeki uyarı rozeti.
+ *
+ * Denetim pahalı: 30 arketip × 21 kare, tek geçiş ~64ms. Zaman çubuğunu
+ * sürüklerken bu her `input` olayında yeniden koşuyordu ve çubuk takılıyordu.
+ * Sonuç hareketin kendi verisine bağlı, o yüzden veri değişmedikçe duruyor.
+ */
+const issueCounts = new Map();
+function issueCountFor(k) {
+  const sig = JSON.stringify(DATA[k]);
+  const hit = issueCounts.get(k);
+  if (hit && hit.sig === sig) return hit.n;
+  const n = auditExercise(DATA[k]).length + auditLoop(DATA[k]).length;
+  issueCounts.set(k, { sig, n });
+  return n;
+}
+
 function renderExList() {
   const host = $('exList');
   host.innerHTML = '';
@@ -354,14 +925,14 @@ function renderExList() {
     const label = names[0] || k;
     const hay = (label + ' ' + names.join(' ') + ' ' + k).toLowerCase();
     if (filter && !hay.includes(filter)) return;
-    const issues = auditExercise(DATA[k]).length + auditLoop(DATA[k]).length;
+    const issues = issueCountFor(k);
     const b = document.createElement('button');
     b.setAttribute('aria-pressed', String(k === key));
     b.innerHTML =
       `${issues ? `<span class="bad">${issues}</span>` : ''}` +
       `${DATA[k].view === 'front' ? '<span class="front">ÖNDEN</span>' : ''}` +
       `<b>${label}</b><small>${names.length > 1 ? names.slice(1).join(', ') + ' · ' : ''}${k}</small>`;
-    b.onclick = () => { key = k; kfIndex = 0; playing = false; scrubT = null; renderAll(); };
+    b.onclick = () => { key = k; kfIndex = 0; playing = false; scrubT = null; phonePlayT = 0; renderAll(); };
     host.appendChild(b);
   });
   if (!host.children.length) host.innerHTML = '<p class="hint">Eşleşen hareket yok.</p>';
@@ -442,7 +1013,9 @@ function renderSliders() {
       if (from !== 'range') range.value = String(v);
       if (from !== 'num') num.value = String(v);
       markDirty();
+      syncViewBox();
       draw();
+      drawPhoneFigure();
       renderIssues();
     };
     range.oninput = () => set(range.value, 'range');
@@ -536,7 +1109,20 @@ function renderEquipment() {
     renderAll();
   };
   $('dur').value = String(e.dur);
-  $('dur').onchange = () => { const n = Number($('dur').value); if (n > 500) { e.dur = n; markDirty(); } };
+  // Alt sınır şemadan geliyor (`src/rigSchema.ts` MIN_DUR): editörün daha
+  // gevşek olması, burada kaydedilip testte düşen veri demekti.
+  $('dur').onchange = () => {
+    const n = Number($('dur').value);
+    if (!(n > 2000)) {
+      $('dur').value = String(e.dur);
+      $('savedMsg').textContent = 'süre 2000ms üstü olmalı';
+      $('savedMsg').style.color = css('--warn');
+      return;
+    }
+    snapshot();
+    e.dur = n;
+    markDirty();
+  };
 }
 
 function renderAll() {
@@ -545,6 +1131,8 @@ function renderAll() {
   renderSliders();
   renderEquipment();
   renderIssues();
+  renderPhone();
+  syncViewBox();
   draw();
 }
 
@@ -583,19 +1171,54 @@ $('closeLoop').onclick = () => {
   renderAll();
 };
 $('kfTime').onchange = () => {
+  const e = ex();
   const t = Number($('kfTime').value);
-  if (!(t >= 0 && t <= 1)) return;
+  const reject = (why) => {
+    $('kfTime').value = String(frame().t);
+    $('savedMsg').textContent = why;
+    $('savedMsg').style.color = css('--warn');
+  };
+  if (!(t >= 0 && t <= 1)) return reject('kare zamanı 0 ile 1 arasında olmalı');
+  // Uçlar döngünün tanımı: ilk kare %0'da, son kare %100'de. Ortadaki bir
+  // kareyi uca taşımak, editörde kaydedilip `npm test`'te düşen veri
+  // üretiyordu.
+  const isFirst = kfIndex === 0;
+  const isLast = kfIndex === e.kf.length - 1;
+  if (isFirst && t !== 0) return reject('ilk kare %0’da kalmalı — döngü orada kapanıyor');
+  if (isLast && t !== 1) return reject('son kare %100’de kalmalı — döngü orada kapanıyor');
+  if (!isFirst && !isLast && (t === 0 || t === 1)) return reject('ara kare uçlara oturamaz');
+
   snapshot();
-  frame().t = t;
-  ex().kf.sort((a, b) => a.t - b.t);
+  const moved = frame();
+  moved.t = t;
+  e.kf.sort((a, b) => a.t - b.t);
+  // Sıralama kareleri yer değiştiriyor; seçim İNDİSE değil KAREYE bağlı
+  // kalmalı, yoksa bir sonraki düzenleme sessizce başka bir kareye gidiyor.
+  kfIndex = e.kf.indexOf(moved);
   markDirty();
   renderAll();
 };
 
 // --- üst çubuk -----------------------------------------------------------
 
-$('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); draw(); };
-$('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); draw(); };
+$('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
+$('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
+
+$('compare').onclick = () => {
+  cmpOn = true;
+  $('cmp').classList.add('on');
+  renderCompare();
+};
+const closeCmp = () => { cmpOn = false; $('cmp').classList.remove('on'); };
+$('cmpClose').onclick = closeCmp;
+window.addEventListener('keydown', (evt) => { if (evt.key === 'Escape' && cmpOn) closeCmp(); });
+
+$('parts').onclick = () => {
+  useParts = !useParts;
+  $('parts').setAttribute('aria-pressed', String(useParts));
+  $('parts').textContent = useParts ? 'Parça' : 'Kapsül';
+  draw();
+};
 
 $('onion').onclick = () => {
   onion = !onion;
@@ -631,7 +1254,13 @@ $('revert').onclick = async () => {
 
 $('scrub').oninput = () => {
   goToTime(Number($('scrub').value) / 1000);
-  renderAll();
+  // Zaman çubuğunda gezinmek ne hareket listesini ne ekipmanı değiştiriyor;
+  // `renderAll` burada boşuna iş yapıyordu.
+  renderKf();
+  renderSliders();
+  renderIssues();
+  draw();
+  drawPhoneFigure();
 };
 
 $('play').onclick = () => {
@@ -668,6 +1297,40 @@ window.addEventListener('keydown', (evt) => {
   if (evt.key === ' ' && evt.target === document.body) { evt.preventDefault(); $('play').click(); }
 });
 
+$('phoneMode').onclick = () => {
+  phoneMode = phoneMode === 'phases' ? 'live' : 'phases';
+  $('phoneMode').textContent = phoneMode === 'phases' ? 'Evre' : 'Canlı';
+  renderPhone();
+};
+
+$('phoneOn').onclick = () => {
+  phoneOn = !phoneOn;
+  $('phoneOn').textContent = phoneOn ? '◉' : '○';
+  $('phoneOn').setAttribute('aria-pressed', String(phoneOn));
+  renderPhone();
+};
+PHONES.forEach((d, i) => {
+  const o = document.createElement('option');
+  o.value = String(i);
+  o.textContent = d.label;
+  $('phoneSize').appendChild(o);
+});
+const LAYOUTS = [
+  ['full', 'Geniş: canlı + evreler'],
+  ['stack', 'Yalnız evreler'],
+  ['compact', 'Sıkı: animasyon küçük'],
+];
+LAYOUTS.forEach(([v, label]) => {
+  const o = document.createElement('option');
+  o.value = v;
+  o.textContent = label;
+  $('phoneLayout').appendChild(o);
+});
+$('phoneLayout').value = phoneLayout;
+$('phoneLayout').onchange = () => { phoneLayout = $('phoneLayout').value; renderPhone(); };
+
+$('phoneSize').onchange = () => { phoneSize = Number($('phoneSize').value); renderPhone(); };
+
 $('search').oninput = () => { filter = $('search').value.trim().toLowerCase(); renderExList(); };
 
 window.addEventListener('beforeunload', (e) => {
@@ -677,23 +1340,51 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 let last = 0;
+/**
+ * Faz duvar saatinden DEĞİL, biriken süreden çıkıyor.
+ *
+ * Eskiden `now / dur` idi: hareket değiştirince `dur` da değiştiği için faz
+ * zıplıyordu, yani listeden bir harekete geçtiğinde figür tekrarın rastgele
+ * bir yerinden başlıyordu. Birikimli sayaç her harekete tekrarın başından
+ * başlatıyor.
+ */
 function tick(now) {
-  if (playing && now - last > 33) {
-    last = now;
-    playT = ((now / ex().dur) % 1 + 1) % 1;
-    draw();
-    $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
+  const dt = last ? Math.min(100, now - last) : 0;
+  last = now;
+  if (dt) {
+    phonePlayT = (phonePlayT + dt / ex().dur) % 1;
+    // Önizleme her zaman oynuyor; ana sahne yalnızca "Oynat" açıkken.
+    drawPhoneFigure();
+    renderCompare();
+    if (playing) {
+      playT = phonePlayT;
+      draw();
+      $('frameInfo').textContent = `oynuyor · ${(playT * 100).toFixed(0)}%`;
+    }
   }
   requestAnimationFrame(tick);
 }
 
 const boot = async () => {
-  const [data, names] = await Promise.all([
+  const [data, names, muscles, anatomy, parts] = await Promise.all([
     fetch('/data').then((r) => r.json()),
     fetch('/names').then((r) => r.json()).catch(() => ({})),
+    fetch('/muscles').then((r) => r.json()).catch(() => ({})),
+    fetch('/anatomy').then((r) => r.json()).catch(() => null),
+    fetch('/parts').then((r) => r.json()).catch(() => null),
   ]);
+  MUSCLEDATA = muscles;
+  ANATOMY = anatomy && anatomy.front ? anatomy : null;
+  PARTS = parts && parts.parts ? parts.parts : null;
   DATA = data;
-  NAMES = names;
+  // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
+  // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
+  // (unilateral_lunge üç hareket) ters çeviriyoruz.
+  CATALOG = names;
+  NAMES = {};
+  for (const e of Object.values(names)) {
+    (NAMES[e.archetype] ||= []).push(e.name);
+  }
   key = Object.keys(DATA)[0];
   renderAll();
   requestAnimationFrame(tick);

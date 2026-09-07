@@ -1,8 +1,13 @@
+// ÜRETİLMİŞ DOSYA — elle düzenleme.
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
+// Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
+// motor doğurur. Bütünlük kontrolü: manifest.json.
+
 import { describe, expect, it } from 'vitest';
 
-import { RIG_ARCHETYPES } from '../src/archetypes';
-import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
-import { auditExercise, auditLoop, auditSegments } from '../src/rigAudit';
+import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
+import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '@/utils/rig';
+import { auditExercise, auditLoop, auditSegments } from '@/utils/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const entries = Object.entries(RIG_ARCHETYPES);

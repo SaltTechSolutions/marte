@@ -129,6 +129,8 @@ export interface RigExercise {
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;
+  /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
+  note?: string;
   kf: RigKeyframe[];
 }
 
@@ -149,6 +151,23 @@ const BASE = {
 
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
 export const ease = (u: number): number => u * u * (3 - 2 * u);
+
+/** Duruştan çıkış: yavaş başla, hızla devam et. */
+const easeOut = (u: number): number => u * u;
+/** Duruşa varış: hızla gel, yavaşlayarak dur. */
+const easeIn = (u: number): number => u * (2 - u);
+
+/**
+ * İki karenin pozu aynı mı? Aynıysa aradaki aralık bir BEKLEME'dir.
+ *
+ * Bekleme ile geçiş ayrımı yumuşatmanın nereye uygulanacağını belirliyor:
+ * beklemede hızın sıfırlanması hareketin kendisi, geçiş karesinde ise hata.
+ */
+const samePose = (a: RigKeyframe, b: RigKeyframe): boolean => {
+  const A = fillPose(a.p);
+  const B = fillPose(b.p);
+  return (Object.keys(A) as (keyof RigPose)[]).every((k) => Math.abs(A[k] - B[k]) <= 0.5);
+};
 
 /**
  * Eksik alanları doldurur. Uzak uzuvlar yazılmadıysa yakınından türetilir:
@@ -267,7 +286,29 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   const a = kf[i];
   const b = kf[i + 1] || kf[i];
   const span = Math.max(0.0001, b.t - a.t);
-  const u = ease(Math.min(1, Math.max(0, (t - a.t) / span)));
+  const raw = Math.min(1, Math.max(0, (t - a.t) / span));
+
+  /*
+   * Yumuşatma her aralığa DEĞİL, yalnızca hareketin gerçekten durduğu yerlere
+   * uygulanıyor.
+   *
+   * Eskiden her aralık smoothstep'ti ve bu, figürün HER ara karede hızını
+   * sıfırlaması demekti. Ölçüldü: 30 arketipteki 9 gerçek geçiş karesinin
+   * dokuzunda da hız ortalamanın %25'inin altına düşüyordu — kol çevirme turun
+   * içinde üç kez, omuz presi itişin ortasında duruyordu.
+   *
+   * Sıfır hız yalnızca BEKLEME'de doğru: iki komşu karenin pozu aynıysa orada
+   * hareket gerçekten duruyor (çömelmenin dibi, plank duruşu). Geçiş
+   * karesinden ise hızla geçilmeli.
+   *
+   * Kübik bir eğri (Catmull-Rom) hızı tam sürekli yapardı ama uçları aşabilir
+   * ve aşan bir eklem ROM bandını ihlal eder; yani yumuşaklık uğruna anatomik
+   * doğruluk riske girerdi. Buradaki çözüm hızda küçük bir kırılma bırakıyor,
+   * ama duraklamayı tamamen kaldırıyor.
+   */
+  const startsAtRest = i === 0 || samePose(kf[i - 1], a);
+  const endsAtRest = i + 2 >= kf.length || samePose(b, kf[i + 2]);
+  const u = startsAtRest && endsAtRest ? ease(raw) : startsAtRest ? easeOut(raw) : endsAtRest ? easeIn(raw) : raw;
   const la = toLocal(fillPose(a.p));
   const lb = toLocal(fillPose(b.p));
   const l = {} as LocalPose;
@@ -315,32 +356,44 @@ const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
  * oturtulur. Bu son adım olmadan plank'ın ayakları havada kalıyordu.
  */
 /**
- * Kadraj kaydırması, harekete BİR KEZ hesaplanır.
+ * Kadraj kaydırması, TEKRARIN TAMAMI için bir kez hesaplanır.
  *
  * Kare başına hesaplanan bir kaydırma figürü ortalar ama sahnenin geri
  * kalanını — zemin çizgisini, sehpayı, basamağı — figürle birlikte
  * sürükler: bar yukarı çıkarken yer yana kayıyordu. Dünya sabit durmalı,
  * içinde insan hareket etmeli.
+ *
+ * Önbellek nesne KİMLİĞİNE değil İÇERİĞE bağlı. Editör kareleri yerinde
+ * değiştiriyor (aynı nesne, yeni açılar); kimliğe bağlı bir önbellek orada
+ * bayatlıyor ve editördeki figür uygulamadakinden ~11px kayıyordu — aynı
+ * veri, iki ayrı görüntü.
  */
-const SHIFT = new WeakMap<RigExercise, number>();
+const SHIFT = new Map<string, number>();
+
+/** Kaydırmayı belirleyen her şey: kareler ve zinciri kuran ayarlar. */
+const shiftKey = (ex: RigExercise): string =>
+  `${ex.mode}|${ex.arm}|${ex.bar}|${ex.bend}|${JSON.stringify(ex.kf)}`;
 
 function centeringShift(ex: RigExercise): number {
-  const cached = SHIFT.get(ex);
+  const key = shiftKey(ex);
+  const cached = SHIFT.get(key);
   if (cached !== undefined) return cached;
-  if (ex.mode === 'hang') {
-    SHIFT.set(ex, 0);
-    return 0;
+  let dx = 0;
+  if (ex.mode !== 'hang') {
+    let sum = 0;
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const { p } = poseAt(ex, i / N);
+      const S = build(ex, p);
+      const anchor = S.bar ? (S.bar[0] + S.pelvis[0] * 1.4) / 2.4 : S.pelvis[0];
+      sum += CENTER_X - anchor;
+    }
+    dx = sum / N;
   }
-  let sum = 0;
-  const N = 12;
-  for (let i = 0; i < N; i++) {
-    const { p } = poseAt(ex, i / N);
-    const S = build(ex, p);
-    const anchor = S.bar ? (S.bar[0] + S.pelvis[0] * 1.4) / 2.4 : S.pelvis[0];
-    sum += CENTER_X - anchor;
-  }
-  const dx = sum / N;
-  SHIFT.set(ex, dx);
+  // Editörde her sürükleme yeni bir anahtar üretiyor; yığılmasın diye
+  // kütüphaneden birkaç kat büyüdüğünde tamamen boşaltılıyor.
+  if (SHIFT.size > 512) SHIFT.clear();
+  SHIFT.set(key, dx);
   return dx;
 }
 
@@ -420,7 +473,16 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
 
   const bar: Vec | null =
     ex.bar === 'back'
-      ? add(thorax, D(p.thoraxA + 201), 18)
+      ? // Sırttaki bar TRAPEZ hizasında, ensenin arkasında durur — ve el onu
+        // tutabilmeli. Eski konum gövdeden aşağı-geriye 18px idi: bar omuza
+        // 21px düşüyor ve el oraya ancak 165° dirsekle uzanıyordu. İnsan
+        // dirseği o kadar katlanmadığı için el barı hiç tutamıyor, hareket
+        // "eller arkada tutuluyor" gibi okunuyordu.
+        //
+        // Çapa artık BOYUN: bar ensenin 14px arkasında. Omuz-bar 40-43px,
+        // gereken dirsek 146-149°, sınırın altında. Yön gövdeyle döndüğü için
+        // figür öne eğilirken bar trapezde kalıyor.
+        add(neck, D(p.thoraxA + 270), 14)
       : ex.bar === 'hands'
         ? [hand![0], hand![1]]
         : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte
@@ -618,6 +680,123 @@ export function boundsFor(ex: RigExercise, view: 'side' | 'front'): string {
 }
 
 /**
+ * Önden görünümde gövde silueti: kalçadan omuza TEK parça.
+ *
+ * Eskiden gövde çıplak bir elipsti ve omuz topu ayrı çiziliyordu. Ölçüldü:
+ * `shrug_front`'ta omuz silkerken omuz topu elipsin tepesinin tamamen dışına
+ * çıkıyor (elipsin o yükseklikteki yarı genişliği 0) ve 27px boşluk kalıyordu
+ * — omuzlar gövdeden kopuk duruyordu.
+ *
+ * Anatomik olarak eksik olan şey omuz kuşağıydı: gerçek bir önden görünümde
+ * trapez boyundan omuza doğru eğimle iner, yani omuz gövdeden kopamaz. Bu yol
+ * o eğimi çiziyor — boyun kökünden omuza, omuzdan bele, belden kalçaya.
+ *
+ * Omuz yükselmesi (`shLift`) siluetin İÇİNDE kalıyor: omuz kalkınca yamuk da
+ * onunla birlikte yükseliyor.
+ */
+export function frontTorsoPath(F: FrontPoints): string {
+  const cx = F.cx;
+  const neckW = 20;
+  const shL = F.L.sh;
+  const shR = F.R.sh;
+  const waistY = (F.lumbar[1] + F.thorax[1]) / 2 + (F.pelvis[1] - F.thorax[1]) * 0.42;
+  const waistW = 38;
+  const hipY = F.pelvis[1] + 10;
+  const hipW = 44;
+  const neckY = F.neck[1] + 6;
+  // Yamuk eğimi: boyun kökünden omuza doğru dışa ve aşağı.
+  return (
+    `M ${cx - neckW} ${neckY} ` +
+    `C ${cx - neckW - 8} ${neckY + 6} ${shL[0] + 12} ${shL[1] - 12} ${shL[0]} ${shL[1]} ` +
+    `C ${shL[0] - 6} ${shL[1] + 14} ${cx - waistW - 6} ${waistY - 30} ${cx - waistW} ${waistY} ` +
+    `C ${cx - waistW - 2} ${waistY + 18} ${cx - hipW} ${hipY - 22} ${cx - hipW} ${hipY} ` +
+    `L ${cx + hipW} ${hipY} ` +
+    `C ${cx + hipW} ${hipY - 22} ${cx + waistW + 2} ${waistY + 18} ${cx + waistW} ${waistY} ` +
+    `C ${cx + waistW + 6} ${waistY - 30} ${shR[0] + 6} ${shR[1] + 14} ${shR[0]} ${shR[1]} ` +
+    `C ${shR[0] - 12} ${shR[1] - 12} ${cx + neckW + 8} ${neckY + 6} ${cx + neckW} ${neckY} Z`
+  );
+}
+
+/**
+ * Yandan görünümde omzu göğüs kafesine bağlayan deltoid kaması.
+ *
+ * Omuz topu tek başına çizilince gövdeye teğet geçen bir daire gibi duruyordu.
+ * Gerçekte deltoid göğüs kafesinin üstüne oturur ve silueti sürekli kılar.
+ */
+export function shoulderWedge(thorax: Vec, sh: Vec, w = 20): string {
+  const dx = sh[0] - thorax[0];
+  const dy = sh[1] - thorax[1];
+  const l = Math.hypot(dx, dy) || 1;
+  const nx = -dy / l;
+  const ny = dx / l;
+  return (
+    `M ${thorax[0] + nx * w} ${thorax[1] + ny * w} ` +
+    `L ${sh[0] + nx * w * 0.75} ${sh[1] + ny * w * 0.75} ` +
+    `A ${w * 0.75} ${w * 0.75} 0 0 0 ${sh[0] - nx * w * 0.75} ${sh[1] - ny * w * 0.75} ` +
+    `L ${thorax[0] - nx * w} ${thorax[1] - ny * w} Z`
+  );
+}
+
+/**
+ * Yandan baş profili.
+ *
+ * Yerel uzay: merkez `(0,0)`, **+X yüzün baktığı yön**. Çizim `neckA` ile
+ * döndürülüyor, yani baş boyunla birlikte eğiliyor.
+ *
+ * Düz bir daire yerine profil, çünkü baş figürün en tanınır parçası: alın,
+ * burun, çene ve ense çizgisi olmadan figür manken gibi okunuyordu. Yüz
+ * ayrıntısı YOK — göz, kulak, ağız çizilmiyor. Spor hareketi simülasyonunda
+ * bunlar bilgi taşımıyor ve küçük ölçekte gürültüye dönüşüyor.
+ */
+export function headProfile(): string {
+  return (
+    'M 0 -30 ' +
+    'C 11 -30 20 -22 22 -10 ' + // alın
+    'C 23 -5 21 -2 19 0 ' + // kaş
+    'C 22 3 23 7 20 9 ' + // burun
+    'C 17 10 16 11 16 14 ' + // burun altı
+    'C 18 16 18 20 15 23 ' + // dudak → çene
+    'C 11 27 5 29 0 29 ' + // çene ucu
+    'C -9 29 -18 22 -22 11 ' + // çene hattı → ense
+    'C -25 0 -24 -16 -14 -24 ' + // ense → kafatası
+    'C -9 -28 -5 -30 0 -30 Z'
+  );
+}
+
+/**
+ * El. Yerel uzay: bilek `(0,0)`, el `(0,18)` yönünde uzanır.
+ *
+ * Parmak yok — spor hareketinde parmak ayrıntısı bilgi taşımıyor (README'nin
+ * kapsam kararı). Ama daire yerine eldiven biçimi, elin hangi yöne baktığını
+ * gösteriyor ve bu bar tutuşunda okunuyor.
+ */
+export function handPath(): string {
+  return 'M -7 -1 C -10 5 -9 13 -5 17 C -1 20 4 20 7 16 C 10 11 10 3 8 -1 C 4 -4 -3 -4 -7 -1 Z';
+}
+
+/**
+ * Bir uzuv parçasını kemiğine oturtan SVG dönüşümü.
+ *
+ * Parçalar YEREL uzayda çiziliyor: kemik (0,0)'dan (0,len)'e uzanır, +X
+ * figürün baktığı yön. Bu dönüşüm parçayı kemiğin dünya konumuna ve yönüne
+ * taşıyor. Kemik boyları sabit olduğu için (`B`) ölçekleme yok — her parça
+ * kendi kemiğinin boyunda çiziliyor.
+ *
+ * Neden yerel uzay: parçaların NEREDEN geldiği bu sözleşmeyi değiştirmiyor.
+ * Bugünkü kaba taslak da, bir 3B modelden seçilen açıyla render edilip
+ * uzuvlara bölünmüş gerçek anatomik siluet de aynı yere oturuyor; kod aynı
+ * kalıyor, yalnızca `data/bodyParts.json` değişiyor.
+ */
+export function partTransform(a: Vec, b: Vec): string {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const l = Math.hypot(dx, dy) || 1;
+  // Yerel +Y'yi kemik yönüne çeviren açı.
+  const deg = (Math.atan2(-dx / l, dy / l) * 180) / Math.PI;
+  return `translate(${a[0]} ${a[1]}) rotate(${deg})`;
+}
+
+/**
  * İki uçtaki kalınlığı farklı olabilen kapsül gövde.
  *
  * Uzuvlar tek kalınlıkta çubuk değil: kas kütlesi uyluğun ve baldırın üst
@@ -642,28 +821,118 @@ export function capsule(a: Vec, b: Vec, wa: number, wb: number): string {
 }
 
 /**
- * Ayak. Topuk ayak bileğinin altında, parmak ucu önde; ikisi de yerden
- * yükselebilir — topuk kalkışında ve basamağa çıkışta ayak havada kalır,
- * tabanı zemine yapıştırmak yanlış olur.
+ * Ayak ölçüleri, ayak bileği orijin alınarak.
+ *
+ * Ayak bileği ayağın arkadan yaklaşık dörtte birinde durur; topuk arkada,
+ * parmak ucu önde. Bu sayılar `footPath`'in ve `MAX_ANKLE_LIFT`'in ortak
+ * kaynağı — ikisi ayrı yazılsaydı denetim, çizimin yapamayacağı bir kalkışa
+ * izin verirdi. Nitekim veriyordu.
+ */
+export const FOOT = { heel: -12, toe: 34, sole: 13 } as const;
+
+/**
+ * Topuğun kalkabileceği en yüksek nokta.
+ *
+ * Topuk kalkarken ayak parmak ucu etrafında döner, yani parmak yerde kalır.
+ * Ayak bileği ancak parmak ucuna olan mesafesi kadar yükselebilir; ötesinde
+ * parmak yerden kopar ve figür havada yürür.
+ *
+ * Ölçüldü: `calf_raise` 38px kaldırıyordu ama sınır 23px. Aradaki fark
+ * çizimde ayağı dörtgen gibi deforme ediyordu, çünkü `pinToe` parmağı zorla
+ * yerde tutmaya çalışıyordu. Eski denetim sınırı ayak BOYUYDU (46) — çizimin
+ * yapabildiğinden iki kat gevşek.
+ */
+export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.sole);
+
+/**
+ * Ayak profili.
+ *
+ * Topuk yuvarlak ve arkada, taban ortada hafif kavisli (ayak tabanı düz
+ * değil), parmak ucu öne incelir. Eskiden dört köşeli bir dörtgendi ve eğim
+ * değişince hangi ucun parmak olduğu okunmuyordu.
+ *
+ * `pinToe`: topuk kalkarken ayak PARMAK UCU ETRAFINDA döner — topuk
+ * kalkışının tanımı bu. Dönüş açısı ayak bileğinin yerden yüksekliğinden
+ * çıkıyor, yani şekil deforme olmuyor, katı kalıp dönüyor.
  */
 /**
- * Ayak.
+ * Ayağın yerel çerçevesi: `(u, v)` → dünya noktası.
  *
- * `pinToe`: topuk kalkarken parmak ucu yerde kalır ve ayak parmak ucu
- * etrafında döner — topuk kalkışının tanımı bu. Yükseklik ayağın boyuyla
- * sınırlı: taban zeminden koparsa figür havada yürür.
+ * `+u` parmak yönü, `+v` taban tarafı. `flip = -1` yerel x eksenini aynalıyor
+ * (bkz. `facingFlip`): parmak yönü aynı kalır, taban karşı tarafa geçer.
+ * Topuk kalkış dönüşü de işaret değiştirir, çünkü aynalanan çerçevede parmak
+ * ucu etrafındaki dönüş ters yöne gider.
  *
- * `pinToe` olmadan taban ayak bileğine bağlı kalır; havadaki ayak (hamlenin
- * arka ayağı, asılı bacak) zemine kadar uzayan bir kama çizmez.
+ * `footPath` ile `footLowestY` bu çerçeveyi PAYLAŞIYOR: ayrı yazılsalardı
+ * denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
  */
-export function footPath(ankle: Vec, dir: number, pinToe = false): string {
-  const d = D(dir);
-  const heel = add(ankle, d, -16);
-  const toe = add(ankle, d, B.foot - 16);
-  const sx = d[0] < 0 ? -1 : 1;
-  const heelBottom = Math.min(GROUND, ankle[1] + 12);
-  const toeBottom = pinToe ? GROUND : Math.min(GROUND, toe[1] + 12);
-  return `M ${heel[0]} ${ankle[1] - 6} L ${toe[0]} ${Math.min(toeBottom - 6, toe[1])} L ${toe[0] + 6 * sx} ${toeBottom} L ${heel[0] - 4 * sx} ${heelBottom} Z`;
+function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
+  const r = Math.hypot(FOOT.toe, FOOT.sole);
+  let extra = 0;
+  if (pinToe) {
+    // Parmak yerde kalsın diye gereken ek dönüş.
+    const h = Math.min(r, GROUND - ankle[1]);
+    extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
+  }
+  const a = rad(dir) + extra * flip;
+  const ux = Math.sin(a);
+  const uy = -Math.cos(a);
+  const vx = -uy * flip;
+  const vy = ux * flip;
+  return (u, v) => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
 }
+
+/**
+ * Çizilen ayağın en alt noktası.
+ *
+ * Tabanı oluşturan eğrinin düğüm ve kontrol noktaları örnekleniyor — yani
+ * denetim, ÇİZİLEN şeklin en alçak yerini ölçüyor, ayak bileğinin konumunu
+ * değil. Aradaki fark önemli: eski dörtgen ayak kendini `min(GROUND, …)` ile
+ * zemine kırpıyordu, o yüzden veri yanlış olsa bile çizim doğru görünüyordu.
+ * Yeni ayak katı bir şekil; kırpma yok, hata görünür.
+ */
+export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1): number {
+  const P = footFrame(ankle, dir, pinToe, flip);
+  const { heel, toe, sole } = FOOT;
+  const sample: [number, number][] = [
+    [heel + 1, sole - 1], [heel + 6, sole + 1], [2, sole - 3], [10, sole - 2],
+    [18, sole], [26, sole], [toe - 2, sole - 1], [toe + 2, sole - 5],
+  ];
+  return Math.max(...sample.map(([u, v]) => P(u, v)[1]));
+}
+
+
+export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): string {
+  const P = footFrame(ankle, dir, pinToe, flip);
+  const pt = (u: number, v: number) => { const q = P(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
+  const { heel, toe, sole } = FOOT;
+  return (
+    `M ${pt(heel + 2, -9)} ` +
+    `C ${pt(heel - 3, -4)} ${pt(heel - 4, 6)} ${pt(heel + 1, sole - 1)} ` + // topuk arkası, yuvarlak
+    `C ${pt(heel + 6, sole + 1)} ${pt(2, sole - 3)} ${pt(10, sole - 2)} ` + // taban kavisi
+    `C ${pt(18, sole)} ${pt(26, sole)} ${pt(toe - 2, sole - 1)} ` + // topuk-parmak arası taban
+    `C ${pt(toe + 2, sole - 5)} ${pt(toe + 1, 3)} ${pt(toe - 7, 1)} ` + // parmak ucu
+
+    `C ${pt(18, -2)} ${pt(6, -6)} ${pt(heel + 2, -9)} Z`
+  );
+}
+
+/**
+ * Gövde aynalanmış mı?
+ *
+ * Yan görünümde figür +x'e bakar. Sırt üstü kiplerde (`bench`, `supine`) baş
+ * SAĞDA, gövdenin önü YUKARI bakar — yani figür ekseni etrafında dönmüş
+ * değil, AYNALANMIŞTIR. Tek bir kemik açısı bunu anlatamıyor: `quad`
+ * (yüzükoyun plank, neckA≈78) ile `bench` (sırt üstü, neckA≈96) neredeyse
+ * aynı açıyı taşıyor, ama biri yere bakar diğeri tavana; biri tabanını yukarı
+ * çevirir diğeri yere basar. Rotasyon bu iki durumu ayıramaz, ayna ayırır.
+ *
+ * Ölçüldü: aynasız hâlde `bench_press` yüzü AŞAĞI bakıyordu (sırt üstü yatan
+ * biri için imkânsız) ve ayak tabanı YUKARI dönüktü.
+ *
+ * Dönen değer profil çizimlerinin yerel x eksenine uygulanacak ölçek:
+ * `scale(flip, 1)`. Kemik açıları etkilenmez — onlar zaten dünya uzayında.
+ */
+export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);

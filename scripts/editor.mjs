@@ -26,6 +26,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadSchema } from './schema.mjs';
+
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'data/rigArchetypes.json');
 const OUT = join(ROOT, '.editor-build');
@@ -50,7 +52,7 @@ function buildEngine() {
           skipLibCheck: true,
           resolveJsonModule: true,
         },
-        files: ['../src/rig.ts', '../src/rigEdit.ts', '../src/rigAudit.ts'],
+        files: ['../src/rig.ts', '../src/rigEdit.ts', '../src/rigAudit.ts', '../src/muscles.ts'],
       },
       null,
       2,
@@ -76,6 +78,15 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
 };
 
 buildEngine();
+const schema = loadSchema(OUT);
+/** Devir paketinin tamamı: kareler, hareket kataloğu ve kas verisi. */
+const readBundle = (archetypes) => ({
+  archetypes,
+  exercises: JSON.parse(readFileSync(join(ROOT, 'data/exercises.json'), 'utf8')),
+  muscles: JSON.parse(readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8')),
+  anatomy: JSON.parse(readFileSync(join(ROOT, 'data/anatomy.json'), 'utf8')),
+  bodyParts: JSON.parse(readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8')),
+});
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -101,11 +112,35 @@ const server = createServer((req, res) => {
     return send(res, 404, 'yok');
   }
   if (req.method === 'GET' && url.pathname === '/names') {
-    // Arketip anahtarları (`hip_hinge_dumbbell`) insanın kafasındaki isim
-    // değil. Kütüphaneden Türkçe adları okuyup listede onları gösteriyoruz.
+    // Hareket kataloğu: kimlik → görünen ad + arketip. Arketip anahtarları
+    // (`hip_hinge_dumbbell`) insanın kafasındaki isim değil; listede Türkçe
+    // adları gösteriyoruz. Bir arketip birden çok harekete hizmet edebiliyor.
     try {
-      const lib = readFileSync(join(ROOT, 'data/exerciseNames.json'), 'utf8');
+      const lib = readFileSync(join(ROOT, 'data/exercises.json'), 'utf8');
       return send(res, 200, lib, TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/muscles') {
+    // Hareket başına birincil/ikincil kaslar. Önizleme çipi ve metin listesi
+    // bunu okuyor; uygulamadan taşındı, anahtarı uygulamanın egzersiz kimliği.
+    try {
+      return send(res, 200, readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8'), TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/parts') {
+    try {
+      return send(res, 200, readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8'), TYPES['.json']);
+    } catch {
+      return send(res, 200, '{}', TYPES['.json']);
+    }
+  }
+  if (req.method === 'GET' && url.pathname === '/anatomy') {
+    try {
+      return send(res, 200, readFileSync(join(ROOT, 'data/anatomy.json'), 'utf8'), TYPES['.json']);
     } catch {
       return send(res, 200, '{}', TYPES['.json']);
     }
@@ -119,9 +154,12 @@ const server = createServer((req, res) => {
     req.on('end', () => {
       try {
         const parsed = JSON.parse(body);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('nesne bekleniyor');
+        // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
+        // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
+        // okuduğu yerde.
+        const errs = schema.validateBundle(readBundle(parsed));
+        if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
         const count = Object.keys(parsed).length;
-        if (count === 0) throw new Error('boş veri — kayıt reddedildi');
         writeFileSync(DATA, JSON.stringify(parsed, null, 2) + '\n');
         console.log(`✓ kaydedildi: ${count} arketip → data/rigArchetypes.json`);
         send(res, 200, JSON.stringify({ ok: true, count }), TYPES['.json']);

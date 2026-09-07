@@ -3,7 +3,7 @@
     "mode": "stand",
     "arm": "angles",
     "bar": "back",
-    "bend": 1,
+    "bend": -1,
     "dur": 3600,
     "kf": [
       {
@@ -15,8 +15,8 @@
           "torso": 5,
           "thoraxA": 1,
           "neckA": 3,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -28,8 +28,8 @@
           "torso": 40,
           "thoraxA": 36,
           "neckA": 24,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -41,8 +41,8 @@
           "torso": 40,
           "thoraxA": 36,
           "neckA": 24,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       },
       {
@@ -54,11 +54,12 @@
           "torso": 5,
           "thoraxA": 1,
           "neckA": 3,
-          "upperA": 213,
-          "foreA": 332
+          "upperA": 260.5,
+          "foreA": 49.8
         }
       }
-    ]
+    ],
+    "note": "Back squat: bar sirtta, eller bari tutuyor. Dirsek ASAGI bakar (bend -1); yukari bakan dirsek squat durusu degil. Eller eskiden bardan 56px otede havada duruyordu ve hareket 'eller arkada tutuluyor' gibi okunuyordu."
   },
   "squat_goblet": {
     "note": "Ağırlık göğüste: gövde squat'tan dik, derinlik biraz daha az.",
@@ -213,8 +214,8 @@
           "neckA": 3,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 190,
-          "shinF": 178
+          "thighF": 197.3,
+          "shinF": 170.5
         }
       },
       {
@@ -258,8 +259,8 @@
           "neckA": 3,
           "upperA": 182,
           "foreA": 180,
-          "thighF": 190,
-          "shinF": 178
+          "thighF": 197.3,
+          "shinF": 170.5
         }
       }
     ]
@@ -626,7 +627,7 @@
         "t": 0.4,
         "tr": "Tepe",
         "p": {
-          "ankleLift": 38,
+          "ankleLift": 22,
           "shinA": 174,
           "thighA": 181,
           "torso": 4,
@@ -640,7 +641,7 @@
         "t": 0.55,
         "tr": "Tepe",
         "p": {
-          "ankleLift": 38,
+          "ankleLift": 22,
           "shinA": 174,
           "thighA": 181,
           "torso": 4,
@@ -664,7 +665,8 @@
           "foreA": 180
         }
       }
-    ]
+    ],
+    "note": "Topuk kalkisi 38px idi ama ayak bilegi-parmak ucu mesafesi 23px'e izin veriyor; fazlasinda parmak yerden kopuyor ve ayak carpik cizilyordu. 22px'e cekildi (figur boyunun ~%5'i, gercek bir topuk kalkisi kadar)."
   },
   "bench_press": {
     "mode": "bench",
@@ -679,7 +681,7 @@
         "tr": "Göğüste",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 88,
           "thoraxA": 92,
           "neckA": 96,
@@ -692,7 +694,7 @@
         "tr": "Kilit",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 88,
           "thoraxA": 92,
           "neckA": 94,
@@ -705,7 +707,7 @@
         "tr": "Kilit",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 88,
           "thoraxA": 92,
           "neckA": 94,
@@ -718,7 +720,7 @@
         "tr": "Göğüste",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 88,
           "thoraxA": 92,
           "neckA": 96,
@@ -742,7 +744,7 @@
         "tr": "Göğüste",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 68,
           "thoraxA": 72,
           "neckA": 76,
@@ -755,7 +757,7 @@
         "tr": "Kilit",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 68,
           "thoraxA": 72,
           "neckA": 74,
@@ -768,7 +770,7 @@
         "tr": "Kilit",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 68,
           "thoraxA": 72,
           "neckA": 74,
@@ -781,7 +783,7 @@
         "tr": "Göğüste",
         "p": {
           "thighA": 250,
-          "shinA": 150,
+          "shinA": 143.3,
           "torso": 68,
           "thoraxA": 72,
           "neckA": 76,
@@ -807,8 +809,8 @@
           "torso": 6,
           "thoraxA": 3,
           "neckA": 8,
-          "hx": 26,
-          "hy": -4
+          "hx": 70,
+          "hy": -20
         }
       },
       {
@@ -872,11 +874,12 @@
           "torso": 6,
           "thoraxA": 3,
           "neckA": 8,
-          "hx": 26,
-          "hy": -4
+          "hx": 70,
+          "hy": -20
         }
       }
-    ]
+    ],
+    "note": "Oturarak omuz presi. 'Omuzda' karesinde el omuzdan 73px uzakta: bar cene hizasinda, dirsek ~121 derece. Eskiden el omzun ustundeydi (26px) ve dirsek 161 dereceye katlaniyordu, yani insanin yapamayacagi bir poz."
   },
   "standing_row_hinged": {
     "note": "--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.",
