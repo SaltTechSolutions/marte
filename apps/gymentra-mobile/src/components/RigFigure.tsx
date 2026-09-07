@@ -197,7 +197,10 @@ export function RigFigure({
   const plate = (c: Vec | null) =>
     c ? (
       <G key="plate">
-        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} stroke={colors.p} strokeWidth={2} />
+        {/* Tabak 50px yarıçapında; kafanın önüne geldiğinde onu tamamen
+            örtüyordu. Saydamlık kafanın konumunu görünür bırakıyor, kenar
+            çizgisi opak kalıyor ki tabağın sınırı kaybolmasın. */}
+        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} fillOpacity={0.62} stroke={colors.p} strokeWidth={2} />
         <Circle cx={c[0]} cy={c[1]} r={38} fill="none" stroke={line} strokeWidth={1.5} />
         <Circle cx={c[0]} cy={c[1]} r={11} fill={joint} stroke={colors.p} strokeWidth={2} />
       </G>

@@ -191,6 +191,30 @@ const mkDumbbell = () => (c, from, far) => {
   ])];
 };
 
+/**
+ * Halter tabağı üreticisi.
+ *
+ * Figürün ÖNÜNDE duruyor (elde/sırtta tutuluyor), o yüzden en üste çiziliyor.
+ * Tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen örtüyordu;
+ * saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam opak kalıyor
+ * ki tabağın sınırı belirsizleşmesin.
+ *
+ * Modül düzeyinde, çünkü ana sahne ve telefon önizlemesi AYNI şeyi çizmek
+ * zorunda. Önizleme bir süre perspektif bir halter çiziyordu (çubuk derinliğe
+ * uzanan bir çizgi, uçlarda eğik elipsler); uygulama öyle bir şey hiç
+ * çizmiyor, dolayısıyla önizleme uygulamada olmayan bir görüntüyü vaat
+ * ediyordu. Önizlemenin işi bu değil.
+ */
+const mkPlate = () => (c) => {
+  if (!c) return [];
+  const metal = css('--metal'), accent = css('--p'), line = css('--line'), joint = css('--joint');
+  return [
+    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, 'fill-opacity': .62, stroke: accent, 'stroke-width': 2 }),
+    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line, opacity: .8 }),
+    el('circle', { cx: c[0], cy: c[1], r: 11, fill: joint, stroke: accent, 'stroke-width': 2 }),
+  ];
+};
+
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
@@ -548,6 +572,7 @@ function drawPose(svg, e, p) {
   const ball = mkBall();
   const limb = mkLimb(seg);
   const db = mkDumbbell();
+  const plate = mkPlate();
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   if (showFarLeg(e)) {
@@ -572,29 +597,12 @@ function drawPose(svg, e, p) {
   if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   push([el('circle', { cx: S.head[0], cy: S.head[1] - 3, r: 24, fill: skin, stroke: line })]);
 
-  // Perspektif barbell: çubuk derinliğe doğru uzanıyor, iki uçtaki tabaklar
-  // eğik görüldüğü için daire değil ELİPS. Onaylanan mockup B'de derinlik
-  // hissini veren şey buydu; editörün ana sahnesi tek bir daire çiziyor.
-  //
-  // Bu bir ÇİZİM konvansiyonu, model değişikliği değil: figür hâlâ yan
-  // görünüm ve gövde rotasyonu poz olarak temsil edilemiyor (bkz. README).
-  // Uygulama da aynı konvansiyonu uygulamak zorunda, yoksa önizleme yalan söyler.
-  if (S.bar) {
-    const metal = css('--metal'), accent = css('--p');
-    const dx = 58, dy = 17;                    // derinlik ekseni
-    const deg = (Math.atan2(-dy, dx) * 180) / Math.PI;
-    const ends = [[S.bar[0] - dx, S.bar[1] + dy], [S.bar[0] + dx, S.bar[1] - dy]];
-    push([el('line', {
-      x1: ends[0][0], y1: ends[0][1], x2: ends[1][0], y2: ends[1][1],
-      stroke: metal, 'stroke-width': 7, 'stroke-linecap': 'round',
-    })]);
-    ends.forEach(([x, y]) => push([
-      el('ellipse', { cx: x, cy: y, rx: 15, ry: 34, fill: metal, stroke: accent, 'stroke-width': 2,
-                      transform: `rotate(${deg} ${x} ${y})` }),
-      el('ellipse', { cx: x, cy: y, rx: 6, ry: 14, fill: 'none', stroke: line,
-                      transform: `rotate(${deg} ${x} ${y})` }),
-    ]));
-  }
+  // Halter ana sahnedekiyle AYNI: düz, saydam tabak. Önizlemenin işi
+  // uygulamada ne çıkacağını göstermek — uygulama da düz tabak çiziyor.
+  // Burada bir süre PERSPEKTİF halter vardı (derinliğe uzanan çubuk, uçlarda
+  // eğik elipsler); uygulamada öyle bir şey yok, yani önizleme olmayan bir
+  // görüntüyü vaat ediyordu.
+  push(plate(S.bar));
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
@@ -664,15 +672,7 @@ function draw() {
       stroke: line,
     });
   };
-  // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
-  // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
-  // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
-  // opak kalıyor ki tabağın sınırı belirsizleşmesin.
-  const plate = (c) => (c ? [
-    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, 'fill-opacity': .62, stroke: accent, 'stroke-width': 2 }),
-    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line, opacity: .8 }),
-    el('circle', { cx: c[0], cy: c[1], r: 11, fill: joint, stroke: accent, 'stroke-width': 2 }),
-  ] : []);
+  const plate = mkPlate();
 
   // Gölge: bir önceki ve bir sonraki karenin izi. Çömelmenin dibini yazarken
   // tepesini görmek, iki kareyi ilişkilendirmenin tek yolu.
