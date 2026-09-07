@@ -5,11 +5,11 @@ import { computeFreeSlots } from './availabilityRepo';
 
 /**
  * plan-eng-review Faz 3.2. `isWithinAvailability` (server,
- * `marte06/functions/src/sessions.ts` — the actual booking gate) and
+ * `backend/functions/src/sessions.ts` — the actual booking gate) and
  * `computeFreeSlots` (client, `availabilityRepo.ts` — what the member sees
  * as bookable) implement the same grid/window rule independently, in two
  * separate npm packages with no shared code. This file and
- * `marte06/functions/tests/sessions.isWithinAvailability.test.ts` run the
+ * `backend/functions/tests/sessions.isWithinAvailability.test.ts` run the
  * SAME literal case table against each implementation — kept in sync by
  * hand, not by import, since a shared package for one function was judged
  * not worth the monorepo complexity (see plan.md's PKG-7/8 section). If one

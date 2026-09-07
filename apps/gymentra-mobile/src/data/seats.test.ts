@@ -16,7 +16,7 @@ function tenant(subscription?: Tenant['subscription']): Tenant {
 
 /**
  * These cases mirror the `withinMemberLimit` rule in
- * `marte06/firestore.rules`. If the rule changes, this table has to change
+ * `backend/firestore.rules`. If the rule changes, this table has to change
  * with it — a client that silently disagreed with the rule is what stopped
  * the pilot gym from approving members.
  */

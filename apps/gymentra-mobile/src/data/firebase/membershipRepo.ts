@@ -231,7 +231,7 @@ export async function rejectMembership(id: string): Promise<void> {
 /**
  * How many paying members the gym has.
  *
- * Must match `syncActiveMemberCount` in `marte06/functions/src/sync.ts`
+ * Must match `syncActiveMemberCount` in `backend/functions/src/sync.ts`
  * exactly — that function maintains `tenants.activeMemberCount`, which the
  * security rule reads to enforce the free-tier seat limit. This is the
  * client's own count of the same thing, and the two disagreeing is worse

@@ -6,7 +6,7 @@ description: Google Play Console işleri — kanal ve sürüm durumu, mağaza gi
 # Google Play Console
 
 GymEntra'nın Android mağaza işlerini yürütür. Eller
-`gymentra-mobile/scripts/play.mjs` içinde.
+`apps/gymentra-mobile/scripts/play.mjs` içinde.
 
 ## Play'in ASC'den farkı — bunu bilmeden yazma yapma
 
@@ -72,5 +72,5 @@ Kimlik `secrets/play-service-account.json`. **Anahtarın içeriğini hiçbir
   bilgileri** için de geçerli: `uye01@supergym88.test`. (5 Eylül 2026'da
   burada bir Tarabya hesabı duruyordu ve düzeltildi.)
 - **Veri güvenliği formu iOS'un App Privacy beyanıyla aynı gerçeği
-  anlatmalı.** İkisinin de tek kaynağı `gymentra-mobile/APP_PRIVACY.md`;
+  anlatmalı.** İkisinin de tek kaynağı `apps/gymentra-mobile/APP_PRIVACY.md`;
   koda bir veri alanı eklendiğinde üçü birden güncellenir.

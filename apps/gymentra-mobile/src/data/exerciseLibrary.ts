@@ -1,5 +1,5 @@
 // GENERATED — do not hand-edit. Rebuild with
-// `marte06/scripts/build_exercise_library.py` (source data lives beside it).
+// `backend/scripts/build_exercise_library.py` (source data lives beside it).
 //
 // The exercise visualiser (PER-19): 34 canonical movements distilled from the
 // ~146 lines across the 14 program templates (machine and cable moves were

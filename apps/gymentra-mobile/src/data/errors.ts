@@ -13,7 +13,7 @@ import * as Sentry from '@sentry/react-native';
  * opposite — AGENTS.md: "Teknik jargon ve hata kodu kullanıcıya
  * gösterilmez." Only surface `.message` for the specific callable codes
  * our own functions deliberately throw with human-authored Turkish text
- * (see `marte06/functions/src/*.ts`'s own `HttpsError` call sites) —
+ * (see `backend/functions/src/*.ts`'s own `HttpsError` call sites) —
  * `'functions/internal'` is excluded on purpose: the one place it's thrown
  * server-side carries an English debug string, never meant for a user.
  */

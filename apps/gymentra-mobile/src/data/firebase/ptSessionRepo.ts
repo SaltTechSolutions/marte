@@ -117,7 +117,7 @@ export function watchUpcomingSessionsForMember(
  * have enough credit, and which of their (possibly several) credit rows pays
  * for it" needs a query rules cannot run, and consuming it has to be atomic
  * against a second device racing for the same slot. See `bookPtSessions` in
- * marte06/functions.
+ * backend/functions.
  */
 export async function bookPtSessions(params: {
   tenantId: string;

@@ -10,7 +10,7 @@ const functions = getFunctions(app, 'europe-west1');
  *
  * Server-side on purpose: security rules deliberately forbid the client from
  * deleting measurements/workout logs/payments, so a phone in the wrong hands
- * can't rewrite history. See `deleteMyAccount` in marte06/functions.
+ * can't rewrite history. See `deleteMyAccount` in backend/functions.
  *
  * Throws with `failed-precondition` when the caller is the only remaining
  * admin of a gym — deleting them would leave it unmanageable.

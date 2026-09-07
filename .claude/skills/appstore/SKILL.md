@@ -5,7 +5,7 @@ description: App Store Connect işleri — build ve inceleme durumu, TestFlight 
 
 # App Store Connect
 
-GymEntra'nın iOS mağaza işlerini yürütür. Eller `gymentra-mobile/scripts/asc.mjs`
+GymEntra'nın iOS mağaza işlerini yürütür. Eller `apps/gymentra-mobile/scripts/asc.mjs`
 içinde; bu dosya ne zaman hangisinin çağrılacağını ve **neyin onay istediğini**
 söyler.
 
@@ -65,7 +65,7 @@ tahmin etme.
 
 1. **Demo hesap.** Onay bekleyen bir hesapla incelemeci hiçbir şey göremez.
    Supergym-88'in demo hesabı kullanılmalı (bkz.
-   `marte06/scripts/README-supergym-demo.md`), Tarabya değil — orada gerçek
+   `backend/scripts/README-supergym-demo.md`), Tarabya değil — orada gerçek
    kişilerin verisi var.
 2. **Yaş sınırı anketi.** `age-rating` yanıtsız alanları listeler; spor
    uygulaması için çoğu `NONE`.

@@ -3,7 +3,7 @@ import { Tenant } from './types';
 /**
  * Free tier: a gym may hold this many active members before it needs a
  * subscription. Must stay in step with `withinMemberLimit` in
- * `marte06/firestore.rules` — the rule is the real gate, this is UX.
+ * `backend/firestore.rules` — the rule is the real gate, this is UX.
  */
 export const FREE_MEMBER_LIMIT = 10;
 
@@ -31,7 +31,7 @@ export function canActivateAnotherMember(tenant: Tenant | null | undefined, acti
 
 /**
  * How many people may hold the `admin` role in one gym. Mirrors
- * `withinAdminLimit` in `marte06/firestore.rules` — the rule is the gate,
+ * `withinAdminLimit` in `backend/firestore.rules` — the rule is the gate,
  * this is what lets the screen say "3/3" before the write is refused.
  */
 export const ADMIN_SEAT_LIMIT = 3;
