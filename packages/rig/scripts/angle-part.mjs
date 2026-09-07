@@ -8,24 +8,27 @@
  * şekli tekrar çizmek olurdu; değişen tek şey GÖVDE ve o da hesaplanabilir
  * bir dönüşüm.
  *
- * Model: her parça, kemik boyunca dizilmiş ELİPS kesitlerden oluşuyor. Yan
- * siluet her kemik istasyonunda kesitin ön (+X) ve arka (−X) sınırını veriyor;
- * aradaki yarı-mesafe `a` = ön-arka yarı derinlik, merkezi `c` = kesitin
- * kemikten kaçıklığı (kalçanın önde, baldırın arkada şişmesi). Yanal yarı
- * genişlik `ratio × a` kabul ediliyor.
+ * Model: her parça, kemik boyunca dizilmiş kesitlerden oluşuyor. Yan siluet her
+ * kemik istasyonunda kesitin ön (+X) ve arka (−X) sınırını veriyor; aradaki
+ * yarı-mesafe `a` = ön-arka yarı derinlik, merkezi `c` = kesitin kemikten
+ * kaçıklığı (kalçanın önde, baldırın arkada şişmesi). Yanal yarı genişlik
+ * `oran × a` kabul ediliyor.
  *
  * α açısından bakıldığında:
  *
- *   yarı genişlik  h' = a · sqrt(cos²α + ratio²·sin²α)
+ *   yarı genişlik  h' = a · genişlikÇarpanı(oran, α, şekil)
  *   merkez         c' = c · cos α
  *
- * Birincisi elips izdüşümünün genişliği, ikincisi sagittal düzlemdeki
- * kaçıklığın kısalması. İkisi farklı çarpanlar — tek bir ölçekle yapılamaz,
- * daha önce denenip yanlış çıkan şey buydu.
+ * İki AYRI çarpan: genişlik BÜYÜR, kaçıklık KÜÇÜLÜR. Tek bir ölçekle
+ * yapılamaz — daha önce `cos(α)` ile hepsini daraltmak denenip yanlış
+ * çıkmıştı.
  *
- * SINIR: bu dönüşüm siluetin GENİŞLİĞİNİ ve KAÇIKLIĞINI düzeltiyor, kesitin
- * gerçek şeklini değil. Elips varsayımı gövdede iyi, dizin/dirseğin kemikli
- * çıkıntılarında kabaca doğru.
+ * KESİT ŞEKLİ parça başına: gövde DİKDÖRTGEN, uzuvlar ELİPS. Gövdeyi elips
+ * saymak 50°'de ×1.29 veriyordu, dikdörtgen ×1.76 veriyor — %37 fark, ve
+ * dar kalan gövde figürü sıkışmış/deforme gösteriyordu.
+ *
+ * SINIR: dönüşüm siluetin GENİŞLİĞİNİ ve KAÇIKLIĞINI düzeltiyor, kesitin
+ * köşe detayını değil — açılı bir kutunun kenar çizgisi siluete girmiyor.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -46,14 +49,35 @@ const DATA = join(ROOT, 'data/bodyParts.json');
  * kullanmadığı bir alan olarak kalıp sonraki turda yanlış karar verdirir.
  */
 const KESIT = {
-  thorax: [11, 16],
-  lumbar: [10, 14],
-  neck: [6, 6],
-  thigh: [8, 8.5],
-  shin: [5.5, 5],
-  upper: [4.5, 4.5],
-  fore: [4, 3.5],
+  // [ön-arka yarı derinlik, yanal yarı genişlik, kesit şekli]
+  //
+  // ŞEKİL ÖNEMLİ ve ölçüldü: aynı ölçülerle elips ×1.29, dikdörtgen ×1.76
+  // veriyor — %37 fark. Gövdeyi elips saymak figürü açılı bakışta SIKIŞMIŞ
+  // gösteriyordu; göğüs kafesi ve leğen köşeli, yandan bakınca dar bir dikdörtgen
+  // gibi. Uzuvlar tersine yuvarlak: kolu kutu saymak ×1.41 verirdi, oysa
+  // gerçekte ×1.00 — açılı bakışta bir kolun kalınlığı değişmez.
+  thorax: [11, 16, 'kutu'],
+  lumbar: [10, 14, 'kutu'],
+  neck: [6, 6, 'elips'],
+  thigh: [8, 8.5, 'elips'],
+  shin: [5.5, 5, 'elips'],
+  upper: [4.5, 4.5, 'elips'],
+  fore: [4, 3.5, 'elips'],
 };
+
+/**
+ * Kesitin α açısındaki genişlik çarpanı — cismin destek fonksiyonu.
+ *
+ *   elips       sqrt(cos²α + oran²·sin²α)     yumuşak, köşesiz
+ *   dikdörtgen  |cos α| + oran·|sin α|        köşe açıya doğrudan katılıyor
+ *
+ * Dikdörtgen her ara açıda elipsten geniş; en büyük fark ~45°'de, çünkü orada
+ * kesitin köşesi kameraya bakıyor.
+ */
+const genislikCarpani = (oran, r, sekil) =>
+  sekil === 'kutu'
+    ? Math.abs(Math.cos(r)) + oran * Math.abs(Math.sin(r))
+    : Math.sqrt(Math.cos(r) ** 2 + oran * oran * Math.sin(r) ** 2);
 
 /** Kübik/kare Bézier'i düz parçalara böler; sınır taraması poligon istiyor. */
 const ORNEK = 24;
@@ -136,9 +160,9 @@ function sinirlar(pts, len) {
 const fmt = (v) => (Math.abs(v) < 5e-3 ? '0' : String(Math.round(v * 100) / 100));
 
 /** Açılı silueti üretir: ön sınır aşağı, arka sınır yukarı, kapalı yol. */
-export function acili(d, ratio, azDeg) {
+export function acili(d, ratio, azDeg, sekil = 'elips') {
   const r = (azDeg * Math.PI) / 180;
-  const gen = Math.sqrt(Math.cos(r) ** 2 + ratio * ratio * Math.sin(r) ** 2);
+  const gen = genislikCarpani(ratio, r, sekil);
   const kis = Math.cos(r);
   const s = sinirlar(flatten(parse(d)));
   const on = [];
@@ -170,10 +194,11 @@ for (const [ad, q] of Object.entries(data.parts)) {
   const k = KESIT[ad];
   if (!k) { console.error(`✗ ${ad} için kesit ölçüsü yok`); process.exit(1); }
   const ratio = k[1] / k[0];
-  parts[ad] = { len: BONES[ad], d: acili(q.d, ratio, az) };
+  const sekil = k[2];
+  parts[ad] = { len: BONES[ad], d: acili(q.d, ratio, az, sekil) };
   const r = (az * Math.PI) / 180;
-  const gen = Math.sqrt(Math.cos(r) ** 2 + ratio * ratio * Math.sin(r) ** 2);
-  console.log(`  ${ad.padEnd(8)} oran ${ratio.toFixed(3)}  genişlik ×${gen.toFixed(3)}  kaçıklık ×${Math.cos(r).toFixed(3)}`);
+  const gen = genislikCarpani(ratio, r, sekil);
+  console.log(`  ${ad.padEnd(8)} ${sekil.padEnd(6)} oran ${ratio.toFixed(3)}  genişlik ×${gen.toFixed(3)}  kaçıklık ×${Math.cos(r).toFixed(3)}`);
   n++;
 }
 
