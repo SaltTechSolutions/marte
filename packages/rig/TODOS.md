@@ -90,15 +90,28 @@ derinliğe uzanıyor, uçlardaki tabaklar elips) ve o yapıldı — mobil önizl
 çizim konvansiyonu olarak duruyor. Diğeri figürün kendi açısıydı ve o bu kayda
 kaldı. Kullanıcı bunu bilerek erteledi (2026-09-06).
 
-**UCUZ KESTİRME DENENDİ VE YETMEDİ (2026-09-06).** Uzak uzuvların 2B'deki
-sahte kaydırmasını gerçek bir Z'ye çevirip kamerayı döndürmek denendi; ucuza
-3/4 vereceği sanılmıştı. Ölçüm (standing_row_hinged, 0° → 26°): uyluk
-105.0 → 102.4, baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Şekil neredeyse
-hiç değişmiyor. Sebep: poz sagittal düzlemde yazıldığı için bir taraftaki
-bütün eklemler AYNI derinlikte, ve aynı derinlikteki noktaları döndürmek
-onları göreli olarak değiştirmiyor — olan tek şey %10 yatay sıkışma. Deney
-editörün "Karşılaştır" ekranında kanıt olarak duruyor. Bu işin ucuz yolu
-YOK: eklem başına enine düzlem açısı gerekiyor.
+**İKİ KEZ ÖLÇÜLDÜ. Kayıt düzeltildi (2026-09-07).**
+
+İlk deneme (2026-09-06) uzak uzuvların 2B'deki sahte kaydırmasını gerçek bir
+Z'ye çevirip kamerayı döndürmüştü ve "şekil değişmiyor" diye kapatılmıştı.
+O ölçüm YANLIŞ SAYIYLA yapılmış: omuz derinliği 17px alınmış, oysa anatomik
+doğrusu 40px (16cm, figür ölçeği 2.51 px/cm) — 2.4 kat küçük. Doğru değerle
+30° kamerada iki omuz 17px değil 40px ayrışıyor, yani omuz dairesinin çapı
+kadar.
+
+Doğru sayılarla yeniden ölçüldü ve ASIL ENGEL BAŞKA ÇIKTI. Eklem derinliği
+eklemek uzuvları doğru ayrıştırıyor, ama figür yine 3/4 görünmüyor: her uzuv
+KAMERAYA BAKAN DÜZ BİR SİLUET. Eklemleri derinlikte gezdirmek parçaları
+yerinden oynatıyor, ama parçanın kendisi düz karton kalıyor. Gerçek 3/4'te
+gövde hem yanını hem önünü gösterir; kapsül bunu yapamaz.
+
+Kalınlıkları `cos(kamera)` ile kısaltmak da denendi (25° ve 40°): figür
+DARALIYOR ama yine yan görünüm. Dört panelli karşılaştırma üretildi.
+
+**Yani sıra yanlıştı:** poz modeline derinlik eklemek pahalı VE tek başına
+hedefi vermiyor. Önce parçaların 3/4 siluetleri gerekiyor (varlık işi,
+`bodyParts.json` gibi ama açı başına), sonra poz derinliği onları doğru
+yerleştirmek için anlamlı hâle geliyor.
 
 **Artı:** Hareketin okunurluğu artar; yan görünümde üst üste binen uzuvlar
 ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir çözüme kavuşur.
