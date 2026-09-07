@@ -28,6 +28,7 @@ import {
   showFarLeg,
   lerpP,
   partTransform,
+  partTransformScaled,
   poseAt,
   skeleton,
 } from '@/utils/rig';
@@ -42,6 +43,7 @@ import rigBodyParts from '@/data/rigBodyParts.json';
  * anlatamıyordu. Bir parça eksikse çağıran kapsüle düşüyor.
  */
 const PARTS = rigBodyParts.parts as Record<string, { len: number; d: string }>;
+const PARTS_FRONT = rigBodyParts.front.parts as Record<string, { len: number; d: string }>;
 
 const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 
@@ -364,33 +366,26 @@ function FrontBody({
 }) {
   const F = frontPoints(rig, p, S);
   const cx = F.cx;
-  const trunk = frontTrunk(F);
-  const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number) => (
-    <Path key={key} d={capsule(a, b, wa, wb)} fill={c.skin} stroke={c.line} strokeWidth={1} />
-  );
+  // Ön parçalar figürün SOL uzuvları (mesh); ekranın solundaki taraf figürün sağı, aynalanır.
+  const part = (key: string, name: string, a: Vec, b: Vec, mirror: boolean) => {
+    const q = PARTS_FRONT[name];
+    return <Path key={key} d={q.d} transform={partTransformScaled(a, b, q.len) + (mirror ? ' scale(-1 1)' : '')} fill={c.skin} stroke={c.line} strokeWidth={1} />;
+  };
   const ball = (key: string, q: Vec, r: number) => (
     <Circle key={key} cx={q[0]} cy={q[1]} r={r} fill={c.joint} stroke={c.line} strokeWidth={1} />
   );
-  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number) => {
-    const m = lerpP(a, b, at);
-    return (
-      <G key={key}>
-        {seg(key + 'p', a, m, wa, wm)}
-        {seg(key + 'd', m, b, wm, wb)}
-      </G>
-    );
-  };
-  const side = (key: string, s: typeof F.L) => (
+  const legs = (key: string, s: typeof F.L, mirror: boolean) => (
     <G key={key}>
       <Rect x={s.ankle[0] - 15} y={GROUND - 13} width={30} height={13} rx={5} fill={c.skin} stroke={c.line} />
-      {limb('t', s.hip, s.knee, 40, 32, 27, 0.42)}
-      {limb('s', s.knee, s.ankle, 27, 29, 15, 0.34)}
-      {ball('k', s.knee, 13)}
-      {ball('a', s.ankle, 9)}
-      {ball('d', s.sh, 17)}
-      {limb('u', s.sh, s.elbow, 24, 21, 17, 0.5)}
-      {limb('f', s.elbow, s.hand, 18, 18, 12, 0.3)}
-      {ball('e', s.elbow, 10)}
+      {part('t', 'thigh', s.hip, s.knee, mirror)}
+      {part('s', 'shin', s.knee, s.ankle, mirror)}
+    </G>
+  );
+  const arms = (key: string, s: typeof F.L, mirror: boolean) => (
+    <G key={key}>
+      {ball('d', s.sh, 16)}
+      {part('u', 'upper', s.sh, s.elbow, mirror)}
+      {part('f', 'fore', s.elbow, s.hand, mirror)}
       <Circle cx={s.hand[0]} cy={s.hand[1]} r={10} fill={c.skin} stroke={c.line} />
       {rig.load === 'dumbbell' && (
         <G key="db" transform={`rotate(${(Math.atan2(s.hand[1] - s.elbow[1], s.hand[0] - s.elbow[0]) * 180) / Math.PI + 90} ${s.hand[0]} ${s.hand[1]})`}>
@@ -412,6 +407,7 @@ function FrontBody({
       </G>
     );
 
+  // Sıra editörle aynı: bacaklar → gövde → kafa → kollar → yük.
   return (
     <>
       <G key="floor">
@@ -419,22 +415,16 @@ function FrontBody({
         <Line x1={cx - 190} y1={GROUND} x2={cx + 190} y2={GROUND} stroke={c.floorC} strokeWidth={2} />
       </G>
       {rig.bar === 'back' && bar('barback')}
-      {side('legL', F.L)}
-      {side('legR', F.R)}
+      {legs('legL', F.L, true)}
+      {legs('legR', F.R, false)}
       <G key="trunk">
-        <Ellipse cx={cx} cy={F.pelvis[1] + 8} rx={38} ry={25} fill={c.skin} stroke={c.line} />
-        {seg('waist', F.pelvis, F.lumbar, 66, 56)}
-        <Ellipse cx={cx} cy={trunk.cy} rx={trunk.rx} ry={trunk.ry} fill={c.skin} stroke={c.line} />
-        {seg('neck', F.thorax, F.neck, 27, 24)}
+        {part('lumbar', 'lumbar', F.pelvis, F.lumbar, false)}
+        {part('thorax', 'thorax', F.lumbar, F.thorax, false)}
+        {part('neck', 'neck', F.thorax, F.neck, false)}
+        {part('head', 'head', F.neck, F.head, false)}
       </G>
-      <G key="head">
-        <Ellipse cx={F.head[0]} cy={F.head[1] - 3} rx={23} ry={27} fill={c.skin} stroke={c.line} />
-        <Path
-          d={`M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z`}
-          fill={c.skin}
-          stroke={c.line}
-        />
-      </G>
+      {arms('armL', F.L, true)}
+      {arms('armR', F.R, false)}
       {rig.bar === 'hands' && bar('barhands')}
     </>
   );

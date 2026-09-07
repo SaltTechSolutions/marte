@@ -37,6 +37,8 @@ export const B = {
   fore: 68,
   foot: 46,
   headR: 27,
+  /** Boyun kökünden kafa merkezine; kafa parçasının kemiği. */
+  head: 28,
 } as const;
 
 export const GROUND = 560;
@@ -94,8 +96,21 @@ export interface RigPose {
   shinF: number;
   upperF: number;
   foreF: number;
-  /** Önden görünümde elin merkeze uzaklığı — yanal düzlemde çalışan hareketler. */
-  hxF: number;
+  /**
+   * Kolun DÜZLEMİ: kol hangi dikey düzlemde kalkıyor. 0 = sagital (öne/arkaya),
+   * 90 = frontal (yana), eksi = gövdenin önünden orta hattı geçer. Yükselme
+   * miktarını `upperA` verir, bu yalnızca düzlemi döndürür — yani yan
+   * görünümdeki kol açısı ile önden görünüm TEK pozdan çıkar: önden bakışta
+   * el = omuz + kol · (sin·sin az, −cos), yana açılan kol öne bakışta
+   * kısalır (bant açmada olduğu gibi). Eskiden `hxF` (piksel) vardı; kol
+   * boyunu bilmediği için uzayıp kısalıyordu (ölçüldü: bant açmada el omuzdan
+   * 98px ötede, üst kol 78).
+   */
+  armAz: number;
+  armAzF: number;
+  /** Ön kolun düzlemi; dış rotasyonda dirsek sabitken ön kol yana döner. */
+  foreAz: number;
+  foreAzF: number;
   /** Önden görünümde omuz yükselmesi (shrug). */
   shLift: number;
   /** Topuğun yerden kalkması (calf raise) ya da ayağın basamağa çıkması (step-up). */
@@ -184,7 +199,10 @@ const BASE = {
   foreA: 180,
   hx: 0,
   hy: 0,
-  hxF: 66,
+  armAz: 0,
+  armAzF: 0,
+  foreAz: 0,
+  foreAzF: 0,
   shLift: 0,
   ankleLift: 0,
   ankle: 0,
@@ -223,6 +241,8 @@ export const fillPose = (p: Partial<RigPose>): RigPose => {
     shinF: p.shinF ?? f.shinA - 5,
     upperF: p.upperF ?? f.upperA - 5,
     foreF: p.foreF ?? f.foreA + 2,
+    armAzF: p.armAzF ?? f.armAz,
+    foreAzF: p.foreAzF ?? f.foreAz,
   };
 };
 
@@ -240,7 +260,10 @@ interface LocalPose {
   foreF: number;
   hx: number;
   hy: number;
-  hxF: number;
+  armAz: number;
+  armAzF: number;
+  foreAz: number;
+  foreAzF: number;
   shLift: number;
   ankleLift: number;
   // Bilek açısı ZATEN eklem-yerel (baldıra göre), o yüzden dünya→yerel
@@ -270,7 +293,10 @@ export const toLocal = (p: RigPose): LocalPose => ({
   foreF: p.foreF - p.upperF,
   hx: p.hx,
   hy: p.hy,
-  hxF: p.hxF,
+  armAz: p.armAz,
+  armAzF: p.armAzF,
+  foreAz: p.foreAz,
+  foreAzF: p.foreAzF,
   shLift: p.shLift,
   ankleLift: p.ankleLift,
   ankle: p.ankle,
@@ -298,7 +324,10 @@ export const toWorld = (l: LocalPose): RigPose => {
     foreF: upperF + l.foreF,
     hx: l.hx,
     hy: l.hy,
-    hxF: l.hxF,
+    armAz: l.armAz,
+    armAzF: l.armAzF,
+    foreAz: l.foreAz,
+    foreAzF: l.foreAzF,
     shLift: l.shLift,
     ankleLift: l.ankleLift,
     ankle: l.ankle,
@@ -544,7 +573,7 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
   const lumbar = add(pelvis, D(p.torso), B.lumbar);
   const thorax = add(lumbar, D(p.thoraxA), B.thorax);
   const neck = add(thorax, D(p.neckA), B.neck);
-  const head = add(neck, D(p.neckA), 28);
+  const head = add(neck, D(p.neckA), B.head);
 
   if (!sh) sh = add(thorax, D(p.thoraxA + 118), 14);
   const shF: Vec = [sh[0], sh[1]];
@@ -644,22 +673,25 @@ export const FX = 210;
  * görünüyordu. Kollar öne uzandığında önden bakış onları kısaltır, ama
  * tamamen yutmamalı — bu durumda dirsek dışa ve aşağı açılıyor.
  */
-function frontElbow(sh: Vec, hand: Vec, sgn: number): Vec {
-  const dx = hand[0] - sh[0];
-  const dy = hand[1] - sh[1];
-  const d = Math.hypot(dx, dy);
-  if (d < 70) return [sh[0] + sgn * 24, sh[1] + 32];
-  return [sh[0] + dx * 0.45, sh[1] + dy * 0.45];
-}
+/**
+ * Kolun 3B yönü: sagital açı (yan görünümdeki, `D` ile aynı eksen) + düzlem
+ * azimutu. Önden bakışta yalnız (x yanal, y dikey) bileşenleri çizilir; z
+ * (öne) bileşeni kısalma olarak görünür.
+ */
+const armDir3 = (sag: number, az: number): { x: number; y: number } => {
+  const f = Math.sin(rad(sag));
+  return { x: f * Math.sin(rad(az)), y: -Math.cos(rad(sag)) };
+};
 
 /**
- * Önden görünüm, çözülmüş YAN iskeletin dikey seviyelerini okur; burada
- * yalnızca yanal açıklık yazılır. Böylece çömelme derinliği iki görünümde
- * birebir aynı kalıyor ve önden bakışta bir bacak önde bir bacak geride
- * olmuyor.
+ * Önden görünüm, çözülmüş YAN iskeletin dikey seviyelerini okur (gövde,
+ * bacak); kollar ise 3B yönden izdüşürülür. Böylece çömelme derinliği iki
+ * görünümde birebir aynı kalıyor, kol boyu her karede doğru, yana açılan kol
+ * gerçekten kol boyu kadar açılıyor.
  *
- * Elin merkeze uzaklığı `hxF` ile kareden geliyor: yan kaldırış, bant açma,
- * dış rotasyon gibi yanal düzlemde çalışan hareketlerin bütün hikâyesi bu.
+ * Taraflar: `L` ekranın solu = figürün SAĞI = yakın taraf (A); `R` ekranın
+ * sağı = figürün solu = uzak taraf (F). Mesh'ten üretilen ön parçalar figürün
+ * sol uzuvları, o yüzden `R` aynalanmadan, `L` aynalanarak çizilir.
  */
 export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoints {
   const kneeFlex = Math.abs(p.shinA - p.thighA);
@@ -668,25 +700,29 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
   const hipDx = 23;
   const footDx = 31;
   const shY = S.thorax[1] + 6 - p.shLift;
-  const mk = (sgn: number): FrontSide => {
+  const mk = (sgn: number, far: boolean): FrontSide => {
     const shX = FX + sgn * shDx;
-    const handX = FX + sgn * p.hxF;
+    const sh: Vec = [shX, shY];
+    // Sagital açılar İSKELETTEN: `ik`/`floor` kiplerinde de doğru (çözülmüş kol).
+    const upperSag = angleOf(far ? S.shF : S.sh, far ? S.elbowF : S.elbow);
+    const foreSag = angleOf(far ? S.elbowF : S.elbow, far ? S.handF : S.hand);
+    const u = armDir3(upperSag, far ? p.armAzF : p.armAz);
+    const f = armDir3(foreSag, far ? p.foreAzF : p.foreAz);
+    const elbow: Vec = [sh[0] + sgn * u.x * B.upper, sh[1] + u.y * B.upper];
+    const hand: Vec = [elbow[0] + sgn * f.x * B.fore, elbow[1] + f.y * B.fore];
     return {
       hip: [FX + sgn * hipDx, S.pelvis[1]],
       knee: [FX + sgn * (footDx + ab), S.knee[1]],
       ankle: [FX + sgn * footDx, S.ankle[1]],
-      sh: [shX, shY],
-      // Kol omuzdan SARKAR: omuz yükselince dirsek ve el de aynı kadar
-      // yükselir. Omuz silkmede omuz kalkıp kol yerinde kalınca üst kol
-      // uzuyor, kol omuzdan çıkmış gibi görünüyordu.
-      elbow: frontElbow([shX, shY], [handX, S.hand[1] - p.shLift], sgn),
-      hand: [handX, S.hand[1] - p.shLift],
+      sh,
+      elbow,
+      hand,
     };
   };
   const F: FrontPoints = {
     cx: FX,
-    L: mk(-1),
-    R: mk(1),
+    L: mk(-1, false),
+    R: mk(1, true),
     pelvis: [FX, S.pelvis[1]],
     lumbar: [FX, S.lumbar[1]],
     thorax: [FX, S.thorax[1]],
@@ -979,6 +1015,19 @@ export function partTransform(a: Vec, b: Vec): string {
   // Yerel +Y'yi kemik yönüne çeviren açı.
   const deg = (Math.atan2(-dx / l, dy / l) * 180) / Math.PI;
   return `translate(${a[0]} ${a[1]}) rotate(${deg})`;
+}
+
+/**
+ * Önden görünüm için parça dönüşümü: kemik izdüşümde KISALIR (öne eğik gövde,
+ * bükük diz kameraya doğru gelir), parça da kemik boyunca aynı oranda
+ * kısalır; genişlik değişmez — katı bir parçanın ortografik izdüşümü tam
+ * budur. Yan görünümde kemik hiç kısalmadığı için orada `partTransform`.
+ * Ölçüldü: menteşeli fly'da boyun kemiği önden 6px'e iniyor, parça 24px
+ * çizilince kafa gövdeden kopuyordu.
+ */
+export function partTransformScaled(a: Vec, b: Vec, len: number): string {
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  return `${partTransform(a, b)} scale(1 ${Math.max(0.05, l / len).toFixed(4)})`;
 }
 
 /**
