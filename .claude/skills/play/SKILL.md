@@ -65,7 +65,7 @@ Kimlik `secrets/play-service-account.json`. **Anahtarın içeriğini hiçbir
   eklenir" de.
 - **Sürüm kodu ile sürüm adı ayrı.** EAS `autoIncrement` sürüm kodunu
   artırıyor; mağaza girişindeki 1.0.0 ayrı bir alan.
-- Metinler `PLAY_STORE.md` içinde tutuluyor; mağazadaki metni değiştirirken o
+- Metinler `docs/PLAY_STORE.md` içinde tutuluyor; mağazadaki metni değiştirirken o
   dosyayı da aynı anda güncelle, yoksa iki doğruluk kaynağı oluşur.
 - Ekran görüntüleri **Supergym-88'den** alınır (uydurma veri), Tarabya'dan
   değil — orada gerçek kişilerin verisi var. Aynı kural **inceleme giriş
