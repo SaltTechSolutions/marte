@@ -771,7 +771,6 @@ function draw() {
     push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
     if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
-  if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   push([
@@ -797,7 +796,6 @@ function draw() {
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
-  if (e.bar === 'hands') push(plate(S.bar));
   push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
   if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
@@ -814,6 +812,12 @@ function draw() {
           el('path', { d: 'M -4 4 L 21 6 L 14 23 L -8 22 Z', fill: skin, stroke: line }),
         ]),
   );
+
+  // Tabak EN SONA, yani kafanın da ÖNÜNE. Yan görünümde halterin iki diski
+  // üst üste düşüyor ve tek daire olarak görünüyor; onu kafanın arkasına
+  // koymak diski yarısı kesik gösteriyordu. Saydamlık kafanın konumunu
+  // görünür bırakıyor, yani öne almak bilgi kaybettirmiyor.
+  push(plate(S.bar));
 
   drawHandles(svg, e, S, view);
 }

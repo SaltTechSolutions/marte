@@ -301,10 +301,6 @@ export function RigFigure({
             </>
           )}
         </G>
-        {/* Sırtta VE kalçada taşınan bar gövdeden önce: ikisi de figürün
-            arkasından geçiyor. `hips` daha önce hiç çizilmiyordu — `hip_thrust`
-            halteri olmadan görünüyordu. */}
-        {(rig.bar === 'back' || rig.bar === 'hips') && plate(S.bar)}
         <G key="torso">
           {trunk('waist', 'lumbar', S.pelvis, S.lumbar, 40, 33)}
           {trunk('rib', 'thorax', S.lumbar, S.thorax, 54, 46)}
@@ -324,7 +320,6 @@ export function RigFigure({
           {limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, false, 'fore')}
           {ball('e', S.elbow, 10)}
         </G>
-        {rig.bar === 'hands' && plate(S.bar)}
         {hand('h', S.hand, S.elbow)}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
@@ -334,6 +329,11 @@ export function RigFigure({
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
           <Path d={headProfile()} fill={skin} stroke={line} strokeWidth={1} />
         </G>
+        {/* Tabak EN SONA, kafanın da ÖNÜNE. Yan görünümde halterin iki diski
+            üst üste düşüp tek daire olarak görünüyor; kafanın arkasına
+            konunca diski yarısı kesik çıkıyordu. Saydamlık kafayı görünür
+            bıraktığı için öne almak bilgi kaybettirmiyor. */}
+        {plate(S.bar)}
       </>
     );
 
