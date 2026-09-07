@@ -492,8 +492,23 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
         ? [hand![0], hand![1]]
         : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte
           // yükselir — hip thrust'ın bütün hikâyesi bu.
+          //
+          // İki kaydırma var ve ikisi de gerekli:
+          //
+          // 1. Gövde ekseni boyunca 14px AŞAĞI (`torso + 180`): bar kalça
+          //    çizgisinde, karın değil kalça kıvrımı hizasında durur.
+          // 2. Eksene DİK 22px, KARIN tarafına (`torso + 90`): bar vücudun
+          //    üstünde durur, içinden geçmez. Eskiden yalnız birinci kaydırma
+          //    vardı ve bar leğenle AYNI yükseklikte kalıyordu (ölçüldü,
+          //    hip_thrust: dy = +2..11px, yani kalçanın ortasından geçiyordu).
+          //
+          // Karın yönü gövde açısından türetiliyor, sabit değil: ayakta duran
+          // figürde `torso ≈ 0` ve `D(90)` figürün baktığı yön; hip
+          // thrust'ta `torso ≈ 283` ve aynı formül YUKARIYI veriyor, çünkü
+          // figür sırt üstü. Sabit bir yön yazsaydık iki duruştan biri
+          // yanlış olurdu.
           ex.bar === 'hips'
-          ? add(pelvis, D(p.torso + 180), 26)
+          ? add(add(pelvis, D(p.torso + 180), 14), D(p.torso + 90), 22)
           : null;
 
   const S: Skeleton = {
