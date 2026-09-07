@@ -1340,9 +1340,10 @@
           "neckA": 1,
           "upperA": 176,
           "foreA": 176,
-          "hxF": 44,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1356,9 +1357,10 @@
           "neckA": 1,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 138,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1372,9 +1374,10 @@
           "neckA": 1,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 138,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1388,9 +1391,10 @@
           "neckA": 1,
           "upperA": 176,
           "foreA": 176,
-          "hxF": 44,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       }
     ]
@@ -1412,9 +1416,10 @@
           "torso": 2,
           "upperA": 178,
           "foreA": 178,
-          "hxF": 42,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1426,9 +1431,10 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 132,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1440,9 +1446,10 @@
           "torso": 2,
           "upperA": 8,
           "foreA": 8,
-          "hxF": 64,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1454,9 +1461,10 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 132,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1468,9 +1476,10 @@
           "torso": 2,
           "upperA": 178,
           "foreA": 178,
-          "hxF": 42,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 90,
+          "foreAz": 90
         }
       }
     ]
@@ -1492,9 +1501,10 @@
           "torso": 2,
           "upperA": 94,
           "foreA": 92,
-          "hxF": 56,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 12,
+          "foreAz": 12
         }
       },
       {
@@ -1506,9 +1516,10 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 142,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 62,
+          "foreAz": 62
         }
       },
       {
@@ -1520,9 +1531,10 @@
           "torso": 2,
           "upperA": 92,
           "foreA": 92,
-          "hxF": 142,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 62,
+          "foreAz": 62
         }
       },
       {
@@ -1534,9 +1546,10 @@
           "torso": 2,
           "upperA": 94,
           "foreA": 92,
-          "hxF": 56,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 12,
+          "foreAz": 12
         }
       }
     ]
@@ -1558,9 +1571,10 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 28,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": -15
         }
       },
       {
@@ -1572,9 +1586,10 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 78,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 60
         }
       },
       {
@@ -1586,9 +1601,10 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 78,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 60
         }
       },
       {
@@ -1600,9 +1616,10 @@
           "torso": 2,
           "upperA": 176,
           "foreA": 96,
-          "hxF": 28,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": -15
         }
       }
     ]
@@ -1625,10 +1642,11 @@
           "torso": 2,
           "upperA": 180,
           "foreA": 180,
-          "hxF": 52,
           "shLift": 0,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 0
         }
       },
       {
@@ -1640,10 +1658,11 @@
           "torso": 2,
           "upperA": 180,
           "foreA": 180,
-          "hxF": 52,
           "shLift": 16,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 0
         }
       },
       {
@@ -1655,10 +1674,11 @@
           "torso": 2,
           "upperA": 180,
           "foreA": 180,
-          "hxF": 52,
           "shLift": 16,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 0
         }
       },
       {
@@ -1670,10 +1690,11 @@
           "torso": 2,
           "upperA": 180,
           "foreA": 180,
-          "hxF": 52,
           "shLift": 0,
           "ankle": 0,
-          "ankleF": 5
+          "ankleF": 5,
+          "armAz": 0,
+          "foreAz": 0
         }
       }
     ]
@@ -1699,9 +1720,10 @@
           "neckA": 54,
           "upperA": 176,
           "foreA": 174,
-          "hxF": 46,
           "ankle": -10,
-          "ankleF": -5
+          "ankleF": -5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1715,9 +1737,10 @@
           "neckA": 54,
           "upperA": 116,
           "foreA": 112,
-          "hxF": 150,
           "ankle": -10,
-          "ankleF": -5
+          "ankleF": -5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1731,9 +1754,10 @@
           "neckA": 54,
           "upperA": 116,
           "foreA": 112,
-          "hxF": 150,
           "ankle": -10,
-          "ankleF": -5
+          "ankleF": -5,
+          "armAz": 90,
+          "foreAz": 90
         }
       },
       {
@@ -1747,9 +1771,10 @@
           "neckA": 54,
           "upperA": 176,
           "foreA": 174,
-          "hxF": 46,
           "ankle": -10,
-          "ankleF": -5
+          "ankleF": -5,
+          "armAz": 90,
+          "foreAz": 90
         }
       }
     ]

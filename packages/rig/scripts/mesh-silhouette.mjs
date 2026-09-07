@@ -40,7 +40,13 @@ const ZINCIR = {
   lumbar: ['joint-pelvis', 'joint-spine-2'],
   thorax: ['joint-spine-2', 'joint-neck'],
   neck: ['joint-neck', 'joint-head'],
+  // Kafa: kemik boyun → kafa merkezi (28px); siluet çeneden tepeye kadar
+  // kemiğin çok ötesine uzanır (`ARALIK`).
+  head: ['joint-neck', 'joint-head'],
 };
+
+/** Kemik boyu oranı olarak istasyon aralığı; yazılmayan kemik [−pay, 1+pay]. */
+const ARALIK = { head: [0.45, 2.45] };
 
 /**
  * Kemik eksenine uzaklık yarıçapı, mesh birimi (1 birim ≈ 25px). Bir köşe bir
@@ -69,7 +75,7 @@ const EKLEM_PAYI = 0.08;
 
 const YARICAP = {
   thigh: 0.9, shin: 0.6, upper: 0.55, fore: 0.45,
-  lumbar: 1.65, thorax: 1.65, neck: 0.6,
+  lumbar: 1.65, thorax: 1.65, neck: 0.6, head: 1.2,
 };
 
 function okuObj(yol) {
@@ -119,9 +125,11 @@ const ISTASYON = 40;
  *  ondan darken (±2px denendi) sıralar arası istasyon boş kalıp komşudan
  *  kopyalanıyor ve kenar testere dişine dönüyordu. */
 const PENCERE_PX = 7;
-function siluet(noktalar, a, b, azDeg, lenPx, ustTasma = 0) {
+function siluet(noktalar, a, b, azDeg, lenPx, ustTasma = 0, aralik = null) {
   const pencere = PENCERE_PX / (lenPx / ISTASYON);
-  const ilk = -Math.round(ustTasma * ISTASYON);
+  const ilk = aralik ? Math.round(aralik[0] * ISTASYON) : -Math.round(ustTasma * ISTASYON);
+  const son_i = aralik ? Math.round(aralik[1] * ISTASYON) : ISTASYON;
+  const [s0, s1] = aralik ?? [-EKLEM_PAYI - ustTasma, 1 + EKLEM_PAYI];
   const r = (azDeg * Math.PI) / 180;
   // az=0 YANDAN bakış: yatay eksen mesh'in DERİNLİĞİ (+Z, figürün baktığı yön),
   // yani parça uzayının +X'i. az=90 önden: yatay eksen mesh'in yanal ekseni (+X).
@@ -138,11 +146,11 @@ function siluet(noktalar, a, b, azDeg, lenPx, ustTasma = 0) {
     const s = (ex*ux + ey*uy) / L;                 // kemik boyunca 0..1
     // Kemiğin ötesindeki kütle (kalça, omuz başı) uç istasyona yığılmasın:
     // eklem topu zaten orayı örtüyor.
-    if (s < -EKLEM_PAYI - ustTasma || s > 1 + EKLEM_PAYI) continue;
+    if (s < s0 || s > s1) continue;
     orn.push([s * ISTASYON, ex*vx + ey*vy]);
   }
   const bant = [];
-  for (let i = ilk; i <= ISTASYON; i++) {
+  for (let i = ilk; i <= son_i; i++) {
     let lo = Infinity, hi = -Infinity;
     for (const [si, w] of orn) {
       if (Math.abs(si - i) > pencere) continue;
@@ -165,13 +173,24 @@ function siluet(noktalar, a, b, azDeg, lenPx, ustTasma = 0) {
   });
   // Kemik üstüne taşan kısım tepeye doğru kapansın: düz kesilince kalça kare
   // bir çıkıntı gibi duruyordu. Kosinüs yumuşatması, merkez sabit.
-  if (ilk < 0) {
+  if (ilk < 0 && !aralik) {
     for (const q of duz) {
       if (q.i >= 0) continue;
       const k = Math.cos((q.i / ilk) * (Math.PI / 2));
       const c = (q.lo + q.hi) / 2, a = (q.hi - q.lo) / 2;
       q.lo = c - a * k; q.hi = c + a * k;
     }
+  }
+  if (aralik) {
+    // Kafa gibi iki ucu da serbest parça: tepe ve çene yuvarlak kapansın
+    const n = duz.length - 1, kapak = Math.max(2, Math.round(n * 0.12));
+    duz.forEach((q, j) => {
+      const u = Math.min(j, n - j);
+      if (u >= kapak) return;
+      const k = Math.sin(((u + 0.5) / kapak) * (Math.PI / 2));
+      const c = (q.lo + q.hi) / 2, a = (q.hi - q.lo) / 2;
+      q.lo = c - a * k; q.hi = c + a * k;
+    });
   }
   return duz;
 }
@@ -185,7 +204,7 @@ const arg = (k) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 
 const objYol = arg('obj');
 const az = Number(arg('az') ?? 0);
 if (!objYol || !existsSync(objYol)) {
-  console.error('Kullanım: --obj <base.obj yolu> [--az 50] [--write]');
+  console.error('Kullanım: --obj <base.obj yolu> [--az 0|90] [--write]');
   console.error('Mesh: makehumancommunity/makehuman → makehuman/data/3dobjs/base.obj (CC0)');
   process.exit(1);
 }
@@ -206,7 +225,8 @@ for (const i of govde) {
   const p = V[i];
   for (const k of kemikler) {
     const { d, t } = parcayaUzaklik(p, k.a, k.b);
-    if (d <= YARICAP[k.ad] && t > -EKLEM_PAYI - (USTE_TASMA[k.ad] ?? 0) && t < 1 + EKLEM_PAYI) kova[k.ad].push(p);
+    const [t0, t1] = ARALIK[k.ad] ?? [-EKLEM_PAYI - (USTE_TASMA[k.ad] ?? 0), 1 + EKLEM_PAYI];
+    if (d <= YARICAP[k.ad] && t > t0 && t < t1) kova[k.ad].push(p);
   }
 }
 
@@ -218,7 +238,7 @@ const parts = {};
 console.log(`  açı ${az}°   ölçek 1 mesh birimi = ${OLCEK.toFixed(2)} px   \n`);
 console.log('  parça     köşe    mesh boy   bizim   gerilme   genişlik');
 for (const k of kemikler) {
-  const bant = siluet(kova[k.ad], k.a, k.b, az, BONES[k.ad], USTE_TASMA[k.ad] ?? 0);
+  const bant = siluet(kova[k.ad], k.a, k.b, az, BONES[k.ad], USTE_TASMA[k.ad] ?? 0, ARALIK[k.ad] ?? null);
   const meshBoy = Math.hypot(...[0,1,2].map((i) => k.b[i] - k.a[i])) * OLCEK;
   const ger = BONES[k.ad] / meshBoy;
   // Kemiği (0,0)→(0,len)'e oturt: istasyon i → y = len*i/ISTASYON, x = w * ölçek
@@ -238,17 +258,16 @@ for (const k of kemikler) {
 }
 
 if (argv.includes('--write')) {
+  if (az !== 0 && az !== 90) { console.error('✗ yalnız --az 0 (yan) ve --az 90 (ön) yazılabilir; 2B kararı, açılı set yok'); process.exit(1); }
   const yol = join(ROOT, 'data/bodyParts.json');
   const data = JSON.parse(readFileSync(yol, 'utf8'));
-  const hedef = az === 0 ? 'parts' : 'angled';
   if (az === 0) {
     data.parts = parts;
     data.source = `MakeHuman base.obj (CC0) mesh'inden üretildi, yandan ortografik — scripts/mesh-silhouette.mjs`;
   } else {
-    data.angled = { _: `${az}° için mesh'ten üretildi — scripts/mesh-silhouette.mjs, elle düzenleme`, az, parts };
+    data.front = { _: `Önden (90°) siluetler, aynı mesh'ten — scripts/mesh-silhouette.mjs --az 90, elle düzenleme. Mesh'in SOL uzuvları; ekranda sağda görünen taraf bunlar, sol taraf aynalanır.`, parts };
   }
+  delete data.angled;
   writeFileSync(yol, JSON.stringify(data, null, 2) + '\n');
-  console.log(`\n✓ data/bodyParts.json → ${hedef}`);
-} else {
-  console.log('\n  (--write eklenmedi, yazılmadı)');
+  console.log(`\n✓ data/bodyParts.json → ${az === 0 ? 'parts' : 'front'}`);
 }

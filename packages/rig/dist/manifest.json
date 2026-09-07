@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-07T18:56:57.614Z",
+  "generated": "2026-09-07T19:11:23.179Z",
   "source": {
-    "commit": "333357bd",
+    "commit": "6154165e",
     "dirty": true
   },
   "counts": {
@@ -14,22 +14,22 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "01479af987d4ee5b02d0d13c1cb93280ce56b6bdd8de532111d39dc6f8f1cdf4",
-      "bytes": 48414,
+      "sha256": "13532b2e1848565b396be3248684ba473d5fcb281a3a0be64ea4200f3e2a3c17",
+      "bytes": 50640,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
     },
     "rigAudit.ts": {
-      "sha256": "d912747aec51e1058ae5aef0298a23c0ee53a51129698f9cf7062f3e6401ad93",
-      "bytes": 18603,
+      "sha256": "d7d6867f305380d2a074d32d570f8cd7865e7af8224b33aa2773ff38fd4f45ba",
+      "bytes": 18463,
       "from": "src/rigAudit.ts",
       "what": "denetim kuralları",
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "083ccc2d05e760ab864956d026901671a7aef32fe921511259840719023f08c9",
-      "bytes": 17769,
+      "sha256": "c4e41c4d08899fa9356cb592f4108c00de093574d16bcfa42241b7d5c64fc663",
+      "bytes": 17560,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "5bd8ec3eb375da78d279cbf587c81bd6bb417d7276f1330e3079d460054da597",
-      "bytes": 51090,
+      "sha256": "332e53b195d630ab82111d631899d15fd92b2dca502ca29f176db3096d06d384",
+      "bytes": 51722,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
@@ -70,8 +70,8 @@
       "to": "src/data/rigAnatomy.json"
     },
     "bodyParts.json": {
-      "sha256": "410de056d8773bbe70ae880468cb467b265eb21ea0ece8133091a3ade42659fa",
-      "bytes": 16942,
+      "sha256": "d1cad75994101dd5074109906c256c5da28512f1b026819891fcf30cde662c8c",
+      "bytes": 21251,
       "from": "data/bodyParts.json",
       "what": "uzuv siluet parçaları",
       "to": "src/data/rigBodyParts.json"
@@ -84,8 +84,8 @@
       "to": "src/data/rigArchetypes.ts"
     },
     "rig.test.ts": {
-      "sha256": "6c4ac3d78b4f649a1a7c6a254186419ad8b89e102ad22e962abaf2aa2d799739",
-      "bytes": 11686,
+      "sha256": "e9d8904f8ce260f29936f53e6243ba2b8b8393b677a05a0d61613a86264475b8",
+      "bytes": 13279,
       "from": "tests/rig.test.ts",
       "what": "motor testleri",
       "to": "src/utils/rig.test.ts"

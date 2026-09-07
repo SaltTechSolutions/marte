@@ -179,8 +179,12 @@ describe('rig hareket denetimi', () => {
   it('yanal hareketlerde el gerçekten yana açılır', () => {
     (['lateral_raise_front', 'band_pull_apart_front', 'band_ext_rotation_front', 'hinged_fly'] as const).forEach((key) => {
       const ex = RIG_ARCHETYPES[key];
-      const widths = Array.from({ length: 21 }, (_, i) => poseAt(ex, i / 20).p.hxF);
-      expect(Math.max(...widths) - Math.min(...widths), `${key} açılma`).toBeGreaterThan(40);
+      const widths = Array.from({ length: 21 }, (_, i) => {
+        const p = poseAt(ex, i / 20).p;
+        const F = frontPoints(ex, p, skeleton(ex, p));
+        return F.R.hand[0] - F.L.hand[0];
+      });
+      expect(Math.max(...widths) - Math.min(...widths), `${key} açılma`).toBeGreaterThan(80);
     });
   });
 });
@@ -250,5 +254,34 @@ describe('ağırlık merkezi', () => {
     expect(x).toBeLessThan(hi);
     expect(y).toBeGreaterThan(S.thorax[1]);
     expect(y).toBeLessThan(S.knee[1]);
+  });
+});
+
+describe('önden görünüm', () => {
+  it('kol boyları önden bakışta kemik boyunu aşmaz, yana açılınca kemik boyuna ulaşır', () => {
+    const ex = A2.lateral_raise_front;
+    for (let i = 0; i <= 20; i++) {
+      const p = pa2(ex, i / 20).p;
+      const F = frontPoints(ex, p, sk2(ex, p));
+      for (const s of [F.L, F.R]) {
+        expect(Math.hypot(s.elbow[0] - s.sh[0], s.elbow[1] - s.sh[1])).toBeLessThanOrEqual(B.upper + 0.01);
+        expect(Math.hypot(s.hand[0] - s.elbow[0], s.hand[1] - s.elbow[1])).toBeLessThanOrEqual(B.fore + 0.01);
+      }
+    }
+    // Omuz hizasında (t=0.5), armAz 90: kol tam kemik boyu yana uzanır.
+    const F = frontPoints(ex, pa2(ex, 0.5).p, sk2(ex, pa2(ex, 0.5).p));
+    expect(Math.abs(F.R.hand[0] - F.R.sh[0])).toBeGreaterThan(B.upper + B.fore - 8);
+  });
+  it('öne uzanan kol önden bakışta kısalır (bant açma kapalı konum)', () => {
+    const ex = A2.band_pull_apart_front;
+    const F = frontPoints(ex, pa2(ex, 0).p, sk2(ex, pa2(ex, 0).p));
+    expect(Math.abs(F.R.hand[0] - F.R.sh[0])).toBeLessThan(50);
+  });
+  it('dış rotasyonda dirsek yerinde kalır, el yana döner', () => {
+    const ex = A2.band_ext_rotation_front;
+    const F0 = frontPoints(ex, pa2(ex, 0).p, sk2(ex, pa2(ex, 0).p));
+    const F1 = frontPoints(ex, pa2(ex, 0.5).p, sk2(ex, pa2(ex, 0.5).p));
+    expect(Math.abs(F1.R.elbow[0] - F0.R.elbow[0])).toBeLessThan(2);
+    expect(F1.R.hand[0] - F0.R.hand[0]).toBeGreaterThan(50);
   });
 });

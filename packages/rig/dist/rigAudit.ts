@@ -64,7 +64,7 @@ export const elbowFlex = (S: Skeleton): number => norm(angleOf(S.elbow, S.hand) 
  *
  * Her band açıyı NEREDEN okuduğunu kendisi söyler ve eşiğini veri olarak
  * taşır. Poz alanları üstünde dolaşan genel bir kural YOK: `RigPose` derece ve
- * piksel alanlarını aynı düz nesnede tutuyor (`hx`, `hy`, `hxF`, `shLift`,
+ * piksel/azimut alanlarını aynı düz nesnede tutuyor (`hx`, `hy`, `shLift`,
  * `ankleLift` piksel) ve alanları gezen bir döngü piksel değerini açı sanar.
  * `auditLoop` bu hatayı bir kez yaptı; tablo o tuzağı yapısal olarak kapatıyor.
  */
@@ -320,12 +320,8 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     const F = frontPoints(ex, p, S);
     const trunk = frontTrunk(F);
     if (trunk.ry <= 0) add('gövde', 'önden gövde çizilemiyor (yarıçap negatif)');
-    ([F.L, F.R] as FrontSide[]).forEach((side, i) => {
-      const upper = len(side.sh, side.elbow);
-      const which = i === 0 ? 'sol' : 'sağ';
-      if (upper < 30) add('kol', `önden ${which} üst kol omzun içine gömülmüş`);
-      if (upper > 110) add('kol', `önden ${which} üst kol uzamış`);
-    });
+    // Kol boyu artık yapı gereği doğru (3B yönden izdüşüm); eski 'kol' kuralı
+    // hxF'in uzattığı kolu yakalıyordu, hxF yok.
   }
 
   return issues;
@@ -374,7 +370,7 @@ export function auditExercise(ex: RigExercise, samples = 41): RigIssue[] {
  * sarmalanırlarsa 360 birimlik bir kaçak sıfır görünür ve döngü kapalı
  * sanılır. `hy` tek başına 440 birim gezebiliyor.
  */
-const OFFSET_KEYS = new Set<keyof RigPose>(['hx', 'hy', 'hxF', 'shLift', 'ankleLift']);
+const OFFSET_KEYS = new Set<keyof RigPose>(['hx', 'hy', 'shLift', 'ankleLift', 'armAz', 'armAzF', 'foreAz', 'foreAzF']);
 
 export function auditLoop(ex: RigExercise): RigIssue[] {
   const first = poseAt(ex, 0).p;

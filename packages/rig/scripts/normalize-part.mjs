@@ -23,7 +23,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Kemik boyları — `src/rig.ts`'teki `B` ile aynı olmak zorunda. */
-export const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 24 };
+export const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 24, head: 28 };
 
 const ARITY = { M: 2, L: 2, T: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, A: 7, Z: 0 };
 

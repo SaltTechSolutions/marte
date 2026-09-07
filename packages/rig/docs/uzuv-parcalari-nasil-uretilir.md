@@ -35,11 +35,11 @@ Kemik boyları sabit ve şema bunları zorunlu tutuyor:
 ```bash
 curl -sL https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/3dobjs/base.obj -o /tmp/base.obj
 npm run parts:mesh -- --obj /tmp/base.obj --az 0  --write
-npm run parts:mesh -- --obj /tmp/base.obj --az 50 --write
+npm run parts:mesh -- --obj /tmp/base.obj --az 90 --write
 npm test && npm run export
 ```
 
-İlk komut yan seti (`parts`), ikincisi açılı seti (`angled`) yazıyor. Mesh
+İlk komut yan seti (`parts`), ikincisi ÖN seti (`front`, 90°) yazıyor. Mesh
 depoda DEĞİL (1.7 MB, ve zaten tek kaynak var); üretilmiş veri depoda.
 
 ### Kaynak ve lisans
@@ -142,16 +142,18 @@ görünmüyor, ama sıfırlanmıyor.
 Deformasyon isteniyorsa yol mesh tabanlı deri (skinning) — o zaman parça değil
 ağırlık haritası gerekir ve mobil maliyeti tamamen başka bir tartışma açar.
 
-## Açılı (3/4) set
+## Ön set
 
-`--az 50` ile aynı mesh'ten üretiliyor; ayrı bir hesap yok. Önceki sürümde
-yan siluetten kesit varsayımıyla (gövde dikdörtgen, uzuvlar elips) türetiliyordu
-— mesh varken o dolaylama gereksiz, kaldırıldı.
+`--az 90` ile aynı mesh'ten üretiliyor. Önden görünüm bu parçalarla çiziliyor;
+kollar tek pozdan 3B izdüşümle yerleşiyor (`armAz`/`foreAz`, bkz. `RigPose`).
+Parçalar mesh'in SOL uzuvları: ekranda sağda görünen taraf (figürün solu)
+olduğu gibi, soldaki taraf `scale(-1 1)` ile aynalanarak çizilir. Önden
+bakışta kemik izdüşümde kısalabildiği için parça `partTransformScaled` ile
+kemik boyunca ölçeklenir (öne eğik gövde, bükük diz).
 
-**Şema ne zorluyor:** açılı set varsa yan setle AYNI parçaları taşımak
-zorunda ve `len`ler kemik boylarıyla uyuşmalı. Eksik bir parça figürü
-çizilmez yapmıyor, o uzvu yan siluetiyle bırakıyor — sessizce karışık figür.
+Kafa da bir parça (`head`, kemik boyun kökü → kafa merkezi, 28px; siluet
+çeneden tepeye). Yan sette de var; yan görünüm bugün hâlâ `headProfile()`
+çiziyor, geçiş ayrı iş.
 
-**Henüz motorda değil.** Açılı set veride duruyor ama motor, editör ve
-uygulama yalnızca yan seti çiziyor; kamera açısı ve eklem derinliği ayrı bir
-iş.
+**Şema ne zorluyor:** ön set varsa yan setle AYNI parçaları taşımak zorunda.
+Açılı (3/4) set yok — 2B kararı, `TODOS.md`.

@@ -157,7 +157,9 @@ export const tidyAngle = (deg: number): number => Math.round((((deg % 360) + 360
 export function applyPatch(frame: Partial<RigPose>, patch: Partial<RigPose>): Partial<RigPose> {
   const next = { ...frame };
   (Object.entries(patch) as [keyof RigPose, number][]).forEach(([k, v]) => {
-    next[k] = k === 'hx' || k === 'hy' || k === 'hxF' || k === 'shLift' || k === 'ankleLift' ? Math.round(v) : tidyAngle(v);
+    // Azimutlar İŞARETLİ kalır (eksi = orta hattı geçen kol); 0-360'a indirgemek
+    // −15'i 345 yapar ve interpolasyon uzun yoldan döner.
+    next[k] = k === 'hx' || k === 'hy' || k === 'shLift' || k === 'ankleLift' || k === 'armAz' || k === 'armAzF' || k === 'foreAz' || k === 'foreAzF' ? Math.round(v) : tidyAngle(v);
   });
   return next;
 }

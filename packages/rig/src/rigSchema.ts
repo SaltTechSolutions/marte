@@ -24,7 +24,7 @@ const VIEWS = ['side', 'front'];
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */
 const POSE_KEYS: (keyof RigPose)[] = [
   'shinA', 'thighA', 'torso', 'thoraxA', 'neckA', 'upperA', 'foreA',
-  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
+  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'armAz', 'armAzF', 'foreAz', 'foreAzF', 'shLift', 'ankleLift',
   // Ayak bileği eklem açısı, taraf başına. Bkz. `RigPose.ankle`.
   'ankle', 'ankleF',
 ];
@@ -305,9 +305,8 @@ export function validateAnatomy(data: unknown): string[] {
  * uzun çizilir ve eklemde boşluk açılır — sessiz bir kusur, çünkü figür yine
  * de çizilir.
  *
- * Bu dosya bugün elle çizilmiş kaba bir taslak. Gerçek anatomik parçalar (CC0
- * bir 3B modelden seçilen açıyla render edilip uzuvlara bölünerek) aynı
- * biçimde buraya girecek; denetim ikisini de aynı kurala tabi tutuyor.
+ * Parçalar MakeHuman CC0 mesh'inden üretiliyor (`npm run parts:mesh`); yan
+ * (`parts`) ve ön (`front`) set aynı kurala tabi.
  */
 export function validateBodyParts(data: unknown, bones: Record<string, number>): string[] {
   const errs: string[] = [];
@@ -329,24 +328,23 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
     else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
   });
 
-  // Açılı (3/4) set: `scripts/mesh-silhouette.mjs --az 50` üretiyor. İsteğe bağlı — yoksa
-  // yalnız yan siluetler var. Varsa YAN SETLE AYNI parçaları taşımak zorunda:
-  // eksik bir parça figürü çizilmez yapmıyor, o uzvu yan siluetiyle bırakıp
-  // ötekileri açılı çiziyor — yani sessizce karışık bir figür.
-  const ang = data.angled;
-  if (ang !== undefined) {
-    if (!isObj(ang)) errs.push('uzuv parçaları: angled nesne değil');
+  // Önden set: `scripts/mesh-silhouette.mjs --az 90` üretiyor. İsteğe bağlı —
+  // yoksa önden görünüm kapsülle çizilir. Varsa YAN SETLE AYNI parçaları
+  // taşımak zorunda: eksik bir parça figürü çizilmez yapmıyor, o uzvu kapsülle
+  // bırakıp ötekileri siluetle çiziyor — yani sessizce karışık bir figür.
+  const fr = data.front;
+  if (fr !== undefined) {
+    if (!isObj(fr)) errs.push('uzuv parçaları: front nesne değil');
     else {
-      if (!num(ang.az) || ang.az < 0 || ang.az > 89) errs.push(`angled: az ${ang.az} geçersiz (0..89)`);
-      const ap = ang.parts;
-      if (!isObj(ap)) errs.push('angled: parts nesnesi yok');
+      const fp = fr.parts;
+      if (!isObj(fp)) errs.push('front: parts nesnesi yok');
       else {
         const yan = Object.keys(parts).sort().join(',');
-        const acili = Object.keys(ap).sort().join(',');
-        if (yan !== acili) errs.push(`angled: parça kümesi yan setle aynı olmalı (yan: ${yan} · açılı: ${acili})`);
-        Object.keys(ap).forEach((name) => {
-          const bad = (msg: string) => errs.push(`açılı parça "${name}": ${msg}`);
-          const q = ap[name];
+        const on = Object.keys(fp).sort().join(',');
+        if (yan !== on) errs.push(`front: parça kümesi yan setle aynı olmalı (yan: ${yan} · ön: ${on})`);
+        Object.keys(fp).forEach((name) => {
+          const bad = (msg: string) => errs.push(`ön parça "${name}": ${msg}`);
+          const q = fp[name];
           if (!isObj(q)) return bad('nesne değil');
           Object.keys(q).forEach((k) => { if (k !== 'len' && k !== 'd') bad(`bilinmeyen alan "${k}"`); });
           if (typeof q.d !== 'string' || q.d.trim() === '') bad('d boş');
@@ -356,6 +354,5 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
       }
     }
   }
-
   return errs;
 }

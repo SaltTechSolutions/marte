@@ -104,9 +104,16 @@ edilmemiş bir çalışma ağacından çıkıp çıkmadığını (`source.dirty`
   uzayda yapılır — bu yüzden uzuvlar bükülür, kendi etraflarında dönmez.
 - Beş kök nokta: ayak yerde, dört ayak, sehpa, sırtüstü, barda asılı. Bir
   hareketin nereye bastığı çizimin temelidir.
-- Önden görünüm, yan çözümün dikey seviyelerini okuyan şematik bir
-  izdüşümdür; bağımsız bir 3B model yok. Gövde rotasyonu gibi gerçek dönüşler
-  bu modelde temsil edilemiyor.
+- Önden görünüm: gövde ve bacak dikey seviyelerini yan çözümden okur, kollar
+  TEK pozdan 3B yönle izdüşürülür (`upperA` yükselme, `armAz` düzlem — 0 öne,
+  90 yana; ön kol için `foreAz`). Kol boyu her karede doğru, yana açılan kol
+  öne bakışta kısalır. Parçalar mesh'in 90° silueti (`bodyParts.json` →
+  `front`). Bağımsız bir 3B model yok; gövde rotasyonu (eksenel dönüş)
+  temsil edilemiyor.
+- Katman sırası (ressam sırası) her iki tüketicide aynı: yan görünümde uzak
+  bacak → uzak kol → gövde → yakın bacak → yakın kol → kafa → tabak; önden
+  bacaklar → gövde → kafa → kollar → yük. Saf yan görünümde bu sıra
+  anatomik olarak doğrudur: yakın taraf hep kamera tarafında.
 
 ## Editör
 

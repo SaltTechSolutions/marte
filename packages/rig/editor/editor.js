@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath, footPinned,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, partTransformScaled, poseAt,
   shoulderWedge, showFarArm, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
@@ -34,7 +34,8 @@ const ANGLES = [
   ['thighF', 'Uzak uyluk', 0, 360], ['shinF', 'Uzak baldır', 0, 360],
   ['upperF', 'Uzak üst kol', 0, 360], ['foreF', 'Uzak ön kol', 0, 360],
   ['hx', 'El yatay', -200, 200], ['hy', 'El dikey', -220, 220],
-  ['hxF', 'Önden el açıklığı', 0, 200], ['shLift', 'Omuz yükselmesi', 0, 40],
+  ['armAz', 'Kol düzlemi (0 öne, 90 yana)', -30, 120], ['foreAz', 'Ön kol düzlemi', -30, 120],
+  ['armAzF', 'Uzak kol düzlemi', -30, 120], ['foreAzF', 'Uzak ön kol düzlemi', -30, 120], ['shLift', 'Omuz yükselmesi', 0, 40],
   ['ankleLift', 'Topuk/basamak', 0, 120],
 ];
 
@@ -58,6 +59,7 @@ let MUSCLEDATA = {};
 let ANATOMY = null;
 /** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
 let PARTS = null;
+let PARTS_FRONT = null;
 /** Çizim kipi: kapsül mü parça mı. */
 let useParts = true;
 let key = null;
@@ -646,31 +648,41 @@ function draw() {
 
   if (view === 'front') {
     const F = frontPoints(e, p, S);
-    const trunk = frontTrunk(F);
     const cx = F.cx;
+    const FP = useParts && PARTS_FRONT;
+    // Ön parça: figürün SOL uzuvları mesh'ten; ekranın solundaki taraf (figürün sağı) aynalanır.
+    const fpart = (name, a, b, mirror) => el('path', {
+      d: FP[name].d, transform: partTransformScaled(a, b, FP[name].len) + (mirror ? ' scale(-1 1)' : ''), fill: skin, stroke: line,
+    });
     const bar = () => (F.barY === null ? [] : [
       el('rect', { x: cx - 152, y: F.barY - 5, width: 304, height: 10, rx: 5, fill: metal, stroke: line }),
       el('rect', { x: cx - 152, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
       el('rect', { x: cx + 137, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
     ]);
     if (e.bar === 'back') push(bar());
-    [F.L, F.R].forEach((s) => {
+    // Sıra: bacaklar → gövde → kafa → kollar (kol gövdenin önünden geçebilir) → yük.
+    [[F.L, true], [F.R, false]].forEach(([s, mirror]) => {
       push([el('rect', { x: s.ankle[0] - 15, y: GROUND - 13, width: 30, height: 13, rx: 5, fill: skin, stroke: line })]);
-      push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34));
-      push([ball(s.knee, 13), ball(s.ankle, 9)]);
-      push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3));
-      push([ball(s.elbow, 10), el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
-      if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
+      if (FP) push([fpart('thigh', s.hip, s.knee, mirror), fpart('shin', s.knee, s.ankle, mirror)]);
+      else { push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34)); push([ball(s.knee, 13), ball(s.ankle, 9)]); }
     });
-    push([
+    if (FP) push([
+      fpart('lumbar', F.pelvis, F.lumbar, false), fpart('thorax', F.lumbar, F.thorax, false),
+      fpart('neck', F.thorax, F.neck, false), fpart('head', F.neck, F.head, false),
+    ]);
+    else push([
       el('ellipse', { cx, cy: F.pelvis[1] + 8, rx: 38, ry: 25, fill: skin, stroke: line }),
-      // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
-      // omuz silkerken omuz gövdeden kopamıyor.
       el('path', { d: frontTorsoPath(F), fill: skin, stroke: line }),
       seg(F.thorax, F.neck, 27, 24),
       el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: line }),
     ]);
-    [F.L, F.R].forEach((s2) => push([ball(s2.sh, 16)]));
+    [[F.L, true], [F.R, false]].forEach(([s, mirror]) => {
+      push([ball(s.sh, 16)]);
+      if (FP) push([fpart('upper', s.sh, s.elbow, mirror), fpart('fore', s.elbow, s.hand, mirror)]);
+      else { push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3)); push([ball(s.elbow, 10)]); }
+      push([el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
+      if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
+    });
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view);
   }
@@ -947,7 +959,7 @@ function relevantFields(e) {
   if (e.arm === 'ik') out.push('hy');
   out.push('thighF', 'shinF');
   if (e.arm === 'angles') out.push('upperF', 'foreF');
-  if (e.view === 'front') out.push('hxF', 'shLift');
+  if (e.view === 'front') out.push('armAz', 'foreAz', 'armAzF', 'foreAzF', 'shLift');
   if (e.mode === 'stand') out.push('ankleLift');
   return out;
 }
@@ -1346,6 +1358,7 @@ const boot = async () => {
   MUSCLEDATA = muscles;
   ANATOMY = anatomy && anatomy.front ? anatomy : null;
   PARTS = parts && parts.parts ? parts.parts : null;
+  PARTS_FRONT = parts && parts.front && parts.front.parts ? parts.front.parts : null;
   DATA = data;
   // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
   // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
