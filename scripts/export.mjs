@@ -74,12 +74,14 @@ const commit = git('rev-parse', '--short', 'HEAD') || 'unknown';
 const dirty = git('status', '--porcelain') !== '';
 const generated = new Date().toISOString();
 
-// Damga ÜRETİM ZAMANINI TAŞIMIYOR, yalnızca sürüm ve commit: zaman damgası
+// Damga ÜRETİM ZAMANI ya da COMMIT TAŞIMIYOR, yalnızca sürüm: ikisi de
 // banner'a girdiğinde kaynak hiç değişmese bile her export dört .ts dosyasını
-// bayt düzeyinde değiştiriyordu — hedefin git diff'i her seferinde kirleniyor,
-// "değişti/aynı" raporu anlamsızlaşıyordu. Üretim zamanı manifestte duruyor.
+// bayt düzeyinde değiştiriyordu: zaman her çalıştırmada, commit her commit'te.
+// Hedefin git diff'i böyle her seferinde kirleniyor, "değişti/aynı" raporu
+// anlamsızlaşıyordu. İkisi de manifest.json'da duruyor — banner yalnızca
+// "bu üretilmiş bir dosya" demek zorunda.
 const BANNER = `// ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v${pkg.version} (${commit}${dirty ? '+kirli' : ''})
+// Kaynak: antrenman-simulatoru v${pkg.version} — hangi üretimden geldiği manifest.json'da
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 `;

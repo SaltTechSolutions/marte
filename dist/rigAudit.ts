@@ -1,11 +1,14 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (30b45bf+kirli)
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
 import {
   B,
   MAX_ANKLE_LIFT,
+  facingFlip,
+  footDirFor,
+  footLowestY,
   FrontSide,
   GROUND,
   RigExercise,
@@ -174,6 +177,27 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     if (p.ankleLift > MAX_ANKLE_LIFT) {
       add('ayak', `topuk ${Math.round(p.ankleLift)}px kalkmış, parmak ucu en fazla ${MAX_ANKLE_LIFT}px'e yetişiyor — parmak yerden kopuyor`);
     }
+  }
+
+  // ÇİZİLEN ayak zeminin altına inmemeli.
+  //
+  // Eklem konumunu ölçen `zemin` kuralı bunu göremiyor: ayak bileği yerin
+  // üstünde durup ayak yine de zemine gömülebiliyor, çünkü tabanın kalınlığı
+  // var. Eskiden görünmüyordu da — dörtgen ayak kendini `min(GROUND, …)` ile
+  // zemine kırpıyordu, yani veri yanlışsa bile çizim doğru görünüyordu. Yeni
+  // ayak katı bir şekil; kırpma kalkınca hata ortaya çıktı.
+  //
+  // Ölçüldü: `bench_press` ve `incline_press` ayağı 6.4px gömüyordu; diğer 28
+  // arketip temizdi. Tolerans 2px, yuvarlama payı.
+  {
+    const dir = footDirFor(ex.mode);
+    const flip = facingFlip(ex.mode);
+    const pin = ex.prop !== 'box' && p.ankleLift > 0;
+    const feet: [string, Vec][] = [['ayak', S.ankle], ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF]] as [string, Vec][]) : [])];
+    feet.forEach(([ad, ankle]) => {
+      const pen = footLowestY(ankle, dir, pin, flip) - GROUND;
+      if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
+    });
   }
 
   if (ex.mode === 'quad' || ex.mode === 'supine') {

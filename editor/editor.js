@@ -9,7 +9,7 @@
  */
 
 import {
-  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, fillPose, footDirFor, footPath,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footPath,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
   shoulderWedge, showFarLeg, skeleton,
 } from '/engine/rig.js';
@@ -250,7 +250,7 @@ function cmpFigure(e, p, mode) {
         ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
         : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
       + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
-    { z: Z.knee, d: `<path d="${footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0)}" fill="${skin}" stroke="${line}"/>`
+    { z: Z.knee, d: `<path d="${footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
         + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
     { z: Z.elbow, d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
   ];
@@ -261,7 +261,7 @@ function cmpFigure(e, p, mode) {
   g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
   g += mode === 'capsule'
     ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
-    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => (depth ? proj([S3.bar[0], S3.bar[1], sgn * 70], 26).p : [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17]);
@@ -538,7 +538,7 @@ function drawPose(svg, e, p) {
     push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true));
   }
   push([seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
-  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42));
   push(limb(S.knee, S.ankle, 26, 28, 13, .34));
   push(limb(S.sh, S.elbow, 25, 22, 17, .5));
@@ -739,7 +739,7 @@ function draw() {
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin), fill: skinFar, stroke: line })]);
+    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
     push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
     push([ball(S.kneeF, 12, true)]);
   }
@@ -774,7 +774,7 @@ function draw() {
       ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
       : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
@@ -782,14 +782,18 @@ function draw() {
   if (e.bar === 'hands') push(plate(S.bar));
   push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
   if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
+  // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
+  // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
+  const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
   svg.appendChild(
     useParts
-      ? el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA})` }, [
-          el('path', { d: headProfile(), fill: skin, stroke: line }),
-        ])
-      : el('g', { transform: `rotate(${p.neckA} ${S.head[0]} ${S.head[1]})` }, [
-          el('ellipse', { cx: S.head[0], cy: S.head[1] - 3, rx: 23, ry: 26, fill: skin, stroke: line }),
-          el('path', { d: `M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`, fill: skin, stroke: line }),
+      ? el('g', { transform: headT }, [el('path', { d: headProfile(), fill: skin, stroke: line })])
+        // Kapsül kipinin çene kaması da YEREL koordinatta: eskiden mutlak
+        // noktalarla çizilip `rotate(a cx cy)` ile döndürülüyordu, o hâlde
+        // aynalanamıyordu. Sayılar birebir aynı, yalnızca kafa merkezine göre.
+      : el('g', { transform: headT }, [
+          el('ellipse', { cx: 0, cy: -3, rx: 23, ry: 26, fill: skin, stroke: line }),
+          el('path', { d: 'M -4 4 L 21 6 L 14 23 L -8 22 Z', fill: skin, stroke: line }),
         ]),
   );
 

@@ -1,5 +1,5 @@
 // ÜRETİLMİŞ DOSYA — elle düzenleme.
-// Kaynak: antrenman-simulatoru v1.0.0 (30b45bf+kirli)
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
@@ -860,7 +860,18 @@ export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.
  * kalkışının tanımı bu. Dönüş açısı ayak bileğinin yerden yüksekliğinden
  * çıkıyor, yani şekil deforme olmuyor, katı kalıp dönüyor.
  */
-export function footPath(ankle: Vec, dir: number, pinToe = false): string {
+/**
+ * Ayağın yerel çerçevesi: `(u, v)` → dünya noktası.
+ *
+ * `+u` parmak yönü, `+v` taban tarafı. `flip = -1` yerel x eksenini aynalıyor
+ * (bkz. `facingFlip`): parmak yönü aynı kalır, taban karşı tarafa geçer.
+ * Topuk kalkış dönüşü de işaret değiştirir, çünkü aynalanan çerçevede parmak
+ * ucu etrafındaki dönüş ters yöne gider.
+ *
+ * `footPath` ile `footLowestY` bu çerçeveyi PAYLAŞIYOR: ayrı yazılsalardı
+ * denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
+ */
+function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
   const r = Math.hypot(FOOT.toe, FOOT.sole);
   let extra = 0;
   if (pinToe) {
@@ -868,13 +879,36 @@ export function footPath(ankle: Vec, dir: number, pinToe = false): string {
     const h = Math.min(r, GROUND - ankle[1]);
     extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
   }
-  // Yerel eksen: +u parmak yönü, +v aşağı.
-  const a = rad(dir) + extra;
+  const a = rad(dir) + extra * flip;
   const ux = Math.sin(a);
   const uy = -Math.cos(a);
-  const vx = -uy;
-  const vy = ux;
-  const P = (u: number, v: number): Vec => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+  const vx = -uy * flip;
+  const vy = ux * flip;
+  return (u, v) => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+}
+
+/**
+ * Çizilen ayağın en alt noktası.
+ *
+ * Tabanı oluşturan eğrinin düğüm ve kontrol noktaları örnekleniyor — yani
+ * denetim, ÇİZİLEN şeklin en alçak yerini ölçüyor, ayak bileğinin konumunu
+ * değil. Aradaki fark önemli: eski dörtgen ayak kendini `min(GROUND, …)` ile
+ * zemine kırpıyordu, o yüzden veri yanlış olsa bile çizim doğru görünüyordu.
+ * Yeni ayak katı bir şekil; kırpma yok, hata görünür.
+ */
+export function footLowestY(ankle: Vec, dir: number, pinToe = false, flip = 1): number {
+  const P = footFrame(ankle, dir, pinToe, flip);
+  const { heel, toe, sole } = FOOT;
+  const sample: [number, number][] = [
+    [heel + 1, sole - 1], [heel + 6, sole + 1], [2, sole - 3], [10, sole - 2],
+    [18, sole], [26, sole], [toe - 2, sole - 1], [toe + 2, sole - 5],
+  ];
+  return Math.max(...sample.map(([u, v]) => P(u, v)[1]));
+}
+
+
+export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): string {
+  const P = footFrame(ankle, dir, pinToe, flip);
   const pt = (u: number, v: number) => { const q = P(u, v); return `${q[0].toFixed(1)} ${q[1].toFixed(1)}`; };
   const { heel, toe, sole } = FOOT;
   return (
@@ -887,5 +921,23 @@ export function footPath(ankle: Vec, dir: number, pinToe = false): string {
     `C ${pt(18, -2)} ${pt(6, -6)} ${pt(heel + 2, -9)} Z`
   );
 }
+
+/**
+ * Gövde aynalanmış mı?
+ *
+ * Yan görünümde figür +x'e bakar. Sırt üstü kiplerde (`bench`, `supine`) baş
+ * SAĞDA, gövdenin önü YUKARI bakar — yani figür ekseni etrafında dönmüş
+ * değil, AYNALANMIŞTIR. Tek bir kemik açısı bunu anlatamıyor: `quad`
+ * (yüzükoyun plank, neckA≈78) ile `bench` (sırt üstü, neckA≈96) neredeyse
+ * aynı açıyı taşıyor, ama biri yere bakar diğeri tavana; biri tabanını yukarı
+ * çevirir diğeri yere basar. Rotasyon bu iki durumu ayıramaz, ayna ayırır.
+ *
+ * Ölçüldü: aynasız hâlde `bench_press` yüzü AŞAĞI bakıyordu (sırt üstü yatan
+ * biri için imkânsız) ve ayak tabanı YUKARI dönüktü.
+ *
+ * Dönen değer profil çizimlerinin yerel x eksenine uygulanacak ölçek:
+ * `scale(flip, 1)`. Kemik açıları etkilenmez — onlar zaten dünya uzayında.
+ */
+export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);

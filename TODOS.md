@@ -132,3 +132,47 @@ anatomik ifade gücü. İkisi birlikte planlanmalı; ayrı ayrı yapmak `RigPose
 iki kez kırar. Devir sözleşmesinin sürümlenmesi (manifest, 2026-09-06) bu
 değişikliği güvenli kılan ön koşul.
 
+---
+
+## `carry`: salınan bacak orta noktada düzleşiyor
+
+**Nasıl bulundu (2026-09-07).** Yeni `zemin` denetimi — ÇİZİLEN ayağın en alt
+noktasını zeminle karşılaştıran kural — dört arketipte gömülme gösterdi. Üçü
+düzeltildi, biri kaldı.
+
+| arketip | gömülme | ne yapıldı |
+|---|---|---|
+| `bench_press` | 6.4px | `shinA` 150 → 143.3 ✓ |
+| `incline_press` | 6.4px | `shinA` 150 → 143.3 ✓ |
+| `unilateral_lunge` | 3.4px | `thighF` 190 → 197.3, `shinF` 178 → 170.5 ✓ |
+| `carry` | 5.1px | **açık** |
+
+Tek açı oynatmak lunge'da kötü takas veriyordu (3.4px için ayağı 22.9px yana
+kaydırıyordu), çünkü bacak neredeyse dikey: dikey duyarlılık sıfıra yakın,
+yatay duyarlılık en yüksek. İki açıyı BİRLİKTE çözünce ayak yerinden
+kıpırdamadan 4.5px yükseldi ve diz bükülmesi 12° → 26.8° oldu — lunge'da arka
+diz zaten bükük olmalı, yani düzeltme anatomiyi de iyileştirdi.
+
+**`carry` neden kaldı.** Uzak bacak `thighF` 160→200, `shinF` 190→170 arasında
+salınıyor. Uçlarda diz 30° bükük ve ayak yerden 2.7px yukarıda; ama t≈0.35'te
+`thighF`≈179.6, `shinF`≈180.2 — diz neredeyse DÜZ. Düzleşen bacak daha uzağa
+uzanıyor ve ayak 5.1px yere giriyor. Gerçek yürüyüşte tersi olur: salınım
+ortasında diz en çok bükülür, ayak yerden kesilir.
+
+Denenen ve YETMEYEN iki yol:
+- İki açıyı tüm karelerde birlikte kaydırmak: ±16° içinde çözüm yok. Kaydırma
+  orta noktadaki düzleşmeyi değiştirmiyor.
+- t=0.35 ve 0.65'e bükük dizli kare eklemek: en kötü değer 5.1 → **4.9px**.
+  Çukur geniş bir plato, tepe noktası yeni karenin yanına kayıyor.
+
+Doğru düzeltme salınım boyunca diz bükülme profilini yeniden yazmak — üç
+kareye sığmıyor, yürüyüş kurgusu işi.
+
+**Şimdilik:** kural susturulmadı, eşik gevşetilmedi. `tests/rig.test.ts`'te DAR
+bir istisna var: yalnızca `carry` + `zemin` + "uzak ayak" kalıbı. O arketipte
+çıkacak başka her uyarı ve diğer 29 arketipteki her uyarı testi kırıyor.
+
+**Not — eşik neden dünya-uzayında 2px:** görünürlük kadraja göre değişiyor.
+`carry`'nin viewBox'ı 148 birim (figüre yakın kadraj), `bench_press`'inki 442.
+Aynı 3px `carry`'de ~6pt, `bench_press`'te ~2pt ekran demek. Eşiği "görünmez"
+diye büyütmek en yakın kadrajdaki hatayı gizlerdi.
