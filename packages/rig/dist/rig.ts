@@ -624,7 +624,15 @@ export function frontPoints(ex: RigExercise, p: RigPose, S: Skeleton): FrontPoin
     head: [FX, S.head[1]],
     barY: null,
   };
-  F.barY = ex.bar === 'back' ? S.thorax[1] + 4 : ex.bar === 'hands' ? F.R.hand[1] : null;
+  // Bar yüksekliği İSKELETTEN okunuyor, ayrıca hesaplanmıyor. Eskiden
+  // `bar: 'back'` için `thorax + 4` yazılıydı; sırt barı sonradan göğüsten
+  // BOYUNA taşındı (el barı tutabilsin diye) ama burası güncellenmedi ve iki
+  // görünüm ayrıştı. Ölçüldü, squat: yan görünümde bar 179.2, önden 207.4 —
+  // 28px fark, yani önden bakışta eller barın 28px üstünde duruyordu.
+  //
+  // `bar: 'hips'` de artık çiziliyor; eskiden `null` dönüyordu ve hip
+  // thrust önden bakışta haltersiz görünüyordu.
+  F.barY = S.bar ? S.bar[1] : null;
   return F;
 }
 

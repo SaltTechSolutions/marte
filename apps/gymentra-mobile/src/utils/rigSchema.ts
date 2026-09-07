@@ -325,15 +325,10 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
     const q = parts[name];
     if (!isObj(q)) return bad('nesne değil');
     Object.keys(q).forEach((k) => {
-      if (k !== 'len' && k !== 'd' && k !== 'ratio') bad(`bilinmeyen alan "${k}"`);
+      if (k !== 'len' && k !== 'd') bad(`bilinmeyen alan "${k}"`);
     });
     if (typeof q.d !== 'string' || q.d.trim() === '') bad('d boş');
     if (!num(q.len)) return bad('len sayı olmalı');
-    // `ratio` = yanal genişlik / ön-arka derinlik. Açılı bakışta siluetin
-    // genişlik çarpanı buradan çıkıyor: sqrt(cos²α + ratio²sin²α). Gövde 1.4-1.5
-    // (yandan dar, önden geniş), uzuvlar 1 civarı (kesit yuvarlak). Sınır geniş
-    // ama sonlu: 0.5-2.5 dışındaki bir değer ölçüm değil yazım hatasıdır.
-    if (q.ratio !== undefined && (!num(q.ratio) || q.ratio < 0.5 || q.ratio > 2.5)) bad(`ratio ${q.ratio} sınır dışı (0.5..2.5)`);
     if (!(name in bones)) bad(`"${name}" bir kemik adı değil (${Object.keys(bones).join(', ')})`);
     else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
   });

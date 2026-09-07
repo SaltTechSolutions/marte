@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-07T16:44:39.991Z",
+  "generated": "2026-09-07T16:51:33.907Z",
   "source": {
-    "commit": "9794cbc1",
+    "commit": "cf456049",
     "dirty": true
   },
   "counts": {
@@ -14,8 +14,8 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "69a93fceeee0b3ad9900c8675b8d5d523c08e4241419496d2c22bea38de27bd1",
-      "bytes": 38455,
+      "sha256": "51c5005fec23a89d6979497c433425ea15b199b19f3731900d7abc8aa804c347",
+      "bytes": 38951,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "3b2c449a7199b4879822e23007be6bf9674808c18497e6fdd1121d35165580d3",
-      "bytes": 16648,
+      "sha256": "0c5487d71dc50a021f76a5f4cf3335b5653557e7eef3253ae575bad050cb5cd0",
+      "bytes": 16146,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -70,8 +70,8 @@
       "to": "src/data/rigAnatomy.json"
     },
     "bodyParts.json": {
-      "sha256": "b9ab669a51bfc96f034e7a28c149ddb7ca4e2c75d6fdefef988fcbedc06b6100",
-      "bytes": 2184,
+      "sha256": "3b4b976041205e1839fd1a84c3c5cb5a1acd4848ba14a33591a51aa4ae1ecf4c",
+      "bytes": 1944,
       "from": "data/bodyParts.json",
       "what": "uzuv siluet parçaları",
       "to": "src/data/rigBodyParts.json"
