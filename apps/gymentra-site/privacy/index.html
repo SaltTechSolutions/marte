@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gizlilik Politikası — GymEntra</title>
+  <link rel="icon" type="image/png" href="/assets/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/assets/favicon.png" />
+  <link rel="stylesheet" href="/assets/style.css" />
+</head>
+<body>
+  <header class="site">
+    <div class="brand">
+      <a href="/" style="display:flex; align-items:center; gap:10px;">
+        <img src="/assets/logo.png" alt="GymEntra" />
+        <span>GymEntra</span>
+      </a>
+    </div>
+    <nav class="site">
+      <a href="/privacy/">Gizlilik</a>
+      <a href="/terms/">Şartlar</a>
+    </nav>
+  </header>
+
+  <div class="wrap doc">
+    <h1>Gizlilik Politikası</h1>
+    <p class="updated">Son güncelleme: 17 Ağustos 2026</p>
+
+    <p>
+      Bu Gizlilik Politikası, <strong>Salt Tech</strong> ("biz", "bize") tarafından geliştirilen ve
+      işletilen <strong>GymEntra</strong> mobil uygulamasını ("Uygulama") kullandığınızda hangi
+      verilerin toplandığını, nasıl kullanıldığını ve nasıl korunduğunu açıklar. GymEntra, spor
+      salonlarının ("Salon") üyelik, check-in, antrenman ve ödeme süreçlerini yönetmesini sağlayan
+      beyaz etiketli bir salon yönetim uygulamasıdır.
+    </p>
+
+    <h2>1. Topladığımız Veriler</h2>
+    <p><strong>Hesap bilgileri:</strong> E-posta adresi, ad-soyad, (varsa) profil fotoğrafı. Hesabınızı
+      e-posta/şifre, Google veya Apple ile oluşturabilirsiniz; bu durumda ilgili sağlayıcıdan
+      adınızı ve e-posta adresinizi alırız. Şifrenizi biz saklamayız — kimlik doğrulama Firebase
+      Authentication üzerinden yürütülür.</p>
+    <p><strong>Üyelik bilgileri:</strong> Hangi salon(lar)a üye olduğunuz, rolünüz (üye, antrenör
+      veya salon yöneticisi), üyelik durumu ve check-in için kullanılan kısa kod.</p>
+    <p><strong>Antrenman ve ölçüm verileri:</strong> Size atanan antrenman programları, tamamladığınız
+      antrenman kayıtları ve kendi girdiğiniz vücut ölçümleri (kilo, göğüs, bel, kol gibi). Bu veriler
+      kullanıcı tarafından beyan edilen fitness takip verileridir; tıbbi kayıt niteliği taşımaz ve
+      sağlık hizmeti sunmak amacıyla toplanmaz.</p>
+    <p><strong>Check-in kayıtları:</strong> Salona giriş yaptığınız zaman damgaları.</p>
+    <p><strong>Ödeme kayıtları:</strong> GymEntra, kredi kartı veya banka bilgilerinizi
+      <strong>toplamaz, işlemez veya saklamaz</strong>. Ödemeler (nakit, banka transferi vb.) salon
+      dışında gerçekleşir; uygulama yalnızca salon yöneticisinin veya üyenin manuel olarak girdiği
+      tutar, yöntem ve durum bilgisini bir kayıt defteri olarak tutar.</p>
+    <p><strong>Bildirim verileri:</strong> Size bildirim gönderebilmemiz için cihazınıza özel bir
+      push bildirim belirteci (token) saklanır.</p>
+    <p><strong>Antrenör takvim verileri:</strong> Antrenörseniz, ders/randevu kayıtlarınız ve
+      meslektaşlarınızla paylaştığınız takvim erişim izinleri.</p>
+
+    <h2>2. Verileri Nasıl Kullanırız</h2>
+    <ul>
+      <li>Hesabınızı oluşturmak, doğrulamak ve salon üyeliğinizi yönetmek için</li>
+      <li>Check-in, antrenman programı ve ölçüm takibi gibi temel uygulama işlevlerini sunmak için</li>
+      <li>Üyelik onayı, ödeme durumu veya program ataması gibi durumlarda size bildirim göndermek için</li>
+      <li>Salon yöneticisinin kendi üyelerini ve ödeme kayıtlarını yönetebilmesi için</li>
+    </ul>
+    <p>Verilerinizi reklam amacıyla kullanmıyor veya üçüncü taraflara satmıyoruz. Uygulamada
+      reklam veya kullanım analitiği SDK'sı bulunmamaktadır.</p>
+
+    <h2>3. Verilerin Paylaşıldığı Taraflar</h2>
+    <p>Verileriniz, Uygulamayı çalıştırmak için kullandığımız aşağıdaki alt yüklenicilerle
+      paylaşılır:</p>
+    <ul>
+      <li><strong>Google Firebase</strong> (Authentication, Firestore veritabanı, Cloud Storage,
+        Cloud Functions) — verilerin barındırılması ve işlenmesi için</li>
+      <li><strong>Expo</strong> — push bildirimlerinin iletilmesi için</li>
+      <li><strong>Google Sign-In</strong> ve <strong>Apple Sign-In</strong> — tercih ederseniz
+        sosyal giriş için</li>
+    </ul>
+    <p>Ayrıca üye olduğunuz salonun yöneticisi ve (varsa) size atanan antrenör, üyelik, antrenman
+      ve ödeme kayıtlarınızı salon yönetimi kapsamında görebilir.</p>
+
+    <h2>4. Veri Güvenliği</h2>
+    <p>Veriler Firebase altyapısında, salonlar arası veri izolasyonunu ve role dayalı erişim
+      kontrolünü zorunlu kılan güvenlik kuralları ile korunur. Bir salonun yöneticisi veya
+      antrenörü yalnızca kendi salonuna ait verilere erişebilir.</p>
+
+    <h2>5. Veri Saklama ve Silme</h2>
+    <p>Verileriniz, hesabınız aktif olduğu sürece saklanır. Hesabınızın ve kişisel verilerinizin
+      silinmesini talep etmek için <a href="mailto:gymentrasupport@salt-tech-apps.com">gymentrasupport@salt-tech-apps.com</a>
+      adresinden bize ulaşabilirsiniz. Salon yöneticileri, kendi işletme kayıtları (ör. ödeme
+      defteri) için mevzuatın gerektirdiği süre boyunca bazı kayıtları saklayabilir.</p>
+
+    <h2>6. Çocukların Gizliliği</h2>
+    <p>GymEntra, 16 yaş altındaki kullanıcılara yönelik değildir. 16 yaşından küçük bir kullanıcının
+      bilerek verisini topladığımızı fark edersek, ilgili veriyi sileriz.</p>
+
+    <h2>7. Haklarınız</h2>
+    <p>6698 sayılı Kişisel Verilerin Korunması Kanunu ve ilgili mevzuat kapsamında, verilerinize
+      erişme, düzeltilmesini isteme, silinmesini talep etme ve işlenmesine itiraz etme hakkına
+      sahipsiniz. Bu haklarınızı kullanmak için yukarıdaki e-posta adresinden bize ulaşabilirsiniz.</p>
+
+    <h2>8. Bu Politikadaki Değişiklikler</h2>
+    <p>Bu Gizlilik Politikasını zaman zaman güncelleyebiliriz. Önemli değişiklikleri uygulama
+      içinde veya bu sayfa üzerinden duyururuz.</p>
+
+    <h2>9. İletişim</h2>
+    <p>Sorularınız için: <a href="mailto:gymentrasupport@salt-tech-apps.com">gymentrasupport@salt-tech-apps.com</a></p>
+
+    <a class="back-link" href="/">← Ana sayfaya dön</a>
+  </div>
+
+  <footer class="site">
+    <span>© 2026 Salt Tech. Tüm hakları saklıdır.</span>
+    <span>
+      <a href="/privacy/">Gizlilik</a>
+      <a href="/terms/">Şartlar</a>
+      <a href="/delete-account/">Hesap Silme</a>
+      <a href="mailto:gymentrasupport@salt-tech-apps.com">İletişim</a>
+    </span>
+  </footer>
+</body>
+</html>
