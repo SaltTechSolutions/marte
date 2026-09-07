@@ -50,8 +50,8 @@ Blender'da (ya da tercih ettiğin 3B aracında):
 
 - Kamerayı **ortografik** yap. Perspektif kamera uzak uzuvları küçültür ve
   parça tek bir kemiğe oturacağı için o küçülme yanlış yere gider.
-- Kamerayı tam yandan konumlandır. Açılı görünümden vazgeçtik; figür yan
-  düzlemde okunuyor.
+- Kamerayı tam yandan konumlandır. Açılı görünüm AYRI bir yoldan çözülüyor
+  (aşağıya bak); parçaların kendisi yan düzlemde çiziliyor.
 - Modeli **nötr pozda** bırak: uzuvlar düz, kollar yanda. Poz vermek gerekmiyor,
   çünkü pozu rig veriyor.
 - Yüksek çözünürlükte, düz renk (silüet) render al. Gölge ve doku gerekmiyor;
@@ -140,3 +140,37 @@ görünmüyor, ama sıfırlanmıyor.
 
 Deformasyon isteniyorsa yol mesh tabanlı deri (skinning) — o zaman parça değil
 ağırlık haritası gerekir ve mobil maliyeti tamamen başka bir tartışma açar.
+
+## Açılı (3/4) görünüm — parça setini ikiye katlamadan
+
+Açılı bakış için ikinci bir siluet seti çizmek GEREKMİYOR. Ölçüldü: 45°'de
+uzuvların silueti neredeyse hiç değişmiyor (uyluk ×1.03, pazu ×1.00, baldır
+×0.97) çünkü kesitleri yuvarlak. Değişen şey GÖVDE — yandan dar, açılı
+bakışta geniş.
+
+Bu yüzden her parça bir `ratio` taşıyor: **yanal genişlik / ön-arka
+derinlik**. Açılı bakışta siluetin genişlik çarpanı buradan çıkıyor:
+
+    genişlik çarpanı = sqrt(cos²α + ratio² · sin²α)
+
+Elips kesitli bir cismin izdüşüm genişliği bu; türetmesi tek satır ve her
+açı için çalışıyor, oysa baked bir 2. set tek bir açıya çakılı kalırdı.
+
+| Parça | ön-arka | yanal | `ratio` | 45°'de çarpan |
+|---|---|---|---|---|
+| `thorax` | 11cm | 16cm | 1.455 | ×1.25 |
+| `lumbar` | 10cm | 14cm | 1.400 | ×1.23 |
+| `thigh` | 8cm | 8.5cm | 1.063 | ×1.03 |
+| `shin` | 5.5cm | 5cm | 0.909 | ×0.97 |
+| `upper` | 4.5cm | 4.5cm | 1.000 | ×1.00 |
+| `fore` | 4cm | 3.5cm | 0.875 | ×0.96 |
+| `neck` | 6cm | 6cm | 1.000 | ×1.00 |
+
+Şema `ratio`yu 0.5-2.5 arasında tutuyor: dışına çıkan bir değer ölçüm
+değil yazım hatasıdır.
+
+**Sınır — kayda geçsin.** Çarpan siluetin GENİŞLİĞİNİ düzeltiyor, ŞEKLİNİ
+değil. Gerçek 3/4'te gövde hem yanını hem önünü gösterir; bizim parçamız
+genişlemiş bir yan siluet olarak kalıyor. Daha ileri gitmek istenirse yol
+gerçekten ikinci bir set çizmek — ama önce bu çarpanın yetip yetmediği
+ekranda görülmeli, çünkü ölçüm uzuvlar için yetmesi gerektiğini söylüyor.
