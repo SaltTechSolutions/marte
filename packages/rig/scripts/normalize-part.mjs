@@ -43,7 +43,7 @@ const token = () => /([MmLlHhVvCcSsQqTtAaZz])|(-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?
  * Göreli komutlar mutlağa çevriliyor, `H`/`V` ise `L`'ye: dönüş altında yatay
  * bir çizgi artık yatay kalmıyor, yani `H` dönüştürülemez.
  */
-/** Yolu mutlak komut listesine ayrıştırır. `angle-part.mjs` de kullanıyor. */
+/** Yolu mutlak komut listesine ayrıştırır. */
 export function parse(d) {
   const out = [];
   let cmd = null;

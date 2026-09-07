@@ -10,7 +10,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "export": "npm run typecheck && npm test && node scripts/export.mjs",
-    "parts:angled": "node scripts/angle-part.mjs"
+    "parts:mesh": "node scripts/mesh-silhouette.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

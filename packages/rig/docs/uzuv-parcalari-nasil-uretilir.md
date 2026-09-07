@@ -1,7 +1,7 @@
 # Uzuv parçaları nasıl üretilir
 
-`data/bodyParts.json`'daki yollar bugün elle çizilmiş kaba bir taslak. Bu belge
-onların yerine gerçek anatomik siluetlerin nasıl konacağını anlatıyor.
+`data/bodyParts.json`'daki yollar MakeHuman'ın CC0 insan mesh'inden
+üretiliyor; bu belge o üretimi ve altındaki kararları anlatıyor.
 
 Amaç 3B modeli uygulamaya taşımak DEĞİL. Model üretim zamanında bir kez
 kullanılıyor, çıktı 2B yol oluyor, mobil tarafa hiç 3B gitmiyor.
@@ -30,95 +30,96 @@ Kemik boyları sabit ve şema bunları zorunlu tutuyor:
 `len` kemik boyuyla uyuşmazsa export durur. Bu kasıtlı: uyuşmazlık figürü
 çizilmez yapmıyor, sadece eklemde boşluk açıyor — yani sessiz bir kusur.
 
-## Adımlar
-
-### 1. CC0 bir insan modeli edin
-
-[MakeHuman](http://www.makehumancommunity.org/) resmî uygulamasından dışa
-aktarılan modeller **CC0**: ticari kullanım serbest, atıf gerekmiyor
-([lisans açıklaması](http://www.makehumancommunity.org/content/license_explanation.html)).
-Değiştirilmemiş resmî sürümün dışa aktarma işlevini kullanmak şart — bu koşul
-lisansın kendisinde yazıyor.
-
-Modeli oluştururken orantıya dikkat: bizim iskeletimizde uyluk 105, baldır 100
-birim. Model bu orana yakın olmalı, yoksa 4. adımdaki ölçekleme uzuvları
-gerçekte olduğundan kalın ya da ince gösterir.
-
-### 2. Yandan ortografik render al
-
-Blender'da (ya da tercih ettiğin 3B aracında):
-
-- Kamerayı **ortografik** yap. Perspektif kamera uzak uzuvları küçültür ve
-  parça tek bir kemiğe oturacağı için o küçülme yanlış yere gider.
-- Kamerayı tam yandan konumlandır. Açılı görünüm AYRI bir yoldan çözülüyor
-  (aşağıya bak); parçaların kendisi yan düzlemde çiziliyor.
-- Modeli **nötr pozda** bırak: uzuvlar düz, kollar yanda. Poz vermek gerekmiyor,
-  çünkü pozu rig veriyor.
-- Yüksek çözünürlükte, düz renk (silüet) render al. Gölge ve doku gerekmiyor;
-  ihtiyacımız olan şey dış hat.
-
-### 3. Uzuvlara böl
-
-İki yol var.
-
-**Blender'da mesh olarak:** model rigli geliyorsa kemik etkisine göre ayır
-(`Separate by Loose Parts` değil, vertex grubuna göre). Daha doğru sonuç verir
-ama 3B bilgisi ister.
-
-**Render üstünde vektör olarak:** render'ı Inkscape'e al, her uzvu ayrı bir yol
-olarak çiz. Daha erişilebilir yol ve bu iş için yeterli, çünkü zaten silueti
-istiyoruz.
-
-Hangi yolu seçersen seç, **eklem merkezlerini işaretle**. Her parça için iki
-nokta gerekiyor: kemiğin başlangıcı ve bitişi (uyluk için kalça merkezi ve diz
-merkezi). Bir sonraki adım bu iki noktaya dayanıyor.
-
-Eklemlerde parçalar biraz ÇAKIŞSIN. Rig eklem yerlerine üst üste binen toplar
-çiziyor, ama uç açılarda çakışma payı dikişi kapatan şey.
-
-### 4. Yerel uzaya çevir
-
-Bu adım hatanın sessiz olduğu yer: yanlış origin ya da yanlış dönüş, parçayı
-kemiğe yanlış oturtur ama figür yine çizilir.
-
-Elindeki `A` (kemik başı) ve `B` (kemik sonu) noktalarıyla, her koordinat için:
-
-1. **Öteleme:** `A`'yı orijine taşı — her noktadan `A`'yı çıkar
-2. **Dönüş:** `B − A` vektörünü +Y'ye çevir. Dönüş açısı
-   `θ = atan2(−(Bx − Ax), By − Ay)`, sonra her noktayı `−θ` kadar döndür
-3. **Ölçek:** `|B − A|`'yı tablodaki `len`'e eşitle — her koordinatı
-   `len / |B − A|` ile çarp
-
-Sonuç: kemik `(0,0)`'dan `(0,len)`'e uzanan bir yol.
-
-Yay komutları (`A`) bu dönüşümde doğru çevrilmiyor — yarıçap ve bayrakların
-yeniden hesaplanması gerekiyor. Inkscape'te `Path > Object to Path` ve
-eğrilere düzleştirme ile yaylardan kurtul; `M`, `L`, `C`, `Q`, `Z` yeterli.
-
-**Bunu elle yapma.** `scripts/normalize-part.mjs` dönüşümü yapıyor ve sonucu
-kendi kendine doğruluyor — kemik başı gerçekten `(0,0)`'a, sonu `(0,len)`'e
-düşmüş mü:
+## Üretim
 
 ```bash
-node scripts/normalize-part.mjs --part thigh --a 300,200 --b 298,305 --d "M 300 200 ..."
-```
-
-`--a` kemiğin başı, `--b` sonu, ikisi de yolun kendi koordinat uzayında.
-Script ayrıca ön (+X) ve arka (−X) genişliğini yazıyor: kütle arkada ağır
-basıyorsa parça aynalanmıştır ve uyarı veriyor. `--write` eklersen sonucu
-doğrudan `data/bodyParts.json`'a yazar. Göreli komutları mutlağa, `H`/`V`'yi
-`L`'ye çeviriyor; yay komutuna açık hatayla itiraz ediyor.
-
-### 5. Yaz ve doğrula
-
-Yolları `data/bodyParts.json`'a koy, `source` alanını güncelle, sonra:
-
-```bash
+curl -sL https://raw.githubusercontent.com/makehumancommunity/makehuman/master/makehuman/data/3dobjs/base.obj -o /tmp/base.obj
+npm run parts:mesh -- --obj /tmp/base.obj --az 0  --write
+npm run parts:mesh -- --obj /tmp/base.obj --az 50 --write
 npm test && npm run export
 ```
 
-Şema `len`'leri kemik boylarıyla karşılaştırıyor; uyuşmazsa export hiçbir şey
-yazmadan duruyor.
+İlk komut yan seti (`parts`), ikincisi açılı seti (`angled`) yazıyor. Mesh
+depoda DEĞİL (1.7 MB, ve zaten tek kaynak var); üretilmiş veri depoda.
+
+### Kaynak ve lisans
+
+[MakeHuman](http://www.makehumancommunity.org/) temel mesh'i (`base.obj`,
+19.158 köşe) **CC0**: dosyanın kendi başlığında yazıyor, `LICENSE.ASSETS.md`
+koşulsuz. Ticari kullanım serbest, atıf gerekmiyor. (Eski sürüm belgede
+"resmî sürümün dışa aktarması şart" deniyordu — o koşul yok.)
+
+Mesh'in bize verdiği iki şey: gövde yüzeyi (`body` grubu) ve **eklem
+merkezleri** (`joint-*` işaretçi grupları — kalça, diz, omuz, omurga...).
+Eklem merkezlerini elle işaretlemek bu işin en zahmetli adımıydı; bedavaya
+geldi.
+
+### Script ne yapıyor
+
+`scripts/mesh-silhouette.mjs`:
+
+1. OBJ'yi okur, eklem gruplarının ağırlık merkezini alır.
+2. Her kemiğimizi iki mesh eklemine bağlar (uyluk = `l-upper-leg → l-knee`,
+   gövde = `spine-2 → neck`, ...). Sol taraf; sağ zaten ayna.
+3. Her kemik, **eksenine belli yarıçaptan yakın** ve boy aralığındaki köşeleri
+   alır. Öbür bacak, kollar, el ve ayak yarıçapın ya da boyun dışında kalıyor.
+4. Köşeleri `--az` açısından **ortografik** izdüşürür, kemik boyunca 40
+   istasyonda ön/arka sınırı okur (konveks kabuk değil — baldırın içbükey
+   yerleri korunuyor), 7px pencere ve 5'li ortalamayla düzler.
+5. Kemiği `(0,0)→(0,len)`'e oturtup yolu yazar.
+
+**Neden "en yakın kemiğe ata" değil.** Denendi: sağ bacak sol uyluğa, kafa
+boyna, el ön kola gidiyordu. Yem kemiklerle bastırılınca köprücük göğsün
+önünü yuttu ve her kenar dişli kaldı. Yarıçap kuralı bu bağımlılığı kesiyor.
+
+**Uyluk kemik başının üstüne taşıyor** (%22): kalça kası kemiğin üstünde ve
+arkasında; kesilince figür kalçasız kalıyordu. Taşan kısım tepeye doğru
+kosinüsle kapanıyor, yoksa kare bir çıkıntı gibi duruyordu.
+
+**Parçalar her iki uçta %8 taşıyor:** düz kesilmiş iki parça bükülü dizde
+dış tarafta köşe açıyordu.
+
+### Ölçek ve orantı
+
+1 mesh birimi = 24.92 px, uyluğa göre (105 px). Bu ölçekte:
+
+| kemik | bizim | mesh | gerilme |
+|---|---|---|---|
+| thigh | 105 | 105 | ×1.00 |
+| shin | 100 | 95 | ×1.05 |
+| upper | 78 | 57 | **×1.37** |
+| fore | 68 | 56 | ×1.21 |
+| lumbar | 55 | 52 | ×1.06 |
+| thorax | 85 | 77 | ×1.10 |
+| neck | 24 | 27 | ×0.88 |
+
+Bacak ve gövde tutuyor. **Kollarımız gerçek insandan orantısız uzun** ve
+siluet kemiğe gerildiği için kollar mesh'tekinden ince görünüyor. Kemik
+boylarını değiştirmek 31 arketipin her karesini etkilediği için burada
+yapılmadı; ayrı bir iş.
+
+### Yerel uzayda +X
+
+Kemik `(0,0)`'dan `(0,len)`'e, yani aşağı. Yerel +X'in dünyada nereye baktığı
+kemiğin yönüne bağlı: aşağı bakan kemiklerde (uyluk, baldır, üst kol) ön,
+yukarı bakanlarda (bel, gövde, boyun) arka. Script bunu kendisi tutarlı
+çıkarıyor çünkü izdüşürülmüş kemik yönünün dikini alıyor.
+
+Ön kol asimetrik ve bu DOĞRU: ön kol dirsekte döndüğünde fleksör tarafı da
+onunla döner. Elle çizilmiş eski set burayı "yön değiştiriyor" diye simetrik
+bırakmıştı.
+
+### Elle düzeltme gerekirse
+
+`scripts/normalize-part.mjs` hâlâ duruyor: elde bir yol varsa `--a`/`--b`
+kemik uçlarıyla yerel uzaya çevirip doğruluyor. Ama düzeltme mesh'te ya da
+script'te yapılmalı, veride değil — veri üretiliyor, elle dokunulan yer bir
+sonraki üretimde silinir.
+
+## Doğrulama
+
+`npm test` şemayı çalıştırıyor: `len`'ler kemik boylarıyla, açılı set yan
+setle AYNI parçaları taşımalı. Uyuşmazsa export hiçbir şey yazmadan durur.
 
 Gözle kontrol için editörü aç ve **Parça** düğmesiyle kapsül çizim arasında
 geçiş yap:
@@ -141,41 +142,16 @@ görünmüyor, ama sıfırlanmıyor.
 Deformasyon isteniyorsa yol mesh tabanlı deri (skinning) — o zaman parça değil
 ağırlık haritası gerekir ve mobil maliyeti tamamen başka bir tartışma açar.
 
-## Açılı (3/4) set — üretiliyor, elle çizilmiyor
+## Açılı (3/4) set
 
-```bash
-npm run parts:angled -- --az 50
-```
-
-Sonuç `data/bodyParts.json`'ın `angled` bloğuna yazılıyor; yan set
-dokunulmadan kalıyor. Yan siluetleri değiştirirsen bunu YENİDEN ÇALIŞTIR —
-üretilmiş veri, elle düzenleme.
-
-**Neden üretiliyor.** Ölçüldü: uzuvların silueti açıyla neredeyse hiç
-değişmiyor (50°'de pazu ×1.00, uyluk ×1.04, baldır ×0.95) çünkü kesitleri
-yuvarlak. Elle ikinci set çizmek o parçalarda aynı şekli tekrar çizmek
-olurdu. Değişen tek şey GÖVDE (thorax ×1.29, lumbar ×1.25) ve o hesaplanabilir.
-
-**Model.** Her parça, kemik boyunca dizilmiş ELİPS kesitlerden oluşuyor. Yan
-siluet her kemik istasyonunda kesitin ön (+X) ve arka (−X) sınırını veriyor:
-
-| | yan siluetten | α açısında |
-|---|---|---|
-| yarı genişlik | `a = (ön − arka)/2` | `a · sqrt(cos²α + oran²·sin²α)` |
-| merkez kaçıklığı | `c = (ön + arka)/2` | `c · cos α` |
-
-İki farklı çarpan: genişlik BÜYÜR, kaçıklık KÜÇÜLÜR. Tek bir ölçekle
-yapılamaz — daha önce `cos(α)` ile hepsini daraltmak denenip yanlış
-çıkmıştı (gövde yandan dar, açılı bakışta geniştir).
-
-Kesit oranları (yanal genişlik / ön-arka derinlik, yetişkin ortalaması)
-script'in içinde: gövde 1.4-1.46, uzuvlar 0.88-1.06. Veriye yazılmıyorlar —
-kullanılmayan bir alan olarak kalıp sonraki turda yanlış karar verdirirdi.
+`--az 50` ile aynı mesh'ten üretiliyor; ayrı bir hesap yok. Önceki sürümde
+yan siluetten kesit varsayımıyla (gövde dikdörtgen, uzuvlar elips) türetiliyordu
+— mesh varken o dolaylama gereksiz, kaldırıldı.
 
 **Şema ne zorluyor:** açılı set varsa yan setle AYNI parçaları taşımak
 zorunda ve `len`ler kemik boylarıyla uyuşmalı. Eksik bir parça figürü
 çizilmez yapmıyor, o uzvu yan siluetiyle bırakıyor — sessizce karışık figür.
 
-**Sınır.** Dönüşüm siluetin GENİŞLİĞİNİ ve KAÇIKLIĞINI düzeltiyor, kesitin
-gerçek şeklini değil. Elips varsayımı gövdede iyi, diz ve dirseğin kemikli
-çıkıntılarında kabaca doğru.
+**Henüz motorda değil.** Açılı set veride duruyor ama motor, editör ve
+uygulama yalnızca yan seti çiziyor; kamera açısı ve eklem derinliği ayrı bir
+iş.

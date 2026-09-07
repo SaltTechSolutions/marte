@@ -333,7 +333,7 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
     else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
   });
 
-  // Açılı (3/4) set: `scripts/angle-part.mjs` üretiyor. İsteğe bağlı — yoksa
+  // Açılı (3/4) set: `scripts/mesh-silhouette.mjs --az 50` üretiyor. İsteğe bağlı — yoksa
   // yalnız yan siluetler var. Varsa YAN SETLE AYNI parçaları taşımak zorunda:
   // eksik bir parça figürü çizilmez yapmıyor, o uzvu yan siluetiyle bırakıp
   // ötekileri açılı çiziyor — yani sessizce karışık bir figür.
