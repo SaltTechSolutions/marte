@@ -311,7 +311,44 @@ export function auditLoop(ex: RigExercise): RigIssue[] {
     const u = px ? 'px' : '°';
     if (d > 1) issues.push({ t: 1, rule: 'döngü', message: `${k}: başlangıç ${first[k]}${u} ile bitiş ${last[k]}${u} farklı, tekrar başa dönerken zıplıyor` });
   });
+  // Sabit durması gereken ayak da döngü ölçeğinde bir sorun: tek kareye
+  // bakarak görülmüyor, ancak zaman içinde gezindiği anlaşılıyor.
+  issues.push(...auditPlantedFoot(ex));
   return issues;
+}
+
+/**
+ * Sehpaya basan ayak kaymamalı.
+ *
+ * `bulgarian_split_squat`ta arka ayak sehpanın üstünde DURUR; hareketi yapan
+ * ön bacaktır. Ama uzak bacak serbest bir zincir — kalça inerken açılar
+ * değişmezse ayak sehpanın üstünde kayar. Ölçüldü: ayak bileği 89.7px
+ * geziniyordu ve sehpanın (150px) dışına, boşluğa çıkıyordu.
+ *
+ * Bu kural yalnız o kurulumu denetliyor: sehpa var ama figür sehpanın ÜSTÜNDE
+ * yatmıyor (`mode !== 'bench'`), yani sehpa ayağın altında. Diğer arketiplerde
+ * uzak ayağın gezinmesi kasıtlı — `step_up` basamağa çıkıyor, `bird_dog`
+ * bacağı geriye uzatıyor, `unilateral_lunge` adım atıyor. Ölçülüp bakıldı,
+ * karıştırılmasın diye burada yazılı.
+ *
+ * Eşik 15px ≈ 6cm: açı interpolasyonu uçları tutturup arada hafif şişiyor,
+ * sıfır kayma açı uzayında elde edilemiyor.
+ */
+export function auditPlantedFoot(ex: RigExercise, samples = 41): RigIssue[] {
+  if (ex.prop !== 'bench' || ex.mode === 'bench' || !showFarLeg(ex)) return [];
+  let lo = Infinity;
+  let hi = -Infinity;
+  let at = 0;
+  for (let i = 0; i < samples; i++) {
+    const t = i / (samples - 1);
+    const x = skeleton(ex, poseAt(ex, t).p).ankleF[0];
+    if (x < lo) lo = x;
+    if (x > hi) { hi = x; at = t; }
+  }
+  const drift = hi - lo;
+  return drift > 15
+    ? [{ t: at, rule: 'temas', message: `sehpaya basan ayak ${Math.round(drift)}px kayıyor — sehpanın üstünde durmalı` }]
+    : [];
 }
 
 /** Segment boyları — geçiş sırasında uzuv uzarsa motor bozulmuş demektir. */

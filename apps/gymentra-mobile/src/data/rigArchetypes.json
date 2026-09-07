@@ -149,6 +149,21 @@
         }
       },
       {
+        "t": 0.23,
+        "p": {
+          "shinA": 187.2,
+          "thighA": 148,
+          "torso": 15.2,
+          "thoraxA": 10.1,
+          "neckA": 6.1,
+          "upperA": 186,
+          "foreA": 184,
+          "thighF": 195,
+          "shinF": 270
+        },
+        "tr": "İniş"
+      },
+      {
         "t": 0.45,
         "tr": "Alt",
         "p": {
@@ -159,8 +174,8 @@
           "neckA": 8,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 245,
-          "shinF": 260
+          "thighF": 187,
+          "shinF": 294
         }
       },
       {
@@ -174,9 +189,24 @@
           "neckA": 8,
           "upperA": 186,
           "foreA": 184,
-          "thighF": 245,
-          "shinF": 260
+          "thighF": 187,
+          "shinF": 294
         }
+      },
+      {
+        "t": 0.77,
+        "p": {
+          "shinA": 187.7,
+          "thighA": 146,
+          "torso": 15.5,
+          "thoraxA": 10.4,
+          "neckA": 6.2,
+          "upperA": 186,
+          "foreA": 184,
+          "thighF": 195,
+          "shinF": 270
+        },
+        "tr": "Çıkış"
       },
       {
         "t": 1,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
 import { RigExercise, RigPose, fillPose, poseAt, skeleton } from '../src/rig';
-import { ROM_BANDS, auditExercise, auditFrame } from '../src/rigAudit';
+import { ROM_BANDS, auditExercise, auditFrame, auditLoop } from '../src/rigAudit';
 
 /**
  * ROM bantlarının ATEŞLEDİĞİNİ doğrulayan testler.
@@ -143,5 +143,43 @@ describe('tutuş kuralı — el barı tutuyor mu', () => {
           expect(Math.hypot(S.hand[0] - S.bar![0], S.hand[1] - S.bar![1]), k).toBeLessThan(0.001);
         }
       });
+  });
+});
+
+describe('sehpaya basan ayak kaymıyor', () => {
+  // `bulgarian_split_squat`ta arka ayak sehpanın ÜSTÜNDE durur; hareketi ön
+  // bacak yapar. Ama uzak bacak serbest bir zincir: kalça inerken açılar
+  // sabit kalırsa ayak sehpanın üstünde kayar. Ölçüldü, kayma 90px'ti ve ayak
+  // 150px'lik sehpanın dışına çıkıyordu; arka diz de 10°→15° arası kalıp
+  // neredeyse hiç bükülmüyordu, oysa Bulgarian'da arka diz yere doğru iner.
+  const ex = RIG_ARCHETYPES.bulgarian_split_squat;
+
+  it('bugünkü veri temiz', () => {
+    expect(auditLoop(ex).filter((i) => i.rule === 'temas').map((i) => i.message)).toEqual([]);
+  });
+
+  it('ayak kayan veride kural KONUŞUYOR', () => {
+    // Düzeltme öncesi hâl: ara kareler yok, dip karesinde arka bacak neredeyse düz.
+    const bozuk: RigExercise = {
+      ...ex,
+      kf: ex.kf
+        .filter((k) => k.tr !== 'İniş' && k.tr !== 'Çıkış')
+        .map((k) => (k.tr === 'Alt' ? { ...k, p: { ...k.p, thighF: 245, shinF: 260 } } : k)),
+    };
+    const hit = auditLoop(bozuk).filter((i) => i.rule === 'temas');
+    expect(hit.length, `uyarı bekleniyordu, çıkan: ${JSON.stringify(auditLoop(bozuk).map((i) => i.message))}`).toBeGreaterThan(0);
+    expect(hit[0].message).toContain('kayıyor');
+  });
+
+  it('arka diz gerçekten bükülüyor', () => {
+    // Bulgarian'ın tanımı bu: arka diz yere doğru iner. Düz kalırsa hareket
+    // ön bacağın tek başına çömelmesine dönüyor.
+    const norm = (d: number) => { let x = ((d % 360) + 360) % 360; if (x > 180) x -= 360; return x; };
+    const acilar = Array.from({ length: 21 }, (_, i) => {
+      const p = poseAt(ex, i / 20).p;
+      return norm(p.shinF - p.thighF);
+    });
+    expect(Math.max(...acilar), 'dipte arka diz belirgin bükülmeli').toBeGreaterThan(80);
+    expect(Math.min(...acilar), 'arka diz ters yöne kırılmamalı').toBeGreaterThan(0);
   });
 });
