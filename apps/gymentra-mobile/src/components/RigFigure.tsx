@@ -19,10 +19,12 @@ import {
   facingFlip,
   footDirOf,
   footPath,
+  footPinned,
   frontPoints,
   frontTrunk,
   handPath,
   headProfile,
+  showFarArm,
   showFarLeg,
   lerpP,
   partTransform,
@@ -115,7 +117,6 @@ export function RigFigure({
   const t0 = poseAt(rig, 0).p.torso;
   const benchDeg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
   // Topuk kalkışında ayak parmak ucu etrafında döner; basamakta ayak düz basar.
-  const pinToe = rig.prop !== 'box' && p.ankleLift > 0;
   // Uzak bacak yalnızca kendi hareketi varsa çizilir (hamle, step-up,
   // bird-dog, taşıma). Squat gibi iki tarafın aynı işi yaptığı hareketlerde
   // ikinci bacak derinlik değil gürültü ekliyor.
@@ -284,13 +285,13 @@ export function RigFigure({
         <G key="far" opacity={0.95}>
           {farLeg && (
             <>
-              <Path d={footPath(S.ankleF, footDirOf(rig, p, true), pinToe, flip)} fill={skinFar} stroke={line} />
+              <Path d={footPath(S.ankleF, footDirOf(rig, p, true), footPinned(rig, p, S, true), flip)} fill={skinFar} stroke={line} />
               {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
               {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
               {ball('fk', S.kneeF, 12, true)}
             </>
           )}
-          {!rig.hideFarArm && (
+          {showFarArm(rig) && (
             <>
               {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true, 'upper')}
               {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true, 'fore')}
@@ -311,7 +312,7 @@ export function RigFigure({
           <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirOf(rig, p), pinToe, flip)} fill={skin} stroke={line} />
+          <Path d={footPath(S.ankle, footDirOf(rig, p), footPinned(rig, p, S, false), flip)} fill={skin} stroke={line} />
           {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
           {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
           {ball('k', S.knee, 13)}
