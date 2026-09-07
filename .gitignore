@@ -1,4 +1,13 @@
-.env*
+# bağımlılıklar ve derleme çıktıları
+node_modules/
+dist/
+build/
+.expo/
+*.log
 
-# Antrenman simülatörü kendi deposu — buraya gömülmesin
+# ortam ve işletim sistemi
+.env*
+.DS_Store
+
+# Antrenman simülatörü kendi deposu — buraya gömülmesin (Faz 3'te kalkacak)
 antrenman-simulatoru/
