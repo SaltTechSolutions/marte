@@ -1,26 +1,21 @@
-import { RigExercise } from '@/utils/rig';
+// ÜRETİLMİŞ DOSYA — elle düzenleme.
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
+// Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
+// motor doğurur. Bütünlük kontrolü: manifest.json.
 
-import data from './rigArchetypes.json';
+import { RigExercise } from '@/utils/rig';
+import { assertArchetypes } from '@/utils/rigSchema';
+
+import data from '@/data/rigArchetypes.json';
 
 /**
- * Her hareketin açı kareleri (bkz. src/utils/rig.ts).
+ * Hareketlerin açı kareleri.
  *
- * Veri `rigArchetypes.json` içinde ve **düzenleyicisi var**: `npm run rig`
- * yerel bir editör açıyor — hareketi seç, kareyi seç, figürün eklemini
- * sürükle, ekipmanı değiştir, denetim uyarılarını canlı gör, kaydet. Bu dosya
- * yalnızca o JSON'a tip veriyor.
+ * Doğruluk kaynağı `data/rigArchetypes.json`; düzenleyicisi `npm run editor`.
  *
- * Neden JSON: kareler elle yazılan sayılardan ibaret ve tek gerçek doğrulama
- * yolu figüre bakmak. TypeScript içinde tutulunca her düzeltme "sayıyı
- * değiştir, derle, önizleme üret, bak" turuna dönüyordu; editör aynı motoru
- * tarayıcıda çalıştırıp turu tek adıma indiriyor.
- *
- * Açılar dünya uzayında, derece: 0 = yukarı, saat yönünde artar. Figür +x
- * yönüne bakar. `thighA` kalçadan dize, `shinA` dizden ayak bileğine, `torso`
- * kalçadan bele, `upperA` omuzdan dirseğe, `foreA` dirsekten bileğe. `...F`
- * uzak taraf; yazılmazsa yakın taraftan birkaç derece kaydırılır.
- *
- * Mekanik doğruluk `rigAudit.ts`'teki kurallarla korunuyor — aynı kurallar hem
- * testlerde hem editörde çalışıyor.
+ * Tip vermek yetmiyordu: `as unknown as` derleyiciye söz veriyor ama JSON elle
+ * de düzenlenebiliyor ve yanlış bir `mode` motorun içinde `undefined.length`
+ * olarak patlıyordu. Yükleme anında doğruluyoruz — hata, kaynağını söyleyen
+ * tek bir satır olarak çıkıyor.
  */
-export const RIG_ARCHETYPES: Record<string, RigExercise> = data as unknown as Record<string, RigExercise>;
+export const RIG_ARCHETYPES: Record<string, RigExercise> = assertArchetypes(data);

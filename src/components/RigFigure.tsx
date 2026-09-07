@@ -8,25 +8,38 @@ import { useAppTheme } from '@/theme/ThemeContext';
 import {
   B,
   BAR_Y,
-  D,
   FX,
   GROUND,
   RigExercise,
   RigPose,
   Skeleton,
   Vec,
-  add,
   boundsFor,
   capsule,
+  facingFlip,
   footDirFor,
   footPath,
   frontPoints,
   frontTrunk,
+  handPath,
+  headProfile,
   showFarLeg,
   lerpP,
+  partTransform,
   poseAt,
   skeleton,
 } from '@/utils/rig';
+import rigBodyParts from '@/data/rigBodyParts.json';
+
+/**
+ * Kemiğe oturan uzuv siluetleri.
+ *
+ * Yerel uzayda kemik (0,0) → (0,len); `partTransform` onu iki eklem arasına
+ * yerleştiriyor. Kapsül geometrisinin yerini alıyorlar: kapsül iki daireyi
+ * birleştiren bir şekildi ve baldırın inceldiği, pazunun şiştiği yeri
+ * anlatamıyordu. Bir parça eksikse çağıran kapsüle düşüyor.
+ */
+const PARTS = rigBodyParts.parts as Record<string, { len: number; d: string }>;
 
 const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 
@@ -107,16 +120,34 @@ export function RigFigure({
   // bird-dog, taşıma). Squat gibi iki tarafın aynı işi yaptığı hareketlerde
   // ikinci bacak derinlik değil gürültü ekliyor.
   const farLeg = showFarLeg(rig);
+  // Sırt üstü kiplerde figür aynalanmış: yüz yukarı, ayak tabanı yerde.
+  const flip = facingFlip(rig.mode);
   const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
   const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
     <Path key={key} d={capsule(a, b, wa, wb)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
   );
+  /**
+   * Eklem topu.
+   *
+   * Parça siluetleri kendi hacmini taşıdığı için eklemler SESSİZ: kontrastlı
+   * bir daire silueti kesiyor ve figürü eklemli bir manken gibi gösteriyordu.
+   * Top hâlâ çiziliyor — iki parça arasındaki boşluğu dolduruyor — ama ten
+   * renginde ve dış çizgisiz.
+   */
   const ball = (key: string, c: Vec, r: number, far?: boolean) => (
-    <Circle key={key} cx={c[0]} cy={c[1]} r={r} fill={far ? skinFar : joint} stroke={line} strokeWidth={1} />
+    <Circle key={key} cx={c[0]} cy={c[1]} r={r} fill={far ? skinFar : skin} />
   );
-  // Kütle formu taşır: uyluk ve baldır üst üçte birinde, pazu ortada kalın.
-  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, far?: boolean) => {
+  /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
+  const part = (key: string, name: string, a: Vec, b: Vec, far?: boolean) => {
+    const q = PARTS[name];
+    return q ? (
+      <Path key={key} d={q.d} transform={partTransform(a, b)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
+    ) : null;
+  };
+  /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
+  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, far?: boolean, name?: string) => {
+    if (name && PARTS[name]) return part(key, name, a, b, far);
     const m = lerpP(a, b, at);
     return (
       <G key={key}>
@@ -125,18 +156,28 @@ export function RigFigure({
       </G>
     );
   };
-  const oval = (key: string, c: Vec, rx: number, ry: number, deg?: number) => (
-    <Ellipse
-      key={key}
-      cx={c[0]}
-      cy={c[1]}
-      rx={rx}
-      ry={ry}
-      fill={skin}
-      stroke={line}
-      {...(deg === undefined ? {} : { transform: `rotate(${deg} ${c[0]} ${c[1]})` })}
-    />
-  );
+  /** Gövde parçası; yoksa kapsüle düşer. */
+  const trunk = (key: string, name: string, a: Vec, b: Vec, wa: number, wb: number) =>
+    part(key, name, a, b) ?? seg(key, a, b, wa, wb);
+  /**
+   * El, ön kolun yönünde uzanır: bileği (0,0) kabul edip kemik dönüşümünü
+   * kullanıyoruz, böylece elin yönü koldan geliyor — daire bunu söyleyemiyordu.
+   */
+  const hand = (key: string, wrist: Vec, elbow: Vec, far?: boolean) => {
+    const dx = wrist[0] - elbow[0];
+    const dy = wrist[1] - elbow[1];
+    const l = Math.hypot(dx, dy) || 1;
+    return (
+      <Path
+        key={key}
+        d={handPath()}
+        transform={partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18])}
+        fill={far ? skinFar : skin}
+        stroke={line}
+        strokeWidth={1}
+      />
+    );
+  };
   /**
    * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin
    * kavradığı yön bu. Barbell tabağını küçültmek dambıl yapmıyor; iki ayrı
@@ -233,56 +274,62 @@ export function RigFigure({
         )}
         {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
             oturma ve kadraj değişmez, figür kımıldamaz. */}
+        {/* Uzak taraf: uzuvlar, EL ve elin taşıdığı ağırlık — hepsi gövdeden
+            ÖNCE, çünkü hepsi figürün arkasında kalıyor. El ve dambıl önceden
+            en sona, gövdenin üstüne çiziliyordu; uzak dambıl gövdenin önünde
+            belirdiği için yakın el iki ağırlık tutuyormuş gibi görünüyordu. */}
         <G key="far" opacity={0.95}>
           {farLeg && (
             <>
-              <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe)} fill={skinFar} stroke={line} />
-              {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true)}
-              {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true)}
+              <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe, flip)} fill={skinFar} stroke={line} />
+              {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
+              {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
               {ball('fk', S.kneeF, 12, true)}
             </>
           )}
           {!rig.hideFarArm && (
             <>
-              {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true)}
-              {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true)}
+              {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true, 'upper')}
+              {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true, 'fore')}
               {ball('fe', S.elbowF, 9, true)}
-              {ball('fh', S.handF, 9, true)}
+              {ball('fw', S.handF, 9, true)}
+              {hand('fh', S.handF, S.elbowF, true)}
+              {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
             </>
           )}
         </G>
-        {rig.bar === 'back' && plate(S.bar)}
+        {/* Sırtta VE kalçada taşınan bar gövdeden önce: ikisi de figürün
+            arkasından geçiyor. `hips` daha önce hiç çizilmiyordu — `hip_thrust`
+            halteri olmadan görünüyordu. */}
+        {(rig.bar === 'back' || rig.bar === 'hips') && plate(S.bar)}
         <G key="torso">
-          {oval('pelv', add(S.pelvis, D(p.torso), 12), 25, 21, p.torso)}
-          {seg('waist', S.pelvis, S.lumbar, 40, 33)}
-          {oval('rib', lerpP(S.lumbar, S.thorax, 0.55), 27, 47, p.thoraxA)}
-          {seg('neck', S.thorax, S.neck, 21, 19)}
-          {ball('delt', S.sh, 17)}
+          {trunk('waist', 'lumbar', S.pelvis, S.lumbar, 40, 33)}
+          {trunk('rib', 'thorax', S.lumbar, S.thorax, 54, 46)}
+          {trunk('neck', 'neck', S.thorax, S.neck, 21, 19)}
+          {/* Omuz yan görünümde gövdeden HEP 14px uzakta; yarıçapı 20 olan
+              yuvarlak bir deltoid kapağı birleşimi zaten örtüyor. Kama
+              gereksiz ve düz kenarları gövdenin üstünde çentik bırakıyordu. */}
+          <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirFor(rig.mode), pinToe)} fill={skin} stroke={line} />
-          {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42)}
-          {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34)}
+          <Path d={footPath(S.ankle, footDirFor(rig.mode), pinToe, flip)} fill={skin} stroke={line} />
+          {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
+          {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
           {ball('k', S.knee, 13)}
           {ball('a', S.ankle, 9)}
-          {limb('u', S.sh, S.elbow, 25, 22, 17, 0.5)}
-          {limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3)}
+          {limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, false, 'upper')}
+          {limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, false, 'fore')}
           {ball('e', S.elbow, 10)}
         </G>
         {rig.bar === 'hands' && plate(S.bar)}
-        <G key="hands">
-          <Circle cx={S.hand[0]} cy={S.hand[1]} r={10} fill={skin} stroke={line} />
-          {!rig.hideFarArm && <Circle cx={S.handF[0]} cy={S.handF[1]} r={9} fill={skinFar} stroke={line} />}
-        </G>
-        {rig.load === 'dumbbell' && !rig.hideFarArm && dumbbell('dbF', S.handF, S.elbowF, true)}
+        {hand('h', S.hand, S.elbow)}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
-        <G key="head" transform={`rotate(${p.neckA} ${S.head[0]} ${S.head[1]})`}>
-          <Ellipse cx={S.head[0]} cy={S.head[1] - 3} rx={23} ry={26} fill={skin} stroke={line} />
-          <Path
-            d={`M ${S.head[0] - 4} ${S.head[1] + 4} L ${S.head[0] + 21} ${S.head[1] + 6} L ${S.head[0] + 14} ${S.head[1] + 23} L ${S.head[0] - 8} ${S.head[1] + 22} Z`}
-            fill={skin}
-            stroke={line}
-          />
+        {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
+            koyuyor ama yüzün hangi yöne baktığını söyleyemiyor: `quad`
+            (yüzükoyun) ile `bench` (sırt üstü) neredeyse aynı açıyı taşıyor,
+            biri yere biri tavana bakmalı. Bkz. `facingFlip`. */}
+        <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
+          <Path d={headProfile()} fill={skin} stroke={line} strokeWidth={1} />
         </G>
       </>
     );

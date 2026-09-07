@@ -1,5 +1,14 @@
+// ÜRETİLMİŞ DOSYA — elle düzenleme.
+// Kaynak: antrenman-simulatoru v1.0.0 — hangi üretimden geldiği manifest.json'da
+// Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
+// motor doğurur. Bütünlük kontrolü: manifest.json.
+
 import {
   B,
+  MAX_ANKLE_LIFT,
+  facingFlip,
+  footDirFor,
+  footLowestY,
   FrontSide,
   GROUND,
   RigExercise,
@@ -12,7 +21,7 @@ import {
   poseAt,
   showFarLeg,
   skeleton,
-} from './rig';
+} from '@/utils/rig';
 
 /**
  * Hareketin mekanik denetimi.
@@ -21,9 +30,10 @@ import {
  * derlemede taranıyor) ve editör (kare düzenlenirken canlı uyarı). Ayrı
  * yazılsalardı editörde temiz görünen bir poz testte patlardı.
  *
- * Denetlenen şey çizim değil MEKANİK: eklem zeminin altına geçemez, basan
- * ayak yerden kalkamaz, diz ve dirsek ters kırılamaz, önden bakışta kol
- * omuzdan çıkamaz. Elle açı yazarken en kolay kaçırılanlar bunlar.
+ * Denetlenen şey çizim değil MEKANİK: eklem zeminin altına geçemez, topuk
+ * ayak boyundan fazla kalkamaz, önden bakışta kol omuzdan çıkamaz. Eklem
+ * açısı sınırları ayrı bir tabloda (`ROM_BANDS`) veri olarak duruyor; eşik
+ * koda gömülü değil, tek yerden ayarlanıyor.
  */
 export interface RigIssue {
   /** 0..1 arası, sorunun görüldüğü an. */
@@ -45,6 +55,96 @@ export const kneeFlex = (S: Skeleton): number => norm(angleOf(S.knee, S.ankle) -
 
 export const elbowFlex = (S: Skeleton): number => norm(angleOf(S.elbow, S.hand) - angleOf(S.sh, S.elbow));
 
+/**
+ * Eklem hareket açıklığı bandı.
+ *
+ * Her band açıyı NEREDEN okuduğunu kendisi söyler ve eşiğini veri olarak
+ * taşır. Poz alanları üstünde dolaşan genel bir kural YOK: `RigPose` derece ve
+ * piksel alanlarını aynı düz nesnede tutuyor (`hx`, `hy`, `hxF`, `shLift`,
+ * `ankleLift` piksel) ve alanları gezen bir döngü piksel değerini açı sanar.
+ * `auditLoop` bu hatayı bir kez yaptı; tablo o tuzağı yapısal olarak kapatıyor.
+ */
+interface RomBand {
+  rule: string;
+  /** Mesajda geçen ad. */
+  label: string;
+  /** Açıyı çıkarır. `p` yazılı açıları, `S` çözülmüş geometriyi verir. */
+  angle: (p: RigPose, S: Skeleton) => number;
+  /** Yazılmazsa alt sınır denetlenmez. */
+  lo?: number;
+  /** Yazılmazsa üst sınır denetlenmez. */
+  hi?: number;
+  /** Bandın uygulanmadığı hareketler. */
+  skip?: (ex: RigExercise) => boolean;
+}
+
+/**
+ * Eklem sınırları.
+ *
+ * Bu sayılar AAOS "normal aralık" DEĞİL, anatomik imkânsızlık eşiğidir. AAOS
+ * normalleri sağlıklı popülasyonun ortalaması; derin çömelme onları zaten aşar
+ * ve sınır olarak kullanmak doğru hareketleri hata sayardı. Buradaki çizgi
+ * "insan bunu yapamaz" çizgisi: diz kendi üstüne katlanamaz, ters kırılamaz,
+ * dirsek ön kolu pazuya gömemez.
+ *
+ * Omuz, boyun ve ayak bileği burada YOK. Omuz ve boyun türetmesi yatık pozlarda
+ * klinik açıyla aynı referans eksenini kullanmıyor (`hip_thrust` omuzda −150°
+ * okunuyor ve bunun sarmalama hatası mı gerçek sorun mu olduğu belirsiz); ayak
+ * bileği ise modelde hiç yok, ayak yönü `footDirFor(mode)` sabiti. Üçü de
+ * TODOS.md'de kayıtlı.
+ */
+export const ROM_BANDS: RomBand[] = [
+  {
+    rule: 'diz',
+    label: 'diz',
+    angle: (p) => Math.abs(norm(p.shinA - p.thighA)),
+    hi: 160,
+  },
+  {
+    rule: 'diz',
+    label: 'diz ters yönde',
+    // İşaret yalnızca ayakta anlamlı: figür +x yönüne bakarken bükülmenin yönü
+    // sabit. Sırtüstü ve dört ayak modlarda gövde yön değiştirdiği için aynı
+    // işaret ters anlama gelir, orada yalnızca büyüklük denetleniyor.
+    angle: (p) => norm(p.shinA - p.thighA),
+    lo: -15,
+    skip: (ex) => ex.mode !== 'stand',
+  },
+  {
+    rule: 'diz',
+    label: 'uzak diz',
+    angle: (p) => Math.abs(norm(p.shinF - p.thighF)),
+    hi: 160,
+    skip: (ex) => !showFarLeg(ex),
+  },
+  {
+    rule: 'dirsek',
+    label: 'dirsek',
+    // Poz DEĞİL iskelet. `arm` 'ik' ya da 'floor' iken kareler `upperA`/`foreA`
+    // yazmıyor, açı ters kinematik çözücüsünden çıkıyor; pozdan okumak o sekiz
+    // harekette sabit 0 verir ve kural sessizce ölür. Eski kuralın
+    // `arm === 'angles'` kapısı da tam bu yüzden vardı, kapı değil kaynak
+    // yanlıştı.
+    angle: (_p, S) => Math.abs(elbowFlex(S)),
+    hi: 160,
+  },
+  {
+    rule: 'kalça',
+    label: 'kalça',
+    // 0 = uyluk gövdenin uzantısı, pozitif = öne bükülme, negatif = geriye açılma.
+    angle: (p) => norm(180 - (p.thighA - p.torso)),
+    lo: -35,
+    hi: 150,
+  },
+  {
+    rule: 'gövde',
+    label: 'gövde',
+    angle: (p) => norm(p.thoraxA - p.torso),
+    lo: -45,
+    hi: 90,
+  },
+];
+
 /** Tek bir karenin denetimi — editör bunu her sürükleme sonrası çağırıyor. */
 export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   const S = skeleton(ex, p);
@@ -62,8 +162,42 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     if (v[1] > GROUND + 14) add('zemin', `${k} zeminin altında`);
   });
 
-  if (ex.mode === 'stand' && Math.abs(S.ankle[1] + p.ankleLift - (GROUND - 12)) > 0.5) {
-    add('ayak', 'basan ayak yerden kalkmış');
+  // Ayakta duran figürde ayağı yerden koparan tek şey `ankleLift`: iskelet
+  // ayağı zaten `GROUND - 12 - ankleLift`'e koyuyor, yani konumu ölçmek
+  // tanım gereği hep sıfır fark veriyordu. Denetlenecek şey konum değil,
+  // kalkışın MİKTARI: topuk ayak boyundan fazla kalkarsa taban zeminden
+  // kopar, figür havada yürür. Basamak ayrı hikâye — orada yükselten şey
+  // ayak değil, altındaki kutu.
+  if (ex.mode === 'stand' && ex.prop !== 'box') {
+    if (p.ankleLift < 0) add('ayak', 'basan ayak zeminin altına inmiş');
+    // Sınır ayak BOYU değil, parmak ucunun UZANABİLDİĞİ mesafe: topuk kalkarken
+    // ayak parmak etrafında döner ve ayak bileği ancak o mesafe kadar
+    // yükselebilir. Eski sınır (ayak boyu 46) çizimin yapabildiğinin iki katı
+    // gevşekti ve `calf_raise` 38px ile aradan geçiyordu.
+    if (p.ankleLift > MAX_ANKLE_LIFT) {
+      add('ayak', `topuk ${Math.round(p.ankleLift)}px kalkmış, parmak ucu en fazla ${MAX_ANKLE_LIFT}px'e yetişiyor — parmak yerden kopuyor`);
+    }
+  }
+
+  // ÇİZİLEN ayak zeminin altına inmemeli.
+  //
+  // Eklem konumunu ölçen `zemin` kuralı bunu göremiyor: ayak bileği yerin
+  // üstünde durup ayak yine de zemine gömülebiliyor, çünkü tabanın kalınlığı
+  // var. Eskiden görünmüyordu da — dörtgen ayak kendini `min(GROUND, …)` ile
+  // zemine kırpıyordu, yani veri yanlışsa bile çizim doğru görünüyordu. Yeni
+  // ayak katı bir şekil; kırpma kalkınca hata ortaya çıktı.
+  //
+  // Ölçüldü: `bench_press` ve `incline_press` ayağı 6.4px gömüyordu; diğer 28
+  // arketip temizdi. Tolerans 2px, yuvarlama payı.
+  {
+    const dir = footDirFor(ex.mode);
+    const flip = facingFlip(ex.mode);
+    const pin = ex.prop !== 'box' && p.ankleLift > 0;
+    const feet: [string, Vec][] = [['ayak', S.ankle], ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF]] as [string, Vec][]) : [])];
+    feet.forEach(([ad, ankle]) => {
+      const pen = footLowestY(ankle, dir, pin, flip) - GROUND;
+      if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
+    });
   }
 
   if (ex.mode === 'quad' || ex.mode === 'supine') {
@@ -71,18 +205,36 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     if (lowest < GROUND - 30) add('temas', 'hiçbir yeri yere değmiyor');
   }
 
+  // Sırttaki bar GÖVDEDEN hesaplanıyor, elden değil — yani elin ona ulaşıp
+  // ulaşmadığını hiçbir şey kontrol etmiyordu. `bar: 'hands'` olanlarda tutuş
+  // yapı gereği garanti (bar elin konumuna çiziliyor), burada değil. Squat'ta
+  // el bardan 56px ötede havada duruyordu ve hareket "eller arkada tutuluyor"
+  // gibi okunuyordu.
+  if (ex.bar === 'back' && S.bar) {
+    const reach = len(S.hand, S.bar);
+    if (reach > 30) add('tutuş', `el bardan ${Math.round(reach)}px uzakta — barı tutmuyor`);
+  }
+
   if (ex.mode === 'hang') {
     if (S.hand[1] > 140) add('bar', 'el bardan kopmuş');
     if (S.ankle[1] > GROUND - 20) add('asılı', 'ayak yere değiyor');
   }
 
-  const knee = kneeFlex(S);
-  if (Math.abs(knee) > 155) add('diz', `diz ${Math.round(Math.abs(knee))}° bükülmüş (insan sınırı ~150°)`);
-  if (ex.mode === 'stand' && knee < -14) add('diz', 'diz ters yöne kırılmış');
-
-  if (ex.arm === 'angles' && Math.abs(elbowFlex(S)) > 160) {
-    add('dirsek', `dirsek ${Math.round(Math.abs(elbowFlex(S)))}° bükülmüş`);
-  }
+  // Eklem sınırları tek yerden, `ROM_BANDS` tablosundan geliyor. Eşikler koda
+  // gömülü değil veri olduğu için editör, testler ve uygulama aynı sayıyı
+  // okuyor; ayarlamak tek satır. Eskiden diz 155, dirsek 160 ayrı ayrı yazılıydı
+  // ve dirsek kuralı `arm === 'angles'` kapısı yüzünden 30 arketipin 8'inde hiç
+  // çalışmıyordu.
+  ROM_BANDS.forEach((band) => {
+    if (band.skip && band.skip(ex)) return;
+    const v = band.angle(p, S);
+    if (band.hi !== undefined && v > band.hi) {
+      add(band.rule, `${band.label} ${Math.round(v)}° bükülmüş (üst sınır ${band.hi}°)`);
+    }
+    if (band.lo !== undefined && v < band.lo) {
+      add(band.rule, `${band.label} ${Math.round(v)}° (alt sınır ${band.lo}°)`);
+    }
+  });
 
   if (len(S.pelvis, S.head) < 90) add('gövde', 'gövde kendi üstüne katlanmış');
 
@@ -129,13 +281,22 @@ export function auditExercise(ex: RigExercise, samples = 21): RigIssue[] {
  * gözle görülür biçimde zıplar. Elle kare yazarken en kolay kaçırılan şey bu,
  * çünkü iki kare de tek başına doğru görünür.
  */
+/**
+ * Piksel cinsinden yazılan alanlar. Bunlar açı değil: `norm()` ile
+ * sarmalanırlarsa 360 birimlik bir kaçak sıfır görünür ve döngü kapalı
+ * sanılır. `hy` tek başına 440 birim gezebiliyor.
+ */
+const OFFSET_KEYS = new Set<keyof RigPose>(['hx', 'hy', 'hxF', 'shLift', 'ankleLift']);
+
 export function auditLoop(ex: RigExercise): RigIssue[] {
   const first = poseAt(ex, 0).p;
   const last = poseAt(ex, 1).p;
   const issues: RigIssue[] = [];
   (Object.keys(first) as (keyof RigPose)[]).forEach((k) => {
-    const d = Math.abs(norm(first[k] - last[k]));
-    if (d > 1) issues.push({ t: 1, rule: 'döngü', message: `${k}: başlangıç ${first[k]}° ile bitiş ${last[k]}° farklı, tekrar başa dönerken zıplıyor` });
+    const px = OFFSET_KEYS.has(k);
+    const d = px ? Math.abs(first[k] - last[k]) : Math.abs(norm(first[k] - last[k]));
+    const u = px ? 'px' : '°';
+    if (d > 1) issues.push({ t: 1, rule: 'döngü', message: `${k}: başlangıç ${first[k]}${u} ile bitiş ${last[k]}${u} farklı, tekrar başa dönerken zıplıyor` });
   });
   return issues;
 }
