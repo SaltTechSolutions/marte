@@ -22,7 +22,6 @@ import {
   footPinned,
   frontPoints,
   handPath,
-  headProfile,
   showFarArm,
   showFarLeg,
   lerpP,
@@ -328,9 +327,7 @@ export function RigFigure({
             koyuyor ama yüzün hangi yöne baktığını söyleyemiyor: `quad`
             (yüzükoyun) ile `bench` (sırt üstü) neredeyse aynı açıyı taşıyor,
             biri yere biri tavana bakmalı. Bkz. `facingFlip`. */}
-        <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
-          <Path d={headProfile()} fill={skin} stroke={line} strokeWidth={1} />
-        </G>
+        <Path key="head" d={PARTS.head.d} transform={partTransform(S.neck, S.head) + (flip < 0 ? ' scale(-1 1)' : '')} fill={skin} stroke={line} strokeWidth={1} />
         {/* Tabak EN SONA, kafanın da ÖNÜNE. Yan görünümde halterin iki diski
             üst üste düşüp tek daire olarak görünüyor; kafanın arkasına
             konunca diski yarısı kesik çıkıyordu. Saydamlık kafayı görünür

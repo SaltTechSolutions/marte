@@ -953,31 +953,6 @@ export function shoulderWedge(thorax: Vec, sh: Vec, w = 20): string {
   );
 }
 
-/**
- * Yandan baş profili.
- *
- * Yerel uzay: merkez `(0,0)`, **+X yüzün baktığı yön**. Çizim `neckA` ile
- * döndürülüyor, yani baş boyunla birlikte eğiliyor.
- *
- * Düz bir daire yerine profil, çünkü baş figürün en tanınır parçası: alın,
- * burun, çene ve ense çizgisi olmadan figür manken gibi okunuyordu. Yüz
- * ayrıntısı YOK — göz, kulak, ağız çizilmiyor. Spor hareketi simülasyonunda
- * bunlar bilgi taşımıyor ve küçük ölçekte gürültüye dönüşüyor.
- */
-export function headProfile(): string {
-  return (
-    'M 0 -30 ' +
-    'C 11 -30 20 -22 22 -10 ' + // alın
-    'C 23 -5 21 -2 19 0 ' + // kaş
-    'C 22 3 23 7 20 9 ' + // burun
-    'C 17 10 16 11 16 14 ' + // burun altı
-    'C 18 16 18 20 15 23 ' + // dudak → çene
-    'C 11 27 5 29 0 29 ' + // çene ucu
-    'C -9 29 -18 22 -22 11 ' + // çene hattı → ense
-    'C -25 0 -24 -16 -14 -24 ' + // ense → kafatası
-    'C -9 -28 -5 -30 0 -30 Z'
-  );
-}
 
 /**
  * El. Yerel uzay: bilek `(0,0)`, el `(0,18)` yönünde uzanır.

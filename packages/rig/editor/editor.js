@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath, footPinned,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, partTransformScaled, poseAt,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, lerpP, partTransform, partTransformScaled, poseAt,
   shoulderWedge, showFarArm, showFarLeg, skeleton,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
@@ -255,7 +255,7 @@ function cmpFigure(e, p, mode) {
   g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
   g += mode === 'capsule'
     ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
-    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
+    : `<path d="${PARTS.head.d}" transform="${partTransform(S.neck, S.head)}${facingFlip(e.mode) < 0 ? ' scale(-1 1)' : ''}" fill="${skin}" stroke="${line}"/>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
@@ -755,9 +755,11 @@ function draw() {
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
+  // Kafa parçası mesh'ten (boyun kökü → kafa merkezi kemiği); aynalı kiplerde
+  // parça yerel x'te aynalanır, yüz doğru yöne bakar.
   svg.appendChild(
-    useParts
-      ? el('g', { transform: headT }, [el('path', { d: headProfile(), fill: skin, stroke: line })])
+    useParts && PARTS && PARTS.head
+      ? el('path', { d: PARTS.head.d, transform: partTransform(S.neck, S.head) + (facingFlip(e.mode) < 0 ? ' scale(-1 1)' : ''), fill: skin, stroke: line })
         // Kapsül kipinin çene kaması da YEREL koordinatta: eskiden mutlak
         // noktalarla çizilip `rotate(a cx cy)` ile döndürülüyordu, o hâlde
         // aynalanamıyordu. Sayılar birebir aynı, yalnızca kafa merkezine göre.
