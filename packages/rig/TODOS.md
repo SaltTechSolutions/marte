@@ -50,6 +50,22 @@ topuk kalkışında, çömelme derinliğinde ve şınav duruşunda gerçekten an
 **Bağlı:** Devir sözleşmesinin sürümlenmesi (bu turda ekleniyor) bu değişikliği
 güvenli kılan ön koşul.
 
+**Ölçülen bedel (2026-09-07).** `ankleLift` tek alan ve yalnız YAKIN ayağa
+uygulanıyor (`rig.ts`, `ankle = [ANKLE_X, GROUND - 12 - ankleLift]`), yani
+uzak ayağın topuğu hiç kalkamıyor. İki hareket bunun bedelini ödüyor:
+
+- **`unilateral_lunge`** — gerçek hamlede arka topuk kalkıktır, ayak parmak
+  ucuyla basar, ayak bileği yerden ~10cm yukarıda durur. Bizim ayağımız düz
+  çizildiği için ya ayak havada kalıyor ya da bastırınca BALDIR YERE YATIYOR
+  (kalça dipte yerden 117px, bacak 205px). Bugünkü uzlaşma: ayak dipte 19px
+  (7.5cm) yukarıda duruyor — "topuk kalkık" izlenimi veriyor. Düzeltmeden
+  önce 59px (23cm) havadaydı, yani bacak sallanıyordu.
+- **`carry`** — salınan dizin alt ucu 25°, gerçekte ~5° olmalı. Bacak öne
+  geldiğinde daha düz bir diz ayağı zemine sokuyor, çünkü modelde kalça
+  YÜKSEKLİĞİ de sabit (leğen salınımı yok). Yakın bacak da hiç kımıldamıyor.
+
+Taraf başına ayak bileği açısı bu iki uzlaşmayı birden kaldırır.
+
 ---
 
 ## Vendored Muscle-Map kopyasının bakımı
