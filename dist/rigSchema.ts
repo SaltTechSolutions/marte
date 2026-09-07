@@ -3,8 +3,8 @@
 // Değişiklik orada yapılır, buraya kopyalanır. Bu dosyayı düzenlemek iki ayrı
 // motor doğurur. Bütünlük kontrolü: manifest.json.
 
-import { B, RigExercise, RigPose } from './rig';
-import { MUSCLES } from './muscles';
+import { B, RigExercise, RigPose } from '@/utils/rig';
+import { MUSCLES } from '@/utils/muscles';
 
 /**
  * Kare verisinin biçim denetimi.

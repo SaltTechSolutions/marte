@@ -35,19 +35,37 @@ hesaplayan kod yalnızca burada yaşıyor, uygulamaya kopyalanıyor.
 
 ## Devir sözleşmesi
 
-`npm run export` (typecheck ve testlerin arkasında) beş dosya üretir:
+`npm run export` (typecheck ve testlerin arkasında) on üç dosya üretir:
 
 ```
 dist/rig.ts               motor
 dist/rigAudit.ts          denetim kuralları
 dist/rigSchema.ts         veri biçim doğrulaması
 dist/muscles.ts           kas bölgesi sözlüğü (39 bölge, Türkçe etiketler)
+dist/archetypes.ts        kare verisini tipleyen ve YÜKLEME ANINDA doğrulayan sarmalayıcı
 dist/rigArchetypes.json   30 arketipin kare verisi
 dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
 dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
 dist/anatomy.json         kas haritasının ön/arka çizim yolları
+dist/bodyParts.json       uzuv siluet parçaları
+dist/rig.test.ts          motor testleri          ┐ devredilen KODUN
+dist/rigAudit.test.ts     denetim testleri        │ testleri de
+dist/rigSchema.test.ts    şema testleri           ┘ devrediliyor
 dist/manifest.json        sürüm, tarih, git commit'i, her dosyanın sha256'sı
 ```
+
+**Testler neden devrediliyor.** Uygulama bir süre kendi elle kopyalanmış
+`rig.test.ts`'ini taşıdı; 34 satır geride kaldı ve her motor değişikliğinde
+kırıldı. Devredilen kodun testi de devredilmezse, uygulama tarafında
+doğrulanmayan bir motor ya da bayatlamış bir test kalıyor — ikisi de kötü.
+`rigEdit` (sürükleme çözücüsü) ve `normalize-part` testleri BURADA KALIYOR:
+o kod devredilmiyor, testi de gitmemeli.
+
+**Yol çevirisi.** İki depo dosyaları farklı yerlere koyuyor (`src/rig.ts` ↔
+`src/utils/rig.ts`, `tests/` ↔ `src/utils/`). Export, depo içi göreli
+yolları uygulamanın `@/` takma adına çeviriyor. Karşılığı olmayan bir göreli
+yol çıkarsa export DURUYOR — yoksa hata uygulamada, bizim göremediğimiz
+yerde çıkardı.
 
 Arketip ile hareket aynı şey değil: 30 arketip 34 hareketi çiziyor.
 `unilateral_lunge` üçüne birden hizmet ediyor (lunge + rotasyon, walking,

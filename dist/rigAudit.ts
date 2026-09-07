@@ -21,7 +21,7 @@ import {
   poseAt,
   showFarLeg,
   skeleton,
-} from './rig';
+} from '@/utils/rig';
 
 /**
  * Hareketin mekanik denetimi.

@@ -104,7 +104,63 @@ const CONTRACT = [
   { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar', to: 'src/data/rigMuscles.json' },
   { out: 'anatomy.json', src: 'data/anatomy.json', banner: false, what: 'kas haritası yolları', to: 'src/data/rigAnatomy.json' },
   { out: 'bodyParts.json', src: 'data/bodyParts.json', banner: false, what: 'uzuv siluet parçaları', to: 'src/data/rigBodyParts.json' },
+  // Kare verisini TİPLEYEN ve YÜKLEME ANINDA DOĞRULAYAN sarmalayıcı.
+  // Uygulamanın kendi kopyası `as unknown as` ile geçiyordu: derleyiciye söz
+  // veriyor ama JSON elle de düzenlenebiliyor ve yanlış bir `mode` motorun
+  // içinde patlıyordu. Şema artık devrediliyor, doğrulama da devredilebilir.
+  { out: 'archetypes.ts', src: 'src/archetypes.ts', banner: true, what: 'doğrulayan kare verisi sarmalayıcısı', to: 'src/data/rigArchetypes.ts' },
+  // Devredilen KODUN testleri de devrediliyor. Uygulama bunların 34 satır
+  // geride kalmış elle kopyalarını taşıyordu ve her motor değişikliğinde
+  // kırılıyorlardı. `rigEdit` (sürükleme çözücüsü) ve `normalize-part`
+  // testleri BURADA KALIYOR — o kod devredilmiyor, testi de gitmemeli.
+  { out: 'rig.test.ts', src: 'tests/rig.test.ts', banner: true, what: 'motor testleri', to: 'src/utils/rig.test.ts' },
+  { out: 'rigAudit.test.ts', src: 'tests/rigAudit.test.ts', banner: true, what: 'denetim testleri', to: 'src/utils/rigAudit.test.ts' },
+  { out: 'rigSchema.test.ts', src: 'tests/rigSchema.test.ts', banner: true, what: 'şema testleri', to: 'src/utils/rigSchema.test.ts' },
 ];
+
+/**
+ * Modül yolu çevirisi.
+ *
+ * İki depo dosyaları farklı yerlere koyuyor: burada `src/rig.ts` ve
+ * `tests/rig.test.ts`, uygulamada ikisi de `src/utils/` altında, veri
+ * `src/data/` altında. Göreli yollar (`'../src/rig'`, `'./rig'`) bu yüzden
+ * taşınamıyor — üstelik `archetypes.ts` burada `'./rig'` diyor ama uygulamada
+ * `src/data/`'ya gidiyor, yani `'./rig'` orada YANLIŞ dosyayı arardı.
+ *
+ * Hepsi uygulamanın `@/` takma adına çevriliyor: konumdan bağımsız, tek biçim.
+ * Anahtar SON parça, çünkü aynı modüle `'./rig'` ve `'../src/rig'` diye iki
+ * ayrı yerden geliniyor.
+ */
+const REWRITE = {
+  rig: '@/utils/rig',
+  rigAudit: '@/utils/rigAudit',
+  rigSchema: '@/utils/rigSchema',
+  muscles: '@/utils/muscles',
+  archetypes: '@/data/rigArchetypes',
+  'rigArchetypes.json': '@/data/rigArchetypes.json',
+  'exercises.json': '@/data/rigExercises.json',
+  'rigMuscles.json': '@/data/rigMuscles.json',
+  'anatomy.json': '@/data/rigAnatomy.json',
+  'bodyParts.json': '@/data/rigBodyParts.json',
+};
+
+/** `from './rig'` → `from '@/utils/rig'`. Yalnızca depo içi göreli yollar. */
+const rewriteImports = (src, file) => {
+  const miss = [];
+  const out = src.replace(/(from\s+)'(\.\.?\/[^']+)'/g, (all, kw, spec) => {
+    const last = spec.split('/').pop();
+    if (REWRITE[last]) return `${kw}'${REWRITE[last]}'`;
+    miss.push(spec);
+    return all;
+  });
+  // Çevrilemeyen göreli yol sessizce gitmesin: uygulamada derlenmez ve hata
+  // orada, bizim göremediğimiz yerde çıkar.
+  if (miss.length) {
+    console.error(`✗ ${file}: bu göreli yolların hedef karşılığı yok — ${[...new Set(miss)].join(', ')}`);
+    process.exit(1);
+  }
+  return out;
+};
 
 const sha256 = (buf) => createHash('sha256').update(buf).digest('hex');
 
@@ -134,7 +190,7 @@ const files = {};
 const outputs = {};
 for (const f of CONTRACT) {
   const src = readFileSync(join(ROOT, f.src));
-  const out = f.banner ? Buffer.from(BANNER + '\n' + src.toString('utf8'), 'utf8') : src;
+  const out = f.banner ? Buffer.from(BANNER + '\n' + rewriteImports(src.toString('utf8'), f.src), 'utf8') : src;
   writeFileSync(join(DIST, f.out), out);
   outputs[f.out] = out;
   files[f.out] = { sha256: sha256(out), bytes: out.length, from: f.src, what: f.what, to: f.to };
