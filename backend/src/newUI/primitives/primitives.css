@@ -1,0 +1,173 @@
+/* src/newUI/primitives/primitives.css */
+
+/* --- Buttons --- */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-family-base);
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Bouncy Effect on Click */
+.ui-btn:active:not([disabled]) {
+  transform: scale(0.96);
+}
+
+/* Sizes */
+.ui-btn[data-size='sm'] {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+}
+
+.ui-btn[data-size='md'] {
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  border-radius: var(--radius);
+}
+
+.ui-btn[data-size='lg'] {
+  padding: 1rem 1.5rem;
+  font-size: 1.125rem;
+  border-radius: var(--radius);
+}
+
+/* Full Width */
+.ui-btn[data-full='true'] {
+  width: 100%;
+  display: flex;
+}
+
+/* Variants & Tones */
+
+/* Primary */
+.ui-btn[data-variant='primary'][data-tone='solid'] {
+  background: var(--color-primary);
+  color: white;
+  box-shadow: var(--shadow-primary);
+}
+
+.ui-btn[data-variant='primary'][data-tone='solid']:hover:not([disabled]) {
+  background: var(--color-primary-strong);
+}
+
+.ui-btn[data-variant='primary'][data-tone='outline'] {
+  background: transparent;
+  border: 2px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.ui-btn[data-variant='primary'][data-tone='ghost'] {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.ui-btn[data-variant='primary'][data-tone='ghost']:hover:not([disabled]) {
+  background: var(--color-primary-light);
+}
+
+/* Neutral */
+.ui-btn[data-variant='neutral'][data-tone='solid'] {
+  background: var(--color-text);
+  color: white;
+}
+
+.ui-btn[data-variant='neutral'][data-tone='outline'] {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+/* Danger */
+.ui-btn[data-variant='danger'][data-tone='solid'] {
+  background: var(--color-danger);
+  color: white;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+}
+
+/* Disabled State */
+/* Disabled State */
+.ui-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--ui-color-neutral-300, #d1d5db) !important;
+  /* Force a visible background */
+  color: var(--ui-color-neutral-600, #4b5563) !important;
+  box-shadow: none;
+}
+
+/* --- Inputs (TextField, Select) --- */
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+}
+
+.ui-field__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-left: 4px;
+}
+
+.ui-input,
+.ui-select {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  /* Larger touch target */
+  font-family: var(--font-family-base);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-surface-subtle);
+  /* Light gray fill */
+  border: 1px solid transparent;
+  /* No border initially */
+  border-radius: var(--radius);
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+}
+
+.ui-input:focus,
+.ui-select:focus {
+  outline: none;
+  background: var(--color-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-light);
+  /* Soft ring */
+}
+
+.ui-input::placeholder {
+  color: var(--color-text-light);
+}
+
+/* Select Chevron */
+.ui-field__control {
+  position: relative;
+}
+
+.ui-select__chevron {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+/* Validation Message */
+.ui-field__message {
+  font-size: 0.8rem;
+  color: var(--color-danger);
+  margin-left: 4px;
+}

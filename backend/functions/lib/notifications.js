@@ -1,0 +1,416 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.notifyMembersOnAnnouncement = exports.resolveRenewalOnAssignment = exports.notifyAdminsOnRenewalRequest = exports.sendClassReminders = exports.notifyTrainerOnSessionCancelled = exports.notifyAdminsOnPackageChangeResponse = exports.notifyAdminsOnPaymentNotice = exports.notifyOnClassCancelled = exports.notifyAdminsOnMemberLeft = exports.notifyAdminsOnJoinRequest = exports.notifyOnPackageChangeRequested = exports.notifyOnProgramAssigned = exports.notifyOnPaymentReversed = exports.notifyOnPaymentStatusChange = exports.notifyOnMembershipApproved = void 0;
+exports.notifyTenantAdmins = notifyTenantAdmins;
+const scheduler_1 = require("firebase-functions/v2/scheduler");
+const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-functions/v2/firestore");
+const push_1 = require("./push");
+/** GymEntra: member's join request just got approved. */
+exports.notifyOnMembershipApproved = (0, firestore_1.onDocumentUpdated)({ document: 'tenant_memberships/{membershipId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status === 'active' || after.status !== 'active')
+        return;
+    await (0, push_1.sendPushToUser)(after.userId, 'Üyeliğin onaylandı 🎉', `${after.tenantName} ailesine hoş geldin! Üyelik kartın artık hazır.`, { screen: 'member/card' }, 'account');
+});
+/** GymEntra: a member-submitted payment notice was confirmed or rejected. */
+exports.notifyOnPaymentStatusChange = (0, firestore_1.onDocumentUpdated)({ document: 'payments/{paymentId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status !== 'pending' || after.status === 'pending')
+        return;
+    const amountLabel = `₺${Number(after.amount).toLocaleString('tr-TR')}`;
+    if (after.status === 'confirmed') {
+        await (0, push_1.sendPushToUser)(after.memberId, 'Ödemen onaylandı ✓', `${amountLabel} tutarındaki ödemen onaylandı.`, { screen: 'member/payments', paymentId: event.params.paymentId }, 'payments');
+    }
+    else if (after.status === 'rejected') {
+        await (0, push_1.sendPushToUser)(after.memberId, 'Ödemen onaylanmadı', `${amountLabel} tutarındaki ödeme bildirimin reddedildi. Detay için salonla iletişime geç.`, { screen: 'member/payments', paymentId: event.params.paymentId }, 'payments');
+    }
+});
+/**
+ * ADMIN-4: a recorded payment was corrected.
+ *
+ * Both sides hear about it, which is the point — a silent correction to
+ * someone's payment history is exactly the kind of thing that turns into a
+ * phone call. The member sees why, the other admins see who did it.
+ *
+ * Fires on the ORIGINAL row being flagged rather than on the reversal row
+ * being created: the flag is the single moment the correction becomes true,
+ * and the reversal row is written in the same batch either way.
+ */
+exports.notifyOnPaymentReversed = (0, firestore_1.onDocumentUpdated)({ document: 'payments/{paymentId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d, _e, _f;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.reversedAt || !after.reversedAt)
+        return;
+    const amountLabel = `₺${Number(after.amount).toLocaleString('tr-TR')}`;
+    const reason = (_e = after.reversalReason) === null || _e === void 0 ? void 0 : _e.trim();
+    const detail = reason ? ` Gerekçe: ${reason}` : '';
+    await (0, push_1.sendPushToUser)(after.memberId, 'Ödeme kaydın düzeltildi', `${amountLabel} tutarındaki kaydın salon tarafından düzeltildi.${detail}`, { screen: 'member/payments', paymentId: event.params.paymentId }, 'payments');
+    await notifyTenantAdmins(after.tenantId, 'Ödeme kaydı düzeltildi', `${(_f = after.memberName) !== null && _f !== void 0 ? _f : 'Bir üye'} · ${amountLabel}${detail}`, { screen: 'admin/payments', paymentId: event.params.paymentId }, 'payments', 
+    // The admin who made the correction already knows.
+    after.reversedBy);
+});
+/** GymEntra: a trainer just assigned (activated) a program for this member. */
+exports.notifyOnProgramAssigned = (0, firestore_1.onDocumentUpdated)({ document: 'programs/{programId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status === 'active' || after.status !== 'active')
+        return;
+    await (0, push_1.sendPushToUser)(after.memberId, 'Yeni programın hazır 💪', `Antrenörün senin için "${after.name}" programını hazırladı.`, { screen: 'member/workout' }, 'programs');
+});
+/**
+ * GymEntra (PKG-6): notifies the member a swap is waiting on them.
+ * `createPackageChangeRequest` never writes anything to `member_packages`
+ * itself — this is purely "someone should look at this."
+ */
+exports.notifyOnPackageChangeRequested = (0, firestore_1.onDocumentCreated)({ document: 'package_change_requests/{requestId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c;
+    const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
+    if (!data)
+        return;
+    await (0, push_1.sendPushToUser)(data.memberId, 'Paket teklifin var', `${(_c = (_b = data.proposedSummary) === null || _b === void 0 ? void 0 : _b.packageName) !== null && _c !== void 0 ? _c : 'Yeni paket'} için bir teklif bekliyor.`, { screen: 'member/index' }, 'packages');
+});
+/**
+ * Pushes to every ACTIVE admin of a gym.
+ *
+ * Fans out rather than targeting an owner field: a gym can have several
+ * admins, and whoever happens to own the tenant document is not necessarily
+ * the one working the desk today.
+ */
+async function notifyTenantAdmins(tenantId, title, body, data, category, 
+/** Skip one admin — the one who performed the action already knows, and a
+ *  push telling you what you just did is noise people learn to dismiss. */
+exceptUserId) {
+    const admins = await admin
+        .firestore()
+        .collection('tenant_memberships')
+        .where('tenantId', '==', tenantId)
+        .where('roles', 'array-contains', 'admin')
+        .where('status', '==', 'active')
+        .get();
+    await Promise.all(admins.docs
+        .map((d) => d.data().userId)
+        .filter((userId) => userId !== exceptUserId)
+        .map((userId) => (0, push_1.sendPushToUser)(userId, title, body, data, category)));
+}
+/**
+ * GymEntra: a join request is waiting for the gym's approval.
+ *
+ * The owner's most time-sensitive event — someone may be standing at the
+ * desk. Until this existed the only way to find out was to open the app and
+ * look, which is how requests sat unnoticed.
+ *
+ * `onDocumentWritten`, not `onDocumentCreated`: a rejoin (P0-6) is an UPDATE
+ * back to `pending` on the document the person already owns, so a
+ * create-only trigger would miss every returning member.
+ */
+exports.notifyAdminsOnJoinRequest = (0, firestore_1.onDocumentWritten)({ document: 'tenant_memberships/{membershipId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!after)
+        return;
+    if ((before === null || before === void 0 ? void 0 : before.status) === 'pending' || after.status !== 'pending')
+        return;
+    const who = after.userDisplayName || after.userEmail || 'Biri';
+    const returning = before !== undefined;
+    await notifyTenantAdmins(after.tenantId, 'Yeni katılım isteği', returning ? `${who} salona tekrar katılmak istiyor.` : `${who} salona katılmak istiyor.`, { screen: 'admin/members' }, 'account');
+});
+/**
+ * GymEntra: tells the gym's admins that someone walked away.
+ *
+ * Leaving is entirely self-service (`leaveTenant` writes `status: 'left'`
+ * straight from the client), so without this the roster silently shrinks and
+ * the owner finds out by noticing a missing name. A gym billed per active
+ * member needs to know the moment a seat frees up.
+ *
+ * Fans out to every active admin rather than an owner field: a gym can have
+ * several, and the one who happens to own the tenant doc is not necessarily
+ * the one working the desk.
+ */
+exports.notifyAdminsOnMemberLeft = (0, firestore_1.onDocumentUpdated)({ document: 'tenant_memberships/{membershipId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status === 'left' || after.status !== 'left')
+        return;
+    const who = after.userDisplayName || after.userEmail || 'Bir üye';
+    await notifyTenantAdmins(after.tenantId, 'Bir üye salondan ayrıldı', `${who} üyeliğini sonlandırdı.`, { screen: 'admin/members' }, 'account');
+});
+/**
+ * GymEntra: a class was cancelled — tell the people who had booked it.
+ *
+ * Cancelling is the one admin action that silently changes somebody else's
+ * plans: the class simply vanishes from their schedule. Without this a member
+ * turns up to a session that no longer exists.
+ *
+ * Fired on delete rather than on a `cancelled` flag because that is what
+ * `deleteClass` does today. The waitlist is notified too — they were holding
+ * a place for this slot and their answer ("am I in?") is now settled.
+ */
+exports.notifyOnClassCancelled = (0, firestore_1.onDocumentDeleted)({ document: 'classes/{classId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
+    if (!data)
+        return;
+    const affected = [
+        ...((_b = data.bookedUserIds) !== null && _b !== void 0 ? _b : []),
+        ...((_c = data.waitlistUserIds) !== null && _c !== void 0 ? _c : []),
+    ];
+    if (affected.length === 0)
+        return;
+    const when = (_d = data.date) === null || _d === void 0 ? void 0 : _d.toDate();
+    const whenLabel = when
+        ? when.toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+        : '';
+    await Promise.all(affected.map((uid) => {
+        var _a;
+        return (0, push_1.sendPushToUser)(uid, 'Ders iptal edildi', `${(_a = data.name) !== null && _a !== void 0 ? _a : 'Ders'}${whenLabel ? ` — ${whenLabel}` : ''} iptal edildi.`, { screen: 'member/classes' }, 'bookings');
+    }));
+});
+/**
+ * ADMIN-3: a member filed a payment notice and it is sitting in the approval
+ * queue. Until now nothing said so — the money had arrived, the member had
+ * told us, and the gym found out whenever it next opened the screen.
+ *
+ * Only member-filed notices: an admin recording a payment they just took
+ * lands as `confirmed` and needs no queue.
+ */
+exports.notifyAdminsOnPaymentNotice = (0, firestore_1.onDocumentCreated)({ document: 'payments/{paymentId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b;
+    const data = (_a = event.data) === null || _a === void 0 ? void 0 : _a.data();
+    if (!data || data.status !== 'pending')
+        return;
+    const amountLabel = `₺${Number(data.amount).toLocaleString('tr-TR')}`;
+    await notifyTenantAdmins(data.tenantId, 'Yeni ödeme bildirimi', `${(_b = data.memberName) !== null && _b !== void 0 ? _b : 'Bir üye'} · ${amountLabel} onayını bekliyor.`, { screen: 'admin/payments', paymentId: event.params.paymentId }, 'payments', 
+    // A guardian filing for their child is the payer, not an admin — but if
+    // an admin ever files on someone's behalf they already know.
+    data.submittedBy);
+});
+/**
+ * ADMIN-3: the member answered a package change the gym proposed.
+ *
+ * The proposal was the admin's move; without this they only learn the answer
+ * by going back to look, and an accepted offer sits unapplied in the meantime.
+ */
+exports.notifyAdminsOnPackageChangeResponse = (0, firestore_1.onDocumentUpdated)({ document: 'package_change_requests/{requestId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d, _e, _f, _g;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status !== 'pending')
+        return;
+    // `expired` is the scheduled job tidying up, not the member answering.
+    if (after.status !== 'approved' && after.status !== 'rejected')
+        return;
+    const accepted = after.status === 'approved';
+    await notifyTenantAdmins(after.tenantId, accepted ? 'Paket teklifi kabul edildi' : 'Paket teklifi reddedildi', `${(_e = after.memberName) !== null && _e !== void 0 ? _e : 'Bir üye'} · ${(_g = (_f = after.proposedSummary) === null || _f === void 0 ? void 0 : _f.packageName) !== null && _g !== void 0 ? _g : 'paket değişikliği'}`, { screen: 'admin/members' }, 'packages');
+});
+/**
+ * ADMIN-3: a member cancelled a PT appointment.
+ *
+ * The trainer's hour just freed up and nobody knows. Goes to the trainer
+ * rather than to the admins: it is their calendar, and a small studio's owner
+ * is usually the trainer anyway.
+ *
+ * Skipped when the trainer cancelled it themselves.
+ */
+exports.notifyTrainerOnSessionCancelled = (0, firestore_1.onDocumentUpdated)({ document: 'pt_sessions/{sessionId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d, _e, _f;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!before || !after)
+        return;
+    if (before.status === 'cancelled' || after.status !== 'cancelled')
+        return;
+    if (!after.trainerId)
+        return;
+    const when = (_e = after.date) === null || _e === void 0 ? void 0 : _e.toDate();
+    const whenLabel = when
+        ? `${when.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} ${when.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
+        : 'Bir randevu';
+    await (0, push_1.sendPushToUser)(after.trainerId, 'Randevu iptal edildi', `${(_f = after.memberName) !== null && _f !== void 0 ? _f : 'Bir üye'} · ${whenLabel} randevusunu iptal etti.`, { screen: 'trainer/calendar' }, 'bookings');
+});
+/**
+ * P4-3 / PER-13: "dersin bir saat sonra".
+ *
+ * Runs every 15 minutes and picks up anything starting in the next window,
+ * rather than scheduling a job per booking: a per-booking timer has to be
+ * cancelled when the booking is, rescheduled when the class moves, and
+ * reconciled after every deploy. Sweeping a short window is stateless and
+ * survives all three.
+ *
+ * `reminderSentAt` is written on the document, so a redelivered run or an
+ * overlapping window cannot send twice — the same discipline
+ * `notifyExpiringPackages` uses for its day-count.
+ *
+ * Deliberately shipped **after** notification preferences, not before: a
+ * reminder is the notification people are most likely to find intrusive, and
+ * adding it while there was no way to turn it off is how an app teaches
+ * people to disable notifications wholesale.
+ */
+const REMINDER_LEAD_MINUTES = 60;
+const REMINDER_WINDOW_MINUTES = 20;
+exports.sendClassReminders = (0, scheduler_1.onSchedule)({ schedule: 'every 15 minutes', region: 'europe-west1', timeZone: 'Europe/Istanbul' }, async () => {
+    var _a, _b;
+    const db = admin.firestore();
+    const now = Date.now();
+    const from = admin.firestore.Timestamp.fromMillis(now + REMINDER_LEAD_MINUTES * 60000);
+    const to = admin.firestore.Timestamp.fromMillis(now + (REMINDER_LEAD_MINUTES + REMINDER_WINDOW_MINUTES) * 60000);
+    let sent = 0;
+    const classes = await db
+        .collection('classes')
+        .where('date', '>=', from)
+        .where('date', '<', to)
+        .get();
+    for (const doc of classes.docs) {
+        const c = doc.data();
+        if (c.reminderSentAt)
+            continue;
+        const when = c.date.toDate();
+        const timeLabel = when.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        // Only people holding a seat. The waitlist is told when a seat opens,
+        // not reminded about a class they are not in.
+        const booked = ((_a = c.bookedUserIds) !== null && _a !== void 0 ? _a : []);
+        await Promise.all(booked.map((uid) => {
+            var _a;
+            return (0, push_1.sendPushToUser)(uid, 'Dersin yaklaşıyor', `${(_a = c.name) !== null && _a !== void 0 ? _a : 'Ders'} bugün ${timeLabel}'de başlıyor.`, { screen: 'member/classes' }, 'bookings');
+        }));
+        await doc.ref.update({ reminderSentAt: admin.firestore.Timestamp.now() });
+        sent += booked.length;
+    }
+    const sessions = await db
+        .collection('pt_sessions')
+        .where('date', '>=', from)
+        .where('date', '<', to)
+        .get();
+    for (const doc of sessions.docs) {
+        const s = doc.data();
+        if (s.reminderSentAt || s.status !== 'scheduled')
+            continue;
+        const when = s.date.toDate();
+        const timeLabel = when.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+        await (0, push_1.sendPushToUser)(s.memberId, 'Randevun yaklaşıyor', `${(_b = s.trainerName) !== null && _b !== void 0 ? _b : 'Antrenörün'} ile ${timeLabel} randevun var.`, { screen: 'member/bookings' }, 'bookings');
+        await doc.ref.update({ reminderSentAt: admin.firestore.Timestamp.now() });
+        sent += 1;
+    }
+    console.log(`sendClassReminders: ${sent} hatırlatma gönderildi`);
+});
+/**
+ * PER-15: a member asked for their package to be renewed.
+ *
+ * The renewal conversation is the one the gym most wants to have; this is the
+ * member starting it. Fires on the transition INTO `pending` — a withdrawn
+ * request being re-opened counts as a new ask.
+ */
+exports.notifyAdminsOnRenewalRequest = (0, firestore_1.onDocumentWritten)({ document: 'renewal_requests/{requestId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (!after || after.status !== 'pending' || (before === null || before === void 0 ? void 0 : before.status) === 'pending')
+        return;
+    const who = after.memberName || 'Bir üye';
+    await notifyTenantAdmins(after.tenantId, 'Yenileme talebi', `${who} paketini yenilemek istiyor.${after.note ? ` "${String(after.note).slice(0, 80)}"` : ''}`, { screen: 'admin/members' }, 'packages');
+});
+/**
+ * PER-15: a new package assignment answers an open renewal request.
+ *
+ * Closed here rather than by an admin tap because the assignment IS the
+ * answer; asking the admin to also mark the request handled is a step that
+ * gets forgotten, and a stale "pending" line on the panel then says the
+ * opposite of what happened.
+ */
+exports.resolveRenewalOnAssignment = (0, firestore_1.onDocumentWritten)({ document: 'member_packages/{assignmentId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d, _e;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (before || !after)
+        return; // creates only
+    const ref = admin.firestore().doc(`renewal_requests/${after.tenantId}_${after.memberId}`);
+    const snap = await ref.get();
+    if (!snap.exists || ((_e = snap.data()) === null || _e === void 0 ? void 0 : _e.status) !== 'pending')
+        return;
+    await ref.update({
+        status: 'handled',
+        handledAt: admin.firestore.Timestamp.now(),
+        handledBy: after.assignedBy || 'system',
+    });
+    await (0, push_1.sendPushToUser)(after.memberId, 'Paketin yenilendi', `${after.packageName} paketin tanımlandı. Yenileme talebin kapatıldı.`, { screen: 'member/index' }, 'packages');
+});
+/**
+ * PER-16: a new announcement goes to everyone in the gym — members and
+ * trainers — except the admin who wrote it. One push per person through
+ * `sendPushToUser`, so the `announcements` preference is honoured per person
+ * and dead tokens are pruned the usual way. Fan-out is bounded by the gym's
+ * size; the biggest gym on the platform is a few hundred people.
+ */
+exports.notifyMembersOnAnnouncement = (0, firestore_1.onDocumentWritten)({ document: 'announcements/{announcementId}', region: 'europe-west1' }, async (event) => {
+    var _a, _b, _c, _d;
+    const before = (_b = (_a = event.data) === null || _a === void 0 ? void 0 : _a.before) === null || _b === void 0 ? void 0 : _b.data();
+    const after = (_d = (_c = event.data) === null || _c === void 0 ? void 0 : _c.after) === null || _d === void 0 ? void 0 : _d.data();
+    if (before || !after)
+        return; // creates only
+    const people = await admin
+        .firestore()
+        .collection('tenant_memberships')
+        .where('tenantId', '==', after.tenantId)
+        .where('status', '==', 'active')
+        .get();
+    const title = String(after.title);
+    const body = String(after.body || '').slice(0, 140) || 'Salonundan yeni bir duyuru var.';
+    await Promise.all(people.docs
+        .map((d) => d.data().userId)
+        .filter((uid) => uid !== after.createdBy)
+        .map((uid) => (0, push_1.sendPushToUser)(uid, title, body, { screen: 'member/index' }, 'announcements')));
+});
+//# sourceMappingURL=notifications.js.map

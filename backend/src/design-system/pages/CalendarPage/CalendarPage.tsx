@@ -1,0 +1,431 @@
+// src/design-system/pages/CalendarPage/CalendarPage.tsx
+// Yeni design system ile modern takvim sayfası
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { collection, query, where, getDocs, Timestamp, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
+import { useMembers } from '../../../hooks/useMembers';
+import { AppShell, Header, BottomNav, Button, FAB, Card, Avatar, Modal, ModalFooter, Input, Select } from '../../components';
+import { FiChevronLeft, FiChevronRight, FiCalendar, FiPlus, FiUserCheck, FiTrash2 } from 'react-icons/fi';
+import { clsx } from 'clsx';
+import './CalendarPage.css';
+import { LessonModal } from '../../../newUI/modules/Calendar/components/LessonModal';
+
+type ViewMode = 'week' | 'day';
+
+interface Lesson {
+    id: string;
+    date: Date;
+    title?: string;
+    memberIds: string[];
+    branchId?: string;
+    notes?: string;
+    status: 'scheduled' | 'completed' | 'cancelled';
+}
+
+interface Branch {
+    id: string;
+    name: string;
+}
+
+export const CalendarPage: React.FC = () => {
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<ViewMode>('week');
+    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [isDeletingLesson, setIsDeletingLesson] = useState(false);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState('');
+
+    const { members } = useMembers(false);
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const snapshot = await getDocs(collection(db, 'branches'));
+                const collator = new Intl.Collator('tr-TR', { sensitivity: 'base' });
+                const list = snapshot.docs
+                    .map((branchDoc) => ({ id: branchDoc.id, name: String(branchDoc.data().name || '') }))
+                    .sort((a, b) => collator.compare(a.name, b.name));
+                setBranches(list);
+            } catch (error) {
+                if (import.meta.env.DEV) console.error('Branşlar yüklenirken hata:', error);
+            }
+        };
+        fetchBranches();
+    }, []);
+
+    // Tarih aralığını hesapla
+    const dateRange = useMemo(() => {
+        const start = new Date(currentDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(currentDate);
+        end.setHours(23, 59, 59, 999);
+
+        if (viewMode === 'week') {
+            const day = start.getDay();
+            const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Pazartesi başlangıç
+            start.setDate(diff);
+            end.setDate(start.getDate() + 6);
+        }
+
+        return { start, end };
+    }, [currentDate, viewMode]);
+
+    // Lessons fetch effect
+    useEffect(() => {
+        const fetchLessons = async () => {
+            setLoading(true);
+            try {
+                const q = query(
+                    collection(db, 'lessons'),
+                    where('date', '>=', Timestamp.fromDate(dateRange.start)),
+                    where('date', '<=', Timestamp.fromDate(dateRange.end))
+                );
+
+                const snapshot = await getDocs(q);
+                const fetchedLessons: Lesson[] = [];
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    fetchedLessons.push({
+                        id: doc.id,
+                        date: data.date.toDate(),
+                        title: data.title,
+                        memberIds: data.memberIds || [],
+                        branchId: data.branchId,
+                        notes: data.notes,
+                        status: data.status || 'scheduled'
+                    });
+                });
+
+                setLessons(fetchedLessons);
+            } catch (error) {
+                console.error('Dersler yüklenirken hata:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchLessons();
+    }, [dateRange, refreshTrigger]);
+
+    const handlePrev = () => {
+        const newDate = new Date(currentDate);
+        if (viewMode === 'week') newDate.setDate(newDate.getDate() - 7);
+        else newDate.setDate(newDate.getDate() - 1);
+        setCurrentDate(newDate);
+    };
+
+    const handleNext = () => {
+        const newDate = new Date(currentDate);
+        if (viewMode === 'week') newDate.setDate(newDate.getDate() + 7);
+        else newDate.setDate(newDate.getDate() + 1);
+        setCurrentDate(newDate);
+    };
+
+    const handleToday = () => setCurrentDate(new Date());
+
+    const getDayLessons = (date: Date) => {
+        return lessons.filter(l => {
+            const isSameDay = l.date.getDate() === date.getDate() &&
+                l.date.getMonth() === date.getMonth() &&
+                l.date.getFullYear() === date.getFullYear();
+            
+            if (!isSameDay) return false;
+            if (selectedBranchId && l.branchId !== selectedBranchId) return false;
+            
+            if (searchQuery) {
+                const query = searchQuery.toLowerCase();
+                const hasMatchingMember = l.memberIds.some(id => {
+                    const member = members.find(m => m.id === id);
+                    if (!member) return false;
+                    const fullName = `${member.name || ''} ${member.surname || ''}`.toLowerCase();
+                    return fullName.includes(query);
+                });
+                if (!hasMatchingMember) return false;
+            }
+            
+            return true;
+        }).sort((a, b) => a.date.getTime() - b.date.getTime());
+    };
+
+    // Haftanın günlerini oluştur
+    const weekDays = useMemo(() => {
+        const days = [];
+        const start = new Date(dateRange.start);
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(start);
+            day.setDate(start.getDate() + i);
+            days.push(day);
+        }
+        return days;
+    }, [dateRange]);
+
+    return (
+        <AppShell
+            header={
+                <Header
+                    title="Takvim"
+                    rightAction={
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            leftIcon={<FiPlus />}
+                            onClick={() => setIsAddModalOpen(true)}
+                            className="hidden sm:flex"
+                        >
+                            Ders Ekle
+                        </Button>
+                    }
+                />
+            }
+            bottomNav={<BottomNav />}
+            fab={<FAB icon={<FiPlus />} onClick={() => setIsAddModalOpen(true)} />}
+        >
+            <div className="calendar-page-container">
+                <div className="calendar-page">
+                    {/* Date Navigation */}
+                    <div className="calendar-nav">
+                        <div className="calendar-nav-left">
+                            <Button variant="ghost" size="sm" onClick={handlePrev}><FiChevronLeft /></Button>
+                            <h2 className="current-date">
+                                {currentDate.toLocaleDateString('tr-TR', {
+                                    month: 'long',
+                                    year: 'numeric',
+                                    day: viewMode === 'day' ? 'numeric' : undefined
+                                })}
+                                {viewMode === 'day' && <span className="weekday-label">{currentDate.toLocaleDateString('tr-TR', { weekday: 'long' })}</span>}
+                            </h2>
+                            <Button variant="ghost" size="sm" onClick={handleNext}><FiChevronRight /></Button>
+                            <Button variant="secondary" size="sm" onClick={handleToday} className="today-btn">Bugün</Button>
+                        </div>
+                        <div className="calendar-nav-right flex items-center">
+                            <Input 
+                                placeholder="Üye ara..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="mr-3 hidden md:block !w-40"
+                                size="sm"
+                            />
+                            <Select
+                                value={selectedBranchId}
+                                onChange={(e) => setSelectedBranchId(e.target.value)}
+                                aria-label="Branş filtresi"
+                                placeholder="Tüm branşlar"
+                                options={branches.map(b => ({ value: b.id, label: b.name }))}
+                                className="mr-3 hidden md:block !w-40"
+                                size="sm"
+                            />
+                            <div className="calendar-view-toggle">
+                                <button
+                                    className={clsx('view-btn', { active: viewMode === 'day' })}
+                                    onClick={() => setViewMode('day')}
+                                >
+                                    Gün
+                                </button>
+                                <button
+                                    className={clsx('view-btn', { active: viewMode === 'week' })}
+                                    onClick={() => setViewMode('week')}
+                                >
+                                    Hafta
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="calendar-loading">
+                            <div className="calendar-spinner" />
+                            <p>Dersler yükleniyor...</p>
+                        </div>
+                    ) : (
+                        <div className="calendar-grid">
+                            {viewMode === 'week' ? (
+                                <div className="week-view">
+                                    {weekDays.map((day, index) => {
+                                        const dayLessons = getDayLessons(day);
+                                        const isToday = day.toDateString() === new Date().toDateString();
+
+                                        return (
+                                            <div key={index} className={clsx('week-day', { 'is-today': isToday })}>
+                                                <div className="week-day-header">
+                                                    <span className="day-name">{day.toLocaleDateString('tr-TR', { weekday: 'short' })}</span>
+                                                    <span className="day-number">{day.getDate()}</span>
+                                                </div>
+                                                <div className="day-lessons">
+                                                    {dayLessons.map(lesson => (
+                                                        <div
+                                                            key={lesson.id}
+                                                            className={`lesson-item lesson-${lesson.status} active:scale-95 transition-all duration-150`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedLesson(lesson);
+                                                            }}
+                                                        >
+                                                            <div className="week-lesson-inner">
+                                                                <span className="lesson-time">
+                                                                    {lesson.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                                <div className="week-lesson-members">
+                                                                    {lesson.memberIds.map((id, idx) => {
+                                                                        const member = members.find(m => m.id === id);
+                                                                        if (!member) return null;
+                                                                        const name = member.name || '';
+                                                                        const surname = member.surname ? ` ${member.surname.charAt(0)}.` : '';
+                                                                        return (
+                                                                            <span key={id} className="week-member-name">
+                                                                                {name}{surname}{idx < lesson.memberIds.length - 1 ? ', ' : ''}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="day-view">
+                                    <div className="time-slots">
+                                        {Array.from({ length: 15 }, (_, i) => i + 7).map(hour => { // 07:00 - 21:00
+                                            const time = `${hour.toString().padStart(2, '0')}:00`;
+                                            const slotLessons = getDayLessons(currentDate).filter(l => l.date.getHours() === hour);
+
+                                            return (
+                                                <div key={hour} className="time-slot">
+                                                    <div className="time-label">{time}</div>
+                                                    <div className="slot-content flex-row flex-wrap">
+                                                        {slotLessons.map(lesson => (
+                                                            <Card
+                                                                key={lesson.id}
+                                                                className={`day-lesson-card lesson-${lesson.status} active:scale-95 transition-all duration-150`}
+                                                                onClick={() => setSelectedLesson(lesson)}
+                                                                interactive
+                                                                padding="none"
+                                                            >
+                                                                <div className="day-lesson-members-list">
+                                                                    {lesson.memberIds.map((id, idx) => {
+                                                                        const member = members.find(m => m.id === id);
+                                                                        if (!member) return null;
+                                                                        const name = member.name || '';
+                                                                        const surname = member.surname ? ` ${member.surname.charAt(0)}.` : '';
+                                                                        return (
+                                                                            <span key={id} className="day-lesson-member-name">
+                                                                                {name}{surname}{idx < lesson.memberIds.length - 1 ? ', ' : ''}
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Lesson Detail Modal */}
+                    <Modal
+                        isOpen={!!selectedLesson}
+                        onClose={() => setSelectedLesson(null)}
+                        title="Ders Detayı"
+                        variant="bottom-sheet"
+                    >
+                        {selectedLesson && (
+                            <div className="lesson-detail">
+                                <div className="lesson-detail-header">
+                                    <div className="lesson-detail-date">
+                                        <FiCalendar />
+                                        <span>
+                                            {selectedLesson.date.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                            {', '}
+                                            {selectedLesson.date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="lesson-detail-section">
+                                    <h4>Katılımcılar ({selectedLesson.memberIds.length})</h4>
+                                    <div className="lesson-members-list">
+                                        {selectedLesson.memberIds.map(id => {
+                                            const member = members.find(m => m.id === id);
+                                            return (
+                                                <div key={id} className="lesson-member-item">
+                                                    <Avatar name={member ? `${member.name} ${member.surname}` : 'Üye'} size="sm" />
+                                                    <span>{member ? `${member.name} ${member.surname}` : 'Bilinmeyen Üye'}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {selectedLesson.notes && (
+                                    <div className="lesson-detail-section">
+                                        <h4>Notlar</h4>
+                                        <p>{selectedLesson.notes}</p>
+                                    </div>
+                                )}
+
+                                <ModalFooter>
+                                    <Button
+                                        variant="danger"
+                                        leftIcon={<FiTrash2 />}
+                                        loading={isDeletingLesson}
+                                        onClick={async () => {
+                                            if (!selectedLesson) return;
+                                            const confirmed = window.confirm('Bu dersi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.');
+                                            if (!confirmed) return;
+                                            setIsDeletingLesson(true);
+                                            try {
+                                                await deleteDoc(doc(db, 'lessons', selectedLesson.id));
+                                                setSelectedLesson(null);
+                                                setRefreshTrigger(prev => prev + 1);
+                                            } catch (err) {
+                                                if (import.meta.env.DEV) console.error('Ders silme hatası:', err);
+                                                alert('Ders silinirken bir hata oluştu.');
+                                            } finally {
+                                                setIsDeletingLesson(false);
+                                            }
+                                        }}
+                                    >Sil</Button>
+                                    <Button variant="secondary" onClick={() => setSelectedLesson(null)}>Kapat</Button>
+                                    <Button variant="primary" leftIcon={<FiUserCheck />}>Yoklama Al</Button>
+                                </ModalFooter>
+                            </div>
+                        )}
+                    </Modal>
+
+                    {/* New Lesson Modal */}
+                    {isAddModalOpen && (
+                        <LessonModal
+                            lesson={null}
+                            isOpen={isAddModalOpen}
+                            onClose={() => setIsAddModalOpen(false)}
+                            isNewLesson={true}
+                            variant="bottom-sheet"
+                            branches={branches}
+                            defaultBranchId={selectedBranchId}
+                            onRefetch={() => {
+                                setRefreshTrigger(prev => prev + 1);
+                            }}
+                        />
+                    )}
+                </div>
+            </div>
+        </AppShell>
+    );
+};
+
+export default CalendarPage;

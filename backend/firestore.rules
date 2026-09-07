@@ -1,0 +1,1128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Tenants (white-label gyms): any signed-in user may look one up by
+    // code to join it. Only the creator (ownerUid) or an active tenant
+    // admin may edit it. Known gap: `code`
+    // uniqueness isn't enforced by rules (no query support here); until a
+    // Cloud Function trigger adds a check, two concurrent creates could in
+    // theory pick the same code. Low risk while tenant creation is admin-
+    // mediated / low volume.
+    match /tenants/{tenantId} {
+      // Readable by any signed-in user so joining by gym code works before
+      // membership exists. Everything in this doc is therefore public to
+      // signed-in users — keep it to branding, code, name and address.
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.ownerUid == request.auth.uid &&
+        request.resource.data.code is string && request.resource.data.code.size() > 0 &&
+        request.resource.data.name is string && request.resource.data.name.size() > 0;
+      // Branding edits (settings screen): any active tenant admin, not just
+      // the original creator — matches every other admin-gated write in this
+      // file. ownerUid/code stay immutable regardless of which path grants access.
+      // `get(..., '')` rather than `.ownerUid`: reading an absent map key is an
+      // ERROR in rules, not `null`, and an error denies the whole write. Gyms
+      // created by the backfill scripts have no `ownerUid`, so every settings
+      // save in those gyms failed — logo, name, colours, hours, all of it —
+      // with nothing pointing at this line. The field stays immutable either
+      // way: a request that introduces one compares 'X' against '' and is
+      // refused.
+      allow update: if (
+        (isTenantAdmin(tenantId) || (isSignedIn() && resource.data.get('ownerUid', '') == request.auth.uid)) &&
+        request.resource.data.get('ownerUid', '') == resource.data.get('ownerUid', '') &&
+        request.resource.data.code == resource.data.code &&
+        // Server-owned: the seat tally is maintained by syncActiveMemberCount
+        // and the subscription by verified store receipts. If the client could
+        // write either, the paid tier would be a suggestion.
+        request.resource.data.get('activeMemberCount', 0) == resource.data.get('activeMemberCount', 0) &&
+        request.resource.data.get('subscription', {}) == resource.data.get('subscription', {})
+      );
+      allow delete: if false;
+    }
+
+    /**
+     * Anything about a gym that must not be readable by every signed-in
+     * user — contact e-mail and phone, billing details, internal notes.
+     * The parent `tenants` doc is deliberately world-readable (join by
+     * code), so sensitive fields must be written HERE, never there.
+     */
+    /**
+     * A person's own notification preferences (P4-3).
+     *
+     * Keyed by uid, not by membership: the phone belongs to the person, not to
+     * a gym, and someone in two gyms does not want to mute the same category
+     * twice. Only the owner reads or writes it; Cloud Functions read it with
+     * the Admin SDK before every push.
+     *
+     * An absent document means "everything on" — see `wantsCategory`. Nothing
+     * writes it until the person actually changes a switch.
+     */
+    match /user_settings/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /tenants/{tenantId}/private/{docId} {
+      // Members, plus applicants still waiting on a decision — see isPendingIn.
+      allow read: if isTenantMember(tenantId) || isPendingIn(tenantId);
+      allow write: if isTenantAdmin(tenantId);
+    }
+
+    // Tenant membership requests/approvals. Doc id is deterministic
+    // `${tenantId}_${uid}` (enforced on create) so: a user can hold at most
+    // one request per tenant, duplicate join attempts are a natural no-op,
+    // and tenant-admin checks below are a plain get() instead of a query.
+    // --- Role / permission model -------------------------------------
+    // A user can hold SEVERAL roles in one gym (a small studio's owner is
+    // usually also a coach), so roles live in a `roles` array. The legacy
+    // single `role` field is gone: every document was backfilled and the
+    // write paths no longer emit it, so `roles` is the only shape.
+    function membershipDoc(tid) {
+      return get(/databases/$(database)/documents/tenant_memberships/$(tid + '_' + request.auth.uid)).data;
+    }
+
+    function hasMembership(tid) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/tenant_memberships/$(tid + '_' + request.auth.uid));
+    }
+
+    function membershipRoles(tid) {
+      return membershipDoc(tid).roles;
+    }
+
+    function isActiveIn(tid) {
+      return hasMembership(tid) && membershipDoc(tid).status == 'active';
+    }
+
+    function hasRoleIn(tid, role) {
+      return isActiveIn(tid) && role in membershipRoles(tid);
+    }
+
+    function isTenantAdmin(tid) {
+      return hasRoleIn(tid, 'admin');
+    }
+
+    // Front-desk QR scanning. Admins always may; a trainer can be delegated
+    // it so someone covers the door when the owner isn't in — the norm in a
+    // small studio. Deliberately narrower than full admin.
+    function canCheckIn(tid) {
+      return hasRoleIn(tid, 'admin') ||
+        (isActiveIn(tid) && 'checkin' in membershipDoc(tid).get('permissions', []));
+    }
+
+    // Anyone with an ACTIVE membership of any role in this tenant. Used to
+    // scope reads that every member legitimately needs (the class schedule)
+    // but that must not leak across gyms.
+    /**
+     * NOTE — there is no platform-wide admin escape hatch anywhere in
+     * this file.
+     *
+     * marte06's global `admin` custom claim used to satisfy every GymEntra
+     * check, which made its holder a platform super-user with read access to
+     * every gym's members, body measurements and payment ledger. That was
+     * reasonable while Tarabya Marte was the only tenant; in a white-label
+     * product sold to other gyms it is not.
+     *
+     * Nothing is lost: genuine support work runs through the Admin SDK in a
+     * Cloud Function, which bypasses rules anyway and leaves a server-side
+     * trail — unlike a claim that silently widens every client session.
+     *
+     */
+    function isTenantMember(tid) {
+      return isActiveIn(tid);
+    }
+
+    /**
+     * Someone whose join request is still waiting (PER-1).
+     *
+     * Not a member — they can read nothing a member can. This exists for one
+     * thing: the pending screen offers to ring the gym ("onayım nerede
+     * kaldı?"), and the number lives in the members-only contact document, so
+     * the person who most needs it was the one person who could not read it.
+     *
+     * Deliberately narrower than moving the phone onto the tenant doc, which
+     * is world-readable to every signed-in user so join-by-code works: that
+     * would hand every gym's contact details to anyone with an account. This
+     * grants exactly the applicant, exactly for the gym they applied to.
+     *
+     * A `get()` rather than a query — the membership id is `{tid}_{uid}`, so
+     * their own document is addressable without searching.
+     */
+    function isPendingIn(tid) {
+      let path = /databases/$(database)/documents/tenant_memberships/$(tid + '_' + request.auth.uid);
+      return isSignedIn() && exists(path) && get(path).data.status == 'pending';
+    }
+
+    // Same shape as isTenantAdmin, but accepts either staff role — used for
+    // program authoring (trainers build programs; admins can too for oversight).
+    function isTenantStaff(tid) {
+      return hasRoleIn(tid, 'admin') || hasRoleIn(tid, 'trainer');
+    }
+
+    /**
+     * MEMBER-5c, decision 4: an approved parent acts on their child's behalf.
+     *
+     * Only `approved` counts. A `pending` link grants the parent enough to
+     * READ the child's membership row — they cannot judge a request whose
+     * subject they cannot see — but nothing more: a link the parent has not
+     * accepted must not carry authority over anyone's bookings or money.
+     *
+     * A `get()` rather than a query, which is what makes this expressible in
+     * rules at all: the membership id is `{tenantId}_{uid}`, so the child's
+     * document is addressable without searching for it.
+     */
+    function isGuardianOf(tid, childUid) {
+      let path = /databases/$(database)/documents/tenant_memberships/$(tid + '_' + childUid);
+      return isSignedIn() && exists(path) &&
+        get(path).data.get('guardianId', '') == request.auth.uid &&
+        get(path).data.get('guardianStatus', '') == 'approved';
+    }
+
+    match /tenant_memberships/{membershipId} {
+      // Read: self, or any tenant staff (admin or trainer) — trainers need
+      // the member list to build the client roster (Üyeler screen).
+      // Approvals (create/update below) stay admin-only.
+      //
+      // A plain member may additionally read the tenant's TRAINER rows —
+      // PKG-8's booking flow starts by picking a trainer, so the list has to
+      // be readable by whoever is booking. Deliberately narrow: only rows
+      // whose roles include 'trainer', so a member still cannot enumerate the
+      // gym's other members (the privacy reason `memberName` is denormalised
+      // everywhere else).
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId) ||
+        (isTenantMember(resource.data.tenantId) &&
+          'trainer' in resource.data.roles) ||
+        // A parent reads their child's row (MEMBER-5b). Present as soon as the
+        // link is requested, before the parent has answered: they cannot judge
+        // a request whose subject they are not allowed to see. Rejecting the
+        // request clears `guardianId`, which withdraws this access again.
+        resource.data.get('guardianId', '') == request.auth.uid
+      );
+      // Reading your OWN membership slot must work even when nothing is
+      // there yet. `requestJoin` looks first to decide between create
+      // (first-timer) and update (rejoin), but every clause above
+      // dereferences `resource.data`, which ERRORS on a missing document —
+      // so the very first join attempt failed before it could write.
+      //
+      // The doc id is `{tenantId}_{uid}`, so matching the wildcard on the
+      // caller's own uid answers "is there one?" without touching
+      // `resource`. Scoped to `get`: it must not widen `list`, or a member
+      // could enumerate the roster.
+      allow get: if isSignedIn() && membershipId.matches('^.*_' + request.auth.uid + '$');
+      // Self-service join request: can only request 'member' role for
+      // yourself, starting 'pending' — never self-grant active/admin/trainer.
+      // Exception: the person who just created a tenant (its ownerUid) may
+      // immediately grant themself its 'admin' / 'active' membership — the
+      // tenant doc's ownerUid was itself locked to their own uid on create,
+      // so this can't be used to take over someone else's gym.
+      allow create: if isSignedIn() &&
+        membershipId == request.resource.data.tenantId + '_' + request.auth.uid &&
+        request.resource.data.userId == request.auth.uid &&
+        (
+          (request.resource.data.roles == ['member'] && request.resource.data.status == 'pending') ||
+          (
+            request.resource.data.roles == ['admin'] &&
+            request.resource.data.status == 'active' &&
+            get(/databases/$(database)/documents/tenants/$(request.resource.data.tenantId)).data.ownerUid == request.auth.uid
+          )
+        );
+      // Approve/reject: tenant admin only, and only status/approvedAt change.
+      /**
+       * Free tier: a gym may hold up to FREE_MEMBER_LIMIT active members
+       * before it needs a subscription.
+       *
+       * Enforced here, not just in the app: the client-side check is UX only
+       * and anyone can call Firestore directly. Rules cannot count documents,
+       * so the tally is denormalised onto the tenant by the
+       * syncActiveMemberCount function and read back here.
+       *
+       * A missing counter (a gym created before this shipped) is treated as
+       * under the limit rather than locking the gym out.
+       */
+      function withinMemberLimit(tid) {
+        let tenant = get(/databases/$(database)/documents/tenants/$(tid)).data;
+        return tenant.get('activeMemberCount', 0) < 10 ||
+          tenant.get('subscription', {}).get('status', '') == 'active';
+      }
+
+      /**
+       * A gym may hold at most ADMIN_LIMIT admins. Small-studio reality is
+       * that admin means "has the keys" — payment ledger, branding, everyone
+       * else's role — and a cap keeps that list from drifting into "everyone
+       * who ever asked". Trainers are unlimited; only the admin seat is capped.
+       *
+       * Same shape as `withinMemberLimit`: rules cannot count documents, so
+       * `activeAdminCount` is denormalised by `syncActiveMemberCount` and read
+       * back here. A missing counter (a gym that predates this) reads as
+       * under the limit rather than locking every gym out at once.
+       */
+      function withinAdminLimit(tid) {
+        return get(/databases/$(database)/documents/tenants/$(tid)).data.get('activeAdminCount', 0) < 3;
+      }
+
+      /**
+       * MEMBER-5b, decision 6: an under-18 member cannot be activated until
+       * their parent has approved the link. The gym's approval and the
+       * parent's are two separate gates and this is where they meet.
+       *
+       * Age is derived from `birthDate`, never stored: an `isMinor` field is
+       * right on the day it is written and wrong the next, and this is exactly
+       * the decision that must not go stale.
+       *
+       * 6575 days is 18 years plus the most leap days that span can hold, so
+       * the check errs on the side of still-a-minor for up to a day after the
+       * eighteenth birthday. Deliberate: needing a parent's approval one day
+       * too long is a nuisance, activating a minor without it is not.
+       *
+       * A member with NO birth date is not blocked. Every member who predates
+       * MEMBER-5a has none, and locking the gym out of its own roster to close
+       * a gap the sign-up screen should close is the wrong trade. The client
+       * asks for the date; this rule enforces it once it exists.
+       */
+      function guardianApprovedIfMinor(data) {
+        return !('birthDate' in data) ||
+          request.time > data.birthDate + duration.value(6575, 'd') ||
+          data.get('guardianStatus', '') == 'approved';
+      }
+
+      // Guardian fields themselves need no rule of their own: every `update`
+      // below is `hasOnly`-constrained and none of them lists a guardian
+      // field, so a client cannot write one. They are set exclusively by the
+      // requestGuardian / respondToGuardian callables, which run on the Admin
+      // SDK and bypass these rules — a child who could write `guardianStatus`
+      // would be approving their own parental consent.
+
+      // Approve/reject, and assign roles or delegated permissions. A trainer
+      // can never grant themselves 'checkin' — only a tenant admin writes here.
+      allow update: if isTenantAdmin(resource.data.tenantId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'approvedAt', 'roles', 'permissions']) &&
+        request.resource.data.status in ['active', 'rejected', 'suspended'] &&
+        // Activating a member is what consumes a seat; rejecting, suspending
+        // and role edits stay free.
+        (
+          request.resource.data.status != 'active' ||
+          resource.data.status == 'active' ||
+          !('member' in request.resource.data.get('roles', [])) ||
+          withinMemberLimit(resource.data.tenantId)
+        ) &&
+        // Activation is also where the parental gate closes.
+        (request.resource.data.status != 'active' || guardianApprovedIfMinor(resource.data)) &&
+        // Never strip the last admin out of their own gym — the same guard
+        // deleteMyAccount applies. Self-demotion has to go through a path
+        // that can count the remaining admins, which rules cannot do.
+        (resource.data.userId != request.auth.uid || 'admin' in request.resource.data.get('roles', [])) &&
+        // The cap only fires on the write that GRANTS admin — someone already
+        // admin being edited for something else (permissions, a demotion)
+        // must not be blocked by a limit they are not the one hitting.
+        ('admin' in resource.data.get('roles', []) ||
+          !('admin' in request.resource.data.get('roles', [])) ||
+          withinAdminLimit(resource.data.tenantId));
+      // An admin corrects a member's basic details. Names arrive from the
+      // member's own sign-up (or the marte06 migration) and are routinely
+      // wrong, abbreviated or missing a phone.
+      //
+      // A separate rule rather than widening the one above: that one
+      // validates `status` on every write, so a pure profile edit on a
+      // still-`pending` request would have failed it.
+      allow update: if isTenantAdmin(resource.data.tenantId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['userDisplayName', 'phone', 'birthDate', 'heightCm', 'photoUrl']) &&
+        (!('heightCm' in request.resource.data) || (request.resource.data.heightCm is number && request.resource.data.heightCm >= 100 && request.resource.data.heightCm <= 250)) &&
+        (!('userDisplayName' in request.resource.data) ||
+          (request.resource.data.userDisplayName is string &&
+           request.resource.data.userDisplayName.size() > 0 &&
+           request.resource.data.userDisplayName.size() <= 100)) &&
+        (!('phone' in request.resource.data) ||
+          (request.resource.data.phone is string && request.resource.data.phone.size() <= 30)) &&
+        (!('birthDate' in request.resource.data) ||
+          request.resource.data.birthDate is timestamp);
+      // The member corrects their own details. Same three fields and the same
+      // validation as the admin path above — a separate rule for the same
+      // reason that one is separate: the approval rule validates `status` on
+      // every write, so a profile edit would fail it.
+      //
+      // Allowed while `pending` too: the sign-up screen promises birth date
+      // and photo will be asked for "later", and someone waiting on approval
+      // is exactly who is filling that in.
+      // `size() > 0` as well as `hasOnly`: an empty diff satisfies `hasOnly`,
+      // so without it a member could write their own document as long as the
+      // write changed nothing. Harmless to the data, but it turns "a member
+      // may only edit these three fields" into "a member may write this
+      // document", and the leave-path tests are right to object.
+      // `affectedKeys`, not `changedKeys`: `changedKeys` lists only keys that
+      // exist in BOTH maps with different values, so ADDING a field it does
+      // not mention yields an empty set. That made every "fill in what you
+      // left blank" write fail — a member adding their first phone number or
+      // height changed nothing by that definition, so the `size() > 0` guard
+      // rejected them. `affectedKeys` counts added, removed and changed keys,
+      // which is what "these are the only fields you may touch" means.
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().size() > 0 &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['userDisplayName', 'phone', 'birthDate', 'heightCm', 'photoUrl']) &&
+        (!('heightCm' in request.resource.data) || (request.resource.data.heightCm is number && request.resource.data.heightCm >= 100 && request.resource.data.heightCm <= 250)) &&
+        (!('userDisplayName' in request.resource.data) ||
+          (request.resource.data.userDisplayName is string &&
+           request.resource.data.userDisplayName.size() > 0 &&
+           request.resource.data.userDisplayName.size() <= 100)) &&
+        (!('phone' in request.resource.data) ||
+          (request.resource.data.phone is string && request.resource.data.phone.size() <= 30)) &&
+        (!('birthDate' in request.resource.data) ||
+          request.resource.data.birthDate is timestamp);
+      // A member (or trainer) ends their own membership. Admins are excluded:
+      // they might be the gym's last one, and rules cannot count the
+      // remaining admins — transferring ownership is a separate flow.
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status == 'active' &&
+        !('admin' in resource.data.roles) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'leftAt']) &&
+        request.resource.data.status == 'left';
+      // Rejoin: someone who left, or whose request was rejected, applies
+      // again. Without this the doc id (`{tenantId}_{uid}`) is already taken,
+      // so `create` fails and the person is locked out of that gym forever —
+      // a member who quits in January cannot come back in March.
+      //
+      // Goes back to `pending`, never straight to `active`: the admin
+      // approves it exactly like a first-time request. Roles and permissions
+      // reset to a plain member so a former trainer cannot carry old
+      // privileges through a rejoin.
+      //
+      // `shortCode` is deliberately NOT in the allowed key list: it is
+      // assigned by an onDocumentCreated trigger that will never fire again
+      // for this doc, so wiping it would cost the member their check-in code
+      // permanently.
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        resource.data.status in ['left', 'rejected'] &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.roles == ['member'] &&
+        request.resource.data.get('permissions', []) == [] &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'roles', 'permissions', 'requestedAt', 'leftAt', 'approvedAt']);
+      allow delete: if false;
+    }
+
+    // Class schedule (one doc per occurrence, not a recurring series).
+    // Self-service booking is a single-array, single-uid toggle: a member
+    // may only add/remove their OWN uid, in exactly one of the two arrays,
+    // per write. That's what makes bookClass()/cancelBooking() in the app
+    // safe to run directly from the client. Waitlist promotion on cancel
+    // is intentionally NOT automated here (would require moving a uid
+    // between two different users' arrays in one write, which this
+    // single-uid-toggle model can't express safely) — admins promote
+    // manually for now.
+    function isSelfArrayAdd(fieldName) {
+      let before = fieldName in resource.data ? resource.data[fieldName] : [];
+      let after = fieldName in request.resource.data ? request.resource.data[fieldName] : [];
+      return after.size() == before.size() + 1 &&
+        after.hasAll(before) &&
+        after.removeAll(before).hasOnly([request.auth.uid]);
+    }
+
+    function isSelfArrayRemove(fieldName) {
+      let before = fieldName in resource.data ? resource.data[fieldName] : [];
+      let after = fieldName in request.resource.data ? request.resource.data[fieldName] : [];
+      return before.size() == after.size() + 1 &&
+        before.hasAll(after) &&
+        before.removeAll(after).hasOnly([request.auth.uid]);
+    }
+
+    /**
+     * The same single-uid toggle, but the uid is a child's and the caller is
+     * their approved parent (MEMBER-5c, decision 4).
+     *
+     * The uid has to be read out of the diff rather than passed in, because a
+     * rule only ever sees the document. `&&` short-circuits, so `[0]` is
+     * reached only once the size checks have proved there is exactly one.
+     */
+    function isGuardianArrayAdd(fieldName, tid) {
+      let before = fieldName in resource.data ? resource.data[fieldName] : [];
+      let after = fieldName in request.resource.data ? request.resource.data[fieldName] : [];
+      return after.size() == before.size() + 1 &&
+        after.hasAll(before) &&
+        after.removeAll(before).size() == 1 &&
+        isGuardianOf(tid, after.removeAll(before)[0]) &&
+        canBookGroupClassFor(tid, after.removeAll(before)[0]);
+    }
+
+    function isGuardianArrayRemove(fieldName, tid) {
+      let before = fieldName in resource.data ? resource.data[fieldName] : [];
+      let after = fieldName in request.resource.data ? request.resource.data[fieldName] : [];
+      return before.size() == after.size() + 1 &&
+        before.hasAll(after) &&
+        before.removeAll(after).size() == 1 &&
+        isGuardianOf(tid, before.removeAll(after)[0]);
+    }
+
+    /**
+     * PKG-4: may this member book a group class right now? Only the
+     * `{unlimited: true}` shape is enforceable today — a quota'd allowance
+     * needs a credit-consuming callable (PKG-8) that doesn't exist yet, so a
+     * package configured that way currently books nothing rather than
+     * silently metering for free. See `member_entitlements`' own comment.
+     *
+     * `endsAt > request.time` is why this cache is safe to trust even though
+     * nothing refreshes it as time passes: the cache is only rewritten when
+     * the source package is *written*, so a lapsed membership would
+     * otherwise keep granting access forever between writes.
+     */
+    function canBookGroupClassFor(tid, uid) {
+      let path = /databases/$(database)/documents/member_entitlements/$(tid + '_' + uid);
+      return exists(path) &&
+        get(path).data.endsAt > request.time &&
+        get(path).data.entitlements.get('groupClasses', {}).get('unlimited', false) == true;
+    }
+
+    function canBookGroupClass(tid) {
+      return canBookGroupClassFor(tid, request.auth.uid);
+    }
+
+    /**
+     * The coach a class belongs to (PER-8). `get(...,'')` because every class
+     * created before the field existed has no trainerId — those stay
+     * admin-only, which is what they were.
+     */
+    function ownsClass() {
+      return isSignedIn() && resource.data.get('trainerId', '') == request.auth.uid;
+    }
+
+    match /classes/{classId} {
+      // Scoped to the gym: without this, any signed-in user could read every
+      // gym's schedule AND the uid lists of who booked each class.
+      allow read: if isTenantMember(resource.data.tenantId);
+      // A trainer may schedule their OWN class; an admin may schedule anyone's
+      // (PER-8). The trainer branch pins trainerId to the caller — otherwise
+      // "create a class" would also mean "put it on a colleague's plate".
+      allow create: if isTenantAdmin(request.resource.data.tenantId) || (
+        hasRoleIn(request.resource.data.tenantId, 'trainer') &&
+        request.resource.data.trainerId == request.auth.uid
+      );
+      allow update: if isTenantAdmin(resource.data.tenantId) || (
+        // The coach who runs it: register, time, capacity, cancellation.
+        // tenantId and trainerId are pinned — editing your own class must not
+        // become a way to move it to another gym or hand it to someone else.
+        // (Reassignment is an admin action, and admins are unconstrained above.)
+        ownsClass() &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        request.resource.data.get('trainerId', '') == resource.data.get('trainerId', '')
+      ) || (
+        // Must actually belong to this gym — otherwise anyone who learned a
+        // class doc id could book themselves into another gym's session.
+        isTenantMember(resource.data.tenantId) && (
+          (
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['bookedUserIds']) &&
+            (
+              (isSelfArrayAdd('bookedUserIds') && canBookGroupClass(resource.data.tenantId)) ||
+              isSelfArrayRemove('bookedUserIds') ||
+              // A parent books or cancels for their child. The entitlement
+              // checked is the CHILD's, not the parent's — decision 2 says the
+              // parent need not hold a package of their own.
+              isGuardianArrayAdd('bookedUserIds', resource.data.tenantId) ||
+              isGuardianArrayRemove('bookedUserIds', resource.data.tenantId)
+            ) &&
+            request.resource.data.bookedUserIds.size() <= resource.data.capacity
+          ) ||
+          (
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['waitlistUserIds']) &&
+            (
+              (isSelfArrayAdd('waitlistUserIds') && canBookGroupClass(resource.data.tenantId)) ||
+              isSelfArrayRemove('waitlistUserIds') ||
+              isGuardianArrayAdd('waitlistUserIds', resource.data.tenantId) ||
+              isGuardianArrayRemove('waitlistUserIds', resource.data.tenantId)
+            )
+          )
+        )
+      );
+      allow delete: if isTenantAdmin(resource.data.tenantId) || ownsClass();
+    }
+
+    // Front-desk check-ins: an immutable attendance record. Only tenant
+    // staff can create one (a member can't self-check-in just by knowing
+    // their own QR payload — a staff device has to scan it), matching the
+    // "member shows QR, front desk scans" flow.
+    match /checkins/{checkinId} {
+      allow read: if canCheckIn(resource.data.tenantId) ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        isGuardianOf(resource.data.tenantId, resource.data.userId);
+      allow create: if canCheckIn(request.resource.data.tenantId) &&
+        request.resource.data.userId is string &&
+        request.resource.data.membershipId is string &&
+        // PKG-3: why this entry was let in — 'ok' or which warning staff
+        // overrode. Reporting material ("kaç kişi paketsiz alındı"), not
+        // an access gate; the gate already happened client-side.
+        // 'guardian' (MEMBER-5d): admitted on a CHILD's active membership.
+        // Its own value, not 'ok': those entries are legitimate but they are
+        // not this person's own package, and the ledger has to say so.
+        request.resource.data.accessReason in ['ok', 'guardian', 'no-package', 'no-session-today', 'frozen'];
+      allow update, delete: if false;
+    }
+
+    // Workout programs a trainer builds and assigns to one member. Exercises
+    // are an embedded array (bounded, always read/written as a whole) —
+    // same pattern as classes' bookedUserIds.
+    match /programs/{programId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId)
+      );
+      allow create: if isTenantStaff(request.resource.data.tenantId);
+      allow update: if isTenantStaff(resource.data.tenantId) &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        request.resource.data.memberId == resource.data.memberId;
+      allow delete: if isTenantStaff(resource.data.tenantId);
+    }
+
+    // A member's own record of actually doing a program. Self-service like
+    // check-in's QR flow reasoning doesn't apply here — starting/logging a
+    // workout is something only the member themself does, live, mid-session.
+    match /workout_logs/{logId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId)
+      );
+      // isTenantMember: without it, anyone could inject workout logs into a
+      // gym they don't belong to (staff of that gym can read them).
+      allow create: if isSignedIn() &&
+        request.resource.data.memberId == request.auth.uid &&
+        isTenantMember(request.resource.data.tenantId) &&
+        request.resource.data.programId is string;
+      allow update: if isSignedIn() &&
+        resource.data.memberId == request.auth.uid &&
+        request.resource.data.memberId == resource.data.memberId &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        request.resource.data.programId == resource.data.programId &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['exerciseLogs', 'completedAt']);
+      allow delete: if false;
+    }
+
+    // Append-only body measurement log — members log their own, staff can
+    // see it for coaching context, nobody edits history after the fact.
+    match /measurements/{entryId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId) ||
+        isGuardianOf(resource.data.tenantId, resource.data.memberId)
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.memberId == request.auth.uid &&
+        isTenantMember(request.resource.data.tenantId) &&
+        request.resource.data.weightKg is number &&
+        request.resource.data.weightKg > 0 && request.resource.data.weightKg < 500;
+      allow update, delete: if false;
+    }
+
+    // Manual payment ledger — no in-app purchase processing. Admin entries
+    // are trusted immediately; member-submitted notices sit pending until
+    // an admin confirms them against cash/bank records.
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantAdmin(resource.data.tenantId) ||
+        isGuardianOf(resource.data.tenantId, resource.data.memberId)
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.amount is number &&
+        request.resource.data.amount > 0 && request.resource.data.amount <= 1000000 &&
+        request.resource.data.method in ['cash', 'bank_transfer', 'card'] &&
+        (
+          (
+            // Member self-notice: must actually belong to this gym, otherwise
+            // anyone could spam any gym's approval queue.
+            request.resource.data.memberId == request.auth.uid &&
+            isTenantMember(request.resource.data.tenantId) &&
+            request.resource.data.status == 'pending'
+          ) ||
+          (
+            // A parent files the notice, but the entry stays in the CHILD's
+            // ledger (`memberId` is the child). `submittedBy` records who
+            // actually paid — without it a parent's three payments for three
+            // children collapse into one person's history.
+            isGuardianOf(request.resource.data.tenantId, request.resource.data.memberId) &&
+            request.resource.data.get('submittedBy', '') == request.auth.uid &&
+            request.resource.data.status == 'pending'
+          ) ||
+          (
+            isTenantAdmin(request.resource.data.tenantId) &&
+            request.resource.data.status == 'confirmed'
+          )
+        ) &&
+        // ADMIN-4: a reversal must say what it cancels, or the ledger holds a
+        // negative row nothing accounts for. Only an admin writes one — a
+        // member cancelling their own charge would be erasing a debt.
+        (
+          request.resource.data.get('kind', 'charge') != 'reversal' ||
+          (isTenantAdmin(request.resource.data.tenantId) &&
+           request.resource.data.reversesPaymentId is string)
+        );
+      // Confirm/reject: tenant admin only, only a still-pending notice, only status/confirmedAt change.
+      allow update: if isTenantAdmin(resource.data.tenantId) &&
+        resource.data.status == 'pending' &&
+        request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'confirmedAt']) &&
+        request.resource.data.status in ['confirmed', 'rejected'];
+      // ADMIN-4: flagging a row as reversed. Deliberately narrow — the
+      // amount, method and date stay exactly as first recorded, because an
+      // edited figure is indistinguishable from a correctly entered one and
+      // the point of the correction is that it leaves a trail.
+      //
+      // Only once: `reversedAt` must not already be set, otherwise the same
+      // row could be cancelled repeatedly and each cancellation would
+      // subtract from revenue again.
+      allow update: if isTenantAdmin(resource.data.tenantId) &&
+        !('reversedAt' in resource.data) &&
+        request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(['reversedAt', 'reversedByPaymentId', 'reversalReason']) &&
+        request.resource.data.reversedByPaymentId is string;
+      allow delete: if false;
+    }
+
+    // Expo push tokens — doc id is the token itself (natural de-dupe on
+    // re-register). Nobody ever reads these client-side; only Cloud
+    // Functions (Admin SDK, bypasses rules) look them up to send a push.
+    /**
+     * A staff member flagging something wrong with a bundled movement
+     * explainer (PER-19) — a pose that misrepresents the lift, a muscle map
+     * that names the wrong prime mover, a translation that reads badly.
+     *
+     * The explainers ship inside the app; they are OUR content, not the gym's,
+     * so a report is a message to the developers and not something the gym
+     * administers. That is why nobody can read this collection from a client:
+     * there is no in-app inbox to serve, and a report naming a colleague's
+     * gym has no business being visible to another tenant.
+     *
+     * Staff only. A member cannot judge whether a pose is anatomically wrong,
+     * and opening writes to every signed-in user makes this a spam target.
+     * Append-only: a report is a point-in-time observation, so there is
+     * nothing to edit and deleting one only loses the signal.
+     */
+    /**
+     * Password-reset rate limiting (PER-2). Two counters, both keyed by a
+     * SHA-256 rather than the value: raw, they would be a list of everyone
+     * who forgot their password and a log of who connected from where — an IP
+     * address is personal data.
+     *
+     * Entirely server-owned; only `requestPasswordReset` touches them, through
+     * the Admin SDK, which does not pass through these rules. Closed to every
+     * client: one that could read them would learn which addresses asked
+     * recently, and one that could write them could clear its own limit —
+     * which is the whole point of the collections.
+     */
+    match /password_reset_throttle/{addressHash} {
+      allow read, write: if false;
+    }
+
+    match /password_reset_ip/{ipHash} {
+      allow read, write: if false;
+    }
+
+    /**
+     * A coach's note about a member (PER-14c). Staff of the gym read and
+     * write it; the member never reads it — that is the point of the note.
+     * `tenantId` and `memberId` are pinned to the doc id so a note cannot be
+     * re-addressed to another person or gym by editing its fields.
+     */
+    /**
+     * A member asking for a renewal (PER-15). The member opens it (one per
+     * person — the doc id pins it) and may withdraw it; staff read it; an
+     * admin may close it. The server closes it too when a package is
+     * assigned. Nothing else on it changes hands.
+     */
+    /**
+     * Announcements (PER-16): the gym to everyone in it. Any active member
+     * or trainer reads; only an admin writes; no edits — a wrong post is
+     * deleted and re-posted, since the push already left with the old words.
+     */
+    match /announcements/{announcementId} {
+      allow read: if isSignedIn() && isTenantMember(resource.data.tenantId);
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 80 &&
+        request.resource.data.body is string &&
+        request.resource.data.body.size() <= 600;
+      allow update: if false;
+      allow delete: if isTenantAdmin(resource.data.tenantId);
+    }
+
+    match /renewal_requests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId)
+      );
+      allow create: if isSignedIn() &&
+        request.resource.data.memberId == request.auth.uid &&
+        isTenantMember(request.resource.data.tenantId) &&
+        requestId == request.resource.data.tenantId + '_' + request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        (!('note' in request.resource.data) || request.resource.data.note.size() <= 300);
+      allow update: if isSignedIn() && (
+        // member withdraws their own open request
+        (resource.data.memberId == request.auth.uid &&
+          resource.data.status == 'pending' &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['status']) &&
+          request.resource.data.status == 'withdrawn') ||
+        // member re-opens after a handled/withdrawn one (same doc, same id)
+        (resource.data.memberId == request.auth.uid &&
+          resource.data.status != 'pending' &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.memberId == resource.data.memberId &&
+          request.resource.data.tenantId == resource.data.tenantId) ||
+        // admin closes it
+        (isTenantAdmin(resource.data.tenantId) &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['status', 'handledAt', 'handledBy']) &&
+          request.resource.data.status == 'handled' &&
+          request.resource.data.handledBy == request.auth.uid)
+      );
+      allow delete: if false;
+    }
+
+    match /member_notes/{noteId} {
+      allow read: if isSignedIn() && isTenantStaff(resource.data.tenantId);
+      allow create, update: if isSignedIn() &&
+        isTenantStaff(request.resource.data.tenantId) &&
+        noteId == request.resource.data.tenantId + '_' + request.resource.data.memberId &&
+        request.resource.data.updatedBy == request.auth.uid &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 2000;
+      allow delete: if isSignedIn() && isTenantStaff(resource.data.tenantId);
+    }
+
+    match /exercise_reports/{reportId} {
+      allow read, update, delete: if false;
+      allow create: if isSignedIn() &&
+        isTenantStaff(request.resource.data.tenantId) &&
+        request.resource.data.reportedBy == request.auth.uid &&
+        request.resource.data.exerciseId is string &&
+        request.resource.data.exerciseId.size() > 0 &&
+        request.resource.data.exerciseId.size() <= 64 &&
+        request.resource.data.reason in ['pose', 'muscles', 'text', 'other'] &&
+        request.resource.data.note is string &&
+        request.resource.data.note.size() <= 500;
+    }
+
+    match /push_tokens/{token} {
+      allow read: if false;
+      // Shape validation only. Rules cannot prove the caller actually owns an
+      // opaque Expo token, so a signed-in user could in principle register
+      // someone else's device under their own uid — the effect is that THEIR
+      // notifications reach that device, a nuisance rather than a data leak.
+      // The real defences are elsewhere: the app revokes its token on sign-out
+      // (so a shared phone stops receiving the previous user's pushes) and
+      // sendPushToUser deletes tokens Expo reports as DeviceNotRegistered.
+      allow create: if isSignedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        token.matches('ExponentPushToken\\[.*\\]|ExpoPushToken\\[.*\\]') &&
+        request.resource.data.platform in ['ios', 'android'] &&
+        isTenantMember(request.resource.data.tenantId);
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      // Anyone may delete a token pointing at their own uid; the owner of a
+      // device also needs to be able to clear a stale registration.
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // A trainer grants a colleague permission to see (and take over) their PT
+    // calendar — e.g. to cover a sick day. Doc id is deterministic
+    // `${tenantId}_${ownerTrainerId}_${viewerTrainerId}`, so a trainer can only
+    // ever grant access to their OWN calendar (ownerTrainerId == auth.uid),
+    // never impersonate granting someone else's.
+    match /calendar_shares/{shareId} {
+      allow read: if isSignedIn() && (
+        resource.data.ownerTrainerId == request.auth.uid ||
+        resource.data.viewerTrainerId == request.auth.uid ||
+        isTenantAdmin(resource.data.tenantId)
+      );
+      allow create: if isSignedIn() &&
+        shareId == request.resource.data.tenantId + '_' + request.resource.data.ownerTrainerId + '_' + request.resource.data.viewerTrainerId &&
+        request.resource.data.ownerTrainerId == request.auth.uid &&
+        request.resource.data.viewerTrainerId != request.auth.uid;
+      allow update: if false;
+      // Revoke: the owner who granted it, or the admin, can pull it back.
+      allow delete: if isSignedIn() && (
+        resource.data.ownerTrainerId == request.auth.uid ||
+        isTenantAdmin(resource.data.tenantId)
+      );
+    }
+
+    // A trainer's 1:1 appointment with a member. Three ways to move a
+    // session to a different trainerId: (1) the tenant admin, unconditionally
+    // — covers the "nobody granted access but a trainer is absent" case; (2)
+    // the currently-assigned trainer editing their own session; (3) a
+    // colleague who was granted a calendar_share "taking over" by
+    // self-assigning — restricted to only the reassignment fields, and only
+    // to themself, never to a third party.
+    match /pt_sessions/{sessionId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        resource.data.trainerId == request.auth.uid ||
+        isTenantAdmin(resource.data.tenantId) ||
+        isGuardianOf(resource.data.tenantId, resource.data.memberId) ||
+        exists(/databases/$(database)/documents/calendar_shares/$(resource.data.tenantId + '_' + resource.data.trainerId + '_' + request.auth.uid))
+      );
+      // A trainer books onto their OWN calendar; only an admin may create a
+      // session on someone else's behalf. A `creditId`-bearing session (a
+      // member spending a package credit, PKG-8) is never a direct client
+      // write at all — only `bookPtSessions` (Cloud Function, Admin SDK)
+      // creates those, because it must also decrement the credit atomically
+      // and rules cannot arbitrate "spend the right credit, exactly once."
+      allow create: if request.resource.data.memberId is string &&
+        !('creditId' in request.resource.data) && (
+          (isTenantStaff(request.resource.data.tenantId) && request.resource.data.trainerId == request.auth.uid) ||
+          isTenantAdmin(request.resource.data.tenantId)
+        );
+      allow update: if
+        // A credit-linked session (PKG-8) can never be cancelled by a direct
+        // client write, by anyone — only `cancelPtSession` (Admin SDK) may,
+        // because cancelling one has to also decide whether the credit is
+        // refunded (plan-eng-review Faz 1.9) and rules cannot arbitrate
+        // that. Marking one 'completed' has no credit implications, so
+        // that direct write still goes through the checks below.
+        (!('creditId' in resource.data) || request.resource.data.status != 'cancelled') &&
+        (
+          isTenantAdmin(resource.data.tenantId) ||
+          (
+            // The assigned trainer may edit their own session, but must not be
+            // able to move it to another gym or swap out the member.
+            isSignedIn() && resource.data.trainerId == request.auth.uid &&
+            request.resource.data.tenantId == resource.data.tenantId &&
+            request.resource.data.memberId == resource.data.memberId
+          ) ||
+          (
+            isSignedIn() &&
+            exists(/databases/$(database)/documents/calendar_shares/$(resource.data.tenantId + '_' + resource.data.trainerId + '_' + request.auth.uid)) &&
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['trainerId', 'trainerName', 'originalTrainerId', 'updatedAt']) &&
+            request.resource.data.trainerId == request.auth.uid
+          )
+        );
+      allow delete: if isTenantAdmin(resource.data.tenantId);
+    }
+
+    /**
+     * A trainer's recurring working hours (PKG-7) — the precondition for a
+     * member being able to book them at all. Any tenant member can read it
+     * (they need it to browse for a slot); only the trainer themselves or
+     * an admin can write it.
+     */
+    match /trainer_availability/{availabilityId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if isSignedIn() && (
+        request.resource.data.trainerId == request.auth.uid ||
+        isTenantAdmin(request.resource.data.tenantId)
+      );
+    }
+
+    /**
+     * A privacy-preserving mirror of `pt_sessions` (PKG-8) — same doc id,
+     * but only `date`/`durationMinutes`/`status`, never `memberId`. A member
+     * browsing a trainer's calendar to book a slot needs to know a time is
+     * taken; `pt_sessions` itself can't be opened up for that without
+     * exposing who else trains with that trainer and when. Entirely
+     * server-owned — `syncTrainerBusySlots` (Cloud Function) is the only
+     * writer.
+     */
+    match /trainer_busy_slots/{slotId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow write: if false;
+    }
+
+    /**
+     * A gym's sellable package catalog (PKG-1). Read by every active member
+     * so the app can show "what you get" and "what you could buy"; written
+     * only by the tenant admin.
+     *
+     * `activeAssignmentCount` is a server-owned tally, same pattern as
+     * `tenants.activeMemberCount` — rules cannot count documents. It is the
+     * lock: while any `member_packages` row points at this package, its
+     * sellable content (price, duration, entitlements, freeze policy) is
+     * frozen. An admin who wants to change locked content creates a new
+     * version instead (client-side `createPackageVersion`); this rule only
+     * has to enforce that a locked row's content doesn't move.
+     */
+    match /gym_packages/{packageId} {
+      allow read: if isTenantMember(resource.data.tenantId);
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.kind in ['membership', 'lessons'] &&
+        request.resource.data.price is number && request.resource.data.price >= 0 &&
+        request.resource.data.entitlements.gymAccess is bool &&
+        request.resource.data.get('activeAssignmentCount', 0) == 0 &&
+        request.resource.data.isActive is bool;
+      allow update: if isTenantAdmin(resource.data.tenantId) &&
+        request.resource.data.tenantId == resource.data.tenantId &&
+        // activeAssignmentCount is never client-writable, locked or not —
+        // only the Cloud Function (Admin SDK) moves it.
+        request.resource.data.get('activeAssignmentCount', 0) == resource.data.get('activeAssignmentCount', 0) &&
+        (
+          // Unlocked: no live assignments yet, content is still fluid.
+          resource.data.get('activeAssignmentCount', 0) == 0 ||
+          // Locked: only visibility/order may change; a content edit must
+          // go through createPackageVersion instead.
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['isActive', 'sortOrder', 'updatedAt'])
+        );
+      // Deactivate instead: deleting would strand member_packages rows that
+      // still point at this package for their original terms.
+      allow delete: if false;
+    }
+
+    /**
+     * A time-boxed campaign layered on top of the catalog (PKG-5) — never
+     * touches `gym_packages` itself, since a locked package's content can't
+     * change once anything is sold from it. Its effect is copied onto
+     * `member_packages` at assignment time, so this doc can be edited,
+     * deactivated, or deleted afterward without touching what anyone
+     * already got — no lock needed here the way the catalog has one.
+     *
+     * `redeemed` is the one counter Firestore rules genuinely can enforce
+     * without a Cloud Function: unlike `activeAssignmentCount` (which needs
+     * a *query* to know how many `member_packages` point at a given
+     * package — rules cannot query), this is a plain "+1 and stay under the
+     * cap" check on the one document being written, the same shape as
+     * `classes.bookedUserIds.size() <= capacity`.
+     */
+    match /promotions/{promotionId} {
+      allow read: if isTenantStaff(resource.data.tenantId);
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.kind in ['percentDiscount', 'amountDiscount', 'bonusDays', 'bonusLessons'] &&
+        request.resource.data.value is number && request.resource.data.value > 0 &&
+        request.resource.data.appliesTo is list &&
+        request.resource.data.get('redeemed', 0) == 0 &&
+        request.resource.data.isActive is bool;
+      allow update: if isTenantAdmin(resource.data.tenantId) && (
+        // Redemption: only redeemed changes, by exactly +1, and only while
+        // under the cap (uncapped if maxRedemptions was never set).
+        (
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['redeemed']) &&
+          request.resource.data.redeemed == resource.data.get('redeemed', 0) + 1 &&
+          request.resource.data.redeemed <= resource.data.get('maxRedemptions', 999999999)
+        ) ||
+        // Ordinary admin edit: anything except redeemed.
+        !request.resource.data.diff(resource.data).changedKeys().hasAny(['redeemed'])
+      );
+      allow delete: if isTenantAdmin(resource.data.tenantId);
+    }
+
+    /**
+     * One member's assignment of a `gym_packages` catalog entry (PKG-2).
+     * Read is narrower than the catalog itself — a member's package holding
+     * is theirs and staff's business, not every other member's.
+     *
+     * Assignment is direct (no member approval) on create: correct for a
+     * first-time or additive grant. Once PKG-6's `package_change_requests`
+     * exists, *changing* what an already-holding member gets must route
+     * through that instead — this rule doesn't know the difference, the
+     * client does (see `assignPackageToMember`'s doc comment).
+     *
+     * No client update path: every later transition (freeze, cancellation,
+     * expiry, PKG-6's swap) is server-owned, same reasoning as
+     * `gym_packages.activeAssignmentCount` — rules cannot safely arbitrate
+     * "which admin's concurrent edit wins" for a record this consequential.
+     */
+    match /member_packages/{assignmentId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId) ||
+        isGuardianOf(resource.data.tenantId, resource.data.memberId)
+      );
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.assignedBy == request.auth.uid &&
+        request.resource.data.status == 'active' &&
+        request.resource.data.kind in ['membership', 'lessons'] &&
+        get(/databases/$(database)/documents/gym_packages/$(request.resource.data.packageId)).data.isActive == true;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * One quota balance — a purchased lesson bundle or one period of a
+     * package's recurring entitlement (PKG-2). `used` is never
+     * client-writable in any direction: only a Cloud Function (periodic
+     * renewal) or a future callable (PKG-8 booking, PKG-11 refund) moves it,
+     * because consumption must be atomic against a concurrent booking and
+     * rules cannot arbitrate that race.
+     */
+    match /member_credits/{creditId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId) ||
+        isGuardianOf(resource.data.tenantId, resource.data.memberId)
+      );
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.kind in ['ptLesson', 'groupClass'] &&
+        request.resource.data.source in ['purchase', 'entitlement'] &&
+        request.resource.data.total is number && request.resource.data.total > 0 &&
+        request.resource.data.used == 0 &&
+        request.resource.data.status == 'active';
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * Denormalized "current membership package" cache (PKG-4), doc id
+     * `{tenantId}_{memberId}`. Exists so `canBookGroupClass` above can gate
+     * a self-service write with one `get()` — rules cannot run the query
+     * that finds "the current one" among a member's package history.
+     *
+     * Entirely server-owned: only `syncMemberEntitlements` (Cloud Function,
+     * Admin SDK) ever writes it, triggered on `member_packages` changes.
+     */
+    match /member_entitlements/{cacheId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId)
+      );
+      allow write: if false;
+    }
+
+    /**
+     * A proposed package swap awaiting the member's yes/no (PKG-6).
+     * Read/respond only — the actual swap never happens through this
+     * document. Approving just flips `status`; `applyPackageChange` (Cloud
+     * Function, triggered on the `pending` -> `approved` transition) is
+     * what touches `member_packages`, because that collection has **no**
+     * client update path at all, admin included (see its own rule above).
+     * A rule here that let the member write more than `status` would be
+     * pointless — there'd be nothing downstream trusted to act on it.
+     */
+    match /package_change_requests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        isTenantStaff(resource.data.tenantId)
+      );
+      allow create: if isTenantAdmin(request.resource.data.tenantId) &&
+        request.resource.data.createdBy == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.kind in ['upgrade', 'downgrade', 'promotion', 'addon'];
+      // The member's approve/decline used to be a direct field flip here —
+      // moved to the `approvePackageChange` callable (plan-eng-review Faz
+      // 1.6) because a `status` write alone can't atomically cancel the
+      // old holding, mint the new one, move credits, redeem a promotion,
+      // or record a refund; only the callable does all of that together.
+      // A member no longer has ANY write path to `status` — approve and
+      // reject both go through the callable now.
+      allow update: if
+        // The admin withdraws an offer before the member has responded.
+        (
+          isTenantAdmin(resource.data.tenantId) &&
+          resource.data.status == 'pending' &&
+          request.resource.data.diff(resource.data).changedKeys().hasOnly(['status']) &&
+          request.resource.data.status == 'cancelled'
+        );
+      allow delete: if false;
+    }
+
+    // Default: deny all access to undefined collections
+    // (remove the wildcard admin rule for better security)
+  }
+}

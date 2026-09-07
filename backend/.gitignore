@@ -1,0 +1,39 @@
+/node_modules
+/dist
+/.env
+/secrets
+/backups
+/firebase-debug.log
+/.idx
+/.vscode
+/functions/node_modules
+/functions/dist
+/functions/.idx
+/functions/.vscode
+/functions/.git
+/functions/.env
+/functions/secrets
+/functions/backups
+/.idx
+/functions/.idx
+/.firebase
+/functions/.firebase
+/.venv
+/functions/.venv
+/.venv-export
+/functions/.venv-export
+/.vscode
+/functions/.vscode
+
+*storybook.log
+storybook-static
+
+# run.sh calisma dosyalari
+/logs
+/.run
+
+# Legacy data export — contains plaintext passwords, never commit
+archive/
+
+# Emulator output — regenerated on every test run.
+firestore-debug.log

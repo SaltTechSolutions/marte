@@ -1,0 +1,51 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Check if the user is an admin via Custom Claims
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Public assets (logo, etc.)
+    match /settings/{file} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // GymEntra multi-tenant logos: public read (the join-by-code screen shows
+    // a gym's logo before any membership exists), and **no client write at
+    // all** — the `uploadTenantLogo` callable writes these with the Admin SDK
+    // after checking membership in code.
+    //
+    // This used to be a cross-service rule that read `tenant_memberships`
+    // from here. Three things made that the wrong foundation: it fails closed
+    // and silent (the client only ever sees `storage/unauthorized`, never
+    // that a Firestore lookup inside a rule was what failed); it needs an IAM
+    // grant that `firebase deploy` does not make, so a correct rule can still
+    // deny everyone; and it had been broken since the singular `role` field
+    // was dropped on 27 Aug 2026 without anyone noticing, because the only
+    // account that tested it carried the legacy global `admin` claim and
+    // passed through the other branch. A real gym owner has no such claim.
+    match /tenant-logos/{tenantId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Member photos (PER-20): written only by the `uploadMemberPhoto`
+    // callable (Admin SDK), read only through the tokenised download URL
+    // stored on the membership — the token is the grant, so the roster can
+    // render photos without a cross-service rule (see tenant-logos above for
+    // why that foundation was abandoned). Deleting the object rotates the
+    // token away with it.
+    match /members/{uid}/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Default: only admins can access other paths
+    match /{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

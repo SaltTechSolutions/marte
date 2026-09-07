@@ -1,0 +1,14 @@
+/* src/index.css */
+/* Global Reset & Base Styles - Design System uses its own index.css */
+/* This file is kept for backward compatibility if needed, but should be empty or minimal */
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

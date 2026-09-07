@@ -1,0 +1,118 @@
+/* src/pages/CalendarManagement.css */
+
+.calendar-management-page {
+  padding: 20px;
+  padding-bottom: 70px; /* Bottom nav bar clearance */
+}
+
+.page-header { /* Page title container */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendar-management-page h2 {
+  margin: 0;
+}
+
+/* Selected date info section style */
+.selected-date-info {
+    margin-top: 30px; /* Space above this section */
+    /* .card styles from index.css will apply here */
+    text-align: center; /* Center content */
+}
+
+.selected-date-info h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.selected-date-info p {
+    margin-bottom: 0;
+    color: var(--muted-color);
+}
+
+/* Container for time slot buttons */
+.time-slot-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.time-slot-buttons button {
+    /* General button styles from index.css will apply */
+    padding: 10px 15px;
+    font-size: 1rem;
+     /* Override default button colors */
+    background-color: var(--color-card); /* Theme card bg */
+    color: var(--text-color); /* Text */
+    border: 1px solid var(--color-border);
+}
+
+.time-slot-buttons button:hover {
+    background-color: var(--color-card); /* Keep subtle hover */
+}
+
+.time-slot-buttons button.selected {
+    background-color: var(--color-primary); /* Seçili buton rengi */
+    color: #fff; /* Seçili buton metin rengi */
+    font-weight: bold;
+}
+
+.time-slot-buttons button.selected:hover {
+     background-color: var(--color-primary);
+}
+
+/* Style for the Add Lesson button */
+.add-lesson-button {
+    margin-top: 15px; /* Space above the button */
+    /* General button styles from index.css will apply */
+}
+
+.scheduled-members-list {
+    margin-top: 20px;
+}
+
+.scheduled-members-list h4 {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.scheduled-members-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.scheduled-members-list li {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.scheduled-members-list li:last-child {
+    margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .calendar-management-page {
+    padding: 10px;
+    padding-bottom: 60px;
+  }
+  .selected-date-info {
+      padding: 15px;
+  }
+   .time-slot-buttons {
+       flex-direction: column; /* Küçük ekranlarda alt alta */
+       gap: 10px;
+   }
+    .time-slot-buttons button {
+        width: 100%; /* Tam genişlik */
+    }
+}
