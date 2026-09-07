@@ -1,0 +1,219 @@
+import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Pressable, View } from 'react-native';
+
+import { FormScreen } from '@/components/FormScreen';
+import { Button } from '@/components/Button';
+import { GymLogo } from '@/components/GymLogo';
+import { Text } from '@/components/Text';
+import { TextField } from '@/components/TextField';
+import { decodeGymQr } from '@/app/gym-qr';
+import { errorMessage } from '@/data/errors';
+import { requestJoin } from '@/data/firebase/membershipRepo';
+import { findTenantByCode } from '@/data/firebase/tenantRepo';
+import { Tenant } from '@/data/types';
+import { auth } from '@/services/firebase';
+import { useAppTheme } from '@/theme/ThemeContext';
+import { signOutAndForget } from '@/services/signOut';
+
+/** Onboarding 2/4 — zero-typing goal: scan the front-desk QR, or type the gym code. */
+export default function GymCodeScreen() {
+  const router = useRouter();
+  const { colors, spacing, radius, applyTenantBranding } = useAppTheme();
+  const [code, setCode] = useState('');
+  const [found, setFound] = useState<Tenant | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const search = async (raw?: string) => {
+    const query = (raw ?? code).trim();
+    if (!query) return;
+    setSearching(true);
+    setError(null);
+    setFound(null);
+    try {
+      const tenant = await findTenantByCode(query);
+      if (!tenant) {
+        setError('Geçersiz salon kodu. Lütfen kodunuzu kontrol ediniz.');
+      } else {
+        setFound(tenant);
+        // Live preview of the real gym's actual colors, derived the same
+        // way the app will re-skin itself once membership is active.
+        applyTenantBranding(tenant.branding);
+      }
+    } catch (e) {
+      setError(errorMessage(e, 'Salon aranırken bir hata oluştu.'));
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  /** The staff-facing card encodes `gymentra:gym:<CODE>`. Anything else is a
+   *  different QR entirely (most likely a member card) — say so rather than
+   *  searching for a gym that cannot exist. */
+  const onScan = (payload: string) => {
+    const scanned = decodeGymQr(payload);
+    setScanning(false);
+    if (!scanned) {
+      setError('Bu karekod bir salon kodu değil. Resepsiyondaki karekodu okut.');
+      return;
+    }
+    setCode(scanned);
+    void search(scanned);
+  };
+
+  const submit = async () => {
+    if (!found || !auth.currentUser) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await requestJoin({
+        tenantId: found.id,
+        tenantCode: found.code,
+        tenantName: found.name,
+        userId: auth.currentUser.uid,
+        userDisplayName: auth.currentUser.displayName,
+        userEmail: auth.currentUser.email,
+      });
+      router.push({
+        pathname: '/onboarding/pending',
+        params: { tenantId: found.id, tenantName: found.name },
+      });
+    } catch (e) {
+      setError(errorMessage(e, 'İstek gönderilirken bir hata oluştu.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <FormScreen contentContainerStyle={{ paddingHorizontal: spacing.xl, paddingTop: 44, gap: spacing.md }}>
+      <View style={{ flex: 1, gap: spacing.md }}>
+        <Text variant="h2">Salonuna katıl</Text>
+        <Text variant="helper" tone="sub">
+          Resepsiyondaki QR&rsquo;ı okut ya da salon kodunu gir.
+        </Text>
+
+        <Pressable
+          onPress={async () => {
+            if (!permission?.granted) {
+              const res = await requestPermission();
+              if (!res.granted) {
+                setError('Kamera izni verilmedi. Salon kodunu elle girebilirsin.');
+                return;
+              }
+            }
+            setError(null);
+            setScanning((v) => !v);
+          }}
+          accessibilityRole="button"
+          style={{
+            height: scanning ? 240 : 120,
+            borderWidth: 2,
+            borderStyle: 'dashed',
+            borderColor: colors.p,
+            borderRadius: radius.lg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            overflow: 'hidden',
+          }}>
+          {scanning && permission?.granted ? (
+            <CameraView
+              style={{ width: '100%', height: '100%' }}
+              facing="back"
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={searching ? undefined : ({ data }) => onScan(data)}
+            />
+          ) : (
+            <>
+              <Ionicons name="qr-code-outline" size={26} color={colors.p} />
+              <Text variant="helper" weight="700" style={{ color: colors.p }}>
+                Karekodu tara
+              </Text>
+            </>
+          )}
+        </Pressable>
+
+        <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
+          — veya —
+        </Text>
+
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TextField
+            placeholder="Salon kodu (ör. TARABYA-01)"
+            value={code}
+            onChangeText={(v) => {
+              setCode(v.toUpperCase());
+              setFound(null);
+            }}
+            autoCapitalize="characters"
+            style={{ flex: 1 }}
+          />
+          <Button label={searching ? '…' : 'Ara'} onPress={() => void search()} disabled={searching || !code.trim()} compact />
+        </View>
+
+        {error && (
+          <Text variant="helper" style={{ color: '#F87171' }}>
+            {error}
+          </Text>
+        )}
+
+        {found && (
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              backgroundColor: colors.surf,
+              borderWidth: 1,
+              borderColor: colors.p,
+              borderRadius: radius.md,
+              padding: 11,
+            }}>
+            {/* Overrides, not the theme: the viewer has not joined this gym,
+                so the theme may still be the previous one. "Is this the
+                right gym?" is answered by the logo more than by a letter. */}
+            <GymLogo size={30} radius={8} logoUrl={found.branding.logoUrl} name={found.name} />
+            <View style={{ flex: 1 }}>
+              <Text variant="helper" weight="700">
+                {found.name}
+              </Text>
+              <Text variant="label" tone="sub">
+                {found.address ?? found.code}
+              </Text>
+            </View>
+            <Text style={{ color: colors.ok, fontSize: 14 }}>✓</Text>
+          </View>
+        )}
+
+        <View style={{ flex: 1 }} />
+        <Button
+          label={submitting ? 'Gönderiliyor…' : 'Katılım isteği gönder'}
+          critical
+          disabled={!found || submitting}
+          onPress={submit}
+        />
+        <Button
+          label="Salonun yok mu? Sen oluştur"
+          variant="secondary"
+          onPress={() => router.push('/onboarding/create-gym')}
+        />
+        <Button
+          label="Çıkış yap"
+          variant="ghost"
+          style={{ marginBottom: spacing.lg }}
+          onPress={async () => {
+            await signOutAndForget();
+            router.replace('/onboarding/register');
+          }}
+        />
+      </View>
+    </FormScreen>
+  );
+}

@@ -1,0 +1,61 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+# `eas build --local` prebuild'i geçici dizinde yapıyor, ama `expo prebuild`
+# elle çalıştırılırsa bunlar repoya düşer — CNG projesinde ikisi de üretilmiş
+# dosya, kaynak değil.
+/android/
+/ios/
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+example
+
+# generated native folders
+/ios
+/android
+
+# Store signing/submit credentials. `*.p8` above covers the App Store Connect
+# key; the Play Console service account is a .json, which nothing else here
+# would catch. Ignoring the whole directory means the next credential — of
+# whatever extension — is covered before anyone has to remember a rule.
+secrets/
+.rig-editor/
+
+# Yerel build çıktıları
+*.aab
+*.apk
+*.ipa

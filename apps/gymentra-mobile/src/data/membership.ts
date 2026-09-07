@@ -1,0 +1,121 @@
+import type { Href } from 'expo-router';
+
+import { MembershipPermission, MembershipRole, TenantMembership } from './types';
+
+/**
+ * Every "can this person do X?" question in the app answers here.
+ *
+ * Screens must not compare roles directly (`role === 'admin'`): a gym owner
+ * who also coaches holds two roles, and a trainer can be delegated a single
+ * admin capability without becoming an admin. Raw comparisons can't express
+ * either case and drift apart over time — that's how `trainer/index` ended up
+ * locking admins out of a tab that `trainer/calendar` let them into.
+ */
+
+type Maybe = TenantMembership | null | undefined;
+
+function isActive(m: Maybe): m is TenantMembership {
+  return !!m && m.status === 'active';
+}
+
+export function hasRole(m: Maybe, role: MembershipRole): boolean {
+  return isActive(m) && m.roles.includes(role);
+}
+
+export function hasPermission(m: Maybe, permission: MembershipPermission): boolean {
+  return isActive(m) && m.permissions.includes(permission);
+}
+
+/** Approvals, payment ledger, branding, class schedule — the owner's surface. */
+export function canManageGym(m: Maybe): boolean {
+  return hasRole(m, 'admin');
+}
+
+/**
+ * Front-desk QR scanning. Admins always can; a trainer can be granted it so
+ * someone covers the door when the owner isn't in — which is the norm in a
+ * small studio.
+ */
+export function canCheckIn(m: Maybe): boolean {
+  return hasRole(m, 'admin') || hasPermission(m, 'checkin');
+}
+
+/**
+ * Own PT calendar, own member roster, program authoring.
+ *
+ * **An admin always coaches.** In most small studios the owner IS the coach,
+ * and a model where they are not could not explain why the person who runs
+ * the gym cannot write a member a programme. So this is a CAPABILITY the
+ * admin role carries, not a role they have to also be granted.
+ *
+ * That is separate from which SURFACES they see. Holding the capability does
+ * not put a trainer tab bar in an owner's navigation — that still follows the
+ * explicit `roles` array, which is why `RoleSwitcher` reads `roles` directly
+ * and `primaryRole` keeps admin and trainer distinct. An owner who does not
+ * coach should not carry a PT calendar around; an owner who wants to write a
+ * programme should not be told no.
+ *
+ * Guard with this, never with `hasRole(m, 'trainer')` — that comparison is
+ * how `trainer/index` once locked admins out of a tab `trainer/calendar`
+ * let them into.
+ */
+export function canCoach(m: Maybe): boolean {
+  return hasRole(m, 'trainer') || hasRole(m, 'admin');
+}
+
+/**
+ * Read and reassign EVERY trainer's calendar. Deliberately separate from
+ * canCoach: this is oversight (covering for an absent trainer), not coaching,
+ * and it must not hand an owner a PT calendar they never asked for.
+ */
+export function canOverseeCalendars(m: Maybe): boolean {
+  return hasRole(m, 'admin');
+}
+
+/** Anyone who works here, as opposed to a paying member. */
+export function isStaff(m: Maybe): boolean {
+  return canCoach(m) || canManageGym(m);
+}
+
+/** Which home screen this person lands on, most privileged first. */
+export function primaryRole(m: Maybe): MembershipRole | null {
+  if (!isActive(m)) return null;
+  if (m.roles.includes('admin')) return 'admin';
+  if (m.roles.includes('trainer')) return 'trainer';
+  if (m.roles.includes('member')) return 'member';
+  return null;
+}
+
+export const ROLE_HOME: Record<MembershipRole, Href> = {
+  admin: '/admin',
+  trainer: '/trainer',
+  member: '/member',
+};
+
+export const ROLE_LABEL: Record<MembershipRole, string> = {
+  admin: 'Yönetici',
+  trainer: 'Antrenör',
+  member: 'Üye',
+};
+
+/** The gym this membership belongs to, but only when the capability holds —
+ * screens use this to guard in one line instead of repeating role checks. */
+export function tenantIdIf(m: Maybe, allowed: boolean): string | null {
+  return allowed && m ? m.tenantId : null;
+}
+
+/**
+ * Birden çok salonda aktif olan kişi hangi salonu görür (P1-8).
+ *
+ * Kişinin son seçtiği salon saklanır; o salondan ayrıldıysa ya da hiç
+ * seçmediyse listenin ilkine düşer. Sıra `getActiveMemberships`'te belirli,
+ * yani seçim yapılmamış bir hesap her açılışta AYNI salonu açar.
+ */
+export function selectMembership(
+  memberships: TenantMembership[],
+  storedTenantId: string | null,
+): TenantMembership | null {
+  if (memberships.length === 0) return null;
+  const stored = storedTenantId ? memberships.find((m) => m.tenantId === storedTenantId) : undefined;
+  return stored ?? memberships[0];
+}

@@ -1,0 +1,108 @@
+{
+  "name": "antrenman-simulatoru",
+  "version": "1.0.0",
+  "generated": "2026-09-07T12:52:32.268Z",
+  "source": {
+    "commit": "2ab47d4",
+    "dirty": true
+  },
+  "counts": {
+    "arketip": 30,
+    "hareket": 34,
+    "kasVerisiYazilan": 33,
+    "kasVerisiBekleyen": 1
+  },
+  "files": {
+    "rig.ts": {
+      "sha256": "d2191e21c65e9ca9fd40e42e5728de518e20300e1c4fd2ff318ac7e5b1ce27da",
+      "bytes": 34941,
+      "from": "src/rig.ts",
+      "what": "motor",
+      "to": "src/utils/rig.ts"
+    },
+    "rigAudit.ts": {
+      "sha256": "236ce5f61727611fc7d261c97dec8c99e002ee7c321e18efaa9d0b1870c05e17",
+      "bytes": 12943,
+      "from": "src/rigAudit.ts",
+      "what": "denetim kuralları",
+      "to": "src/utils/rigAudit.ts"
+    },
+    "rigSchema.ts": {
+      "sha256": "d8af2072e297a249f8cb65cdceb54ae71ab802ba1a7e6887fbbf55dc30cbacc7",
+      "bytes": 16053,
+      "from": "src/rigSchema.ts",
+      "what": "veri biçim doğrulaması",
+      "to": "src/utils/rigSchema.ts"
+    },
+    "muscles.ts": {
+      "sha256": "690076299ac7fddeb7929db7d17e4e491212e0b4c9d9b6baa4ec0348c231efd4",
+      "bytes": 4208,
+      "from": "src/muscles.ts",
+      "what": "kanonik kas sözlüğü",
+      "to": "src/utils/muscles.ts"
+    },
+    "rigArchetypes.json": {
+      "sha256": "8412a2efdf3dbaf1a3960bb208453aa50d5d7532726a40be39463c434600843c",
+      "bytes": 38713,
+      "from": "data/rigArchetypes.json",
+      "what": "kare verisi",
+      "to": "src/data/rigArchetypes.json"
+    },
+    "exercises.json": {
+      "sha256": "824da2a31971ea84801c4456bb179970e62dfab86373fafc4720aa11f1888def",
+      "bytes": 3013,
+      "from": "data/exercises.json",
+      "what": "hareket kataloğu",
+      "to": "src/data/rigExercises.json"
+    },
+    "rigMuscles.json": {
+      "sha256": "4a9f919612f1f7e462076b5d94912908ed2dbea039621afd3bd0a346b2e65b1c",
+      "bytes": 8636,
+      "from": "data/rigMuscles.json",
+      "what": "hareket başına kaslar",
+      "to": "src/data/rigMuscles.json"
+    },
+    "anatomy.json": {
+      "sha256": "b550f2efb4a137ad469bc6f6038c58e24a33c430d3a1b6c02b4f963b33c55b5a",
+      "bytes": 7619,
+      "from": "data/anatomy.json",
+      "what": "kas haritası yolları",
+      "to": "src/data/rigAnatomy.json"
+    },
+    "bodyParts.json": {
+      "sha256": "3b4b976041205e1839fd1a84c3c5cb5a1acd4848ba14a33591a51aa4ae1ecf4c",
+      "bytes": 1944,
+      "from": "data/bodyParts.json",
+      "what": "uzuv siluet parçaları",
+      "to": "src/data/rigBodyParts.json"
+    },
+    "archetypes.ts": {
+      "sha256": "a260e7bf17739ddae7764dfd779fe2d7026f72bbd176293dfed681a318319b4a",
+      "bytes": 919,
+      "from": "src/archetypes.ts",
+      "what": "doğrulayan kare verisi sarmalayıcısı",
+      "to": "src/data/rigArchetypes.ts"
+    },
+    "rig.test.ts": {
+      "sha256": "dc4bc1b7deba74bcbd5e5361af7b9e970ef72b33b7eb2f49e87fcf66de7ca700",
+      "bytes": 9251,
+      "from": "tests/rig.test.ts",
+      "what": "motor testleri",
+      "to": "src/utils/rig.test.ts"
+    },
+    "rigAudit.test.ts": {
+      "sha256": "0b967b48801e1634f0a282dcad8371b9360d70c7f24054566d4b39edc4fb7050",
+      "bytes": 7776,
+      "from": "tests/rigAudit.test.ts",
+      "what": "denetim testleri",
+      "to": "src/utils/rigAudit.test.ts"
+    },
+    "rigSchema.test.ts": {
+      "sha256": "6d429d2a49e8414ff1b3cc3ee769822dc490c4b56a790565b008ee7b276a5448",
+      "bytes": 19566,
+      "from": "tests/rigSchema.test.ts",
+      "what": "şema testleri",
+      "to": "src/utils/rigSchema.test.ts"
+    }
+  }
+}
