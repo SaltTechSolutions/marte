@@ -21,7 +21,6 @@ import {
   footPath,
   footPinned,
   frontPoints,
-  frontTrunk,
   handPath,
   headProfile,
   showFarArm,

@@ -93,10 +93,10 @@ dış tarafta köşe açıyordu.
 | thorax | 85 | 77 | ×1.10 |
 | neck | 24 | 27 | ×0.88 |
 
-Bacak ve gövde tutuyor. **Kollarımız gerçek insandan orantısız uzun** ve
-siluet kemiğe gerildiği için kollar mesh'tekinden ince görünüyor. Kemik
-boylarını değiştirmek 31 arketipin her karesini etkilediği için burada
-yapılmadı; ayrı bir iş.
+Bacak ve gövde tutuyor. Kolda fark büyük ama **hata bizde değil**:
+antropometri (Dempster, 175 cm) üst kolu ≈ 32 cm = 80px, ön kolu ≈ 26 cm =
+64px verir; bizim 78/68 uyumlu. Mesh'in kol eklemi işaretçileri kısa ölçüyor.
+Sonuç: kol siluetleri gerildiği için biraz ince; kemik boyu doğru, dokunma.
 
 ### Yerel uzayda +X
 

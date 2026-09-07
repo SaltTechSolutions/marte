@@ -17,10 +17,11 @@
  * yaklaşımı; gerçek ağırlık haritası değil ama siluet için yeterli, çünkü
  * bizi ilgilendiren dış hat.
  *
- * SINIR: mesh nötr pozda ve tek bir gövde tipi. Silueti kemiğe oturturken
- * `normalize-part.mjs` uzunluğu bizim kemik boyumuza GERİYOR; kollarımız
- * mesh'e göre orantısız uzun (üst kol 78 vs 57) olduğu için oradaki gerilme
- * en çok. Ölçüldü ve kayıtlı.
+ * SINIR: mesh nötr pozda ve tek bir gövde tipi. Siluet kemik boyumuza
+ * GERİLİYOR; kolda gerilme en çok (üst kol mesh 57px, bizim 78). Bu bizim
+ * kusurumuz DEĞİL: antropometriyle (Dempster, 175 cm: üst kol ≈ 32 cm = 80px,
+ * ön kol ≈ 26 cm = 64px) bizim boylar uyuşuyor, mesh'in kol eklemi
+ * işaretçileri kısa ölçüyor. Kol siluetleri o yüzden biraz ince kalır.
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
