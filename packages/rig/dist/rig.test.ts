@@ -132,7 +132,9 @@ describe('rig hareket denetimi', () => {
   it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {
     // Kural: ikinci bacak birincinin kopyasıysa çizimde bilgi taşımıyor.
     const gorunur = entries.filter(([, ex]) => showFarLeg(ex)).map(([k]) => k);
-    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'step_up', 'unilateral_lunge']);
+    // `lunge_reach` listeye `unilateral_lunge`tan ayrılınca katıldı: hamlede
+    // iki bacak apayrı iş yapıyor, arka bacak uzanıp diz yere iniyor.
+    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'lunge_reach', 'step_up', 'unilateral_lunge']);
     // Yan plank'ta bacaklar bilerek üst üste: ayrı hareket değil, gizli.
     expect(showFarLeg(RIG_ARCHETYPES.side_plank)).toBe(false);
     expect(showFarLeg(RIG_ARCHETYPES.squat)).toBe(false);

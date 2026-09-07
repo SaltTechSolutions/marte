@@ -21,7 +21,7 @@
   },
   "worlds-greatest-stretch": {
     "name": "Lunge + gövde rotasyonu",
-    "archetype": "unilateral_lunge"
+    "archetype": "lunge_reach"
   },
   "goblet-squat": {
     "name": "Goblet squat",

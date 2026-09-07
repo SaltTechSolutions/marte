@@ -1985,5 +1985,121 @@
         }
       }
     ]
+  },
+  "lunge_reach": {
+    "note": "Dünyanın en iyi esnemesi. EKSENEL ROTASYON ÇİZİLEMİYOR: model sagittal, gövdenin kendi ekseni etrafında dönmesi poz olarak yok (önden görünüm de simetrik izdüşüm, oradan da çıkmıyor). Onun yerine hareketin tanınabilir şekli çiziliyor — derin hamle, gövdenin öne katlanıp elin yere inmesi, sonra gövdenin açılıp kolun yukarı uzanması. Uzak kol gizli: IK iki eli aynı hedefe götürüyor, oysa gerçekte tek kol uzanıyor.",
+    "mode": "stand",
+    "arm": "ik",
+    "bar": null,
+    "bend": 1,
+    "hideFarArm": true,
+    "dur": 5200,
+    "kf": [
+      {
+        "t": 0,
+        "tr": "Ayakta",
+        "p": {
+          "shinA": 178,
+          "thighA": 183,
+          "torso": 5,
+          "thoraxA": 3,
+          "neckA": 3,
+          "hx": -4,
+          "hy": 140,
+          "thighF": 180,
+          "shinF": 200.5
+        }
+      },
+      {
+        "t": 0.28,
+        "tr": "El yerde",
+        "p": {
+          "shinA": 190,
+          "thighA": 95,
+          "thighF": 200.5,
+          "shinF": 278.5,
+          "torso": 62,
+          "thoraxA": 58,
+          "neckA": 45,
+          "hx": -47,
+          "hy": 133
+        }
+      },
+      {
+        "t": 0.42,
+        "tr": "El yerde",
+        "p": {
+          "shinA": 190,
+          "thighA": 95,
+          "thighF": 200.5,
+          "shinF": 278.5,
+          "torso": 62,
+          "thoraxA": 58,
+          "neckA": 45,
+          "hx": -47,
+          "hy": 133
+        }
+      },
+      {
+        "t": 0.55,
+        "tr": "Açılış",
+        "p": {
+          "shinA": 190,
+          "thighA": 95,
+          "thighF": 200.5,
+          "shinF": 278.5,
+          "torso": 45,
+          "thoraxA": 38,
+          "neckA": 10,
+          "hx": -95,
+          "hy": 10
+        }
+      },
+      {
+        "t": 0.72,
+        "tr": "Uzanma",
+        "p": {
+          "shinA": 190,
+          "thighA": 95,
+          "thighF": 200.5,
+          "shinF": 278.5,
+          "torso": 25,
+          "thoraxA": 15,
+          "neckA": -25,
+          "hx": -40,
+          "hy": -125
+        }
+      },
+      {
+        "t": 0.85,
+        "tr": "Uzanma",
+        "p": {
+          "shinA": 190,
+          "thighA": 95,
+          "thighF": 200.5,
+          "shinF": 278.5,
+          "torso": 25,
+          "thoraxA": 15,
+          "neckA": -25,
+          "hx": -40,
+          "hy": -125
+        }
+      },
+      {
+        "t": 1,
+        "tr": "Ayakta",
+        "p": {
+          "shinA": 178,
+          "thighA": 183,
+          "torso": 5,
+          "thoraxA": 3,
+          "neckA": 3,
+          "hx": -4,
+          "hy": 140,
+          "thighF": 180,
+          "shinF": 200.5
+        }
+      }
+    ]
   }
 }

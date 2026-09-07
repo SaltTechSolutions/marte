@@ -388,11 +388,16 @@ describe('validateBundle — devir paketi', () => {
     });
   });
 
-  it('34 hareket, 30 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+  it('34 hareket, 31 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+    // 30 -> 31: `worlds-greatest-stretch` (Lunge + gövde rotasyonu)
+    // `unilateral_lunge`tan ayrılıp kendi arketibine (`lunge_reach`) taşındı.
+    // Paylaştıkları çizim düz bir hamleydi; o hareketin tanımlayıcı evreleri
+    // — gövdenin öne katlanıp elin yere inmesi, sonra kolun yukarı uzanması —
+    // hiç görünmüyordu.
     expect(Object.keys(rawExercises)).toHaveLength(34);
-    expect(Object.keys(rawArchetypes)).toHaveLength(30);
+    expect(Object.keys(rawArchetypes)).toHaveLength(31);
     const used = new Set(Object.values(rawExercises as Record<string, { archetype: string }>).map((e) => e.archetype));
-    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(30);
+    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(31);
   });
 });
 
