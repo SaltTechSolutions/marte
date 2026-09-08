@@ -153,6 +153,61 @@ async function images(language = 'tr-TR') {
   });
 }
 
+/**
+ * Sürüm notu — Play'in "neyi test edin" alanı. Metinsiz çağrılınca okur.
+ *
+ * Not, sürümün kendisinde durur; ayrı bir uç nokta yok. Bu yüzden yazma
+ * işlemi kanalı okuyup **mevcut sürümü olduğu gibi geri gönderiyor**, yalnızca
+ * `releaseNotes` alanını değiştirerek: `tracks.patch` gövdedeki `releases`
+ * dizisinin tamamını yerine koyar, eksik alan gönderirsek sürüm kodunu ya da
+ * durumu düşürürüz.
+ */
+async function notes(track = 'internal', text, ...rest) {
+  const LIMIT = 500; // Play'in dil başına sürüm notu sınırı.
+  const lang = 'tr-TR';
+
+  // Kanal metnini serbestçe düzeltmek yalnızca iç testte güvenli. Üretimde
+  // notu değiştirmek yayındaki sürümün açıklamasını değiştirmek demek —
+  // /play skill'i bunu "önce sorulur" listesine koyuyor.
+  if (text && track !== 'internal' && !rest.includes('--onaylandi')) {
+    throw new Error(
+      `'${track}' kanalı iç test değil; yayındaki sürüm notunu değiştirmek kullanıcı onayı ister.\n` +
+        "  Onay alındıysa komutun sonuna --onaylandi ekleyin.",
+    );
+  }
+
+  if (text && [...text].length > LIMIT) {
+    throw new Error(`sürüm notu ${[...text].length} karakter, Play sınırı ${LIMIT}`);
+  }
+
+  await withEdit(
+    async (editId, pkg) => {
+      const t = await call(`/applications/${pkg}/edits/${editId}/tracks/${track}`);
+      const releases = t.releases ?? [];
+      if (!releases.length) throw new Error(`'${track}' kanalında sürüm yok`);
+      if (!text) {
+        console.log(`\nSÜRÜM NOTU · ${track}`);
+        releases.forEach((r) => {
+          console.log(`\n  sürüm kodu ${(r.versionCodes ?? []).join(', ') || '—'} (${r.status})`);
+          if (!(r.releaseNotes ?? []).length) console.log('    (boş)');
+          (r.releaseNotes ?? []).forEach((n) => console.log(`    [${n.language}]\n${n.text.replace(/^/gm, '      ')}`));
+        });
+        console.log('');
+        return;
+      }
+      // Birden çok sürüm ancak kademeli yayında olur; iç testte tek sürüm var.
+      if (releases.length > 1) throw new Error(`'${track}' kanalında ${releases.length} sürüm var; hangisi olduğu belirsiz`);
+      const [release] = releases;
+      await call(`/applications/${pkg}/edits/${editId}/tracks/${track}`, {
+        method: 'PATCH',
+        body: { track, releases: [{ ...release, releaseNotes: [{ language: lang, text }] }] },
+      });
+      console.log(`✓ ${track} · sürüm kodu ${(release.versionCodes ?? []).join(', ')} · ${[...text].length}/${LIMIT} karakter`);
+    },
+    { commit: !!text },
+  );
+}
+
 /** İnceleme durumu ve uygulama detayları. */
 async function details() {
   await withEdit(async (editId, pkg) => {
@@ -164,7 +219,7 @@ async function details() {
   });
 }
 
-const COMMANDS = { status, listing: (p) => listing(p), images: (l) => images(l), details };
+const COMMANDS = { status, listing: (p) => listing(p), images: (l) => images(l), details, notes: (...a) => notes(...a) };
 
 const [cmd, ...args] = process.argv.slice(2);
 if (!cmd || !COMMANDS[cmd]) {
@@ -172,6 +227,7 @@ if (!cmd || !COMMANDS[cmd]) {
 
   status                     kanallar, sürümler, yüklenen paketler
   listing ['{"...":"..."}']  mağaza girişini oku / yaz (yazınca commit eder)
+  notes [kanal] ['metin']    sürüm notunu oku / yaz (yazınca commit eder)
   images [dil]               grafikler, hangisi eksik
   details                    varsayılan dil ve iletişim bilgileri
 

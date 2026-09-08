@@ -257,8 +257,16 @@ izniyle üretilmişti. **Internal track'e yüklendi** (8 Eylül 2026): `play.mjs
 status` internal'da 1.0.0 / sürüm kodu 7 `completed` gösteriyor. *Not: `eas
 submit` çıktısında "You've already submitted this version" hatası göründü ama
 yükleme tamamlanmıştı — doğrulama CLI çıktısına değil Play API'sine
-bakılarak yapıldı (öncesinde internal'da 6 vardı).* **Internal sürüm notu
-boş** — test edenler neyi deneyeceklerini bilmiyor; Play Console'dan yazılmalı.
+bakılarak yapıldı (öncesinde internal'da 6 vardı).* **Internal sürüm notu yazıldı**
+*(8 Eylül 2026).* Notun gövdesi bir değişiklik listesi değil, bir **test
+görevi**: aşağıdaki 3. maddedeki üç doğrulama (Google ile giriş, push, QR)
+en üstte, gerekçesiyle birlikte ("önceki testler farklı imzalı APK'ylaydı").
+`play.mjs`'e bunun için `notes` komutu eklendi — script salt okunurdu.
+Komut kanalı okuyup **mevcut sürümü olduğu gibi geri yazıyor**, yalnızca
+`releaseNotes` alanını değiştirerek: `tracks.patch` `releases` dizisinin
+tamamını yerine koyduğu için eksik alan göndermek sürüm kodunu düşürürdü.
+İç test dışındaki bir kanala not yazmak `--onaylandi` istiyor (yayındaki
+sürümün açıklamasını değiştirmek kullanıcı onayına bağlı).
 Kalan: aşağıdaki cihaz doğrulaması.
 
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
