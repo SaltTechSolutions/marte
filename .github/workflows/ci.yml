@@ -1,0 +1,143 @@
+name: CI
+
+# One workflow for the whole monorepo. It lives at the repository root because
+# GitHub reads workflows from `<root>/.github/workflows` and nowhere else — the
+# two per-package copies this replaces (apps/gymentra-mobile/.github/ and
+# backend/.github/) never ran a single time.
+on:
+  # Every branch, not just main: active work lives on feature branches here.
+  push:
+  pull_request:
+
+# A newer push to the same branch makes the previous run irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: Mobile — typecheck, lint, tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/gymentra-mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/gymentra-mobile/package-lock.json
+
+      # `npm ci` needs the lockfile to match package.json exactly, which is
+      # what we want in CI — a drifted lockfile should fail here, not later.
+      - run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      # Zero warnings, not just zero errors: warnings hid a broken Firestore
+      # query for days (see plan.md DEV-1), so they are treated as failures.
+      - name: ESLint
+        run: npx expo lint --max-warnings 0
+
+      - name: Tests
+        run: npm test
+
+  rules:
+    name: Firestore security rules
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # The Firestore emulator is a Java process; firebase-tools requires
+      # JDK 21 or newer and fails with an unhelpful message on older ones.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - run: npm ci
+
+      # Runs every rule assertion against the real emulator — tenant
+      # isolation, role/permission model, free-tier limit, and the regression
+      # tests that keep the platform super-user locked out.
+      - name: Security rules
+        run: npm run test:rules
+
+  functions:
+    name: Cloud Functions — build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            backend/functions/package-lock.json
+
+      # The function tests run inside `firebase emulators:exec`, same as the
+      # rules ones, so this job needs a JDK too.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # firebase-tools lives in the backend package; the functions themselves
+      # have their own lockfile. Both installs are needed before the tests.
+      - name: Install (backend)
+        run: npm ci
+        working-directory: backend
+
+      - name: Install (functions)
+        run: npm ci
+        working-directory: backend/functions
+
+      # Deploys upload functions/lib, so a build failure here means a deploy
+      # would silently ship the previous compiled output (see plan.md P5-7).
+      - name: Build
+        run: npm run build
+        working-directory: backend/functions
+
+      - name: Tests
+        run: npm run test:functions
+        working-directory: backend
+
+  rig:
+    name: Rig — typecheck and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/rig
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: packages/rig/package-lock.json
+
+      - run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck
+
+      # The pose audit runs in here: every archetype is checked against the
+      # joint range-of-motion table, so a bad pose fails the build rather
+      # than shipping into the exercise library.
+      - name: Tests
+        run: npm test
