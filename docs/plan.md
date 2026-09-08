@@ -1232,9 +1232,24 @@ uygulama, **uygulama içinden hesap silme** imkânı sunmak zorundadır.
       KVKK tarafında düzeltmesi zor bir beyan olurdu.
       Ayrıca `delete-account/index.html`'deki **"yedeklerde en fazla 30 gün"**
       ifadesi **7 güne** çekildi: D-3'te kurulan gerçek yapılandırma PITR 7 gün
-      + günlük yedek 7 gün saklama (`docs/BACKUP.md`). **Yayına alınmadı** —
-      değişiklik depoda, `gymentra.salt-tech-apps.com` hâlâ eski metni
-      gösteriyor; site ayrı bir depodan (subtree) dağıtılıyor.
+      + günlük yedek 7 gün saklama (`docs/BACKUP.md`).
+      **Yayına alındı** (8 Eylül 2026) ve dört yol da doğrulandı.
+
+      ⚠️ *Dağıtım yolu sanıldığı gibi değilmiş — bir sonrakinde vakit kaybetmemek
+      için:* `SaltTechSolutions/gymentra-site` **31 Ağustos'ta arşivlendi**, yani
+      salt okunur; `git subtree push` oraya 403 alıyor. Cloudflare Pages'teki
+      `gymentra` projesi git'e **bağlı değil** (Git Provider: No), doğrudan
+      yüklemeyle yayınlanıyor:
+      `npx wrangler pages deploy apps/gymentra-site --project-name=gymentra --branch=main`.
+
+      **Bu deploy sırasında çıkan asıl bulgu — aşağıdaki mağaza maddesi
+      yanlışmış.** Production'daki tek dağıtım üç haftalıktı; yani
+      `/delete-account/` sayfası **hiç yayına girmemişti**. Site bilinmeyen her
+      yolda ana sayfayı döndürdüğü için adres 200 dönüyor ve göze "çalışıyor"
+      gibi görünüyordu — açan kişi pazarlama sayfasını görüyordu. Play
+      Console'daki hesap silme alanı tam da bu adresi gösteriyor ve Google onu
+      denetliyor. Aynı deploy ile sayfa ve ana sayfadaki "Hesap Silme"
+      bağlantısı da yayına girdi.
 - [x] Play Console'daki "hesap silme URL'i" alanı — `gymentra.salt-tech-apps.com/delete-account/`
       yayında ve alan dolduruldu. *(Bu kutu 8 Eylül 2026'ya kadar açık
       kalmıştı; mağaza hazırlığı bölümünde zaten işaretliydi.)*
@@ -2756,6 +2771,12 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] Hesap silme — `gymentra.salt-tech-apps.com/delete-account/` yayında,
       Play Console'daki alan dolduruldu. Sayfa `deleteMyAccount`'un gerçekte
       yaptığına göre yazıldı (o sırada bulunan hata için bkz. aşağısı).
+      ⚠️ *Bu kutu 1 Eylül'de işaretlendi ama sayfa 8 Eylül 2026'ya kadar
+      **gerçekte yayında değildi** — dosya depoya girmişti, Cloudflare'e hiç
+      dağıtılmamıştı ve adres ana sayfayı döndürüyordu. 8 Eylül'de deploy edilip
+      doğrulandı. Ders: "commit edildi" ile "yayında" ayrı şeyler; bu sitede
+      **her yol 200 döndüğü için** adresi açıp göz kararı doğrulamak da yetmiyor,
+      sayfanın başlığına bakmak gerekiyor.*
 - [x] `internal` track'e ilk yükleme — versionCode 2 AAB, `eas submit` ile
       API üzerinden gitti. (Play'in "ilk sürümü elle yükle" davranışını
       bekliyordum, gerçekleşmedi.)
