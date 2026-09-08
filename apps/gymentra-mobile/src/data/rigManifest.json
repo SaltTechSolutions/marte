@@ -1,15 +1,15 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-08T06:18:23.176Z",
+  "generated": "2026-09-08T06:24:15.437Z",
   "source": {
-    "commit": "86e82b0e",
+    "commit": "7666a053",
     "dirty": true
   },
   "counts": {
-    "arketip": 32,
-    "hareket": 35,
-    "kasVerisiYazilan": 34,
+    "arketip": 33,
+    "hareket": 36,
+    "kasVerisiYazilan": 35,
     "kasVerisiBekleyen": 1
   },
   "files": {
@@ -42,22 +42,22 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "b0fbc9cb587e02d4269db39c08fe9a1aed48a2406df132b672ae499664a8ee49",
-      "bytes": 53218,
+      "sha256": "6a51cea7288656f363685e594aac55e880167e07decf1cf4a66d36ec491355bd",
+      "bytes": 54704,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
     },
     "exercises.json": {
-      "sha256": "a2c0ffc47324aba763155c3c8d18f05cc6b080c3fa19cb955535b617132d12a7",
-      "bytes": 3111,
+      "sha256": "69dbacc744d52f0cedf7bc9304dd9ec081d4d492dcda7e97af988de208fa23d7",
+      "bytes": 3180,
       "from": "data/exercises.json",
       "what": "hareket kataloğu",
       "to": "src/data/rigExercises.json"
     },
     "rigMuscles.json": {
-      "sha256": "09f968b4d78f9e2340d26f21f2c5b4d0777d9ae058872527b78a4a568fbb6b2c",
-      "bytes": 8897,
+      "sha256": "9a54b87424640ec3960d0c5051ba1e0b919f3494977fcb710b9d6d502863fb7e",
+      "bytes": 9242,
       "from": "data/rigMuscles.json",
       "what": "hareket başına kaslar",
       "to": "src/data/rigMuscles.json"
@@ -77,8 +77,8 @@
       "to": "src/data/rigBodyParts.json"
     },
     "programmes.json": {
-      "sha256": "504a5d9750462476277a2b9d7918c7d410717f1470799521bee86f1774a15a3d",
-      "bytes": 25485,
+      "sha256": "b6c87d001e2167618817e1e31ddd744277b5456a5dff3f043a086dbaf3c7ebc2",
+      "bytes": 26353,
       "from": "data/programmes.json",
       "what": "hazır paket programlar",
       "to": "src/data/rigProgrammes.json"

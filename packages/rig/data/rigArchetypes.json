@@ -2588,5 +2588,76 @@
         }
       }
     ]
+  },
+  "pull_up": {
+    "note": "Barfiks. El barda sabit, govde yukari cekiliyor: dirsek ~130 derece bukuluyor ve omuz bara yaklasiyor. Dikey cekis; katalogda hic yoktu.",
+    "mode": "hang",
+    "arm": "angles",
+    "bar": null,
+    "bend": 1,
+    "dur": 3400,
+    "prop": "bar",
+    "kf": [
+      {
+        "t": 0,
+        "tr": "Asılı",
+        "p": {
+          "upperA": 5,
+          "foreA": 3,
+          "torso": 2,
+          "thoraxA": 2,
+          "neckA": 3,
+          "thighA": 184,
+          "shinA": 208,
+          "ankle": -24,
+          "ankleF": -20
+        }
+      },
+      {
+        "t": 0.42,
+        "tr": "Yukarıda",
+        "p": {
+          "upperA": 65,
+          "foreA": -65,
+          "torso": 8,
+          "thoraxA": 8,
+          "neckA": 2,
+          "thighA": 184,
+          "shinA": 208,
+          "ankle": -24,
+          "ankleF": -20
+        }
+      },
+      {
+        "t": 0.55,
+        "tr": "Yukarıda",
+        "p": {
+          "upperA": 65,
+          "foreA": -65,
+          "torso": 8,
+          "thoraxA": 8,
+          "neckA": 2,
+          "thighA": 184,
+          "shinA": 208,
+          "ankle": -24,
+          "ankleF": -20
+        }
+      },
+      {
+        "t": 1,
+        "tr": "Asılı",
+        "p": {
+          "upperA": 5,
+          "foreA": 3,
+          "torso": 2,
+          "thoraxA": 2,
+          "neckA": 3,
+          "thighA": 184,
+          "shinA": 208,
+          "ankle": -24,
+          "ankleF": -20
+        }
+      }
+    ]
   }
 }

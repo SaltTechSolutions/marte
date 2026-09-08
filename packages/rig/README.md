@@ -188,6 +188,10 @@ olması. Üç kural şemada, yani export'u durduran yerde:
    dolu görünüyor. Bu kural yazılırken `kalca-bacak` paketinin arka bacağa
    yalnız 7 set verdiğini buldu.
 
+Dikey çekiş (barfiks) 2026-09-08'de eklendi: `lat` yalnız deadlift ve
+küreklerde birincildi, yani programlarda hiç yukarıdan çekiş yoktu. `hang`
+kipi zaten vardı (asılı diz çekme), arketip onun üstüne kuruldu.
+
 **"Bel incelme" diye bir program YOK ve olmayacak.** Bölgesel yağ kaybı
 gösterilememiş bir şey: karın egzersizi karın yağını azaltmıyor. Aynı ihtiyaç
 `govde-ve-bel` altında, bel çevresini toplam yağ kaybının belirlediği ve onu

@@ -418,6 +418,20 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
+    id: 'pullup', tr: 'Barfiks', en: 'Pull-up',
+    difficulty: 'ORTA-İLERİ', equipTr: 'Barfiks barı', equipEn: 'Pull-up bar',
+    primary: ['lat', 'teres', 'biceps'],
+    secondary: ['trapMid', 'trapLower', 'deltPost', 'brachialis', 'forearmFlex'],
+    archetype: 'pull_up',
+    setsHint: '3 × 5-8', restHint: '120-180 sn',
+    steps: [
+      ['Bara omuz genişliğinden biraz açık tutun, kollar tam açık asıl.', 'Grip the bar slightly wider than shoulders, hang with arms straight.'],
+      ['Kürek kemiklerini aşağı çekerek başla, sonra dirsekleri gövdeye doğru çekip çeneyi barın hizasına getir.', 'Start by pulling the shoulder blades down, then drive the elbows down until the chin reaches bar height.'],
+      ['Kontrollü in; kolları tam açarak bitir. Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla çalış.', 'Lower under control to a full hang. If you cannot yet, use band assistance or train the lowering phase only.'],
+    ],
+    poseReviewed: false,
+  },
+  {
     id: 'barbell-row', tr: 'Barbell row', en: 'Barbell row',
     difficulty: 'ORTA', equipTr: 'Bar', equipEn: 'Barbell',
     primary: ['lat', 'trapMid', 'deltPost', 'biceps'],

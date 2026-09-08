@@ -12,6 +12,7 @@
         "bar",
         "dambıl",
         "sehpa",
+        "barfiks barı",
         "mat"
       ],
       "promise": "Haftada üç tam vücut seansıyla temel kaldırışlarda güç kazandırır: çömelme, kalça menteşesi, itiş, çekiş ve taşıma. Yeni başlayan biri için yapısı en çok denenmiş başlangıç programı.",
@@ -135,6 +136,13 @@
               "restSec": 120
             },
             {
+              "id": "pullup",
+              "sets": 3,
+              "reps": "5-8",
+              "restSec": 150,
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
+            },
+            {
               "id": "bird-dog",
               "sets": 3,
               "reps": "10",
@@ -167,7 +175,8 @@
       "equipment": [
         "dambıl",
         "bar",
-        "sehpa"
+        "sehpa",
+        "barfiks barı"
       ],
       "targets": [
         "biceps",
@@ -236,6 +245,13 @@
             "band-external-rotation"
           ],
           "exercises": [
+            {
+              "id": "pullup",
+              "sets": 3,
+              "reps": "6-10",
+              "restSec": 150,
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
+            },
             {
               "id": "barbell-row",
               "sets": 3,
@@ -309,6 +325,7 @@
       "equipment": [
         "dambıl",
         "bar",
+        "barfiks barı",
         "mat"
       ],
       "promise": "Gövdeyi taşıyan kasları (karın, yan karın, bel dikleştiriciler) ve tüm vücudu çalıştırır. Enerji açığıyla birlikte yürütüldüğünde kas kütlesini korumaya yardım eder — bel çevresindeki değişimin yönünü belirleyen şey budur.",
@@ -355,6 +372,13 @@
               "sets": 3,
               "reps": "10",
               "restSec": 90
+            },
+            {
+              "id": "pullup",
+              "sets": 3,
+              "reps": "5-8",
+              "restSec": 120,
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
             },
             {
               "id": "plank",

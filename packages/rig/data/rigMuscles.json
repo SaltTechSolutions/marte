@@ -440,5 +440,22 @@
     "secondary": [],
     "source": "Ense arkasi (overhead) uzatma: uzun bas omuzdan gectigi icin gerilmis konumda calisiyor.",
     "reviewed": false
+  },
+  "pullup": {
+    "status": "authored",
+    "primary": [
+      "lat",
+      "teres",
+      "biceps"
+    ],
+    "secondary": [
+      "trapMid",
+      "trapLower",
+      "deltPost",
+      "brachialis",
+      "forearmFlex"
+    ],
+    "source": "Dikey cekis: kol govdeye yukaridan yaklasiyor, lat ve teres major baskin.",
+    "reviewed": false
   }
 }

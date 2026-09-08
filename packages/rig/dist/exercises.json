@@ -138,5 +138,9 @@
   "triceps-extension": {
     "name": "Triceps ense arkası",
     "archetype": "triceps_extension"
+  },
+  "pullup": {
+    "name": "Barfiks",
+    "archetype": "pull_up"
   }
 }
