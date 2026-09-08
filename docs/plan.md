@@ -201,8 +201,13 @@ boş.
 politikasının gerçekten devrede olduğu build çıktısında doğrulandı). Üç şeyi
 birden taşıyor: OTA desteği (D-2), mikrofon izni düzeltmesi (P0-3) ve PER-6'nın
 istemci yarısı. **Sürüm kodu 6 üretime terfi ettirilmemeli** — o build mikrofon
-izniyle üretilmişti. Kalan: `eas submit` ile internal'a yükleme ve aşağıdaki
-cihaz doğrulaması.
+izniyle üretilmişti. **Internal track'e yüklendi** (8 Eylül 2026): `play.mjs
+status` internal'da 1.0.0 / sürüm kodu 7 `completed` gösteriyor. *Not: `eas
+submit` çıktısında "You've already submitted this version" hatası göründü ama
+yükleme tamamlanmıştı — doğrulama CLI çıktısına değil Play API'sine
+bakılarak yapıldı (öncesinde internal'da 6 vardı).* **Internal sürüm notu
+boş** — test edenler neyi deneyeceklerini bilmiyor; Play Console'dan yazılmalı.
+Kalan: aşağıdaki cihaz doğrulaması.
 
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
