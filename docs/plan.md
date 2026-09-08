@@ -338,6 +338,26 @@ tarabyamarte` başlığı istiyor, yoksa 403 dönüyor. **Deploy edilip
 edilmediğine `git log`'a bakarak karar verilemez** — backend subtree olarak
 alındığı için bütün commit tarihleri 7 Eylül.
 
+**Fonksiyonların tamamı yeniden deploy edildi (8 Eylül 2026, kullanıcı
+onayıyla).** Sebep bir hata değil, bir *belirsizlik*: her fonksiyon kendi
+deploy anındaki kaynak paketini taşıyor ve 47'sinin 41'i 3–4 Eylül'de
+deploy edilmişti; aradan geçen sürede `sync.ts` ve `notifications.ts` gibi
+**ortak** dosyalar değişti. Tek tek 41 paketi indirip karşılaştırmak yerine
+hepsini bir kez yeniden deploy etmek soruyu tamamen ortadan kaldırıyor —
+artık 47'si de tek ve güncel pakete bakıyor.
+
+*Sonuç:* 47 güncelleme, sıfır oluşturma, **sıfır silme**, hata yok. Deploy
+öncesi `index.ts`'in 47 export'u canlıdaki 47 fonksiyonla birebir eşleştirildi;
+eşleşmeseydi Firebase eksik olanı silmek isterdi. Firebase hiçbirini
+"değişmemiş" diye atlamadı, yani kaç tanesinin gerçekten bayat olduğu bu
+yoldan öğrenilemedi — ama soru artık geçersiz.
+
+*PER-2'de kayıtlı tuzak bu sefer gerçekleşmedi ve kontrol edildi:* altı
+callable'ın Cloud Run servisinde `allUsers` → `roles/run.invoker` bağı yerinde.
+`revenueCatWebhook` uçtan uca sınandı — GET **405** (yani istek fonksiyonun
+kendi koduna ulaşıyor; yetki eksik olsaydı Cloud Run daha önce keserdi),
+jetonsuz POST **401** (secret okunuyor).
+
 Mağaza gönderiminden **önce**, aynı build'e girecek şekilde. Her biri en
 fazla yarım gün; toplamı Kuşak 1'in tek bir maddesinden kısa.
 
