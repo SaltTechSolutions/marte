@@ -61,9 +61,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "rig": "node scripts/rig-editor.mjs",
-    "build:android:local": "JAVA_HOME=$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk eas build --platform android --profile production --local",
-    "build:android:preview:local": "JAVA_HOME=$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk eas build --platform android --profile preview --local",
-    "build:ios:local": "eas build --platform ios --profile production --local"
+    "build:android:local": "JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk npx eas build --platform android --profile production --local",
+    "build:android:preview:local": "JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk npx eas build --platform android --profile preview --local",
+    "build:ios:local": "npx eas build --platform ios --profile production --local"
   },
   "private": true
 }
