@@ -317,7 +317,10 @@ yalnızca gürültü üretir. Duvara kadar onaylananlar onaylı kalıyor, mesaj
 kaçının geçtiğini söylüyor.
 
 **4f. [x] PER-6 · Antrenörün eklediği randevuda çakışma kontrolü yok.**
-*(8 Eylül 2026 — kod tarafı bitti; **deploy edilmedi**.)* Antrenör tarafı
+*(8 Eylül 2026 — **sunucu tarafı deploy edildi**: `createPtSessionByStaff`
+ve çakışma denetimini taşıyan `bookPtSessions` ikisi de `ACTIVE`, Cloud Run
+çağrı yetkileri doğrulandı. İstemci yarısı bir sonraki build'le sahaya
+iner.)* Antrenör tarafı
 `createPtSessionByStaff` callable'ına taşındı: antrenör hâlâ salonda mı, üye
 hâlâ aktif mi, saat gerçekten boş mu — üye akışının yıllardır yaptığı üç
 kontrol artık personel tarafında da var. `cancellationDeadlineAt` de yazılıyor
@@ -340,7 +343,7 @@ sahibidir — telefonla sözleşilen 07:00 dersi, kapalı pazar günündeki fazl
 saat. Bunları engellemek bugün çalışan bir akışı kırardı; PER-6'nın eksiği de
 "antrenör tuhaf saat seçti" değil, **bir saate iki üye** idi.
 
-⚠️ **Kalan iki iş.** (1) `createPtSessionByStaff` **deploy edilmeli**. (2)
+⚠️ **Kalan tek iş — kural sıkılaştırması.**
 `pt_sessions` create kuralı hâlâ personelin doğrudan yazmasına izin veriyor;
 şimdi kapatılırsa sahadaki build'ler (hâlâ `setDoc` kullanan) randevu
 ekleyemez hâle gelir — canlı bir salonda kesinti demek. Kural, yeni build
