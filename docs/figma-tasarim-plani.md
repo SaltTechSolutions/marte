@@ -388,18 +388,25 @@ gerekiyordu.
       çıktı, ve pulse gradyanı için ayrı bir test var: `onColorFor(p)`'nin
       seçtiği tek mürekkep üç durağın hepsinde ≥ 4.5:1 olmalı.
 
-### K3 · Antrenör sekme adı ile ekran başlığı çelişiyor *(P3)*
+### K3 · Antrenör sekme adı ile ekran başlığı çelişiyordu *(karara bağlandı)*
 
 `trainer/_layout.tsx` sekmeyi "Üyeler", `Stack.Screen` başlığını "Üyeler",
-ekranın kendi `<Text variant="h3">` başlığı ise "Üyelerim" yazıyor. Üçü de
-görünür. Birine karar verilmeli — Figma'da "Üyelerim" seçildi (ekran başlığı),
-sekme "Üyeler" kaldı; bu tutarlı ama bilinçli olmalı.
+ekranın kendi `<Text variant="h3">` başlığı ise "Üyelerim" yazıyordu. Üçü de
+aynı anda görünüyor.
+
+- [x] **K3-1 · "Üyeler" seçildi.** Ekran başlığı sekmeye uyduruldu; sekme ve
+      header'a dokunulmadı. Figma'daki `17` çerçevesi ve başlığı da aynı
+      şekilde güncellendi.
+
+Yönetici tarafındaki "Üyeler" sekmesi olduğu gibi kaldı: aynı sözcük ama
+farklı kapsam (antrenör kendine atanmış üyeleri, yönetici salonun tamamını
+görüyor) ve ikisi farklı rol yüzeyinde, yan yana görünmüyorlar.
 
 ---
 
 ## Sıradaki tur için önerilen sıra
 
-Kod tarafındaki bulguların hepsi (~~K1~~, ~~K2~~, ~~K4~~) ve ~~F1~~
+Kod tarafındaki bulguların hepsi (~~K1~~, ~~K2~~, ~~K3~~, ~~K4~~) ve ~~F1~~
 tamamlandı; kontrast artık 354 testlik takımda nöbetçiye bağlı. Kalanlar:
 
 1. **F1-3'ün devamı** — ekranları `callout` basamağına taşı. Basamak artık
@@ -409,5 +416,3 @@ tamamlandı; kontrast artık 354 testlik takımda nöbetçiye bağlı. Kalanlar:
 3. **F2-3** — kart/satır/çip bileşenleri; bundan sonraki her ekranı ucuzlatır.
 4. **F4-4 / F4-1** — metin olarak çizilmiş ikonların temizliği (listesi
    hazır), sonra elevation.
-5. **K3** — antrenör sekmesi "Üyeler" / ekran başlığı "Üyelerim"; hangisi
-   olacağına karar verilmeli.

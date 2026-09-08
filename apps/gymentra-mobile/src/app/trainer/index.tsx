@@ -126,7 +126,9 @@ export default function TrainerClients() {
           </Text>
         </GymSwitchTarget>
       </View>
-      <Text variant="h3">Üyelerim</Text>
+      {/* "Üyeler", matching the tab and the header — the screen used to say
+          "Üyelerim" while both of those said "Üyeler". */}
+      <Text variant="h3">Üyeler</Text>
 
       {/* Only for staff the owner has put on the door. Front-desk check-in is
           frequent and time-critical, so it sits on the landing screen rather
