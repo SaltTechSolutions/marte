@@ -197,6 +197,19 @@ npx tsc --noEmit && npx expo lint
 - Yeni **native modül** veya `app.json` plugin değişikliği → yeni build
   gerekir. Sadece JS değişikliği → yeniden yükleme yeterli. Kullanıcıya
   hangisinin gerektiğini açıkça söyle.
+- **`eas update`, yerel build'e ulaşmıyor.** *(8 Eylül 2026'da denendi.)*
+  `runtimeVersion` politikası `fingerprint`; `--local` build parmak izini
+  kendi geçici dizininde hesaplıyor, `eas update` ise çalışma dizininde.
+  İkisi tutmayınca kurulu APK `CheckCompleteUnavailable` deyip update'i hiç
+  görmüyor. Yani "JS değişikliği → OTA" yolu **yalnızca EAS'ta derlenmiş
+  binary'ler için** geçerli; yerelde derlenmiş bir APK'ya renk/metin
+  değişikliği göndermek istiyorsan ya yeni build alacaksın ya da önce
+  `runtimeVersion`'ı sabit bir değere çekeceksin (üretimi de etkiler,
+  kullanıcıya sor).
+- `eas update` çalıştırırken `--platform android` ver: varsayılan `all`,
+  web export'unu da deniyor ve Firebase'in `getReactNativePersistence`'ı
+  web'de olmadığı için düşüyor. `--non-interactive` ise `--environment`
+  istiyor.
 - Simülatörde görsel doğrulama yapılabiliyorsa yap. Dokunmalar kaydedilmiyorsa
   körlemesine tıklama yapma — kullanıcıdan doğrulama iste.
 - Test hesabı şifresi: `48162026` (tüm test hesapları).
