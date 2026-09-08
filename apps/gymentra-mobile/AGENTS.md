@@ -207,9 +207,13 @@ gereken her şey var (JDK 17, Android SDK 36 + NDK 27/28, Xcode 26.6,
 fastlane), yani:
 
 ```bash
-npm run build:android:local     # .aab, proje kökünde
-npm run build:ios:local         # .ipa
+npm run build:android:local          # .aab, üretim profili — mağaza için
+npm run build:android:preview:local  # .apk, cihaza doğrudan kurulabilir
+npm run build:ios:local              # .ipa
 ```
+
+Cihazda bir şeyi gözle görmek için istenen şey **.aab değil .apk**'dır;
+`preview` profili onu üretir ve mağazaya hiç dokunmaz.
 
 `--local` yalnızca derlemeyi buraya taşır: imzalama anahtarı yine EAS'tan
 çekilir, sürüm kodu yine uzaktan artar. Yani çıkan paket EAS'ta derlenenle
@@ -220,8 +224,16 @@ aynı imzayı taşır — mağaza tarafında hiçbir şey değişmez.
 - **Disk.** Yerel build birkaç GB Gradle/Xcode türetilmiş dosyası üretir.
   Build'den önce `df -h /` ile bakılmalı, yoksa yarıda "no space left" ile
   düşer. Aşağıdaki temizlik ~30 GB açıyor; tıkandıkça tekrarlanabilir.
-- `ANDROID_HOME` kabuk profilinde tanımlı değil, bu yüzden npm script'i
-  kendi içinde veriyor. Elle `eas build --local` çalıştıracaksan sen de ver.
+- `ANDROID_HOME` **ve** `JAVA_HOME` kabuk profilinde tanımlı değil, bu yüzden
+  npm script'leri ikisini de kendi içinde veriyor. Elle `eas build --local`
+  çalıştıracaksan sen de ver.
+- **JDK tuzağı.** `java -version` "17" diyor ama o bir **JRE** (Liberica
+  JRE 17) — `javac` yok. `/usr/libexec/java_home` de yalnızca onu ve Java
+  8'i görüyor. Gerçek JDK 17, Homebrew'un keg-only `openjdk@17`'si:
+  `$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home`.
+  `JAVA_HOME` verilmezse Gradle JRE'ye düşer ve
+  `Error resolving plugin [id: 'com.facebook.react.settings'] > No Java
+  compiler found` ile 14 saniyede patlar. *(8 Eylül 2026'da bu yaşandı.)*
 
 Yerel build'in mümkün olmadığı tek durum: makinenin meşgul olması ya da
 kullanıcının açıkça EAS istemesi. Kotayı harcamadan önce sor.
