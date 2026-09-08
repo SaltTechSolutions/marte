@@ -152,8 +152,30 @@ paket her iki platforma bağlandı. `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` EAS
 abonelik grubu yerelleştirmesi ve iki inceleme ekran görüntüsü (1242×2208)
 yüklendi. **Kalan:** Apple'daki iki ürün hâlâ `MISSING_METADATA` — API'nin
 gösterdiği tüm alanlar dolu, eksik alan App Store Connect arayüzünden
-okunacak. Ayrıca webhook secret + deploy ve gerçek cihazda satın alma
-doğrulaması.)* Açık maddeler içinde tek başına en
+okunacak. **8 Eylül 2026 — webhook tarafı bayat çıktı: iş zaten bitmiş.**
+`REVENUECAT_WEBHOOK_TOKEN` Secret Manager'da (sürüm 2, 2 Eylül),
+`revenueCatWebhook` 3 Eylül'den beri `ACTIVE` ve **sürüm 2'ye bağlı**.
+Bugün uçtan uca sınandı: geçersiz jeton → 401, jetonsuz → 401, GET → 405.
+Secret yüklenememiş olsa 500 alınırdı, yani jeton gerçekten okunuyor.
+
+**RevenueCat tarafı da kurulu:** 2 Eylül 08:55'te `User-Agent: RevenueCat`
+ile gelen bir istek **200** almış — URL ve jeton karşı tarafta doğru.
+O olayın `app_user_id`'si bir UUID'ydi (`0ca3a471…`) ve fonksiyon "salon
+bulunamadı" dedi; bu, RevenueCat panelinden gönderilen **test olayının**
+imzası. İstemci gerçek satın almada kimliği doğru kuruyor:
+`configurePurchases` `appUserID: tenantId` ile yapılandırıyor
+(`services/purchases.ts:53`, paywall açılışında çağrılıyor).
+
+**Kalan:** Apple'daki iki üründe `MISSING_METADATA` ve **gerçek cihazda
+satın alma** — ikincisi cihaz gerektiriyor.
+
+*Cihaz testinde ayrıca bakılacak bir şey:* salon değiştiren bir hesapta
+satın almanın hangi salona yazıldığı. `configurePurchases` ikinci salon için
+`Purchases.configure`'ı **tekrar** çağırıyor; RevenueCat kullanıcı
+değiştirmek için `logIn()` öneriyor ve iki kez `configure` etmenin davranışı
+belgede net değil. Yanlışsa yükseltme parası yanlış salona yazılır — koddan
+bakarak karara varılamaz, panelde hangi `app_user_id` ile göründüğüne
+bakmak lazım.)* Açık maddeler içinde tek başına en
 ağırı. Bir salon 10 aktif üyeye ulaşınca 11.'yi **hiçbir zaman**
 onaylayamıyor; `paywall.tsx`'teki yükseltme düğmesi yalnızca geri gidiyor.
 Tarabya Marte için elle bir abonelik yazılarak geçici olarak açıldı, yani
