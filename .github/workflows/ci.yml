@@ -22,9 +22,9 @@ jobs:
       run:
         working-directory: apps/gymentra-mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -52,9 +52,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -62,7 +62,7 @@ jobs:
 
       # The Firestore emulator is a Java process; firebase-tools requires
       # JDK 21 or newer and fails with an unhelpful message on older ones.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -79,9 +79,9 @@ jobs:
     name: Cloud Functions — build and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -91,7 +91,7 @@ jobs:
 
       # The function tests run inside `firebase emulators:exec`, same as the
       # rules ones, so this job needs a JDK too.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -123,9 +123,9 @@ jobs:
       run:
         working-directory: packages/rig
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
