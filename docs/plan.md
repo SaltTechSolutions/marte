@@ -66,7 +66,26 @@ origin'in 35 commit önünde — dosyalar köke taşınsa bile push edilmeden ko
 lint + `npm test`; backend: kural testleri + functions derlemesi), push et,
 yeşil olduğunu gör.
 
-**D-2. EAS Update (OTA) kurulu değil.** `GYMENTRA_PLAN.md` Faz 5 "JS-only
+**D-2. [x] EAS Update (OTA) kurulu değil.** *(8 Eylül 2026 — kuruldu.)*
+`expo-updates` eklendi, `updates.url` proje kimliğine bağlandı ve her build
+profiline kanal verildi (`production`, `preview`, `development`,
+`development-device`, `simulator`).
+
+**`runtimeVersion` politikası `fingerprint` seçildi**, `eas update:configure`'ın
+varsayılan olarak yazdığı `appVersion` değil. Fark kritik: `appVersion` ile
+runtime sürümü `1.0.0` olur ve yerel bağımlılık değişip sürüm numarası
+unutulduğunda OTA güncellemesi **uyumsuz build'lere düşer** — kullanıcı
+açılışta çöken bir uygulama alır ve OTA ile geri de alamazsın. `fingerprint`
+yerel projenin durumundan hesaplandığı için bu kapıyı kendiliğinden kapatır
+(bugünkü değer `2b3bc0e5…`, 113 kaynak dosyadan).
+
+⚠️ **OTA ancak bir sonraki build'den itibaren çalışır.** Bugün incelemede
+olan iOS build 22 ve Play'deki sürüm kodu 6, `expo-updates` içermiyor —
+onlara güncelleme gönderilemez. Yani üretim sürümü **yeni bir build'le**
+çıkmalı; aksi hâlde yayına OTA'sız girilmiş olur ve ilk JS hatası tam bir
+mağaza turu demektir.
+
+*Özgün bulgu:* `GYMENTRA_PLAN.md` Faz 5 "JS-only
 değişiklikler store onayı beklemeden yayınlanır" diyor ama `app.json`'da ne
 `updates` ne `runtimeVersion` var. Yayından sonraki ilk küçük hata tam bir
 mağaza turu demek. **Yayından önce kurulmalı** — sonradan eklemek, kurulu
@@ -1089,6 +1108,26 @@ uygulama, **uygulama içinden hesap silme** imkânı sunmak zorundadır.
       kalmıştı; mağaza hazırlığı bölümünde zaten işaretliydi.)*
 
 ### [x] P0-3 · Gereksiz mikrofon izni (`RECORD_AUDIO`)
+
+⚠️ **Düzeltme (8 Eylül 2026): bu madde yanlış kapatılmış.** `app.json`'ın
+`permissions` dizisinden kaldırmak yetmiyormuş — **`expo-image-picker`
+eklentisi izni geri ekliyor**: `microphonePermission` verilmediğinde
+plugin `RECORD_AUDIO`'yu koşulsuz ekliyor (`withImagePicker.js:11`). Yani
+girdi dosyası temiz görünürken **çözülen manifest kirliydi**;
+`npx expo config --type public` çıktısında izin duruyordu. Kontrol
+`app.json`'a bakarak yapıldığı için üç tur boyunca gözden kaçtı.
+
+*Çözüm:* `expo-image-picker` eklentisine `microphonePermission: false`
+verildi — bu hem izni eklemiyor hem de `withBlockedPermissions` ile başka
+bir paketin eklemesini engelliyor. Çözülen config artık yalnızca
+`android.permission.CAMERA` içeriyor.
+
+**Sonucu:** Play'deki sürüm kodu 6 bu düzeltmeden önce üretildi, yani
+manifestinde mikrofon izni olduğu varsayılmalı. Üretim sürümü yeni build ile
+çıkacağı için (bkz. D-2) kendiliğinden düzelir; **eski build üretime terfi
+ettirilmemeli.**
+
+*Özgün madde:*
 `apps/gymentra-mobile/app.json:27-30` Android izinleri arasında
 `android.permission.RECORD_AUDIO` var. Uygulama yalnızca QR okutuyor, ses
 kaydetmiyor. Gereksiz hassas izin hem Play Store incelemesinde risk hem de

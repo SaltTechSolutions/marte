@@ -29,6 +29,7 @@
     "expo-splash-screen": "~57.0.6",
     "expo-symbols": "~57.0.2",
     "expo-system-ui": "~57.0.2",
+    "expo-updates": "~57.0.21",
     "firebase": "^12.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
