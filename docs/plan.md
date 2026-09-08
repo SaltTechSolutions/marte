@@ -322,7 +322,21 @@ bırakıyor (`submissions` komutu kapları listeler).
 ### Kuşak 1.5 — [x] TAMAMLANDI (3 Eylül 2026)
 
 Altı maddenin altısı da kapandı. **Kalan:** `firestore.rules` (PER-1) ve
-`functions:requestPasswordReset` (PER-2 HTML gövde) deploy edilmeli.
+~~`functions:requestPasswordReset` (PER-2 HTML gövde) deploy edilmeli~~ —
+**ikisi de bayat çıktı, 8 Eylül 2026'da doğrulandı: zaten deploy edilmişler.**
+Canlı ruleset (`rulesets/34d0ff6d…`, 4 Eylül 15:19) indirilip `firestore.rules`
+ile karşılaştırıldı: **birebir aynı**, `isPendingIn` içinde. Aynı şey
+`storage.rules` için de geçerli. Composite index'ler de eşleşiyor: canlıda 36
+READY, dosyada 36, alan alan aynı. `requestPasswordReset`'in canlı kaynak
+paketi indirildi, `passwordReset.ts` yerelle **birebir aynı** ve HTML gövdeyi
+içeriyor.
+
+*Nasıl doğrulanır (tekrar gerekirse):* Firebase Rules REST API'sinden
+`releases/cloud.firestore` → `rulesetName` → ruleset içeriği; fonksiyon için
+`functions/<ad>:generateDownloadUrl`. İkisi de `x-goog-user-project:
+tarabyamarte` başlığı istiyor, yoksa 403 dönüyor. **Deploy edilip
+edilmediğine `git log`'a bakarak karar verilemez** — backend subtree olarak
+alındığı için bütün commit tarihleri 7 Eylül.
 
 Mağaza gönderiminden **önce**, aynı build'e girecek şekilde. Her biri en
 fazla yarım gün; toplamı Kuşak 1'in tek bir maddesinden kısa.
@@ -333,7 +347,8 @@ herkese açık `tenants` dokümanına taşımak yerine kural genişletildi —
 `isPendingIn`, onay bekleyen başvurana **yalnızca başvurduğu salonun**
 iletişim bilgisini açıyor. `tenants` dokümanı join-by-code için her oturum
 açmış kullanıcıya okunur, yani oraya taşımak her salonun iletişim bilgisini
-herkese açardı. 5 kural testi (184 → 189). **Kural deploy edilmeli.**
+herkese açardı. 5 kural testi (184 → 189). ~~**Kural deploy edilmeli.**~~
+*(8 Eylül 2026 — zaten canlıda; yukarıdaki Kuşak 1.5 notuna bakınız.)*
 
 **4b. [x] PER-2 · Şifremi unuttum** *(2 Eylül 2026 — deploy edildi ve
 simülatörde uçtan uca doğrulandı: istemci → callable →
