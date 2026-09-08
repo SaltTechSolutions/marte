@@ -140,7 +140,7 @@
               "sets": 3,
               "reps": "5-8",
               "restSec": 150,
-              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in. Makinen varsa lat pulldown aynı işi görür, ağırlığı seçebilirsin."
             },
             {
               "id": "bird-dog",
@@ -250,7 +250,7 @@
               "sets": 3,
               "reps": "6-10",
               "restSec": 150,
-              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in. Makinen varsa lat pulldown aynı işi görür, ağırlığı seçebilirsin."
             },
             {
               "id": "barbell-row",
@@ -378,7 +378,7 @@
               "sets": 3,
               "reps": "5-8",
               "restSec": 120,
-              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in."
+              "note": "Yapamıyorsan bant desteğiyle ya da yalnız iniş fazıyla (negatif) çalış; 3-5 saniyede in. Makinen varsa lat pulldown aynı işi görür, ağırlığı seçebilirsin."
             },
             {
               "id": "plank",
@@ -638,7 +638,8 @@
         "bar",
         "dambıl",
         "sehpa",
-        "basamak"
+        "basamak",
+        "makine ya da direnç bandı"
       ],
       "targets": [
         "gluteMax",
@@ -688,6 +689,13 @@
               "sets": 3,
               "reps": "12-15",
               "restSec": 60
+            },
+            {
+              "id": "leg-curl",
+              "sets": 3,
+              "reps": "10-15",
+              "restSec": 60,
+              "note": "Menteşe hareketleri arka bacağı kalçadan çalıştırıyor; bu dizden. İkisi aynı şey değil."
             },
             {
               "id": "calf-raise",

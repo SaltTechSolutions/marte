@@ -142,5 +142,13 @@
   "pullup": {
     "name": "Barfiks",
     "archetype": "pull_up"
+  },
+  "lat-pulldown": {
+    "name": "Lat pulldown",
+    "archetype": "lat_pulldown"
+  },
+  "leg-curl": {
+    "name": "Bacak curl",
+    "archetype": "leg_curl"
   }
 }

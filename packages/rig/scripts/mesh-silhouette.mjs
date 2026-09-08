@@ -46,8 +46,15 @@ const ZINCIR = {
   head: ['joint-neck', 'joint-head'],
 };
 
-/** Kemik boyu oranı olarak istasyon aralığı; yazılmayan kemik [−pay, 1+pay]. */
-const ARALIK = { head: [0.45, 2.45] };
+/**
+ * Kemik boyu oranı olarak istasyon aralığı; yazılmayan kemik [−pay, 1+pay].
+ *
+ * Kafanın ALT sınırı boyun ekleminin ALTINDA (negatif): 0.45'ken kafa
+ * silueti eklemin 12.6px üstünde başlıyordu ve boyun parçası eklemde
+ * bittiği için arada boşluk kalıyordu — önden bakışta kopuk kafa. Şimdi iki
+ * parça biniyor; bindirme dikişi kapatan şey (bkz. `EKLEM_PAYI`).
+ */
+const ARALIK = { head: [-0.15, 2.45] };
 
 /**
  * Kemik eksenine uzaklık yarıçapı, mesh birimi (1 birim ≈ 25px). Bir köşe bir

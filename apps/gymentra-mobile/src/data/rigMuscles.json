@@ -457,5 +457,34 @@
     ],
     "source": "Dikey cekis: kol govdeye yukaridan yaklasiyor, lat ve teres major baskin.",
     "reviewed": false
+  },
+  "lat-pulldown": {
+    "status": "authored",
+    "primary": [
+      "lat",
+      "teres",
+      "biceps"
+    ],
+    "secondary": [
+      "trapMid",
+      "trapLower",
+      "deltPost",
+      "brachialis"
+    ],
+    "source": "Dikey cekis; barfiksin agirligi secilebilen hali.",
+    "reviewed": false
+  },
+  "leg-curl": {
+    "status": "authored",
+    "primary": [
+      "hamBF",
+      "hamST"
+    ],
+    "secondary": [
+      "gastroLat",
+      "gastroMed"
+    ],
+    "source": "Diz fleksiyonu: arka bacagin kalca uzatmasindan (menteşe) ayri islevi.",
+    "reviewed": false
   }
 }

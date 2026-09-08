@@ -2659,5 +2659,153 @@
         }
       }
     ]
+  },
+  "lat_pulldown": {
+    "note": "Makinede yukaridan cekis. Govde hafif geriye yaslanir, bar gogsun ust kismina iner. Barfiksin olceklenebilir hali: agirlik secilebiliyor.",
+    "mode": "stand",
+    "arm": "ik",
+    "bar": "hands",
+    "bend": 1,
+    "dur": 3200,
+    "kf": [
+      {
+        "t": 0,
+        "tr": "Yukarıda",
+        "p": {
+          "shinA": 176,
+          "thighA": 184,
+          "ankle": 2,
+          "ankleF": 7,
+          "torso": 8,
+          "thoraxA": 5,
+          "neckA": 4,
+          "hx": 12,
+          "hy": -150
+        }
+      },
+      {
+        "t": 0.42,
+        "tr": "Göğüste",
+        "p": {
+          "shinA": 176,
+          "thighA": 184,
+          "ankle": 2,
+          "ankleF": 7,
+          "torso": 14,
+          "thoraxA": 10,
+          "neckA": 2,
+          "hx": 46,
+          "hy": -12
+        }
+      },
+      {
+        "t": 0.55,
+        "tr": "Göğüste",
+        "p": {
+          "shinA": 176,
+          "thighA": 184,
+          "ankle": 2,
+          "ankleF": 7,
+          "torso": 14,
+          "thoraxA": 10,
+          "neckA": 2,
+          "hx": 46,
+          "hy": -12
+        }
+      },
+      {
+        "t": 1,
+        "tr": "Yukarıda",
+        "p": {
+          "shinA": 176,
+          "thighA": 184,
+          "ankle": 2,
+          "ankleF": 7,
+          "torso": 8,
+          "thoraxA": 5,
+          "neckA": 4,
+          "hx": 12,
+          "hy": -150
+        }
+      }
+    ]
+  },
+  "leg_curl": {
+    "note": "Ayakta tek bacak curl. Uyluk sabit, hareketi yalnizca diz yapiyor: kalca uzatmasindan (menteşe) ayri bir arka bacak isi. Yatarak ya da oturarak makinede ayni kas ayni sekilde calisiyor.",
+    "mode": "stand",
+    "arm": "angles",
+    "bar": null,
+    "bend": 1,
+    "dur": 3000,
+    "kf": [
+      {
+        "t": 0,
+        "tr": "Açık",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "upperA": 184,
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 0,
+          "thighF": 188,
+          "shinF": 186
+        }
+      },
+      {
+        "t": 0.42,
+        "tr": "Bükülü",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "upperA": 184,
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": -10,
+          "thighF": 188,
+          "shinF": 288
+        }
+      },
+      {
+        "t": 0.55,
+        "tr": "Bükülü",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "upperA": 184,
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": -10,
+          "thighF": 188,
+          "shinF": 288
+        }
+      },
+      {
+        "t": 1,
+        "tr": "Açık",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "upperA": 184,
+          "foreA": 180,
+          "ankle": 0,
+          "ankleF": 0,
+          "thighF": 188,
+          "shinF": 186
+        }
+      }
+    ]
   }
 }

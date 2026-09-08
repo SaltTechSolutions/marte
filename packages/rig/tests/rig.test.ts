@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
-import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
+import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, farLegDistinct, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
 import { auditExercise, auditLoop, auditSegments } from '../src/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -127,9 +127,16 @@ describe('rig hareket denetimi', () => {
   it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {
     // Kural: ikinci bacak birincinin kopyasıysa çizimde bilgi taşımıyor.
     const gorunur = entries.filter(([, ex]) => showFarLeg(ex)).map(([k]) => k);
-    // `lunge_reach` listeye `unilateral_lunge`tan ayrılınca katıldı: hamlede
-    // iki bacak apayrı iş yapıyor, arka bacak uzanıp diz yere iniyor.
-    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'lunge_reach', 'step_up', 'unilateral_lunge']);
+    // Liste SABİT YAZILMIYOR — her yeni hareketle güncellenmesi gereken bir
+    // sayaç olurdu. Korunan şey kuralın kendisi: görünen her uzak bacağın
+    // gerçekten ayrı bir hareketi var, gizlenenin yok.
+    for (const [k, ex] of entries) {
+      expect(showFarLeg(ex), `${k}: kural ile çizim kararı ayrışmamalı`).toBe(
+        ex.hideFarLeg === undefined ? farLegDistinct(ex) : !ex.hideFarLeg,
+      );
+    }
+    expect(gorunur).toContain('unilateral_lunge');
+    expect(gorunur).toContain('bulgarian_split_squat');
     // Yan plank'ta bacaklar bilerek üst üste: ayrı hareket değil, gizli.
     expect(showFarLeg(RIG_ARCHETYPES.side_plank)).toBe(false);
     expect(showFarLeg(RIG_ARCHETYPES.squat)).toBe(false);

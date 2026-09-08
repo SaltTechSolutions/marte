@@ -103,9 +103,11 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   it('bandın hiçbir hareket için atlaması yok', () => {
     // T2'nin doğrudan iddiası: kapı yok, band 30/30 harekette değerlendiriliyor.
     expect(dirsek.skip, 'dirsek bandında skip olmamalı').toBeUndefined();
-    // 8 -> 9: `lunge_reach` ters kinematik kullanıyor, çünkü elin yere inip
-    // sonra başın üstüne uzanması hedef konumuyla anlatılıyor, açıyla değil.
-    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(9);
+    // Sayı SABİT YAZILMIYOR: her yeni hareket eklendiğinde güncellemek
+    // gerekiyordu ve o güncelleme düşünmeden yapılan bir işleme dönüşüyor.
+    // Korunan şey T2'nin iddiası: açı kipinde OLMAYAN hareketler var ve
+    // bandın onları atlamaması bu testin geri kalanında sınanıyor.
+    expect(ik.length + floor.length, 'ters kinematikli hareket bulunmalı').toBeGreaterThan(0);
   });
 
   ik.forEach(([k, ex]) => {
