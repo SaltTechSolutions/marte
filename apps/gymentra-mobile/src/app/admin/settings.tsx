@@ -40,9 +40,10 @@ import { signOutAndForget } from '@/services/signOut';
  * Marka rengi seçenekleri, tayf sırasıyla — satır bir renk çemberi gibi
  * okunsun diye hue'ya göre dizildi, popülerliğe göre değil.
  *
- * Hepsi güvenli: `onColorFor` ana rengin üstündeki metni parlaklığa göre
- * seçiyor ve açık temada `derivePalette` ana rengi l≤0.42'ye indiriyor, bu
- * yüzden sarı ve limon da beyaz zeminde okunur kalıyor.
+ * Hepsi güvenli: `onColorFor` ana rengin üstündeki metni iki mürekkepten
+ * kontrastı yüksek olanı seçerek belirliyor ve açık temada `derivePalette`
+ * ana rengi l≤0.42'ye indiriyor, bu yüzden sarı ve limon da beyaz zeminde
+ * okunur kalıyor.
  */
 /** Salonların gerçekte kullandığı eşikler. Ara değerler bir politika değil,
  *  ince ayar; kimse iptal süresini 19 saat yapmıyor. */
