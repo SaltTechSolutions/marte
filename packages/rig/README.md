@@ -48,6 +48,7 @@ dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
 dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
 dist/anatomy.json         kas haritasının ön/arka çizim yolları
 dist/bodyParts.json       uzuv siluet parçaları
+dist/programmes.json      hazır paket programlar
 dist/rig.test.ts          motor testleri          ┐ devredilen KODUN
 dist/rigAudit.test.ts     denetim testleri        │ testleri de
 dist/rigSchema.test.ts    şema testleri           ┘ devrediliyor
@@ -162,6 +163,38 @@ Verinin ŞEKLİ ayrı bir soru: `src/rigSchema.ts` yüklenirken ve editör
 kaydederken çalışır. Bilinmeyen bir `mode`, sıfırdan başlamayan bir kare
 dizisi ya da 2000ms altı bir süre motora hiç ulaşamaz — mekanik denetim
 elinde düzgün biçimli bir hareket olduğunu varsayıyor.
+
+## Hazır programlar ve yanlış vaat koruması
+
+`data/programmes.json` altı hazır program taşıyor (temel güç, kol
+kalınlaştırma, gövde ve bel, sırt-omuz dayanıklılığı, kalça-bacak, masa başı
+molası). Her programın `promise` (ne yapar), `limits` (ne YAPMAZ),
+`progression` ve özet `evidence` alanları var.
+
+Buradaki asıl mesele veri biçimi değil, kullanıcıya söylenen şeyin doğru
+olması. Üç kural şemada, yani export'u durduran yerde:
+
+1. **`limits` boş olamaz.** Bir program ne yapmadığını yazmadan yayına
+   giremez; yazılmayan sınırı kullanıcı kendi beklentisiyle dolduruyor.
+2. **Vaatte yanlış yönlendiren ifade yasak** — bölgesel yağ kaybı, inceltme,
+   detoks, "garanti". Kalıplar Türkçe ek alıyor ve Unicode harf sınıfıyla
+   eşleşiyor: düz alt dizge de `\w` de "yağı yakar"ı kaçırıyordu. Yasak
+   yalnızca `name` ve `promise` alanlarına bakıyor, çünkü `limits` içinde bu
+   ifadelerin İNKÂR EDİLİRKEN geçmesi gerekiyor.
+3. **Hipertrofi hedefli program, hedef aldığı her kasa haftada en az 10
+   birincil set vermek zorunda.** Sayı veriden hesaplanıyor: setler × haftalık
+   tekrar, kasın birincil olduğu hareketlerde. "Kol kalınlaştırma" adlı ama
+   haftada dört set kol çalıştıran bir programı gözle fark etmek zor — liste
+   dolu görünüyor. Bu kural yazılırken `kalca-bacak` paketinin arka bacağa
+   yalnız 7 set verdiğini buldu.
+
+**"Bel incelme" diye bir program YOK ve olmayacak.** Bölgesel yağ kaybı
+gösterilememiş bir şey: karın egzersizi karın yağını azaltmıyor. Aynı ihtiyaç
+`govde-ve-bel` altında, bel çevresini toplam yağ kaybının belirlediği ve onu
+ağırlıklı olarak beslenmenin sürdüğü açıkça yazılarak karşılanıyor.
+
+`reviewed: false` alanı içeriğin bir uzman kontrolünden geçmediğini söylüyor
+ve uygulamada kullanıcıya gösteriliyor.
 
 ## Sırada ne var
 

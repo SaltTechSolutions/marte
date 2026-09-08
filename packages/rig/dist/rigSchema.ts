@@ -574,3 +574,63 @@ export function validateProgrammes(data: unknown, exerciseKeys: string[], muscle
 
   return errs;
 }
+
+/* --- paket program tipleri ------------------------------------------------ */
+
+export interface ProgrammeSet {
+  id: string;
+  sets: number;
+  /** "8", "6-10", "30 sn", "40 m". */
+  reps: string;
+  restSec: number;
+  note?: string;
+}
+
+export interface ProgrammeDay {
+  id: string;
+  name: string;
+  /** Isınma hareketleri — hacim sayımına GİRMEZ, çalışma seti değiller. */
+  warmup?: string[];
+  exercises: ProgrammeSet[];
+}
+
+export interface ProgrammeEvidence {
+  claim: string;
+  basis: string;
+}
+
+export interface Programme {
+  name: string;
+  goal: 'guc' | 'hipertrofi' | 'dayaniklilik' | 'hareketlilik';
+  level: 'baslangic' | 'orta' | 'ileri';
+  weeks: number;
+  sessionsPerWeek: number;
+  minutes: number;
+  equipment: string[];
+  /** Hipertrofi hedefli pakette zorunlu: hacim denetiminin girdisi. */
+  targets?: string[];
+  promise: string;
+  /** Paketin ne YAPMADIĞI. Boş olamaz — bkz. `validateProgrammes`. */
+  limits: string[];
+  progression: string;
+  evidence: ProgrammeEvidence[];
+  days: ProgrammeDay[];
+  /** Bir uzmanın içeriği kontrol edip etmediği. */
+  reviewed: boolean;
+}
+
+export interface ProgrammeFile {
+  programmes: Record<string, Programme>;
+}
+
+/**
+ * Yükleme anında doğrular. `assertArchetypes` ile aynı gerekçe: JSON elle de
+ * düzenlenebiliyor ve bozuk bir paket uygulamanın içinde patlar. Hareket
+ * kimlikleri ve kas verisi de gerekiyor, çünkü denetlenen şeylerin bir kısmı
+ * (ölü atıf, haftalık hacim) tek başına bu dosyadan görülemiyor.
+ */
+export function assertProgrammes(data: unknown, exerciseKeys: string[], muscles: unknown): ProgrammeFile {
+  const errs = validateProgrammes(data, exerciseKeys, muscles);
+  if (errs.length) throw new Error(`programmes.json geçersiz:\n  ${errs.join('\n  ')}`);
+  return data as ProgrammeFile;
+}

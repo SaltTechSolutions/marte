@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-08T06:13:01.799Z",
+  "generated": "2026-09-08T06:16:13.127Z",
   "source": {
-    "commit": "534de283",
+    "commit": "8fdcb619",
     "dirty": true
   },
   "counts": {
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "dc6d47a5230c444f1763406fa94476c1c8f6aadb762134714f6e2f691dbf8b83",
-      "bytes": 28718,
+      "sha256": "87290d674759ee31efba23ca670d7b8fc9d2313dcd844fe864cc10c69ff160a7",
+      "bytes": 30534,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
