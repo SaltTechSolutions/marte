@@ -309,16 +309,57 @@ turuncu/yeşil). Yanlış olan kod.
       `derivePalette`'in ana rengi o bantttan uzaklaştırması — bugünkü
       hiçbir salon o bantta değil, ayrı bir iş olarak durabilir.
 
-### K2 · `sub` rengi açık temada sınırın altında *(P2)*
+### K2 · `sub` rengi açık temada sınırın altındaydı *(düzeltildi)*
 
-`designplan.md` D2-4 bunu tahmin etmişti, ölçüldü:
+`designplan.md` D2-4 bunu tahmin etmişti. İlk ölçümü yalnızca `bg0` üstünde
+yapmıştım; dört yüzeyin hepsine bakınca durum **daha kötü** çıktı — en zayıf
+kombinasyon `bg0` değil, çip ve rozetlerin oturduğu `surf2`:
 
-- GymEntra Light: `sub #64748B` / `bg0 #F6F8FB` → **4.47:1** (AA sınırı 4.5)
-- Tarabya Light: `sub #78716C` / `surf #FFFFFF` → 4.80:1 ✓
-- Koyu temaların hepsi 6:1 üstü ✓
+| palet | eski `sub` | en düşük | nerede |
+|---|---|---|---|
+| GymEntra Light | `#64748B` (slate-500) | **4.20:1** | `surf2 #EDF1F7` |
+| Tarabya Light | `#78716C` (stone-500) | **4.04:1** | `surf2 #F1EBDF` |
+| Koyu paletler | — | 6.04 / 6.09 ✓ | — |
 
-`label` (11pt) + `tone="sub"` kombinasyonu çok yaygın; 4.47 sınırın *altında*.
-GymEntra Light `sub`'ı bir tık koyulaştırmak yeter (`#5A6B80` → ~5.1:1).
+`sub`, 11-13pt'de okunuyor, yani AA 4.5:1 istiyor.
+
+- [x] **K2-1 · Düzeltildi.** Her iki açık palette `sub` yarım basamak
+      koyulaştırıldı: `#5B6980` ve `#6B645F`. İkisi de dört yüzeyin hepsinde
+      **4.90:1**. Figma'daki `color/sub` değişkeni ve Foundations'taki hex
+      etiketleri de aynı değerlere çekildi — `08L` ve `21L` çerçeveleri
+      değişkene bağlı olduğu için kendiliğinden güncellendi.
+- [x] **K2-2 · Nöbetçi test eklendi.** `contrast.test.ts` → "palette
+      legibility": gönderilen dört paletin ve türetilmiş paletlerin
+      (120 hue × 2 mod) `txt` ve `sub` değerleri dört yüzeyin hepsinde
+      ≥ 4.5:1 olmalı. Bu test, kaçırdığım `surf2` kombinasyonunu yakalar.
+
+**Türetilmiş paletler zaten geçiyordu** ve değiştirilmedi: `derivePalette`'in
+`sub`'ı (`s:0.06`, açıkta `l:0.4`, koyuda `l:0.65`) en kötü hâlde 4.72 / 5.00
+veriyor.
+
+### K4 · Açık temada semantik renkler `surf2` üstünde AA'yı geçmiyor *(P2, açık)*
+
+K2'yi ölçerken çıktı. Aynı tablo, `sub` dışındaki ön plan renkleri için:
+
+| palet | `p` | `danger` | `warn` | `ok` |
+|---|---|---|---|---|
+| GymEntra Light | **3.32** | **4.26** | **4.43** | **3.32** |
+| Tarabya Light | **3.00** | **4.07** | **4.23** | **4.22** |
+| Koyu paletler | 5.48-6.04 ✓ | 5.54 ✓ | 9.18 ✓ | 7.97-8.81 ✓ |
+
+(en düşük değer; hepsi `bg1`/`surf2` üstünde. Beyaz `surf` üstünde geçiyorlar.)
+
+Gerçek bir kombinasyon: `StatusBadge` zeminini `surf2` yapıp metni
+`ok`/`warn`/`danger` ile yazıyor, `Chip` de öyle. Yani açık temada her durum
+rozeti sınırın altında.
+
+- [ ] **K4-1.** Açık palet semantik renklerini yeniden ayarla. Bu bir eşik
+      düzeltmesi değil, **tasarım kararı**: renkler gözle görülür biçimde
+      koyulaşacak. Koyu tema birincil olduğu için acil değil ama açık tema
+      "destekleniyor" deniyorsa borç.
+- [ ] **K4-2.** Düzeltildikten sonra `contrast.test.ts`'teki `FOREGROUNDS`
+      dizisine `p`/`danger`/`warn`/`ok` eklensin — test o gün tek satırla
+      genişler.
 
 ### K3 · Antrenör sekme adı ile ekran başlığı çelişiyor *(P3)*
 
@@ -331,12 +372,13 @@ sekme "Üyeler" kaldı; bu tutarlı ama bilinçli olmalı.
 
 ## Sıradaki tur için önerilen sıra
 
-~~K1~~ ve ~~F1~~ tamamlandı. Kalanlar:
+~~K1~~, ~~K2~~ ve ~~F1~~ tamamlandı. Kalanlar:
 
 1. **F1-3'ün devamı** — ekranları `callout` basamağına taşı. Basamak artık
    kodda var ama kimse kullanmıyor; Figma hangi metnin 15pt olduğunu
    söylüyor, ekran ekran uygulanması gerekiyor.
-2. **K2** — GymEntra Light'ta `sub` 4.47:1; tek hex değişikliği.
+2. **K4** — açık temada semantik renkler `surf2` üstünde 3.00-4.43:1.
+   Koyu tema birincil olduğu için acil değil, ama açık tema destekleniyorsa borç.
 3. **F3-1 / F3-2** — yönetici üye yönetimi ve raporlar; dosyadaki en büyük boşluk.
 4. **F2-3** — kart/satır/çip bileşenleri; bundan sonraki her ekranı ucuzlatır.
 5. **F4-4 / F4-1** — metin olarak çizilmiş ikonların temizliği (listesi
