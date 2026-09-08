@@ -157,14 +157,17 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
       await createPtSession({
         tenantId,
         trainerId: user.uid,
-        trainerName: user.displayName || user.email || 'Antrenör',
         memberId: selectedMember.userId,
-        memberName: selectedMember.userDisplayName || selectedMember.userEmail || 'Üye',
         date,
         durationMinutes: duration,
       });
       setScheduling(false);
       setSelectedMember(null);
+    } catch (e) {
+      // A clash is a normal outcome now, not a bug: the server refuses the
+      // write and says which appointment it collides with. Swallowing it
+      // would leave the trainer staring at a form that did nothing.
+      reportError(e, toast, 'Randevu oluşturulamadı, tekrar dene.');
     } finally {
       setSaving(false);
     }

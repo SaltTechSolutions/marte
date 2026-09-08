@@ -316,7 +316,37 @@ ve ilk redde duruyor: koltuk bittiyse sıradaki de sığmaz, devam etmek
 yalnızca gürültü üretir. Duvara kadar onaylananlar onaylı kalıyor, mesaj
 kaçının geçtiğini söylüyor.
 
-**4f. PER-6 · Antrenörün eklediği randevuda çakışma kontrolü yok.**
+**4f. [x] PER-6 · Antrenörün eklediği randevuda çakışma kontrolü yok.**
+*(8 Eylül 2026 — kod tarafı bitti; **deploy edilmedi**.)* Antrenör tarafı
+`createPtSessionByStaff` callable'ına taşındı: antrenör hâlâ salonda mı, üye
+hâlâ aktif mi, saat gerçekten boş mu — üye akışının yıllardır yaptığı üç
+kontrol artık personel tarafında da var. `cancellationDeadlineAt` de yazılıyor
+(elle eklenen randevuda hiç yoktu, iptalde salonun o günkü ayarına düşüyordu).
+
+**Asıl düzeltme, deterministik kimliğin göremediği çakışma.** Kimlik
+`{tenant}_{trainer}_{başlangıç}` olduğu için yalnızca *aynı dakikada başlayan*
+iki randevuyu yakalıyordu. Elle eklenen randevunun başlangıcı ve süresi
+serbest olduğundan 10:00–11:00 ile 10:30–11:30 iki farklı kimlik, iki mutlu
+yazma, tek antrenör demekti. Yeni `findOverlap` yarı açık aralık
+karşılaştırması yapıyor — arka arkaya dersler (11:00'de biten, 11:00'de
+başlayan) çakışma sayılmıyor. **Aynı denetim üye akışına da eklendi**: üyenin
+ızgaraya oturan saati, antrenörün elle koyduğu 09:30'luk randevunun içine
+düşebiliyordu. 9 birim testi (functions 79 → 88).
+
+**Bilerek yapılmadı — antrenörün kendi çalışma saatleri ve salonun açık
+olması personel tarafında zorlanmıyor.** İkisi de üye akışında *teklif*: üye
+antrenörün yayınladığından seçer. Kendi takvimine yazan antrenör o takvimin
+sahibidir — telefonla sözleşilen 07:00 dersi, kapalı pazar günündeki fazladan
+saat. Bunları engellemek bugün çalışan bir akışı kırardı; PER-6'nın eksiği de
+"antrenör tuhaf saat seçti" değil, **bir saate iki üye** idi.
+
+⚠️ **Kalan iki iş.** (1) `createPtSessionByStaff` **deploy edilmeli**. (2)
+`pt_sessions` create kuralı hâlâ personelin doğrudan yazmasına izin veriyor;
+şimdi kapatılırsa sahadaki build'ler (hâlâ `setDoc` kullanan) randevu
+ekleyemez hâle gelir — canlı bir salonda kesinti demek. Kural, yeni build
+dağıtıldıktan **sonra** sıkılaştırılmalı.
+
+*Özgün madde:*
 `ptSessionRepo.createPtSession` doğrudan `setDoc`; ne mevcut randevularla
 çakışma, ne antrenörün kendi saatleri, ne salonun açık olması kontrol
 ediliyor. Üye tarafındaki `bookPtSessions` callable'ı bunların hepsini

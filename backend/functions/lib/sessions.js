@@ -33,7 +33,8 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cancelPtSession = exports.bookPtSessions = void 0;
+exports.createPtSessionByStaff = exports.cancelPtSession = exports.bookPtSessions = void 0;
+exports.findOverlap = findOverlap;
 exports.isWithinAvailability = isWithinAvailability;
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
@@ -49,6 +50,44 @@ function timeAt(base, hhmm) {
     const d = new Date(base);
     d.setHours(h, m, 0, 0);
     return d;
+}
+function findOverlap(existing, startMs, durationMinutes, ignoreIds = new Set()) {
+    const endMs = startMs + durationMinutes * 60000;
+    return existing.find((s) => {
+        if (s.status === 'cancelled')
+            return false;
+        if (ignoreIds.has(s.id))
+            return false;
+        const otherEnd = s.startMs + (s.durationMinutes || 60) * 60000;
+        return startMs < otherEnd && s.startMs < endMs;
+    });
+}
+/** Start of the day a date falls in, and start of the day after the last one. */
+function dayBounds(dates) {
+    const from = new Date(Math.min(...dates.map((d) => d.getTime())));
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(Math.max(...dates.map((d) => d.getTime())));
+    to.setHours(0, 0, 0, 0);
+    to.setDate(to.getDate() + 1);
+    return { from, to };
+}
+async function readTrainerSessions(tx, db, tenantId, trainerId, dates) {
+    const { from, to } = dayBounds(dates);
+    const snap = await tx.get(db
+        .collection('pt_sessions')
+        .where('tenantId', '==', tenantId)
+        .where('trainerId', '==', trainerId)
+        .where('date', '>=', admin.firestore.Timestamp.fromDate(from))
+        .where('date', '<', admin.firestore.Timestamp.fromDate(to)));
+    return snap.docs.map((d) => {
+        var _a;
+        return ({
+            id: d.id,
+            startMs: d.data().date.toMillis(),
+            durationMinutes: (_a = d.data().durationMinutes) !== null && _a !== void 0 ? _a : 60,
+            status: d.data().status,
+        });
+    });
 }
 /**
  * Same rule the client's `computeFreeSlots` shows the member — re-derived
@@ -140,7 +179,7 @@ exports.bookPtSessions = (0, https_1.onCall)({ region: 'europe-west1' }, async (
     // optimistic concurrency then guarantees only one of them commits.
     const sessionRefs = slots.map((slot) => db.collection('pt_sessions').doc(`${tenantId}_${trainerId}_${slot.getTime()}`));
     const result = await db.runTransaction(async (tx) => {
-        var _a, _b, _c, _d, _e, _f, _g, _h;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
         const [membershipSnap, trainerMembershipSnap, availabilitySnap, ...sessionSnaps] = await Promise.all([
             tx.get(membershipRef),
             tx.get(trainerMembershipRef),
@@ -173,6 +212,18 @@ exports.bookPtSessions = (0, https_1.onCall)({ region: 'europe-west1' }, async (
                 throw new https_1.HttpsError('failed-precondition', `${slots[i].toLocaleString('tr-TR')} az önce doldu, başka bir saat seç.`);
             }
         });
+        // PER-6: the id check above only catches an identical start time. A
+        // session a trainer added by hand can sit at any minute and run any
+        // length, so a member's grid-aligned slot can still land inside one.
+        const slotMinutes = (_b = availability.slotMinutes) !== null && _b !== void 0 ? _b : 60;
+        const existing = await readTrainerSessions(tx, db, tenantId, trainerId, slots);
+        const beingCreated = new Set(sessionRefs.map((ref) => ref.id));
+        for (const slot of slots) {
+            const clash = findOverlap(existing, slot.getTime(), slotMinutes, beingCreated);
+            if (clash) {
+                throw new https_1.HttpsError('failed-precondition', `${slot.toLocaleString('tr-TR')} antrenörün başka bir randevusuyla çakışıyor.`);
+            }
+        }
         // Faz 1.4: credits must still be unexpired *as of now* (the stored
         // read-time-check discipline every other quota in this schema uses —
         // see `member_entitlements.endsAt > request.time`) — and, separately,
@@ -206,8 +257,8 @@ exports.bookPtSessions = (0, https_1.onCall)({ region: 'europe-west1' }, async (
             remaining.set(eligible.ref.id, remaining.get(eligible.ref.id) - 1);
             creditIdBySlot.push(eligible.ref.id);
         }
-        const trainerName = (_c = (_b = trainerMembership.userDisplayName) !== null && _b !== void 0 ? _b : trainerMembership.userEmail) !== null && _c !== void 0 ? _c : 'Antrenör';
-        const memberName = (_g = (_e = (_d = membershipSnap.data()) === null || _d === void 0 ? void 0 : _d.userDisplayName) !== null && _e !== void 0 ? _e : (_f = membershipSnap.data()) === null || _f === void 0 ? void 0 : _f.userEmail) !== null && _g !== void 0 ? _g : 'Üye';
+        const trainerName = (_d = (_c = trainerMembership.userDisplayName) !== null && _c !== void 0 ? _c : trainerMembership.userEmail) !== null && _d !== void 0 ? _d : 'Antrenör';
+        const memberName = (_h = (_f = (_e = membershipSnap.data()) === null || _e === void 0 ? void 0 : _e.userDisplayName) !== null && _f !== void 0 ? _f : (_g = membershipSnap.data()) === null || _g === void 0 ? void 0 : _g.userEmail) !== null && _h !== void 0 ? _h : 'Üye';
         // The deadline is frozen at booking, not recomputed at cancellation.
         // A gym that tightens its notice period next week must not retroactively
         // move the line under sessions somebody already booked — "the rule was
@@ -239,7 +290,7 @@ exports.bookPtSessions = (0, https_1.onCall)({ region: 'europe-west1' }, async (
         });
         const spendPerCredit = new Map();
         for (const id of creditIdBySlot)
-            spendPerCredit.set(id, ((_h = spendPerCredit.get(id)) !== null && _h !== void 0 ? _h : 0) + 1);
+            spendPerCredit.set(id, ((_j = spendPerCredit.get(id)) !== null && _j !== void 0 ? _j : 0) + 1);
         for (const credit of credits) {
             const spent = spendPerCredit.get(credit.ref.id);
             if (!spent)
@@ -368,5 +419,116 @@ exports.cancelPtSession = (0, https_1.onCall)({ region: 'europe-west1' }, async 
     });
     console.log(`Session ${sessionId} cancelled by ${uid}, refunded=${result.refunded}`);
     return result;
+});
+/**
+ * PER-6: a trainer (or an admin, on a trainer's behalf) puts a session on the
+ * calendar for a member — no package credit involved.
+ *
+ * This used to be a direct client `setDoc` (`ptSessionRepo.createPtSession`).
+ * Nothing checked anything: the same trainer could be booked twice for the
+ * same hour, once by the member flow and once by hand, and both rows would
+ * sit there until somebody noticed at the door. Every guarantee the member
+ * flow already had — trainer still works here, member still belongs here,
+ * the slot is actually free — was simply absent on the staff side.
+ *
+ * Deliberately NOT enforced here: the trainer's own availability windows and
+ * the gym's opening hours. Both are checked for the member flow, where they
+ * are the offer — the member picks from what the trainer published. A trainer
+ * writing on their own calendar is the authority over it: the 07:00 session
+ * agreed with a member by phone, the extra hour on a closed Sunday. Blocking
+ * those would break a workflow that runs today, and the missing guarantee in
+ * PER-6 was never "the trainer booked an odd hour" — it was two members in
+ * one hour.
+ */
+exports.createPtSessionByStaff = (0, https_1.onCall)({ region: 'europe-west1' }, async (request) => {
+    var _a;
+    const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
+    if (!uid)
+        throw new https_1.HttpsError('unauthenticated', 'Giriş yapmış olmanız gerekiyor.');
+    const { tenantId, trainerId, memberId, date: dateString, durationMinutes } = request.data;
+    if (!tenantId || !trainerId || !memberId || !dateString) {
+        throw new https_1.HttpsError('invalid-argument', 'Eksik bilgi.');
+    }
+    const duration = Number(durationMinutes);
+    if (!Number.isInteger(duration) || duration <= 0 || duration > 480) {
+        throw new https_1.HttpsError('invalid-argument', 'Randevu süresi geçersiz.');
+    }
+    const start = new Date(dateString);
+    if (Number.isNaN(start.getTime()))
+        throw new https_1.HttpsError('invalid-argument', 'Tarih okunamadı.');
+    if (start.getTime() <= Date.now())
+        throw new https_1.HttpsError('invalid-argument', 'Geçmiş bir saat seçilemez.');
+    const db = admin.firestore();
+    const callerRef = db.doc(`tenant_memberships/${tenantId}_${uid}`);
+    const trainerRef = db.doc(`tenant_memberships/${tenantId}_${trainerId}`);
+    const memberRef = db.doc(`tenant_memberships/${tenantId}_${memberId}`);
+    // Same deterministic id the member flow uses, for the same reason: two
+    // devices racing for one start time share a read on one document, so
+    // exactly one of them commits.
+    const sessionRef = db.collection('pt_sessions').doc(`${tenantId}_${trainerId}_${start.getTime()}`);
+    await db.runTransaction(async (tx) => {
+        var _a, _b, _c, _d, _e, _f;
+        const [callerSnap, trainerSnap, memberSnap, sessionSnap] = await Promise.all([
+            tx.get(callerRef),
+            tx.get(trainerRef),
+            tx.get(memberRef),
+            tx.get(sessionRef),
+        ]);
+        const caller = callerSnap.data();
+        const callerRoles = (_a = caller === null || caller === void 0 ? void 0 : caller.roles) !== null && _a !== void 0 ? _a : [];
+        const callerIsAdmin = callerRoles.includes('admin');
+        const callerIsTrainer = callerRoles.includes('trainer');
+        if (!callerSnap.exists || (caller === null || caller === void 0 ? void 0 : caller.status) !== 'active' || !(callerIsAdmin || callerIsTrainer)) {
+            throw new https_1.HttpsError('permission-denied', 'Bu işlem için yetkin yok.');
+        }
+        // A trainer writes onto their own calendar only; an admin may write onto
+        // any trainer's. Mirrors the `pt_sessions` create rule.
+        if (!callerIsAdmin && trainerId !== uid) {
+            throw new https_1.HttpsError('permission-denied', 'Yalnızca kendi takvimine randevu ekleyebilirsin.');
+        }
+        const trainer = trainerSnap.data();
+        if (!trainerSnap.exists || (trainer === null || trainer === void 0 ? void 0 : trainer.status) !== 'active' || !((_b = trainer === null || trainer === void 0 ? void 0 : trainer.roles) !== null && _b !== void 0 ? _b : []).includes('trainer')) {
+            throw new https_1.HttpsError('failed-precondition', 'Bu antrenör artık salonda çalışmıyor.');
+        }
+        const member = memberSnap.data();
+        if (!memberSnap.exists || (member === null || member === void 0 ? void 0 : member.status) !== 'active') {
+            throw new https_1.HttpsError('failed-precondition', 'Bu üyenin salonda aktif üyeliği yok.');
+        }
+        if (sessionSnap.exists && sessionSnap.data().status !== 'cancelled') {
+            throw new https_1.HttpsError('failed-precondition', 'Bu saatte zaten bir randevu var.');
+        }
+        const existing = await readTrainerSessions(tx, db, tenantId, trainerId, [start]);
+        const clash = findOverlap(existing, start.getTime(), duration, new Set([sessionRef.id]));
+        if (clash) {
+            const clashStart = new Date(clash.startMs).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            throw new https_1.HttpsError('failed-precondition', `Bu saat ${clashStart} randevusuyla çakışıyor.`);
+        }
+        const tenantSnap = await tx.get(db.doc(`tenants/${tenantId}`));
+        const tenantData = tenantSnap.data();
+        // Frozen at booking, same as the member flow (PKG-11): a session added
+        // by hand had no deadline at all before this, so cancelling one fell
+        // back to whatever the gym's setting happened to be that day.
+        const deadline = (0, cancellationDeadline_1.computeCancellationDeadline)({
+            sessionStart: start,
+            cancellationHours: tenantData === null || tenantData === void 0 ? void 0 : tenantData.cancellationHours,
+            openingHours: tenantData === null || tenantData === void 0 ? void 0 : tenantData.openingHours,
+        });
+        const now = admin.firestore.Timestamp.now();
+        tx.set(sessionRef, {
+            tenantId,
+            trainerId,
+            trainerName: (_d = (_c = trainer === null || trainer === void 0 ? void 0 : trainer.userDisplayName) !== null && _c !== void 0 ? _c : trainer === null || trainer === void 0 ? void 0 : trainer.userEmail) !== null && _d !== void 0 ? _d : 'Antrenör',
+            memberId,
+            memberName: (_f = (_e = member === null || member === void 0 ? void 0 : member.userDisplayName) !== null && _e !== void 0 ? _e : member === null || member === void 0 ? void 0 : member.userEmail) !== null && _f !== void 0 ? _f : 'Üye',
+            date: admin.firestore.Timestamp.fromDate(start),
+            durationMinutes: duration,
+            status: 'scheduled',
+            cancellationDeadlineAt: admin.firestore.Timestamp.fromDate(deadline),
+            createdAt: now,
+            updatedAt: now,
+        });
+    });
+    console.log(`Staff ${uid} created a session for member ${memberId} with trainer ${trainerId}`);
+    return { id: sessionRef.id };
 });
 //# sourceMappingURL=sessions.js.map
