@@ -77,19 +77,15 @@ describe('onColorFor', () => {
 });
 
 /**
- * `txt` and `sub` carry nearly every word in the app, and `sub` is read at
- * 11-13pt, so both owe AA on all four surfaces. This guards the pair that
- * actually regressed: both light palettes shipped a `sub` that failed on
- * `surf2` — the surface chips and badges sit on.
- *
- * Deliberately not asserted here: `p`/`danger`/`warn`/`ok` on light-mode
- * `bg1`/`surf2`, which are still 3.00-4.43:1. Fixing those means retuning the
- * light semantic palette, a design call rather than a threshold — tracked as
- * K4 in docs/figma-tasarim-plani.md.
+ * Every foreground token is read as text or as an icon somewhere — `p` in
+ * links and card icons, the semantic three in status badges — so all of them
+ * owe AA on all four surfaces. Both regressions this guards were the same
+ * shape: a value tuned against white, failing on `surf2`, which is the palest
+ * surface but is not white.
  */
 describe('palette legibility', () => {
   const SURFACES = ['bg0', 'bg1', 'surf', 'surf2'] as const;
-  const FOREGROUNDS = ['txt', 'sub'] as const;
+  const FOREGROUNDS = ['txt', 'sub', 'p', 'danger', 'warn', 'ok'] as const;
 
   it('keeps text and secondary text at AA on every surface of every shipped palette', () => {
     for (const [tenant, theme] of Object.entries(themes)) {
@@ -108,16 +104,39 @@ describe('palette legibility', () => {
 
   it('keeps a derived palette legible for any brand hue', () => {
     for (let h = 0; h < 360; h += 3) {
-      for (const mode of ['dark', 'light'] as const) {
-        const palette = derivePalette(hslHex(h, 0.8, 0.5), undefined, mode);
-        for (const fg of FOREGROUNDS) {
-          for (const surface of SURFACES) {
-            expect(
-              contrastRatio(palette[fg], palette[surface]),
-              `${mode} h${h}: ${fg} on ${surface}`,
-            ).toBeGreaterThanOrEqual(4.5);
+      for (const s of [0.4, 0.7, 1]) {
+        for (const mode of ['dark', 'light'] as const) {
+          const palette = derivePalette(hslHex(h, s, 0.5), undefined, mode);
+          for (const fg of FOREGROUNDS) {
+            for (const surface of SURFACES) {
+              expect(
+                contrastRatio(palette[fg], palette[surface]),
+                `${mode} h${h} s${s}: ${fg} on ${surface}`,
+              ).toBeGreaterThanOrEqual(4.5);
+            }
           }
         }
+      }
+    }
+  });
+
+  // The pulse button paints one ink across a three-stop gradient, so the ink
+  // `p` chose has to work on all three. Before this, GymEntra Light had no
+  // ink that worked: dark managed 3.74 on g3, white 3.68 on g2.
+  it('keeps the pulse gradient legible under a single ink', () => {
+    const check = (palette: ReturnType<typeof derivePalette>, label: string) => {
+      const ink = onColorFor(palette.p);
+      for (const stop of ['g1', 'g2', 'g3'] as const) {
+        expect(contrastRatio(palette[stop], ink), `${label}: ink on ${stop}`).toBeGreaterThanOrEqual(4.5);
+      }
+    };
+    for (const [tenant, theme] of Object.entries(themes)) {
+      check(theme.dark, `${tenant} dark`);
+      check(theme.light, `${tenant} light`);
+    }
+    for (let h = 0; h < 360; h += 3) {
+      for (const mode of ['dark', 'light'] as const) {
+        check(derivePalette(hslHex(h, 0.8, 0.5), undefined, mode), `derived ${mode} h${h}`);
       }
     }
   });

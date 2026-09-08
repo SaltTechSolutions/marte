@@ -2,6 +2,7 @@
 // Every screen must read colors through these semantic tokens only —
 // never a raw hex — so runtime tenant re-skinning stays correct.
 
+import { adjustForContrast, onColorFor } from './contrast';
 import { hexToHsl, hslToHex, mix, shiftHue, tone } from './deriveColor';
 
 export type TenantId = 'gymentra' | 'tarabya';
@@ -61,13 +62,17 @@ export const themes: Record<TenantId, TenantTheme> = {
       // which is exactly where chips and badges put it. This clears 4.90:1
       // on every surface in this palette.
       sub: '#5B6980',
-      p: '#059669',
-      g1: '#059669',
-      g2: '#0891B2',
-      g3: '#2563EB',
-      danger: '#DC2626',
-      warn: '#B45309',
-      ok: '#059669',
+      // Light mode reads these as text and icons on `surf2`, not just as
+      // button fills. One step darker across the board so they clear AA
+      // there; the gradient stops move with `p` because the pulse button
+      // paints a single ink across all three.
+      p: '#047857',
+      g1: '#047857',
+      g2: '#0E7490',
+      g3: '#1D4ED8',
+      danger: '#B91C1C',
+      warn: '#92400E',
+      ok: '#047857',
     },
   },
   tarabya: {
@@ -98,13 +103,14 @@ export const themes: Record<TenantId, TenantTheme> = {
       // Same correction as GymEntra Light: stone-500 (#78716C) sat at 4.04:1
       // on `surf2`. This clears 4.90:1 everywhere.
       sub: '#6B645F',
-      p: '#EA580C',
-      g1: '#EA580C',
-      g2: '#F97316',
-      g3: '#D97706',
-      danger: '#DC2626',
-      warn: '#B45309',
-      ok: '#15803D',
+      // Same correction as GymEntra Light — see the note there.
+      p: '#B3380A',
+      g1: '#B3380A',
+      g2: '#C2410C',
+      g3: '#A16207',
+      danger: '#B91C1C',
+      warn: '#92400E',
+      ok: '#136B33',
     },
   },
 };
@@ -112,7 +118,21 @@ export const themes: Record<TenantId, TenantTheme> = {
 // Semantic colors stay fixed across every tenant — danger/warn/ok communicate
 // universal meaning and shouldn't shift with brand hue.
 const SEMANTIC_DARK = { danger: '#F87171', warn: '#FBBF24', ok: '#34D399' };
-const SEMANTIC_LIGHT = { danger: '#DC2626', warn: '#B45309', ok: '#059669' };
+// Light-mode values are a step darker than the obvious 600s: a status badge
+// puts them as text on `surf2`, which is the palest surface but not white,
+// and the 600s only reached 3.97-4.13:1 there.
+const SEMANTIC_LIGHT = { danger: '#B91C1C', warn: '#92400E', ok: '#065F46' };
+
+type Semantic = typeof SEMANTIC_DARK;
+
+/** Keeps the semantic constants unless the derived surface under them fails AA. */
+function semantic(base: Semantic, surface: string): Semantic {
+  return {
+    danger: adjustForContrast(base.danger, surface),
+    warn: adjustForContrast(base.warn, surface),
+    ok: adjustForContrast(base.ok, surface),
+  };
+}
 
 /**
  * Derives a full usable palette from just a primary (+ optional accent) hex —
@@ -129,35 +149,54 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
   const neutral = hslToHex({ h: hue, s: 0.06, l: mode === 'dark' ? 0.65 : 0.4 });
 
   if (mode === 'dark') {
+    const surf2 = hslToHex({ h: hue, s: 0.2, l: 0.19 });
+    // `p` is read as text and icons on the surfaces too, and `surf2` is the
+    // lightest of them — the binding constraint for a light-on-dark value.
+    // A muted brand (low saturation) lands too close to it at a fixed 0.52.
+    const p = adjustForContrast(tone(primaryHex, 0.52), surf2);
+    // The pulse button paints one ink — `onp`, derived from `p` — across all
+    // three stops, so every stop owes that ink AA, not just the one `p` came
+    // from. `g1` is the raw brand hex and `g3` a hue shift away, so they can
+    // easily land on the wrong side of it.
+    const ink = onColorFor(p);
     return {
       bg0: hslToHex({ h: hue, s: 0.28, l: 0.07 }),
       bg1: hslToHex({ h: hue, s: 0.26, l: 0.1 }),
       surf: hslToHex({ h: hue, s: 0.22, l: 0.14 }),
-      surf2: hslToHex({ h: hue, s: 0.2, l: 0.19 }),
+      surf2,
       line: 'rgba(255,255,255,0.09)',
       txt: '#FFFFFF',
       sub: neutral,
-      p: tone(primaryHex, 0.52),
-      g1,
-      g2,
-      g3,
-      ...SEMANTIC_DARK,
+      p,
+      g1: adjustForContrast(g1, ink),
+      g2: adjustForContrast(g2, ink),
+      g3: adjustForContrast(g3, ink),
+      // The semantic three are fixed on purpose, but the surface under them is
+      // not: a warm `surf2` is brighter than a cool one at the same HSL
+      // lightness, and red-400 lands at 4.46:1 there. Nudge only where the
+      // derived surface makes the constant fail.
+      ...semantic(SEMANTIC_DARK, surf2),
     };
   }
+  const bg1 = hslToHex({ h: hue, s: 0.28, l: 0.93 });
+  // Light mode reads `p` as text and icons on `surf2`, so a fixed lightness
+  // cap is not enough — HSL 0.42 is three times brighter in yellow than in
+  // blue. Darken until it actually clears AA against the surface it sits on.
+  const p = adjustForContrast(tone(primaryHex, Math.min(hexToHsl(primaryHex).l, 0.42)), bg1);
+  const ink = onColorFor(p);
   return {
     bg0: hslToHex({ h: hue, s: 0.3, l: 0.97 }),
-    bg1: hslToHex({ h: hue, s: 0.28, l: 0.93 }),
+    bg1,
     surf: '#FFFFFF',
-    surf2: hslToHex({ h: hue, s: 0.28, l: 0.93 }),
+    surf2: bg1,
     line: 'rgba(15,23,42,0.12)',
     txt: hslToHex({ h: hue, s: 0.2, l: 0.09 }),
     sub: neutral,
-    // Darken the primary for light-mode use so it stays legible on white.
-    p: tone(primaryHex, Math.min(hexToHsl(primaryHex).l, 0.42)),
-    g1: tone(g1, Math.min(hexToHsl(g1).l, 0.42)),
-    g2: tone(g2, Math.min(hexToHsl(g2).l, 0.45)),
-    g3: tone(g3, Math.min(hexToHsl(g3).l, 0.48)),
-    ...SEMANTIC_LIGHT,
+    p,
+    g1: adjustForContrast(tone(g1, Math.min(hexToHsl(g1).l, 0.42)), ink),
+    g2: adjustForContrast(tone(g2, Math.min(hexToHsl(g2).l, 0.45)), ink),
+    g3: adjustForContrast(tone(g3, Math.min(hexToHsl(g3).l, 0.48)), ink),
+    ...semantic(SEMANTIC_LIGHT, bg1),
   };
 }
 

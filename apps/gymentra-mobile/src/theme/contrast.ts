@@ -1,6 +1,8 @@
 // Contrast guard — guarantees AA-legible text/icons on top of an arbitrary
 // tenant primary color.
 
+import { hexToHsl, hslToHex } from './deriveColor';
+
 /** The two inks anything can sit on. `#0A0F0D` rather than pure black is the
  *  design token value, so the choice stays consistent with the Figma library. */
 const DARK_INK = '#0A0F0D';
@@ -42,4 +44,31 @@ export function contrastRatio(a: string, b: string): number {
  */
 export function onColorFor(hex: string): string {
   return contrastRatio(hex, DARK_INK) >= contrastRatio(hex, LIGHT_INK) ? DARK_INK : LIGHT_INK;
+}
+
+/** WCAG AA for normal text. Everything `sub`-sized is read below 18pt. */
+export const AA = 4.5;
+
+/**
+ * Nudges a color's lightness away from `against` until they clear `target`,
+ * keeping hue and saturation.
+ *
+ * Used where a value has to stay legible against something the tenant does not
+ * control: a brand primary read as text on a pale surface, or a gradient stop
+ * carrying a fixed ink. A hand-picked lightness cap cannot do this job — the
+ * luminance of HSL 0.42 differs by a factor of three between blue and yellow,
+ * so one cap is always wrong for some hue.
+ */
+export function adjustForContrast(hex: string, against: string, target = AA): string {
+  if (contrastRatio(hex, against) >= target) return hex;
+  const { h, s } = hexToHsl(hex);
+  // Move away from the other color: darker when it is the lighter of the two.
+  const step = relativeLuminance(against) > relativeLuminance(hex) ? -0.02 : 0.02;
+  let l = hexToHsl(hex).l;
+  while (l > 0 && l < 1) {
+    l = Math.max(0, Math.min(1, l + step));
+    const candidate = hslToHex({ h, s, l });
+    if (contrastRatio(candidate, against) >= target) return candidate;
+  }
+  return hslToHex({ h, s, l });
 }
