@@ -1216,8 +1216,25 @@ uygulama, **uygulama içinden hesap silme** imkânı sunmak zorundadır.
 
 **Kalan:**
 - [ ] Gerçek cihazda uçtan uca test (yeni build gerekiyor).
-- [ ] Gizlilik politikasına silme prosedürü ve saklama süreleri eklenmeli
-      (ödeme kayıtlarının anonimleştirilerek saklandığı açıkça yazılmalı).
+- [x] Gizlilik politikasına silme prosedürü ve saklama süreleri eklendi
+      *(8 Eylül 2026).* `apps/gymentra-site/privacy/index.html` bölüm 5 dört alt
+      başlığa ayrıldı: silme prosedürü (uygulama içi adımlar + e-posta yolu +
+      tek yönetici kısıtı), silinenlerin listesi, **anonimleştirilerek saklanan
+      iki kayıt** (ödeme defteri ve geçmiş PT randevusu — ikisinde de ad
+      "Silinmiş üye", veri sorumlusu salon) ve saklama süreleri. Metin
+      `deleteMyAccount`'un gerçekte yaptığından çıkarıldı, tahminle değil.
+      **Eski metindeki iki yanlış düzeltildi:** (1) "silme talebi için bize
+      e-posta atın" diyordu — uygulama içi silme bir yıldır var ve Apple
+      5.1.1(v) tam olarak onu istiyor; (2) salonun ödeme defterini "mevzuatın
+      gerektirdiği süre boyunca" saklayabileceğini yazıyordu — kullanıcı
+      kararına göre (bkz. v2 notu) bu defter resmi belge değil, yasal saklama
+      yükümlülüğü yok; olmayan bir hukuki dayanağı politikada iddia etmek
+      KVKK tarafında düzeltmesi zor bir beyan olurdu.
+      Ayrıca `delete-account/index.html`'deki **"yedeklerde en fazla 30 gün"**
+      ifadesi **7 güne** çekildi: D-3'te kurulan gerçek yapılandırma PITR 7 gün
+      + günlük yedek 7 gün saklama (`docs/BACKUP.md`). **Yayına alınmadı** —
+      değişiklik depoda, `gymentra.salt-tech-apps.com` hâlâ eski metni
+      gösteriyor; site ayrı bir depodan (subtree) dağıtılıyor.
 - [x] Play Console'daki "hesap silme URL'i" alanı — `gymentra.salt-tech-apps.com/delete-account/`
       yayında ve alan dolduruldu. *(Bu kutu 8 Eylül 2026'ya kadar açık
       kalmıştı; mağaza hazırlığı bölümünde zaten işaretliydi.)*
