@@ -75,7 +75,6 @@ let playT = 0;
 let scrubT = null;
 let dragging = null;
 let dirty = false;
-let onion = true;
 let filter = '';
 /** Mobil önizleme: hangi cihaz ve açık mı. */
 let phoneOn = true;
@@ -518,7 +517,7 @@ function keyPhases(e) {
 function drawPose(svg, e, p) {
   const view = e.view ?? 'side';
   svg.setAttribute('viewBox', boundsFor(e, view));
-  drawFigure(svg, e, p, view, { ghost: false, handles: false });
+  drawFigure(svg, e, p, view, { handles: false });
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
@@ -593,28 +592,6 @@ function drawFigure(svg, e, p, view, opts = {}) {
     });
   };
   const plate = mkPlate();
-
-  // Gölge: bir önceki ve bir sonraki karenin izi. Çömelmenin dibini yazarken
-  // tepesini görmek, iki kareyi ilişkilendirmenin tek yolu.
-  if (opts.ghost) {
-    const ghost = css('--ghost');
-    [kfIndex - 1, kfIndex + 1].forEach((i) => {
-      const k = e.kf[i];
-      if (!k) return;
-      const gp = fillPose(k.p);
-      const gs = skeleton(e, gp);
-      const bones = [
-        [gs.pelvis, gs.knee], [gs.knee, gs.ankle], [gs.pelvis, gs.lumbar], [gs.lumbar, gs.thorax],
-        [gs.thorax, gs.neck], [gs.sh, gs.elbow], [gs.elbow, gs.hand],
-        ...(showFarLeg(e) ? [[gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF]] : []),
-      ];
-      bones.forEach(([a, b]) => svg.appendChild(el('line', {
-        x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: ghost, 'stroke-width': 7,
-        'stroke-linecap': 'round', opacity: .55,
-      })));
-      svg.appendChild(el('circle', { cx: gs.head[0], cy: gs.head[1], r: 20, fill: 'none', stroke: ghost, 'stroke-width': 5, opacity: .55 }));
-    });
-  }
 
   push([
     el('ellipse', { cx: S.pelvis[0], cy: GROUND + 4, rx: 96, ry: 12, fill: floor, opacity: .25 }),
@@ -759,7 +736,7 @@ function drawFigure(svg, e, p, view, opts = {}) {
 }
 
 function draw() {
-  drawFigure($('stage'), ex(), currentPose(), plane, { ghost: onion && editable(), handles: true });
+  drawFigure($('stage'), ex(), currentPose(), plane, { handles: true });
 }
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */
@@ -1189,12 +1166,6 @@ $('parts').onclick = () => {
   useParts = !useParts;
   $('parts').setAttribute('aria-pressed', String(useParts));
   $('parts').textContent = useParts ? 'Parça' : 'Kapsül';
-  draw();
-};
-
-$('onion').onclick = () => {
-  onion = !onion;
-  $('onion').setAttribute('aria-pressed', String(onion));
   draw();
 };
 
