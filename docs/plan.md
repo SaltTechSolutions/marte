@@ -181,7 +181,20 @@ Yani 1.0 bu hâliyle onaylanırsa uygulama yayına girer ama iki ürün
 açılmaz. Abonelikler kendi gönderimlerini gerektiriyor; kap incelemedeyken
 değiştirilemediği için ya 1.0'ın sonucu beklenip ürünler ayrıca
 gönderilecek, ya da sürüm geri çekilip ikisi birlikte gönderilecek.
-**Karar gerekiyor.**
+
+**Karar (kullanıcı, 8 Eylül 2026): 1.0 geri çekilmiyor.** İnceleme sonucu
+beklenecek, abonelikler onaylandıktan sonra **ayrı bir gönderimle**
+yollanacak. Kabul edilen sonuç: uygulama yayına girdikten sonra, abonelikler
+de onaylanana kadar geçen sürede **paywall'daki satın alma çalışmaz** — yani
+o pencerede 10 üye sınırına dayanan yeni bir salon yükseltme yapamaz.
+Bugünkü durumdan kötü değil (satın alma zaten hiç çalışmıyor, Tarabya elle
+açıldı), ama ikinci salon o pencerede gelirse elle açmak gerekir.
+
+*Sırası geldiğinde:* `asc.mjs status` ile 1.0'ın durumu okunur; `APPROVED` /
+`READY_FOR_SALE` görülünce iki ürün için gönderim kabı açılır. Kap açma
+mantığı `submit` komutunda zaten var (boş kap varsa yenisini açmak yerine
+onu kullanıyor) — abonelik maddesi ekleyen bir `submit-subscriptions`
+komutu yazılacak.
 
 **Kalan:** yukarıdaki gönderim kararı ve **gerçek cihazda satın alma**
 (cihaz gerektiriyor).
