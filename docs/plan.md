@@ -196,6 +196,14 @@ onları zorunlu tutmuyor.)* **Kalan tek iş: üretim kanalına sürüm çıkarma
 bugün yalnızca iç test kanalında 1.0.0 (sürüm kodu 5) var, üretim/beta/alfa
 boş.
 
+**2a. [x] Yeni production build alındı** *(8 Eylül 2026).* Sürüm kodu **7**,
+`production` profili ve kanalı, runtime sürümü `2b3bc0e5…` (parmak izi
+politikasının gerçekten devrede olduğu build çıktısında doğrulandı). Üç şeyi
+birden taşıyor: OTA desteği (D-2), mikrofon izni düzeltmesi (P0-3) ve PER-6'nın
+istemci yarısı. **Sürüm kodu 6 üretime terfi ettirilmemeli** — o build mikrofon
+izniyle üretilmişti. Kalan: `eas submit` ile internal'a yükleme ve aşağıdaki
+cihaz doğrulaması.
+
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
@@ -229,6 +237,15 @@ takip yok — yani ATT ekranı gerekmiyor. Cevaplar tahmin değil, koddan
 çıkarıldı; gerekçeleriyle `apps/gymentra-mobile/APP_PRIVACY.md` içinde. Beyan
 yayınlandıktan sonra son engel de kalktı ve **sürüm 1.0 (build 22)
 incelemeye gönderildi** → `WAITING_FOR_REVIEW`.
+
+**Karar (kullanıcı, 8 Eylül 2026): incelemedeki build 22 geri çekilmiyor.**
+O build OTA desteği (D-2), mikrofon izni düzeltmesi (P0-3) ve PER-6'nın
+istemci yarısı olmadan üretildi; yine de kuyruk sırası korunuyor.
+**Sonucu bilinerek kabul edildi:** yayına giren ilk iOS sürümü
+`expo-updates` içermediği için **1.0.1 de OTA ile gönderilemez**, o da tam
+bir mağaza turu ister. OTA iOS'ta ancak 1.0.1'den *sonraki* sürümlerde
+işlemeye başlar. Android'de böyle bir gecikme yok: sürüm kodu 7 zaten
+OTA'lı üretiliyor.
 
 Yol üzerinde bir Apple tuhaflığı: aynı anda tek bir açık "gönderim kabı"na
 izin veriliyor ama gönderilmemiş bir kap **iptal edilemiyor** ("not in
