@@ -383,6 +383,24 @@ gerekiyordu.
       3.96'ya düşüyordu), gradyan durakları (mürekkebe karşı) ve semantik
       üçlü (türetilmiş yüzeye karşı — sıcak bir `surf2` üstünde red-400
       4.46'da kalıyordu).
+- [x] **K4-4 · Sonradan: renk ikiye ayrıldı.** K4'ün ilk çözümü açık temada
+      `p`'yi koyulaştırmaktı ve marka hissini zayıflattı. "Ara ton" arandı ve
+      **olmadığı ölçüldü**: `surf2` parlaklığı 0.81 iken 4.5:1 isteyen her
+      renk 0.14 parlaklığın altına inmek zorunda; adım inceltmek L farkı
+      0.006, doygunluğu 1.0'a çekmek neredeyse aynı renk veriyor.
+
+      Bunun üzerine rol ayrıldı: **`p`** dolgu (buton, çip, gösterge —
+      markanın kendi rengi), **`pText`** metin/ikon (yüzeye göre koyultulur).
+      Koyu modda ikisi aynı. Kazanç iki taraflı: buton markanın rengine döndü
+      *ve* etiketi koyu mürekkebe geçtiği için kontrast 5.36'dan 7.76'ya
+      çıktı. Kodda 139 kullanımın 75'i `pText`'e taşındı.
+
+      Figma da aynı ayrımı taşıyor: `color/pText` değişkeni dört modda
+      tanımlı, açık modların `primary`/`g1`/`g2`/`g3`/`onPrimary` değerleri
+      canlı hallerine döndürüldü, ekranlardaki ve sekme çubuğu
+      bileşenlerindeki 88 metin/ikon dolgusu `pText`'e bağlandı (58 dolgu ve
+      6 kenarlık `primary`'de kaldı), Foundations'a dört palete de `pText`
+      swatch'ı eklendi.
 - [x] **K4-3 · Test genişletildi.** `FOREGROUNDS` artık `p`/`danger`/`warn`/`ok`'i
       de içeriyor, türetilmiş palet taraması 3 doygunluk × 120 ton × 2 mod'a
       çıktı, ve pulse gradyanı için ayrı bir test var: `onColorFor(p)`'nin
