@@ -239,7 +239,7 @@ export default function MemberProgress() {
                     <View style={{ flex: 1 }} />
                     {diff !== 0 && (
                       <View style={{ backgroundColor: colors.surf2, borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 3 }}>
-                        <Text variant="label" weight="700" style={{ color: colors.p }}>
+                        <Text variant="label" weight="700" style={{ color: colors.pText }}>
                           {diff > 0 ? '+' : '−'}
                           {formatNumber(Math.abs(diff), decimals)}
                         </Text>

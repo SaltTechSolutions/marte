@@ -16,7 +16,15 @@ export interface Palette {
   line: string;
   txt: string;
   sub: string;
-  p: string; // primary
+  /** Brand colour as a **fill**: buttons, selected chips, indicators. Stays at
+   *  full brand vividness; what sits on top of it is `onp`. */
+  p: string;
+  /** Brand colour as **text or an icon on a surface**: links, card glyphs, the
+   *  active tab. Split from `p` because one value cannot do both jobs in light
+   *  mode — `surf2` is pale enough that AA forces a much darker green than the
+   *  brand actually is, and using that everywhere drained the colour out of the
+   *  UI. In dark mode the two are identical. */
+  pText: string;
   g1: string;
   g2: string;
   g3: string; // pulse gradient stops
@@ -43,6 +51,7 @@ export const themes: Record<TenantId, TenantTheme> = {
       txt: '#FFFFFF',
       sub: '#9CA3AF',
       p: '#10B981',
+      pText: '#10B981',
       g1: '#10B981',
       g2: '#06B6D4',
       g3: '#3B82F6',
@@ -62,14 +71,16 @@ export const themes: Record<TenantId, TenantTheme> = {
       // which is exactly where chips and badges put it. This clears 4.90:1
       // on every surface in this palette.
       sub: '#5B6980',
-      // Light mode reads these as text and icons on `surf2`, not just as
-      // button fills. One step darker across the board so they clear AA
-      // there; the gradient stops move with `p` because the pulse button
-      // paints a single ink across all three.
-      p: '#047857',
-      g1: '#047857',
-      g2: '#0E7490',
-      g3: '#1D4ED8',
+      // `p` is the brand green at full strength — it is only ever a fill here,
+      // and dark ink on it reads 5.13:1. `pText` carries the same green into
+      // text and icons, where the pale `surf2` forces a darker value.
+      p: '#059669',
+      pText: '#047857',
+      g1: '#059669',
+      g2: '#0891B2',
+      // Lighter than the brand blue: the pulse label is dark ink in light
+      // mode, and #2563EB only gave it 3.74:1.
+      g3: '#3B82F6',
       danger: '#B91C1C',
       warn: '#92400E',
       ok: '#047857',
@@ -86,6 +97,7 @@ export const themes: Record<TenantId, TenantTheme> = {
       txt: '#FFFFFF',
       sub: '#A8A29E',
       p: '#F97316',
+      pText: '#F97316',
       g1: '#F97316',
       g2: '#FB923C',
       g3: '#FACC15',
@@ -104,10 +116,11 @@ export const themes: Record<TenantId, TenantTheme> = {
       // on `surf2`. This clears 4.90:1 everywhere.
       sub: '#6B645F',
       // Same correction as GymEntra Light — see the note there.
-      p: '#B3380A',
-      g1: '#B3380A',
-      g2: '#C2410C',
-      g3: '#A16207',
+      p: '#EA580C',
+      pText: '#B3380A',
+      g1: '#EA580C',
+      g2: '#F97316',
+      g3: '#D97706',
       danger: '#B91C1C',
       warn: '#92400E',
       ok: '#136B33',
@@ -150,10 +163,11 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
 
   if (mode === 'dark') {
     const surf2 = hslToHex({ h: hue, s: 0.2, l: 0.19 });
-    // `p` is read as text and icons on the surfaces too, and `surf2` is the
-    // lightest of them — the binding constraint for a light-on-dark value.
-    // A muted brand (low saturation) lands too close to it at a fixed 0.52.
-    const p = adjustForContrast(tone(primaryHex, 0.52), surf2);
+    const p = tone(primaryHex, 0.52);
+    // Read as text/icons on the surfaces, `surf2` being the lightest of them
+    // and so the binding constraint. A muted brand lands too close to it at a
+    // fixed 0.52 — 3.96:1 for a low-saturation red.
+    const pText = adjustForContrast(p, surf2);
     // The pulse button paints one ink — `onp`, derived from `p` — across all
     // three stops, so every stop owes that ink AA, not just the one `p` came
     // from. `g1` is the raw brand hex and `g3` a hue shift away, so they can
@@ -168,6 +182,7 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
       txt: '#FFFFFF',
       sub: neutral,
       p,
+      pText,
       g1: adjustForContrast(g1, ink),
       g2: adjustForContrast(g2, ink),
       g3: adjustForContrast(g3, ink),
@@ -179,10 +194,12 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
     };
   }
   const bg1 = hslToHex({ h: hue, s: 0.28, l: 0.93 });
-  // Light mode reads `p` as text and icons on `surf2`, so a fixed lightness
-  // cap is not enough — HSL 0.42 is three times brighter in yellow than in
-  // blue. Darken until it actually clears AA against the surface it sits on.
-  const p = adjustForContrast(tone(primaryHex, Math.min(hexToHsl(primaryHex).l, 0.42)), bg1);
+  const p = tone(primaryHex, Math.min(hexToHsl(primaryHex).l, 0.42));
+  // A fixed lightness cap cannot make this legible: HSL 0.42 is three times
+  // brighter in yellow than in blue. Darken until it actually clears AA
+  // against the surface it sits on — and only for the text role, so the fill
+  // keeps the brand's own colour.
+  const pText = adjustForContrast(p, bg1);
   const ink = onColorFor(p);
   return {
     bg0: hslToHex({ h: hue, s: 0.3, l: 0.97 }),
@@ -193,6 +210,7 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
     txt: hslToHex({ h: hue, s: 0.2, l: 0.09 }),
     sub: neutral,
     p,
+    pText,
     g1: adjustForContrast(tone(g1, Math.min(hexToHsl(g1).l, 0.42)), ink),
     g2: adjustForContrast(tone(g2, Math.min(hexToHsl(g2).l, 0.45)), ink),
     g3: adjustForContrast(tone(g3, Math.min(hexToHsl(g3).l, 0.48)), ink),

@@ -165,7 +165,7 @@ export default function TrainerProfile() {
             borderWidth: 2,
             borderColor: colors.p,
           }}>
-          <Text variant="body" weight="900" style={{ color: colors.p }}>
+          <Text variant="body" weight="900" style={{ color: colors.pText }}>
             {initialsOf(displayName)}
           </Text>
         </View>
@@ -328,7 +328,7 @@ export default function TrainerProfile() {
                 }}>
                 <View
                   style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text variant="label" weight="900" style={{ color: colors.p }}>
+                  <Text variant="label" weight="900" style={{ color: colors.pText }}>
                     {initialsOf(name)}
                   </Text>
                 </View>

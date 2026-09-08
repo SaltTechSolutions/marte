@@ -81,7 +81,7 @@ export default function AdminPanel() {
           <Text variant="h1">
             {checkinCount ?? '–'} <Text variant="helper" weight="600" style={{ color: colors.ok }}>▲ canlı</Text>
           </Text>
-          <Text variant="label" style={{ color: colors.p }}>
+          <Text variant="label" style={{ color: colors.pText }}>
             Kimlerin girdiğini gör →
           </Text>
         </Card>

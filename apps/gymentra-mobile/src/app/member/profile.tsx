@@ -141,7 +141,7 @@ export default function MemberProfile() {
         {activeMembership ? (
           <View style={{ flexDirection: 'row', gap: 14 }}>
             <Pressable onPress={pickPhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
-              <Text variant="label" weight="700" style={{ color: colors.p }}>
+              <Text variant="label" weight="700" style={{ color: colors.pText }}>
                 {photoBusy ? '…' : activeMembership.photoUrl ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
               </Text>
             </Pressable>
@@ -209,7 +209,7 @@ export default function MemberProfile() {
       {packageOffers.map((offer) => (
         <Pressable key={offer.id} onPress={() => router.push({ pathname: '/member/package-offer', params: { requestId: offer.id } })}>
           <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} outlineColor={colors.p}>
-            <Ionicons name="swap-horizontal-outline" size={19} color={colors.p} />
+            <Ionicons name="swap-horizontal-outline" size={19} color={colors.pText} />
             <View style={{ flex: 1 }}>
               <Text variant="helper" weight="700">
                 Paket teklifin var

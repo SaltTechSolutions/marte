@@ -77,15 +77,19 @@ describe('onColorFor', () => {
 });
 
 /**
- * Every foreground token is read as text or as an icon somewhere — `p` in
+ * Every foreground token is read as text or as an icon somewhere — `pText` in
  * links and card icons, the semantic three in status badges — so all of them
  * owe AA on all four surfaces. Both regressions this guards were the same
  * shape: a value tuned against white, failing on `surf2`, which is the palest
  * surface but is not white.
+ *
+ * `p` is deliberately absent: it is the fill role, so what it owes contrast to
+ * is its own ink, not the surfaces — covered by the onColorFor tests above and
+ * by the pulse-gradient test below.
  */
 describe('palette legibility', () => {
   const SURFACES = ['bg0', 'bg1', 'surf', 'surf2'] as const;
-  const FOREGROUNDS = ['txt', 'sub', 'p', 'danger', 'warn', 'ok'] as const;
+  const FOREGROUNDS = ['txt', 'sub', 'pText', 'danger', 'warn', 'ok'] as const;
 
   it('keeps text and secondary text at AA on every surface of every shipped palette', () => {
     for (const [tenant, theme] of Object.entries(themes)) {

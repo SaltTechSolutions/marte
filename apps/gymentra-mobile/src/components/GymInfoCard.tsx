@@ -89,8 +89,8 @@ export function GymInfoCard({
           onPress={() => Linking.openURL(`tel:${contact.phone!.replace(/\s/g, '')}`)}
           accessibilityRole="button"
           style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <Ionicons name="call-outline" size={15} color={colors.p} />
-          <Text variant="label" weight="700" style={{ color: colors.p }}>
+          <Ionicons name="call-outline" size={15} color={colors.pText} />
+          <Text variant="label" weight="700" style={{ color: colors.pText }}>
             {contact.phone}
           </Text>
         </Pressable>
@@ -101,8 +101,8 @@ export function GymInfoCard({
           onPress={() => Linking.openURL(`mailto:${contact.email}`)}
           accessibilityRole="button"
           style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-          <Ionicons name="mail-outline" size={15} color={colors.p} />
-          <Text variant="label" weight="700" style={{ color: colors.p }}>
+          <Ionicons name="mail-outline" size={15} color={colors.pText} />
+          <Text variant="label" weight="700" style={{ color: colors.pText }}>
             {contact.email}
           </Text>
         </Pressable>

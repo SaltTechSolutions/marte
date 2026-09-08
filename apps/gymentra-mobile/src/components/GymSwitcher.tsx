@@ -112,7 +112,7 @@ export function GymSwitcher({ open, onClose }: { open: boolean; onClose: () => v
                       {m.roles.map((r) => ROLE_LABEL[r]).join(' · ')}
                     </Text>
                   </View>
-                  {on ? <Ionicons name="checkmark-circle" size={22} color={colors.p} /> : <Text tone="sub">›</Text>}
+                  {on ? <Ionicons name="checkmark-circle" size={22} color={colors.pText} /> : <Text tone="sub">›</Text>}
                 </Pressable>
               );
             })}
@@ -134,7 +134,7 @@ export function GymSwitcher({ open, onClose }: { open: boolean; onClose: () => v
               borderColor: colors.line,
               borderRadius: radius.md,
             }}>
-            <Ionicons name="add-circle-outline" size={20} color={colors.p} />
+            <Ionicons name="add-circle-outline" size={20} color={colors.pText} />
             <Text variant="helper" weight="700" style={{ flex: 1 }}>
               Başka bir salona katıl
             </Text>
@@ -191,7 +191,7 @@ export function GymSwitchRow() {
           borderColor: colors.line,
           borderRadius: radius.md,
         }}>
-        <Ionicons name="swap-horizontal-outline" size={19} color={colors.p} />
+        <Ionicons name="swap-horizontal-outline" size={19} color={colors.pText} />
         <View style={{ flex: 1 }}>
           <Text variant="helper" weight="700">
             Salon değiştir

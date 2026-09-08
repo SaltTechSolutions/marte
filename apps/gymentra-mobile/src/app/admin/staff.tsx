@@ -203,7 +203,7 @@ export default function AdminStaff() {
           <Card key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View
               style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-              <Text variant="label" weight="900" style={{ color: colors.p }}>
+              <Text variant="label" weight="900" style={{ color: colors.pText }}>
                 {initialsOf(nameOf(m))}
               </Text>
             </View>
@@ -251,7 +251,7 @@ export default function AdminStaff() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View
                   style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text variant="label" weight="900" style={{ color: colors.p }}>
+                  <Text variant="label" weight="900" style={{ color: colors.pText }}>
                     {initialsOf(nameOf(m))}
                   </Text>
                 </View>
@@ -318,7 +318,7 @@ export default function AdminStaff() {
           <Card key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View
               style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-              <Text variant="label" weight="900" style={{ color: colors.p }}>
+              <Text variant="label" weight="900" style={{ color: colors.pText }}>
                 {initialsOf(nameOf(m))}
               </Text>
             </View>

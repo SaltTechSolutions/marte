@@ -209,7 +209,7 @@ export default function WorkoutSession() {
               borderWidth: guide ? 1.5 : 0,
               borderColor: colors.p,
             }}>
-            <Ionicons name={guide ? 'body-outline' : 'barbell-outline'} size={24} color={guide ? colors.p : colors.sub} />
+            <Ionicons name={guide ? 'body-outline' : 'barbell-outline'} size={24} color={guide ? colors.pText : colors.sub} />
           </Pressable>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text variant="h3" numberOfLines={1}>
@@ -226,7 +226,7 @@ export default function WorkoutSession() {
                 hitSlop={6}
                 accessibilityRole="button"
                 style={{ minHeight: 22, justifyContent: 'center' }}>
-                <Text variant="label" weight="700" style={{ color: colors.p }}>
+                <Text variant="label" weight="700" style={{ color: colors.pText }}>
                   Nasıl yapılır? ›
                 </Text>
               </Pressable>
@@ -261,7 +261,7 @@ export default function WorkoutSession() {
                   borderWidth: done ? 0 : isActive ? 2 : 1.5,
                   borderColor: done ? 'transparent' : isActive ? colors.p : colors.line,
                 }}>
-                <Text variant="body" weight="900" tone={done ? 'onp' : isActive ? 'primary' : 'sub'} style={done ? { color: colors.onp } : isActive ? { color: colors.p } : undefined}>
+                <Text variant="body" weight="900" tone={done ? 'onp' : isActive ? 'primary' : 'sub'} style={done ? { color: colors.onp } : isActive ? { color: colors.pText } : undefined}>
                   {done ? `✓ ${setNumber}` : setNumber}
                 </Text>
               </Pressable>

@@ -121,7 +121,7 @@ function MyClasses({ tenantId, trainerId }: { tenantId: string; trainerId: strin
             }}
             hitSlop={8}
             style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text variant="helper" weight="700" style={{ color: colors.p }}>
+            <Text variant="helper" weight="700" style={{ color: colors.pText }}>
               Bugüne dön
             </Text>
           </Pressable>

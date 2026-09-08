@@ -91,7 +91,7 @@ export default function AdminPromotions() {
                     <Text variant="body" weight="900">
                       {promo.name}
                     </Text>
-                    <Text variant="body" weight="900" style={{ color: colors.p }}>
+                    <Text variant="body" weight="900" style={{ color: colors.pText }}>
                       {KIND_LABEL[promo.kind](promo.value)}
                     </Text>
                   </View>

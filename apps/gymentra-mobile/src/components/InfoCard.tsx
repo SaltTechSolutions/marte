@@ -69,14 +69,14 @@ export function InfoCard({
     lead ??
     (initials ? (
       <View style={circle}>
-        <Text variant="helper" weight="900" style={{ color: colors.p }}>
+        <Text variant="helper" weight="900" style={{ color: colors.pText }}>
           {initials}
         </Text>
       </View>
     ) : icon ? (
       <View
         style={circle}>
-        <Ionicons name={icon} size={19} color={colors.p} />
+        <Ionicons name={icon} size={19} color={colors.pText} />
       </View>
     ) : null);
 

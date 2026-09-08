@@ -101,7 +101,7 @@ function ToastView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const accent = tone === 'success' ? colors.ok : tone === 'error' ? colors.danger : colors.p;
+  const accent = tone === 'success' ? colors.ok : tone === 'error' ? colors.danger : colors.pText;
 
   return (
     <Animated.View
@@ -148,7 +148,7 @@ function ToastView({
               onDone();
             }}
             hitSlop={8}>
-            <Text variant="helper" weight="900" style={{ color: colors.p }}>
+            <Text variant="helper" weight="900" style={{ color: colors.pText }}>
               {action.label}
             </Text>
           </Pressable>

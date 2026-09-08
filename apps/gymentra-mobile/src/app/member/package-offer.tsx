@@ -106,7 +106,7 @@ export default function MemberPackageOffer() {
       )}
 
       <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 20, color: colors.p }}>↓</Text>
+        <Text style={{ fontSize: 20, color: colors.pText }}>↓</Text>
       </View>
 
       <Card style={{ gap: 6 }} outlineColor={colors.p}>

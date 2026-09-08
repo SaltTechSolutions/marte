@@ -146,7 +146,7 @@ export default function TrainerClients() {
               borderRadius: 14,
               padding: 13,
             }}>
-            <Ionicons name="qr-code-outline" size={22} color={colors.p} />
+            <Ionicons name="qr-code-outline" size={22} color={colors.pText} />
             <View style={{ flex: 1 }}>
               <Text variant="helper" weight="700">
                 Giriş kabul et
@@ -155,7 +155,7 @@ export default function TrainerClients() {
                 Üyenin QR kodunu okut veya 6 haneli kodu gir
               </Text>
             </View>
-            <Text style={{ color: colors.p }}>›</Text>
+            <Text style={{ color: colors.pText }}>›</Text>
           </View>
         </Pressable>
       )}
@@ -242,7 +242,7 @@ export default function TrainerClients() {
             return (
               <ListRow last={index === visible.length - 1} onPress={() => openClient(m)}>
                 <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text variant="helper" weight="900" style={{ color: colors.p }}>
+                  <Text variant="helper" weight="900" style={{ color: colors.pText }}>
                     {initialsOf(name)}
                   </Text>
                 </View>

@@ -92,13 +92,13 @@ export function TabBar({ items }: { items: TabItem[] }) {
               <Ionicons
                 name={active ? activeGlyph(item.icon) : item.icon}
                 size={isIOS ? 23 : 24}
-                color={active ? colors.p : colors.sub}
+                color={active ? colors.pText : colors.sub}
               />
             </View>
             <Text
               variant="label"
               weight={!isIOS && active ? '700' : undefined}
-              style={{ color: active ? colors.p : colors.sub, fontSize: isIOS ? undefined : 12 }}>
+              style={{ color: active ? colors.pText : colors.sub, fontSize: isIOS ? undefined : 12 }}>
               {item.label}
             </Text>
           </Pressable>

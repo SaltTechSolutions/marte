@@ -74,7 +74,7 @@ export default function GymQr() {
           onPress={() => router.back()}
           accessibilityRole="button"
           style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.lg }}>
-          <Text variant="helper" weight="700" style={{ color: colors.p }}>
+          <Text variant="helper" weight="700" style={{ color: colors.pText }}>
             Kapat
           </Text>
         </Pressable>

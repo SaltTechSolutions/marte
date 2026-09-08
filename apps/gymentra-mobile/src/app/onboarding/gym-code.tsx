@@ -132,8 +132,8 @@ export default function GymCodeScreen() {
             />
           ) : (
             <>
-              <Ionicons name="qr-code-outline" size={26} color={colors.p} />
-              <Text variant="helper" weight="700" style={{ color: colors.p }}>
+              <Ionicons name="qr-code-outline" size={26} color={colors.pText} />
+              <Text variant="helper" weight="700" style={{ color: colors.pText }}>
                 Karekodu tara
               </Text>
             </>

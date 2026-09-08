@@ -255,11 +255,11 @@ export default function AdminMembers() {
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text variant="h3">
-          İstekler <Text variant="h3" style={{ color: colors.p }}>{requests.length}</Text>
+          İstekler <Text variant="h3" style={{ color: colors.pText }}>{requests.length}</Text>
         </Text>
         {requests.length > 0 && (
           <Pressable onPress={() => void approveAll()} disabled={bulkBusy} accessibilityRole="button">
-            <Text variant="helper" weight="700" style={{ color: bulkBusy ? colors.sub : colors.p }}>
+            <Text variant="helper" weight="700" style={{ color: bulkBusy ? colors.sub : colors.pText }}>
               {bulkBusy ? 'Onaylanıyor…' : 'Tümünü onayla'}
             </Text>
           </Pressable>
@@ -318,7 +318,7 @@ export default function AdminMembers() {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: spacing.md }}>
         <Text variant="h3">
           Üyeler{' '}
-          <Text variant="h3" style={{ color: colors.p }}>
+          <Text variant="h3" style={{ color: colors.pText }}>
             {trimmedQuery ? `${visibleMembers.length}/${members?.length ?? 0}` : (members?.length ?? 0)}
           </Text>
         </Text>
@@ -390,7 +390,7 @@ export default function AdminMembers() {
                   {m.shortCode ? `Giriş kodu ${m.shortCode}` : 'Giriş kodu atanıyor…'}
                 </Text>
                 {renewalIds.has(m.userId) ? (
-                  <Text variant="label" weight="700" style={{ color: colors.p }}>
+                  <Text variant="label" weight="700" style={{ color: colors.pText }}>
                     Yenileme talebi
                   </Text>
                 ) : null}

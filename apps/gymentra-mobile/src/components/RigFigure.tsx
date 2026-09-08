@@ -195,8 +195,8 @@ export function RigFigure({
     return (
       <G key={key} transform={`rotate(${deg} ${c[0]} ${c[1]})`}>
         <Rect x={c[0] - 17} y={c[1] - 4} width={34} height={8} rx={4} fill={fill} stroke={line} />
-        <Rect x={c[0] - 25} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.p} strokeWidth={1.5} />
-        <Rect x={c[0] + 12} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.p} strokeWidth={1.5} />
+        <Rect x={c[0] - 25} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.pText} strokeWidth={1.5} />
+        <Rect x={c[0] + 12} y={c[1] - 13} width={13} height={26} rx={4} fill={fill} stroke={colors.pText} strokeWidth={1.5} />
       </G>
     );
   };
@@ -206,9 +206,9 @@ export function RigFigure({
         {/* Tabak 50px yarıçapında; kafanın önüne geldiğinde onu tamamen
             örtüyordu. Saydamlık kafanın konumunu görünür bırakıyor, kenar
             çizgisi opak kalıyor ki tabağın sınırı kaybolmasın. */}
-        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} fillOpacity={0.62} stroke={colors.p} strokeWidth={2} />
+        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} fillOpacity={0.62} stroke={colors.pText} strokeWidth={2} />
         <Circle cx={c[0]} cy={c[1]} r={38} fill="none" stroke={line} strokeWidth={1.5} />
-        <Circle cx={c[0]} cy={c[1]} r={11} fill={joint} stroke={colors.p} strokeWidth={2} />
+        <Circle cx={c[0]} cy={c[1]} r={11} fill={joint} stroke={colors.pText} strokeWidth={2} />
       </G>
     ) : null;
 
