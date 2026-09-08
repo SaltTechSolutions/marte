@@ -44,6 +44,7 @@ node scripts/asc.mjs review-detail '{"demoAccountRequired":true,"demoAccountName
 node scripts/asc.mjs age-rating              # yaş sınırı anketi, yanıtsız alanlar
 node scripts/asc.mjs age-rating '{"violenceCartoonOrFantasy":"NONE"}'
 node scripts/asc.mjs screenshots             # hangi ekran boyutu eksik
+node scripts/asc.mjs subscriptions           # abonelik ürünleri; MISSING_METADATA'nın sebebi
 node scripts/asc.mjs testers                 # TestFlight grupları ve kişiler
 ```
 

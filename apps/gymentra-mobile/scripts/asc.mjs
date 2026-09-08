@@ -505,6 +505,94 @@ async function submissions(sub, id) {
   console.log('');
 }
 
+/**
+ * Abonelik ürünlerinin durumu ve `MISSING_METADATA`'nın sebebi.
+ *
+ * Apple durumu söylüyor ama **neyin** eksik olduğunu söylemiyor; arayüzde de
+ * kırmızı bir nokta olarak duruyor. Bir aboneliğin incelemeye hazır sayılması
+ * için dört şey gerekiyor ve dördü ayrı uçlarda duruyor: grup yerelleştirmesi,
+ * ürün yerelleştirmesi (ad + açıklama), fiyat çizelgesi ve inceleme ekran
+ * görüntüsü. Komut dördünü tek tek yoklayıp eksik olanı adıyla yazıyor.
+ *
+ * Yoklamalar tek tek `try` içinde: Apple bu uçlarda "yok" durumunu boş liste
+ * yerine 404 ile de dönebiliyor ve tek bir eksik parça bütün raporu
+ * düşürmemeli — raporun işi zaten eksikleri göstermek.
+ */
+async function subscriptions() {
+  const cfg = config();
+  const groups = await call(
+    `/apps/${cfg.appId}/subscriptionGroups?limit=10&fields[subscriptionGroups]=referenceName`,
+  );
+
+  if (!groups.data?.length) {
+    console.log('\nABONELİK GRUBU YOK\n');
+    return;
+  }
+
+  for (const group of groups.data) {
+    console.log(`\nGRUP · ${group.attributes.referenceName}`);
+
+    const groupLocales = await call(
+      `/subscriptionGroups/${group.id}/subscriptionGroupLocalizations?limit=20&fields[subscriptionGroupLocalizations]=locale,name,state`,
+    ).catch(() => ({ data: [] }));
+    console.log(
+      groupLocales.data.length
+        ? `  grup adı      : ${groupLocales.data.map((l) => `${l.attributes.locale} (${l.attributes.name})`).join(', ')}`
+        : '  grup adı      : ⚠ EKSİK — grubun görünen adı hiçbir dilde yazılmamış',
+    );
+
+    const subs = await call(
+      `/subscriptionGroups/${group.id}/subscriptions?limit=20` +
+        '&fields[subscriptions]=name,productId,state,subscriptionPeriod,reviewNote',
+    );
+
+    for (const sub of subs.data ?? []) {
+      const a = sub.attributes;
+      console.log(`\n  ${a.productId}`);
+      console.log(`    ad/dönem    : ${a.name} · ${a.subscriptionPeriod ?? '—'}`);
+      console.log(`    durum       : ${a.state}`);
+
+      const [locales, prices, shot] = await Promise.all([
+        call(
+          `/subscriptions/${sub.id}/subscriptionLocalizations?limit=20&fields[subscriptionLocalizations]=locale,name,description,state`,
+        ).catch(() => ({ data: [] })),
+        call(`/subscriptions/${sub.id}/prices?limit=10`).catch(() => ({ data: [] })),
+        call(
+          `/subscriptions/${sub.id}/appStoreReviewScreenshot?fields[subscriptionAppStoreReviewScreenshots]=assetDeliveryState,fileName`,
+        ).catch(() => ({ data: null })),
+      ]);
+
+      const eksik = [];
+
+      if (locales.data.length) {
+        const yarim = locales.data.filter((l) => !l.attributes.name || !l.attributes.description);
+        console.log(`    yerelleştirme: ${locales.data.map((l) => l.attributes.locale).join(', ')}`);
+        if (yarim.length) eksik.push(`yerelleştirmede ad/açıklama boş (${yarim.map((l) => l.attributes.locale).join(', ')})`);
+      } else {
+        console.log('    yerelleştirme: ⚠ yok');
+        eksik.push('ürün adı ve açıklaması (en az bir dil)');
+      }
+
+      console.log(`    fiyat       : ${prices.data.length ? `${prices.data.length} kayıt` : '⚠ yok'}`);
+      if (!prices.data.length) eksik.push('fiyat çizelgesi');
+
+      const shotState = shot.data?.attributes?.assetDeliveryState?.state;
+      console.log(`    inceleme SS : ${shot.data ? `${shot.data.attributes.fileName ?? 'var'} (${shotState ?? '—'})` : '⚠ yok'}`);
+      if (!shot.data) eksik.push('inceleme ekran görüntüsü');
+      else if (shotState && shotState !== 'COMPLETE') eksik.push(`inceleme ekran görüntüsü yüklenmesi bitmemiş (${shotState})`);
+
+      if (a.state === 'MISSING_METADATA') {
+        console.log(
+          eksik.length
+            ? `    → eksik     : ${eksik.join('; ')}`
+            : '    → dört parça da tam görünüyor; kalan eksik yalnızca App Store Connect arayüzünde görünüyor olabilir (ör. vergi kategorisi ya da Paid Apps sözleşmesi).',
+        );
+      }
+    }
+  }
+  console.log('');
+}
+
 const COMMANDS = {
   status,
   'upload-screenshots': uploadScreenshots,
@@ -516,6 +604,7 @@ const COMMANDS = {
   'review-detail': (...args) => reviewDetail(args.length ? JSON.parse(args.join(' ')) : undefined),
   'age-rating': (...args) => ageRating(args.length ? JSON.parse(args.join(' ')) : undefined),
   screenshots,
+  subscriptions,
   testers,
 };
 
@@ -532,6 +621,7 @@ if (!cmd || !COMMANDS[cmd]) {
   review-detail ['{"...":"..."}'] inceleme bilgileri (demo hesap, not) oku / yaz
   age-rating ['{"...":"..."}']    yaş sınırı anketini oku / yaz
   screenshots                     ekran görüntüsü setleri, hangisi eksik
+  subscriptions                   abonelik ürünleri ve MISSING_METADATA'nın sebebi
   upload-screenshots <tip> <dizin>  klasördeki PNG'leri sırayla yükle
   testers                         TestFlight grupları ve kişiler
 `);

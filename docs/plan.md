@@ -166,8 +166,25 @@ imzası. İstemci gerçek satın almada kimliği doğru kuruyor:
 `configurePurchases` `appUserID: tenantId` ile yapılandırıyor
 (`services/purchases.ts:53`, paywall açılışında çağrılıyor).
 
-**Kalan:** Apple'daki iki üründe `MISSING_METADATA` ve **gerçek cihazda
-satın alma** — ikincisi cihaz gerektiriyor.
+**8 Eylül 2026 — Apple tarafı da bayat çıktı.** `asc.mjs`'e yazılan yeni
+`subscriptions` komutu (grup yerelleştirmesi, ürün yerelleştirmesi, fiyat
+çizelgesi ve inceleme ekran görüntüsünü tek tek yokluyor) ikisini de
+**`READY_TO_SUBMIT`** gösteriyor — `MISSING_METADATA` geçmiş; 4–5 Eylül'de
+yüklenen grup adı ve ekran görüntüleri durumu değiştirmiş, yalnızca yeniden
+bakılmamış. Dört parçanın dördü de tam: `tr` yerelleştirme, 10 fiyat kaydı,
+inceleme ekran görüntüsü `COMPLETE`.
+
+⚠️ **Ama yeni bir engel çıktı: abonelikler incelemeye gönderilmemiş.**
+Gönderilen kapta (`00f92308…`, 5 Eylül) **tek madde** var, o da sürüm 1.0.
+Yani 1.0 bu hâliyle onaylanırsa uygulama yayına girer ama iki ürün
+`READY_TO_SUBMIT`'te kalır — paywall'daki satın alma gerçek kullanıcıda
+açılmaz. Abonelikler kendi gönderimlerini gerektiriyor; kap incelemedeyken
+değiştirilemediği için ya 1.0'ın sonucu beklenip ürünler ayrıca
+gönderilecek, ya da sürüm geri çekilip ikisi birlikte gönderilecek.
+**Karar gerekiyor.**
+
+**Kalan:** yukarıdaki gönderim kararı ve **gerçek cihazda satın alma**
+(cihaz gerektiriyor).
 
 *Cihaz testinde ayrıca bakılacak bir şey:* salon değiştiren bir hesapta
 satın almanın hangi salona yazıldığı. `configurePurchases` ikinci salon için
