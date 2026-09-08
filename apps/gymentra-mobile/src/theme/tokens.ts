@@ -155,12 +155,19 @@ export function derivePalette(primaryHex: string, accentHex: string | undefined,
   };
 }
 
-// Type scale (Inter): 34/28/22 headings (900), 17 body (500), 13 helper, 11 label
+// Type scale (Inter): 34/28/22 headings (900), 17 body (500), 15 callout,
+// 13 helper, 11 label.
+//
+// `callout` closes the gap the design audit flagged (designplan D2-5): body
+// dropped straight from 17 to 13, so every piece of secondary text was
+// squeezed into `helper` and, paired with `sub`, read badly. It is the step
+// list rows, chips and card values actually want.
 export const Type = {
   h1: { fontSize: 34, fontWeight: '900' as const, lineHeight: 38 },
   h2: { fontSize: 28, fontWeight: '900' as const, lineHeight: 32 },
   h3: { fontSize: 22, fontWeight: '900' as const, lineHeight: 26 },
   body: { fontSize: 17, fontWeight: '500' as const, lineHeight: 23 },
+  callout: { fontSize: 15, fontWeight: '500' as const, lineHeight: 21 },
   helper: { fontSize: 13, fontWeight: '500' as const, lineHeight: 18 },
   label: { fontSize: 11, fontWeight: '700' as const, lineHeight: 14 },
 };

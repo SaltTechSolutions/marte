@@ -3,7 +3,7 @@ import { Text as RNText, TextProps, TextStyle } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
 
-type Variant = 'h1' | 'h2' | 'h3' | 'body' | 'helper' | 'label';
+type Variant = 'h1' | 'h2' | 'h3' | 'body' | 'callout' | 'helper' | 'label';
 type Tone = 'primary' | 'sub' | 'onp' | 'ok' | 'warn' | 'danger' | 'inherit';
 
 interface Props extends TextProps {
