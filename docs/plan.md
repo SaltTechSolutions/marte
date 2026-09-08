@@ -72,7 +72,27 @@ değişiklikler store onayı beklemeden yayınlanır" diyor ama `app.json`'da ne
 mağaza turu demek. **Yayından önce kurulmalı** — sonradan eklemek, kurulu
 olmayan sürümdeki kullanıcılara ulaşmıyor.
 
-**D-3. Firestore yedeği yok.** Bu planda "yedek" kelimesi bir kez geçiyor, o
+**D-3. [x] Firestore yedeği yok.** *(8 Eylül 2026 — kuruldu; runbook:
+`docs/BACKUP.md`.)* Ölçülen başlangıç durumu tahminden de çıplaktı: PITR
+kapalı ve sürüm saklama **1 saat**, sıfır yedek, sıfır zamanlama, üstelik
+**silme koruması da kapalı** — veritabanının kendisi tek komutla
+silinebiliyordu. Üçü de açıldı: PITR **7 gün**, **günlük** yedek (7 gün
+saklama), silme koruması. Doğrulandı (`databases describe`).
+
+Runbook'ta asıl değerli olan geri yükleme tarafı: restore **her zaman yeni
+bir veritabanı yaratır**, var olanın üzerine yazamaz — yani "geri al" tek
+komut değil, üç adım (yükle → doğrula → taşı). Üç senaryo (PITR'lı kısmi
+kurtarma, yedekten restore, silinmiş veritabanı) komutlarıyla yazıldı.
+
+**Kalan üç karar:** (1) haftalık zamanlama — bugün koruma penceresi 7 gün,
+üç hafta önce bozulmuş veri kurtarılamaz; (2) Storage sürümleme — açılmadı,
+çünkü avatar yolu sabit ve sürümleme silinen hesabın fotoğrafını eski sürüm
+olarak yaşatır (`deleteMyAccount`'un temizlediğini geri getirir, KVKK
+sorunu); (3) Auth kullanıcı dışa aktarımı bugün elle. Ayrıca **restore
+tatbikatı yayından önce bir kez yapılmalı** — yedeğin varlığı geri
+yüklenebildiğini kanıtlamaz.
+
+*Özgün bulgu:* Bu planda "yedek" kelimesi bir kez geçiyor, o
 da git hakkında. Canlı bir salonun üyelik, paket, kredi ve ödeme defteri
 Firestore'da duruyor; PITR açık değil, zamanlanmış dışa aktarma yok, geri
 yükleme provası hiç yapılmadı. Yanlış bir toplu script ya da hatalı bir kural
