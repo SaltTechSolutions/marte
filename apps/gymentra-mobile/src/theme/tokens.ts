@@ -56,7 +56,11 @@ export const themes: Record<TenantId, TenantTheme> = {
       surf2: '#EDF1F7',
       line: 'rgba(15,23,42,0.12)',
       txt: '#0B1220',
-      sub: '#64748B',
+      // Half a step darker than slate-500 (#64748B). `sub` is read at 11-13pt,
+      // so AA wants 4.5:1 — and slate-500 only managed 4.20:1 on `surf2`,
+      // which is exactly where chips and badges put it. This clears 4.90:1
+      // on every surface in this palette.
+      sub: '#5B6980',
       p: '#059669',
       g1: '#059669',
       g2: '#0891B2',
@@ -91,7 +95,9 @@ export const themes: Record<TenantId, TenantTheme> = {
       surf2: '#F1EBDF',
       line: 'rgba(28,25,23,0.12)',
       txt: '#1C1917',
-      sub: '#78716C',
+      // Same correction as GymEntra Light: stone-500 (#78716C) sat at 4.04:1
+      // on `surf2`. This clears 4.90:1 everywhere.
+      sub: '#6B645F',
       p: '#EA580C',
       g1: '#EA580C',
       g2: '#F97316',

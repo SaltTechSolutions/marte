@@ -75,3 +75,50 @@ describe('onColorFor', () => {
     expect(onColorFor('#FFFFFF')).toBe(DARK_INK);
   });
 });
+
+/**
+ * `txt` and `sub` carry nearly every word in the app, and `sub` is read at
+ * 11-13pt, so both owe AA on all four surfaces. This guards the pair that
+ * actually regressed: both light palettes shipped a `sub` that failed on
+ * `surf2` — the surface chips and badges sit on.
+ *
+ * Deliberately not asserted here: `p`/`danger`/`warn`/`ok` on light-mode
+ * `bg1`/`surf2`, which are still 3.00-4.43:1. Fixing those means retuning the
+ * light semantic palette, a design call rather than a threshold — tracked as
+ * K4 in docs/figma-tasarim-plani.md.
+ */
+describe('palette legibility', () => {
+  const SURFACES = ['bg0', 'bg1', 'surf', 'surf2'] as const;
+  const FOREGROUNDS = ['txt', 'sub'] as const;
+
+  it('keeps text and secondary text at AA on every surface of every shipped palette', () => {
+    for (const [tenant, theme] of Object.entries(themes)) {
+      for (const [mode, palette] of Object.entries({ dark: theme.dark, light: theme.light })) {
+        for (const fg of FOREGROUNDS) {
+          for (const surface of SURFACES) {
+            expect(
+              contrastRatio(palette[fg], palette[surface]),
+              `${tenant} ${mode}: ${fg} on ${surface}`,
+            ).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps a derived palette legible for any brand hue', () => {
+    for (let h = 0; h < 360; h += 3) {
+      for (const mode of ['dark', 'light'] as const) {
+        const palette = derivePalette(hslHex(h, 0.8, 0.5), undefined, mode);
+        for (const fg of FOREGROUNDS) {
+          for (const surface of SURFACES) {
+            expect(
+              contrastRatio(palette[fg], palette[surface]),
+              `${mode} h${h}: ${fg} on ${surface}`,
+            ).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    }
+  });
+});
