@@ -129,185 +129,16 @@ export const BACK_PATHS: { d: string; muscle: string | null }[] = [
   { d: 'M83 416 C84 422 85 426 86 428 L93 427 C93 422 93 418 93 416 Z', muscle: null },
 ];
 
-export interface PoseFrame {
-  head: [number, number];
-  shoulder: [number, number];
-  elbow: [number, number];
-  wrist: [number, number];
-  hip: [number, number];
-  knee: [number, number];
-  ankle: [number, number];
-  toe: [number, number];
-  /**
-   * The far-side limb, drawn behind the torso, only where it does something
-   * different from the near one (a lunge's trailing leg, bird-dog's planted
-   * leg and reaching arm). Absent means "same as the near limb" and the
-   * renderer draws a faded copy — right for squats, hinges and presses.
-   */
-  farKnee?: [number, number];
-  farAnkle?: [number, number];
-  farToe?: [number, number];
-  farElbow?: [number, number];
-  farWrist?: [number, number];
-  /** Loaded implement (bar/dumbbell/handle). Absent for bodyweight moves. */
-  bar?: [number, number];
-  /** [x1,y1,x2,y2] motion hint, drawn dashed on the start frame only. */
-  arrow?: [number, number, number, number];
-  /** Bench, box, machine pad — drawn behind the figure. */
-  props?: { x: number; y: number; w: number; h: number; r?: number }[];
-}
-
-/** Which way the head looks when the toes cannot say (lying, quadruped, side plank). */
-export type PoseFace = 'left' | 'right' | 'up' | 'down' | 'front';
-
 /**
- * Start/end frames. `end: null` means an isometric hold — one frame only.
+ * Hareketin çizim arketipi — `@/data/rigArchetypes` anahtarı.
  *
- * `view: 'front'` draws the same joints mirrored across the body's centre
- * line — both arms, both legs, symmetric — for moves that only read from the
- * front (a lateral raise seen from the side is a forward raise). `face`
- * overrides the derived facing for the few frames where nothing in the
- * skeleton says which way the eyes point.
+ * Burada bir zamanlar `POSE_ARCHETYPES` vardı: eklem piksellerini elle tutan
+ * 30 kayıtlık eski poz sistemi. Hiçbir şey ondan çizmiyordu (figürü
+ * `RigFigure` motorun kare verisiyle çiziyor), yalnız bu alanı TİPLİYORDU ve
+ * senkronu çoktan kaçmıştı — `lunge_reach` hiç eklenmemişti. Tip artık gerçek
+ * kaynağa bakıyor; testte her kimliğin motorda karşılığı olduğu doğrulanıyor.
  */
-export interface PoseArchetype {
-  start: PoseFrame;
-  end: PoseFrame | null;
-  view?: 'side' | 'front';
-  face?: PoseFace;
-}
-
-export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
-  squat: {
-    start: { head: [150.0, 46.0], shoulder: [150.0, 70.0], elbow: [134.0, 96.0], wrist: [138.0, 68.0], hip: [152.0, 134.0], knee: [152.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [146.0, 66.0], arrow: [196, 112, 180, 158] },
-    end: { head: [144.2, 80.0], shoulder: [145.2, 104.0], elbow: [125.3, 127.1], wrist: [131.6, 99.5], hip: [132.5, 166.8], knee: [168.9, 177.7], ankle: [150, 206], toe: [174.0, 206.0], bar: [141.6, 97.5] },
-  },
-  squat_goblet: {
-    start: { head: [150.0, 46.0], shoulder: [150.0, 70.0], elbow: [144.0, 100.0], wrist: [150.0, 120.0], hip: [152.0, 134.0], knee: [152.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [150.0, 122.0], arrow: [196, 112, 180, 158] },
-    end: { head: [144.2, 80.0], shoulder: [145.2, 104.0], elbow: [138.7, 133.9], wrist: [148.3, 152.4], hip: [132.5, 166.8], knee: [168.9, 177.7], ankle: [150, 206], toe: [174.0, 206.0], bar: [148.3, 154.4] },
-  },
-  hinge: {
-    start: { head: [128.0, 96.0], shoulder: [144.0, 112.0], elbow: [150.0, 146.0], wrist: [152.0, 180.0], hip: [178.0, 142.0], knee: [156.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [152.0, 182.0], arrow: [204, 172, 204, 118] },
-    end: { head: [150.3, 66.4], shoulder: [150.6, 89.0], elbow: [149.2, 123.5], wrist: [154.9, 157.1], hip: [152.0, 134.3], knee: [152.0, 171.5], ankle: [150, 206], toe: [174.0, 206.0], bar: [154.9, 159.1] },
-  },
-  hip_hinge_dumbbell: {
-    start: { head: [150.0, 46.0], shoulder: [150.0, 70.0], elbow: [150.0, 102.0], wrist: [152.0, 138.0], hip: [152.0, 136.0], knee: [152.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [152.0, 140.0] },
-    end: { head: [151.5, 86.2], shoulder: [128.9, 94.4], elbow: [141.9, 123.7], wrist: [149.3, 159.0], hip: [174.8, 141.9], knee: [155.9, 172.5], ankle: [150, 206], toe: [174.0, 206.0], bar: [149.3, 161.0], arrow: [204, 168, 204, 118] },
-  },
-  hip_thrust: {
-    start: { head: [70.0, 150.0], shoulder: [92.0, 152.0], elbow: [92.0, 176.0], wrist: [92.0, 196.0], hip: [132.0, 180.0], knee: [168.0, 180.0], ankle: [168, 206], toe: [190.0, 206.0], bar: [150, 168], props: [{ x: 56, y: 150, w: 16, h: 42 }] },
-    end: { head: [73.1, 150.0], shoulder: [95.2, 150.2], elbow: [92.0, 174.0], wrist: [92.0, 194.0], hip: [143.9, 153.2], knee: [168.0, 180.0], ankle: [168, 206], toe: [190.0, 206.0], bar: [150, 132], arrow: [150, 168, 150, 140], props: [{ x: 56, y: 150, w: 16, h: 42 }] },
-    face: 'up',
-  },
-  bench_press: {
-    start: { head: [100.0, 138.0], shoulder: [120, 144], elbow: [120.0, 116.0], wrist: [118.0, 90.0], hip: [198.0, 148.0], knee: [230.0, 172.0], ankle: [230.0, 204.0], toe: [248.0, 204.0], bar: [118.0, 90.0], arrow: [152, 96, 152, 126], props: [{ x: 70, y: 150, w: 180, h: 14, r: 5 }, { x: 88, y: 164, w: 12, h: 42 }, { x: 220, y: 164, w: 12, h: 42 }] },
-    end: { head: [100.0, 138.0], shoulder: [120, 144], elbow: [136.8, 121.6], wrist: [110.9, 124.9], hip: [198.0, 148.0], knee: [230.0, 172.0], ankle: [230.0, 204.0], toe: [248.0, 204.0], bar: [110.9, 124.9], props: [{ x: 70, y: 150, w: 180, h: 14, r: 5 }, { x: 88, y: 164, w: 12, h: 42 }, { x: 220, y: 164, w: 12, h: 42 }] },
-  },
-  incline_press: {
-    start: { head: [86.0, 120.0], shoulder: [108, 132], elbow: [112.0, 104.0], wrist: [110.0, 78.0], hip: [176.0, 158.0], knee: [214.0, 178.0], ankle: [218.0, 204.0], toe: [238.0, 204.0], bar: [110.0, 78.0], arrow: [146, 86, 146, 116], props: [{ x: 60, y: 90, w: 40, h: 110, r: 8 }, { x: 74, y: 160, w: 140, h: 14, r: 5 }, { x: 200, y: 174, w: 12, h: 34 }] },
-    end: { head: [86.0, 120.0], shoulder: [108, 132], elbow: [126.1, 110.3], wrist: [100.0, 109.8], hip: [176.0, 158.0], knee: [214.0, 178.0], ankle: [218.0, 204.0], toe: [238.0, 204.0], bar: [100.0, 109.8], props: [{ x: 60, y: 90, w: 40, h: 110, r: 8 }, { x: 74, y: 160, w: 140, h: 14, r: 5 }, { x: 200, y: 174, w: 12, h: 34 }] },
-  },
-  seated_overhead_press: {
-    start: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [132.0, 90.0], wrist: [130.0, 64.0], hip: [150, 150], knee: [150.0, 182.0], ankle: [150.0, 206.0], toe: [172.0, 206.0], bar: [130.0, 64.0], arrow: [178, 96, 178, 66], props: [{ x: 140, y: 150, w: 22, h: 58, r: 6 }] },
-    end: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [146.3, 65.4], wrist: [148.9, 39.4], hip: [150, 150], knee: [150.0, 182.0], ankle: [150.0, 206.0], toe: [172.0, 206.0], bar: [148.9, 39.4], props: [{ x: 140, y: 150, w: 22, h: 58, r: 6 }] },
-    view: 'front',
-  },
-  standing_row_hinged: {
-    start: { head: [128.0, 96.0], shoulder: [144.0, 112.0], elbow: [150.0, 146.0], wrist: [152.0, 178.0], hip: [178.0, 142.0], knee: [156.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [152.0, 180.0] },
-    end: { head: [128.0, 96.0], shoulder: [144.0, 112.0], elbow: [176.8, 122.9], wrist: [175.5, 154.9], hip: [178.0, 142.0], knee: [156.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [175.5, 156.9], arrow: [204, 182, 204, 150] },
-  },
-  unilateral_lunge: {
-    start: { head: [150.0, 46.0], shoulder: [150.0, 70.0], elbow: [136.0, 96.0], wrist: [140.0, 120.0], hip: [152.0, 134.0], knee: [152.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [140.0, 122.0] },
-    end: { head: [143.4, 64.9], shoulder: [146.3, 88.7], elbow: [133.3, 115.2], wrist: [135.7, 139.4], hip: [143.2, 152.7], knee: [176.0, 171.9], ankle: [176, 206], toe: [200.0, 206.0], farKnee: [114.2, 177.3], farAnkle: [85.2, 195.2], farToe: [105.4, 208.2], bar: [135.7, 141.4] },
-  },
-  step_up: {
-    start: { head: [110.0, 66.0], shoulder: [112.0, 90.0], elbow: [100.0, 116.0], wrist: [104.0, 140.0], hip: [114.0, 150.0], knee: [114.0, 182.0], ankle: [114, 206], toe: [136.0, 206.0], bar: [104.0, 142.0], props: [{ x: 150, y: 174, w: 70, h: 32, r: 4 }] },
-    end: { head: [171.8, 39.9], shoulder: [179.7, 62.7], elbow: [170.3, 89.7], wrist: [170.1, 114.0], hip: [172.1, 122.2], knee: [188.0, 150.0], ankle: [188, 174], toe: [210.0, 174.0], farKnee: [161.3, 152.3], farAnkle: [149.8, 173.4], farToe: [152.6, 195.2], bar: [170.1, 116.0], props: [{ x: 150, y: 174, w: 70, h: 32, r: 4 }] },
-  },
-  calf_raise: {
-    start: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [142.0, 110.0], wrist: [144.0, 136.0], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [148, 200], toe: [170.0, 206.0] },
-    end: { head: [150.0, 50.0], shoulder: [150.0, 76.0], elbow: [142.0, 102.0], wrist: [144.0, 128.0], hip: [150.0, 142.0], knee: [150.0, 174.0], ankle: [148, 192], toe: [169.8, 198.6], arrow: [110, 180, 110, 158] },
-  },
-  plank_prone: {
-    start: { head: [262.0, 144.0], shoulder: [230.0, 152.0], elbow: [214.0, 178.0], wrist: [212.0, 204.0], hip: [168, 164], knee: [132.0, 174.0], ankle: [100.0, 186.0], toe: [86.0, 206.0] },
-    end: null,
-  },
-  side_plank: {
-    start: { head: [256.0, 116.0], shoulder: [226.0, 132.0], elbow: [214.0, 166.0], wrist: [214.0, 204.0], hip: [166, 158], knee: [130.0, 172.0], ankle: [98.0, 188.0], toe: [84.0, 206.0] },
-    end: null,
-    face: 'front',
-  },
-  bird_dog: {
-    start: { head: [244.0, 134.0], shoulder: [216.0, 140.0], elbow: [216.0, 172.0], wrist: [216.0, 204.0], hip: [150, 140], knee: [150.0, 174.0], ankle: [150.0, 204.0], toe: [132.0, 206.0] },
-    end: { head: [243.3, 129.5], shoulder: [216.0, 138.1], elbow: [218.0, 170.0], wrist: [218.0, 202.0], hip: [150, 140], knee: [116.8, 132.8], ankle: [87.5, 126.3], toe: [69.7, 123.1], farKnee: [150.0, 174.0], farAnkle: [150.0, 204.0], farToe: [132.0, 206.0], farElbow: [245.2, 124.9], farWrist: [274.9, 112.9], arrow: [92, 152, 64, 136] },
-  },
-  quadruped_spine: {
-    start: { head: [248.0, 120.0], shoulder: [216.0, 138.0], elbow: [216.0, 172.0], wrist: [216.0, 204.0], hip: [150, 148], knee: [150.0, 174.0], ankle: [150.0, 204.0], toe: [132.0, 206.0] },
-    end: { head: [250.7, 149.9], shoulder: [214.8, 142.2], elbow: [213.9, 176.2], wrist: [214.0, 208.2], hip: [150, 126], knee: [150.0, 152.0], ankle: [150.0, 182.0], toe: [139.1, 196.5], arrow: [180, 108, 180, 130] },
-  },
-  hinged_fly: {
-    start: { head: [128.0, 96.0], shoulder: [144.0, 112.0], elbow: [148.0, 144.0], wrist: [150.0, 176.0], hip: [178.0, 142.0], knee: [156.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [150.0, 178.0] },
-    end: { head: [128.0, 96.0], shoulder: [144.0, 112.0], elbow: [168.3, 133.2], wrist: [180.7, 103.6], hip: [178.0, 142.0], knee: [156.0, 172.0], ankle: [150, 206], toe: [174.0, 206.0], bar: [182.7, 101.6], arrow: [200, 168, 204, 124] },
-  },
-  anti_rotation_standing: {
-    start: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [132.0, 96.0], wrist: [112.0, 96.0], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0], bar: [112.0, 96.0], arrow: [70, 96, 110, 96] },
-    end: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [150.0, 105.6], wrist: [168.9, 99.1], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0], bar: [168.9, 99.1] },
-  },
-  carry: {
-    start: { head: [120.0, 58.0], shoulder: [120.0, 84.0], elbow: [110.0, 110.0], wrist: [108.0, 140.0], hip: [120.0, 150.0], knee: [110.0, 182.0], ankle: [104, 206], toe: [126.0, 206.0], farKnee: [131.8, 181.4], farAnkle: [139.6, 204.9], farToe: [161.6, 206.0], bar: [108.0, 142.0] },
-    end: { head: [190.0, 59.3], shoulder: [190.0, 85.3], elbow: [179.5, 111.1], wrist: [177.9, 141.1], hip: [190.6, 151.3], knee: [204.0, 182.0], ankle: [210, 206], toe: [232.0, 206.0], farKnee: [177.9, 182.3], farAnkle: [170.1, 205.8], farToe: [192.1, 206.0], bar: [177.9, 143.1], arrow: [150, 60, 180, 60] },
-  },
-  standing_arm_isolation: {
-    start: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [146.0, 110.0], wrist: [148.0, 138.0], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0], bar: [148.0, 140.0] },
-    end: { head: [150.0, 58.0], shoulder: [150.0, 84.0], elbow: [146.0, 110.0], wrist: [130.4, 86.6], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0], bar: [130.4, 86.6], arrow: [112, 120, 112, 92] },
-  },
-  rollout: {
-    start: { head: [204.0, 116.0], shoulder: [180.0, 132.0], elbow: [196.0, 160.0], wrist: [204.0, 194.0], hip: [128, 170], knee: [110.0, 204.0], ankle: [76.0, 204.0], toe: [58.0, 204.0], bar: [212.0, 200.0] },
-    end: { head: [235.3, 166.3], shoulder: [208.8, 177.8], elbow: [238.6, 190.2], wrist: [270.8, 203.7], hip: [146, 192], knee: [109.5, 204.2], ankle: [75.5, 204.0], toe: [57.5, 204.0], bar: [278.8, 205.7], arrow: [230, 150, 260, 166] },
-  },
-  bulgarian_split_squat: {
-    start: { head: [142.0, 50.0], shoulder: [144.0, 74.0], elbow: [130.0, 100.0], wrist: [134.0, 124.0], hip: [146.0, 138.0], knee: [150.0, 174.0], ankle: [150, 206], toe: [174.0, 206.0], farKnee: [116.4, 158.8], farAnkle: [84.7, 163.0], farToe: [60.9, 165.9], bar: [134.0, 126.0], props: [{ x: 28, y: 168, w: 44, h: 38, r: 4 }] },
-    end: { head: [140.1, 72.8], shoulder: [142.0, 96.8], elbow: [127.7, 122.6], wrist: [132.1, 146.5], hip: [144.3, 160.8], knee: [177.4, 175.4], ankle: [168, 206], toe: [192.0, 206.0], farKnee: [114.5, 181.3], farAnkle: [83.8, 172.3], farToe: [59.9, 169.7], bar: [132.1, 148.5], arrow: [200, 118, 190, 160], props: [{ x: 28, y: 168, w: 44, h: 38, r: 4 }] },
-  },
-  glute_bridge: {
-    start: { head: [236.0, 194.0], shoulder: [210.0, 194.0], elbow: [212.0, 202.0], wrist: [196.0, 204.0], hip: [150.0, 194.0], knee: [110.0, 168.0], ankle: [92, 206], toe: [74.0, 206.0] },
-    end: { head: [229.0, 192.9], shoulder: [203.3, 188.9], elbow: [207.9, 195.8], wrist: [194.6, 204.9], hip: [155.3, 152.9], knee: [110.0, 168.0], ankle: [92, 206], toe: [74.0, 206.0], arrow: [148, 190, 142, 162] },
-    face: 'up',
-  },
-  chin_tuck_side: {
-    start: { head: [160.0, 60.0], shoulder: [150.0, 84.0], elbow: [146.0, 110.0], wrist: [148.0, 138.0], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0] },
-    end: { head: [146.0, 58.3], shoulder: [150.0, 84.0], elbow: [146.0, 110.0], wrist: [148.0, 138.0], hip: [150.0, 150.0], knee: [150.0, 182.0], ankle: [150, 206], toe: [170.0, 206.0], arrow: [188, 60, 166, 60] },
-  },
-  arm_circles_front: {
-    start: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [176.0, 102.0], wrist: [194.0, 126.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0] },
-    end: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [181.6, 62.2], wrist: [195.2, 35.5], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], arrow: [214, 110, 214, 60] },
-    view: 'front',
-  },
-  lateral_raise_front: {
-    start: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [170.0, 106.0], wrist: [176.0, 132.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [176.0, 134.0] },
-    end: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [183.9, 83.7], wrist: [210.4, 80.4], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [210.4, 80.4], arrow: [204, 126, 214, 94] },
-    view: 'front',
-  },
-  shrug_front: {
-    start: { head: [150.0, 52.0], shoulder: [150, 82], elbow: [172.0, 112.0], wrist: [176.0, 140.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [176.0, 142.0] },
-    end: { head: [150.0, 42.0], shoulder: [150, 72], elbow: [172.0, 102.0], wrist: [176.0, 130.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [176.0, 132.0], arrow: [200, 96, 200, 76] },
-    view: 'front',
-  },
-  hanging_knee_raise: {
-    start: { head: [150.0, 66.0], shoulder: [150.0, 92.0], elbow: [178.0, 62.0], wrist: [186, 34], hip: [150.0, 150.0], knee: [158.0, 182.0], ankle: [160.0, 206.0], toe: [168.0, 206.0], bar: [186, 32] },
-    end: { head: [150.0, 66.0], shoulder: [150.0, 92.0], elbow: [178.0, 62.0], wrist: [186, 34], hip: [150.0, 150.0], knee: [173.3, 126.7], ankle: [166.6, 149.8], toe: [166.4, 157.8], bar: [186, 32], arrow: [196, 176, 196, 146] },
-    view: 'front',
-  },
-  band_pull_apart_front: {
-    start: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [164.0, 82.0], wrist: [168.0, 86.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [168.0, 86.0] },
-    end: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [164.5, 79.6], wrist: [170.2, 79.8], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [170.2, 79.8], arrow: [182, 104, 214, 104] },
-    view: 'front',
-  },
-  band_ext_rotation_front: {
-    start: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [170.0, 112.0], wrist: [148.0, 116.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [148.0, 116.0] },
-    end: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [170.0, 112.0], wrist: [192.3, 110.4], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [192.3, 110.4], arrow: [160, 130, 196, 128] },
-    view: 'front',
-  },
-};
+export type ArchetypeId = string;
 
 export interface Exercise {
   id: string;
@@ -319,7 +150,7 @@ export interface Exercise {
   equipEn: string;
   primary: MuscleId[];
   secondary: MuscleId[];
-  archetype: keyof typeof POSE_ARCHETYPES;
+  archetype: ArchetypeId;
   setsHint: string;
   restHint: string;
   /** [Turkish, English] pairs. */
@@ -635,6 +466,19 @@ export const EXERCISES: Exercise[] = [
     steps: [
       ['Kolları omuz hizasına kadar yana kaldır.', 'Raise arms out to shoulder height.'],
       ['Kontrollü indir.', 'Lower with control.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'triceps-extension', tr: 'Triceps ense arkası', en: 'Overhead triceps extension',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Dambıl', equipEn: 'Dumbbell',
+    primary: ['triLong', 'triLat'],
+    secondary: [],
+    archetype: 'triceps_extension',
+    setsHint: '3 × 10-15', restHint: '60-90 sn',
+    steps: [
+      ['Tek dambılı iki elle tut, kolları yukarı uzat; dirsekler kulak hizasında ve sabit.', 'Hold one dumbbell with both hands, arms overhead; elbows stay by the ears.'],
+      ['Yalnız ön kolu bükerek ağırlığı ensenin arkasına indir, sonra dirseği açarak yukarı it.', 'Bend only at the elbow to lower the weight behind the head, then extend back up.'],
     ],
     poseReviewed: false,
   },

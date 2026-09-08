@@ -2517,5 +2517,76 @@
         }
       }
     ]
+  },
+  "triceps_extension": {
+    "note": "Ayakta, tek dambil iki elle: dirsek yukarida sabit, on kol ensenin arkasina iner. Uzun bas gerilmis konumda calisiyor.",
+    "mode": "stand",
+    "arm": "angles",
+    "bar": null,
+    "load": "dumbbell",
+    "bend": 1,
+    "dur": 3200,
+    "kf": [
+      {
+        "t": 0,
+        "tr": "Tepe",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "ankle": 0,
+          "ankleF": 5,
+          "upperA": 8,
+          "foreA": 8
+        }
+      },
+      {
+        "t": 0.45,
+        "tr": "Ensede",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "ankle": 0,
+          "ankleF": 5,
+          "upperA": 8,
+          "foreA": -122
+        }
+      },
+      {
+        "t": 0.58,
+        "tr": "Ensede",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "ankle": 0,
+          "ankleF": 5,
+          "upperA": 8,
+          "foreA": -122
+        }
+      },
+      {
+        "t": 1,
+        "tr": "Tepe",
+        "p": {
+          "shinA": 178,
+          "thighA": 182,
+          "torso": 4,
+          "thoraxA": 2,
+          "neckA": 2,
+          "ankle": 0,
+          "ankleF": 5,
+          "upperA": 8,
+          "foreA": 8
+        }
+      }
+    ]
   }
 }

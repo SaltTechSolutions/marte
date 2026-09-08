@@ -134,5 +134,9 @@
   "glute-bridge": {
     "name": "Kalça köprüsü",
     "archetype": "glute_bridge"
+  },
+  "triceps-extension": {
+    "name": "Triceps ense arkası",
+    "archetype": "triceps_extension"
   }
 }

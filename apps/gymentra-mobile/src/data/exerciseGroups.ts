@@ -23,7 +23,7 @@ export const LIBRARY_GROUPS: { label: string; ids: string[] }[] = [
       'lat-pulldown', 'pullup', 'face-pull', 'reverse-fly',
     ],
   },
-  { label: 'KOL · OMUZ', ids: ['lateral-raise', 'biceps-curl', 'triceps-pushdown', 'shrug'] },
+  { label: 'KOL · OMUZ', ids: ['lateral-raise', 'biceps-curl', 'triceps-extension', 'triceps-pushdown', 'shrug'] },
   {
     label: 'CORE',
     ids: [

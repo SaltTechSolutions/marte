@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { RIG_ARCHETYPES } from './rigArchetypes';
 import {
   EXERCISES,
   MUSCLE_LABELS,
   NAME_TO_EXERCISE,
-  POSE_ARCHETYPES,
   exerciseById,
   exerciseByName,
 } from './exerciseLibrary';
@@ -19,7 +19,7 @@ describe('exercise library', () => {
 
   it('every exercise references an archetype that exists', () => {
     for (const e of EXERCISES) {
-      expect(POSE_ARCHETYPES[e.archetype], `${e.id} → ${e.archetype}`).toBeDefined();
+      expect(RIG_ARCHETYPES[e.archetype], `${e.id} → ${e.archetype}`).toBeDefined();
     }
   });
 

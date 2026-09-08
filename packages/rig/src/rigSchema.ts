@@ -242,6 +242,7 @@ export function validateBundle(b: {
   muscles: unknown;
   anatomy?: unknown;
   bodyParts?: unknown;
+  programmes?: unknown;
 }): string[] {
   const errs = validateArchetypes(b.archetypes);
   const archetypeKeys = isObj(b.archetypes) ? Object.keys(b.archetypes) : [];
@@ -250,6 +251,7 @@ export function validateBundle(b: {
   errs.push(...validateMuscles(b.muscles, exerciseKeys));
   if (b.anatomy !== undefined) errs.push(...validateAnatomy(b.anatomy));
   if (b.bodyParts !== undefined) errs.push(...validateBodyParts(b.bodyParts, B));
+  if (b.programmes !== undefined) errs.push(...validateProgrammes(b.programmes, exerciseKeys, b.muscles));
   return errs;
 }
 
@@ -354,5 +356,216 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
       }
     }
   }
+  return errs;
+}
+
+/* --- hazır paket programlar ---------------------------------------------- */
+
+const GOALS = ['guc', 'hipertrofi', 'dayaniklilik', 'hareketlilik'];
+const LEVELS = ['baslangic', 'orta', 'ileri'];
+const PROGRAMME_KEYS = [
+  'name', 'goal', 'level', 'weeks', 'sessionsPerWeek', 'minutes', 'equipment',
+  'targets', 'promise', 'limits', 'progression', 'evidence', 'days', 'reviewed',
+];
+const DAY_KEYS = ['id', 'name', 'warmup', 'exercises'];
+const SET_KEYS = ['id', 'sets', 'reps', 'restSec', 'note'];
+
+/** "8", "6-10", "30 sn", "40 m" — sayı, aralık, süre ya da mesafe. */
+const REPS = /^(\d{1,3}(-\d{1,3})?|\d{1,3} (sn|dk|m))$/;
+
+/**
+ * Kullanıcıyı yanlış yönlendiren ifadeler — vaatlerde ve sınırlarda YASAK.
+ *
+ * Bunlar üslup tercihi değil: her biri fizyolojide karşılığı olmayan ya da
+ * kanıtın söylediğinden fazlasını söyleyen bir iddia. En önemlisi BÖLGESEL
+ * YAĞ KAYBI: bir bölgeyi çalıştırmak o bölgenin yağını azaltmıyor, ama
+ * "karın eritme programı" satmanın en kolay yolu tam olarak bunu ima etmek.
+ * Yasağı koda bağlamak, iyi niyete bağlamaktan güvenli — metni yazan kişi
+ * altı ay sonra başkası olacak.
+ *
+ * Sınır metinlerinde bu ifadeler İNKÂR EDİLİRKEN geçebilir ("bölgesel yağ
+ * kaybı diye bir şey yok"), o yüzden kural yalnızca `promise` ve `name`
+ * alanlarına bakıyor; `limits` zaten sınırı anlatmak için var.
+ */
+const BANNED: { re: RegExp; label: string }[] = [
+  // Düz alt dizge YETMİYOR: Türkçe ek alıyor. "yağ yak" araması "karın yağını
+  // yakar" cümlesini kaçırıyordu. `\w` de yetmiyor — JavaScript'te ASCII
+  // demek, yani "yağı"nın "ı"sını görmüyor. Harf sınıfı `\p{L}` ve `u` bayrağı
+  // şart; ikisi de ölçülerek bulundu (testte).
+  { re: /bölgesel\s*(yağ|incel|zayıfla)/u, label: 'bölgesel yağ kaybı iması' },
+  { re: /yağ\p{L}*\s*(yak|erit|söktür)/u, label: 'yağ yakma vaadi' },
+  { re: /(göbek|karın|basen|bel)\p{L}*\s*(erit|incelt)/u, label: 'bölgesel inceltme vaadi' },
+  { re: /incelt\p{L}*/u, label: 'inceltme vaadi' },
+  { re: /selülit/u, label: 'selülit vaadi' },
+  { re: /detoks|toksin/u, label: 'detoks iddiası' },
+  { re: /metabolizma\p{L}*\s*hızlandır/u, label: 'metabolizma hızlandırma iddiası' },
+  { re: /garanti|kesinlikle|mucize|anında\s*sonuç/u, label: 'aşırı kesinlik' },
+];/**
+ * Hipertrofi hedefi için haftalık birincil set sınırları.
+ *
+ * ALT SINIR anlamlı olan: doz-yanıt meta-analizleri haftada 10+ setin daha
+ * azından daha çok büyüme verdiğini gösteriyor. Bu sınır "kol kalınlaştırma"
+ * adlı ama haftada dört set kol çalıştıran paketi yakalıyor.
+ *
+ * ÜST SINIR kaba bir toparlanma korkuluğu, en iyi hacmin ölçüsü değil — o
+ * konuda kanıt çok daha zayıf. Ayrıca sayım YUKARI YANLI: bileşik bir hareket
+ * setinin tamamı BİRİNCİL saydığı her kasa yazılıyor, yani çömelme de menteşe
+ * de hamle de kalçaya tam set yazıyor. Kalça gibi her alt vücut hareketinden
+ * pay alan bir kasta gerçek yük, sayının gösterdiğinden az. Sınır bu yüzden
+ * 30 değil 40: 30'da makul bir bacak programı yanlışlıkla düşüyordu (ölçüldü,
+ * `kalca-bacak` 31 set).
+ */
+const MIN_WEEKLY_SETS = 10;
+const MAX_WEEKLY_SETS = 40;
+
+/**
+ * Hazır paket programlar.
+ *
+ * Denetlenen şey biçimden ibaret değil: bu dosya kullanıcıya ne yapacağını
+ * SÖYLÜYOR, o yüzden şema iki şeyi ayrıca zorluyor.
+ *
+ * 1. `limits` boş olamaz. Bir paket ne yapmadığını yazmadan yayına giremez;
+ *    yazılmayan sınırı kullanıcı kendi hayal gücüyle dolduruyor.
+ * 2. Hipertrofi hedefli bir paket, hedef aldığı her kasa haftada en az
+ *    `MIN_WEEKLY_SETS` birincil set vermek zorunda. "Kol kalınlaştırma" adlı
+ *    ama haftada dört set kol çalıştıran bir paket, adının vaat ettiği şeyi
+ *    yapmıyor demektir — ve bunu gözle fark etmek zor, çünkü liste dolu
+ *    görünüyor. Sayı veriden hesaplanıyor: setler × haftalık tekrar sayısı,
+ *    kasın BİRİNCİL olduğu hareketlerde.
+ */
+export function validateProgrammes(data: unknown, exerciseKeys: string[], musclesRaw: unknown): string[] {
+  const errs: string[] = [];
+  if (!isObj(data)) return ['paket programlar: kök nesne bekleniyor'];
+  const progs = data.programmes;
+  if (!isObj(progs)) return ['paket programlar: programmes nesnesi yok'];
+  if (Object.keys(progs).length === 0) errs.push('paket programlar: programmes boş');
+
+  const muscles = isObj(musclesRaw) ? musclesRaw : {};
+  /** Hareketin BİRİNCİL kasları — hacim sayımının tabanı. */
+  const primaryOf = (id: string): string[] => {
+    const m = muscles[id];
+    return isObj(m) && Array.isArray(m.primary) ? (m.primary as unknown[]).filter((x): x is string => typeof x === 'string') : [];
+  };
+
+  Object.keys(progs).forEach((id) => {
+    const bad = (msg: string) => errs.push(`paket "${id}": ${msg}`);
+    if (!SLUG.test(id)) bad('kimlik küçük harf ASCII slug olmalı (a-z, 0-9, tire)');
+    const p = progs[id];
+    if (!isObj(p)) return bad('nesne değil');
+    Object.keys(p).forEach((k) => {
+      if (!PROGRAMME_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
+    });
+
+    const text = (k: string): string => (typeof p[k] === 'string' ? (p[k] as string) : '');
+    if (text('name').trim() === '') bad('name boş olmayan metin olmalı');
+    if (text('promise').trim() === '') bad('promise boş olmayan metin olmalı');
+    if (text('progression').trim() === '') bad('progression boş olmayan metin olmalı');
+    if (typeof p.goal !== 'string' || !GOALS.includes(p.goal)) bad(`goal geçersiz (${GOALS.join(', ')})`);
+    if (typeof p.level !== 'string' || !LEVELS.includes(p.level)) bad(`level geçersiz (${LEVELS.join(', ')})`);
+    if (typeof p.reviewed !== 'boolean') bad('reviewed doğru/yanlış olmalı');
+    if (!num(p.weeks) || p.weeks < 1 || p.weeks > 52) bad('weeks 1..52 olmalı');
+    if (!num(p.minutes) || p.minutes < 5 || p.minutes > 180) bad('minutes 5..180 olmalı');
+    if (!Array.isArray(p.equipment) || p.equipment.some((q) => typeof q !== 'string' || q.trim() === '')) {
+      bad('equipment boş olmayan metin dizisi olmalı');
+    }
+
+    // Yasaklı ifade: vaatte ve adda.
+    ['name', 'promise'].forEach((k) => {
+      const low = text(k).toLocaleLowerCase('tr');
+      BANNED.forEach(({ re, label }) => {
+        const hit = low.match(re);
+        if (hit) bad(`${k} yanlış yönlendiren ifade içeriyor (${label}): "${hit[0]}"`);
+      });
+    });
+
+    // Sınırlar: boş bırakılamaz.
+    if (!Array.isArray(p.limits) || p.limits.length === 0) {
+      bad('limits boş olamaz — paket ne YAPMADIĞINI da yazmak zorunda');
+    } else if (p.limits.some((q) => typeof q !== 'string' || q.trim() === '')) {
+      bad('limits boş olmayan metinlerden oluşmalı');
+    }
+
+    if (!Array.isArray(p.evidence) || p.evidence.length === 0) bad('evidence boş olamaz');
+    else {
+      p.evidence.forEach((e, i) => {
+        if (!isObj(e)) return bad(`evidence[${i}] nesne değil`);
+        if (typeof e.claim !== 'string' || e.claim.trim() === '') bad(`evidence[${i}].claim boş`);
+        if (typeof e.basis !== 'string' || e.basis.trim() === '') bad(`evidence[${i}].basis boş`);
+      });
+    }
+
+    const targets = Array.isArray(p.targets) ? p.targets.filter((t): t is string => typeof t === 'string') : [];
+    targets.forEach((t) => {
+      if (!(t in MUSCLES)) bad(`targets "${t}" kas sözlüğünde yok`);
+    });
+
+    if (!Array.isArray(p.days) || p.days.length === 0) return bad('days boş olamaz');
+    const dayIds: string[] = [];
+    // Kasa haftada düşen birincil set — hipertrofi kontrolünün girdisi.
+    const weekly: Record<string, number> = {};
+    const cycles = num(p.sessionsPerWeek) && p.days.length > 0 ? p.sessionsPerWeek / p.days.length : NaN;
+    if (!num(p.sessionsPerWeek) || p.sessionsPerWeek < 1 || p.sessionsPerWeek > 14) bad('sessionsPerWeek 1..14 olmalı');
+    else if (!Number.isInteger(cycles) || cycles < 1) {
+      bad(`sessionsPerWeek (${p.sessionsPerWeek}) gün sayısının (${p.days.length}) tam katı olmalı — yoksa haftanın nasıl geçeceği belirsiz`);
+    }
+
+    p.days.forEach((d, di) => {
+      const dbad = (msg: string) => bad(`days[${di}] ${msg}`);
+      if (!isObj(d)) return dbad('nesne değil');
+      Object.keys(d).forEach((k) => {
+        if (!DAY_KEYS.includes(k)) dbad(`bilinmeyen alan "${k}"`);
+      });
+      if (typeof d.id !== 'string' || !SLUG.test(d.id)) dbad('id slug olmalı');
+      else if (dayIds.includes(d.id)) dbad(`id "${d.id}" birden fazla günde`);
+      else dayIds.push(d.id);
+      if (typeof d.name !== 'string' || d.name.trim() === '') dbad('name boş');
+
+      if (d.warmup !== undefined) {
+        if (!Array.isArray(d.warmup)) dbad('warmup dizi olmalı');
+        else {
+          d.warmup.forEach((w, wi) => {
+            if (typeof w !== 'string') dbad(`warmup[${wi}] metin olmalı`);
+            else if (!exerciseKeys.includes(w)) dbad(`warmup[${wi}] "${w}" hareket kataloğunda yok`);
+          });
+        }
+      }
+
+      if (!Array.isArray(d.exercises) || d.exercises.length === 0) return dbad('exercises boş olamaz');
+      d.exercises.forEach((x, xi) => {
+        const xbad = (msg: string) => dbad(`exercises[${xi}] ${msg}`);
+        if (!isObj(x)) return xbad('nesne değil');
+        Object.keys(x).forEach((k) => {
+          if (!SET_KEYS.includes(k)) xbad(`bilinmeyen alan "${k}"`);
+        });
+        if (typeof x.id !== 'string') return xbad('id metin olmalı');
+        if (!exerciseKeys.includes(x.id)) xbad(`"${x.id}" hareket kataloğunda yok`);
+        if (!num(x.sets) || !Number.isInteger(x.sets) || x.sets < 1 || x.sets > 10) xbad('sets 1..10 tam sayı olmalı');
+        if (typeof x.reps !== 'string' || !REPS.test(x.reps)) xbad('reps "8", "6-10", "30 sn" ya da "40 m" biçiminde olmalı');
+        if (!num(x.restSec) || x.restSec < 0 || x.restSec > 600) xbad('restSec 0..600 olmalı');
+        if (x.note !== undefined && (typeof x.note !== 'string' || x.note.trim() === '')) xbad('note boş metin olamaz');
+
+        const sets = x.sets;
+        if (num(sets) && Number.isFinite(cycles)) {
+          primaryOf(x.id).forEach((mu) => {
+            weekly[mu] = (weekly[mu] ?? 0) + sets * cycles;
+          });
+        }
+      });
+    });
+
+    if (p.goal === 'hipertrofi') {
+      if (targets.length === 0) bad('hipertrofi hedefli paket targets yazmak zorunda — hacim başka türlü denetlenemez');
+      targets.forEach((t) => {
+        const n = weekly[t] ?? 0;
+        const label = (MUSCLES[t]?.label ?? t);
+        if (n < MIN_WEEKLY_SETS) {
+          bad(`"${label}" haftada ${n} birincil set alıyor, en az ${MIN_WEEKLY_SETS} gerekiyor — paket adının vaat ettiği büyümeyi vermez`);
+        } else if (n > MAX_WEEKLY_SETS) {
+          bad(`"${label}" haftada ${n} birincil set alıyor, üst sınır ${MAX_WEEKLY_SETS} — toparlanmayı aşıyor`);
+        }
+      });
+    }
+  });
+
   return errs;
 }

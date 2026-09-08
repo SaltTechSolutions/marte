@@ -1,15 +1,15 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-07T19:54:41.426Z",
+  "generated": "2026-09-08T06:13:01.799Z",
   "source": {
-    "commit": "5f67d7c8",
+    "commit": "534de283",
     "dirty": true
   },
   "counts": {
-    "arketip": 31,
-    "hareket": 34,
-    "kasVerisiYazilan": 33,
+    "arketip": 32,
+    "hareket": 35,
+    "kasVerisiYazilan": 34,
     "kasVerisiBekleyen": 1
   },
   "files": {
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "998745489578d6e6a30c2cfa6f1a9403bca903fbfe37b79f192e24c44e6b722e",
-      "bytes": 17583,
+      "sha256": "dc6d47a5230c444f1763406fa94476c1c8f6aadb762134714f6e2f691dbf8b83",
+      "bytes": 28718,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -42,22 +42,22 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "de67c264282efdc92c980496c59b24717191dfbd392aa16312cd763c7a826764",
-      "bytes": 51762,
+      "sha256": "b0fbc9cb587e02d4269db39c08fe9a1aed48a2406df132b672ae499664a8ee49",
+      "bytes": 53218,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
     },
     "exercises.json": {
-      "sha256": "d219209623a44540557045bce384a429f96e8ce4840e35772f67653b26f55476",
-      "bytes": 3008,
+      "sha256": "a2c0ffc47324aba763155c3c8d18f05cc6b080c3fa19cb955535b617132d12a7",
+      "bytes": 3111,
       "from": "data/exercises.json",
       "what": "hareket kataloğu",
       "to": "src/data/rigExercises.json"
     },
     "rigMuscles.json": {
-      "sha256": "4a9f919612f1f7e462076b5d94912908ed2dbea039621afd3bd0a346b2e65b1c",
-      "bytes": 8636,
+      "sha256": "09f968b4d78f9e2340d26f21f2c5b4d0777d9ae058872527b78a4a568fbb6b2c",
+      "bytes": 8897,
       "from": "data/rigMuscles.json",
       "what": "hareket başına kaslar",
       "to": "src/data/rigMuscles.json"
@@ -75,6 +75,13 @@
       "from": "data/bodyParts.json",
       "what": "uzuv siluet parçaları",
       "to": "src/data/rigBodyParts.json"
+    },
+    "programmes.json": {
+      "sha256": "504a5d9750462476277a2b9d7918c7d410717f1470799521bee86f1774a15a3d",
+      "bytes": 25485,
+      "from": "data/programmes.json",
+      "what": "hazır paket programlar",
+      "to": "src/data/rigProgrammes.json"
     },
     "archetypes.ts": {
       "sha256": "a260e7bf17739ddae7764dfd779fe2d7026f72bbd176293dfed681a318319b4a",
@@ -98,8 +105,8 @@
       "to": "src/utils/rigAudit.test.ts"
     },
     "rigSchema.test.ts": {
-      "sha256": "269126b9d1da127aa15d877a5b92766a4be4c2e0170280b58e545ab7f8e3b4ca",
-      "bytes": 19923,
+      "sha256": "41be68cc218e8c08bdcbc265ba43eff987387671e81f4f77715b08824c8d4b0d",
+      "bytes": 23459,
       "from": "tests/rigSchema.test.ts",
       "what": "şema testleri",
       "to": "src/utils/rigSchema.test.ts"

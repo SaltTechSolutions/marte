@@ -103,6 +103,7 @@ const readBundle = (archetypes) => ({
   muscles: JSON.parse(readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8')),
   anatomy: JSON.parse(readFileSync(join(ROOT, 'data/anatomy.json'), 'utf8')),
   bodyParts: JSON.parse(readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8')),
+  programmes: JSON.parse(readFileSync(join(ROOT, 'data/programmes.json'), 'utf8')),
 });
 
 const server = createServer((req, res) => {

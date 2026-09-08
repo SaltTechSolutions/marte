@@ -430,5 +430,15 @@
     ],
     "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
     "reviewed": false
+  },
+  "triceps-extension": {
+    "status": "authored",
+    "primary": [
+      "triLong",
+      "triLat"
+    ],
+    "secondary": [],
+    "source": "Ense arkasi (overhead) uzatma: uzun bas omuzdan gectigi icin gerilmis konumda calisiyor.",
+    "reviewed": false
   }
 }
