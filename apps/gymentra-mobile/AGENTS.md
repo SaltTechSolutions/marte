@@ -218,13 +218,38 @@ aynı imzayı taşır — mağaza tarafında hiçbir şey değişmez.
 İki uyarı:
 
 - **Disk.** Yerel build birkaç GB Gradle/Xcode türetilmiş dosyası üretir.
-  Bu makinede boş alan ~12 GB (%98 dolu); build'den önce bakılmalı, yoksa
-  yarıda "no space left" ile düşer.
+  Build'den önce `df -h /` ile bakılmalı, yoksa yarıda "no space left" ile
+  düşer. Aşağıdaki temizlik ~30 GB açıyor; tıkandıkça tekrarlanabilir.
 - `ANDROID_HOME` kabuk profilinde tanımlı değil, bu yüzden npm script'i
   kendi içinde veriyor. Elle `eas build --local` çalıştıracaksan sen de ver.
 
 Yerel build'in mümkün olmadığı tek durum: makinenin meşgul olması ya da
 kullanıcının açıkça EAS istemesi. Kotayı harcamadan önce sor.
+
+**Disk tıkandığında temizlik.** *(Karar: kullanıcı, 8 Eylül 2026 — "gereksiz
+build'leri arada bir silelim ki yine tıkanmayalım".)* Yer **kod tabanında
+değil**: depo 1.4 GB ve içinde build çıktısı tutulmuyor, `android/`–`ios/`
+klasörleri CNG ile üretiliyor. Silinecek yerler depo dışında:
+
+```bash
+npm cache clean --force
+rm -rf ~/Library/Developer/Xcode/DerivedData
+rm -rf ~/Library/Developer/Xcode/"iOS DeviceSupport"
+rm -rf ~/Library/Caches/CocoaPods
+rm -rf ~/.gradle/caches
+brew cleanup -s && rm -rf "$(brew --cache)"
+```
+
+Hepsi yeniden üretilir; tek bedeli bir sonraki build'in bir kez yavaş olması.
+
+**Silinmeyecekler — sorulmadan dokunma:**
+
+| yer | neden |
+|---|---|
+| `~/.expo` | **Önbellek değil**, EAS oturumu burada. Silersen `eas` "Not logged in" der ve build düşer; kullanıcı `eas login` çalıştırmadan devam edilemez. *(8 Eylül 2026'da bu hata yapıldı.)* |
+| `~/.android/avd` | 12 GB ama emülatör cihazları; silinirse hepsi gider |
+| `~/Library/Developer/CoreSimulator/Devices` | 14 GB; kullanıcının başka uygulaması da orada çalışıyor |
+| `~/Library/Developer/Xcode/Archives` | Yayınlanmış build'lerin dSYM'leri — çökme raporlarını çözmek için lazım |
 
 **İki salon, iki amaç — karıştırma.**
 
