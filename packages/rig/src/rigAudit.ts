@@ -7,7 +7,6 @@ import {
   footPinned,
   footSpan,
   centerOfMass,
-  FrontSide,
   GROUND,
   RigExercise,
   RigPose,
@@ -234,7 +233,6 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // arketip temizdi. Tolerans 2px, yuvarlama payı.
   {
     const flip = facingFlip(ex.mode);
-    const pin = ex.prop !== 'box' && p.ankleLift > 0;
     const feet: [string, Vec, boolean][] = [
       ['ayak', S.ankle, false],
       ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF, true]] as [string, Vec, boolean][]) : []),

@@ -6,8 +6,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, farLegDistinct, frontPoints, ik, poseAt, showFarLeg, skeleton } from '@/utils/rig';
-import { auditExercise, auditLoop, auditSegments } from '@/utils/rigAudit';
+import {
+  B, FOOT, GROUND, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, centerOfMass, facingFlip,
+  farLegDistinct, fillPose, footDirOf, footLowestY, footPinned, footSpan, frontPoints, ik,
+  poseAt, showFarArm, showFarLeg, skeleton,
+} from '@/utils/rig';
+import { auditExercise, auditFrame, auditLoop, auditSegments } from '@/utils/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const entries = Object.entries(RIG_ARCHETYPES);
@@ -201,28 +205,25 @@ describe('rig hareket denetimi', () => {
   });
 });
 
-import { auditFrame as af2 } from '@/utils/rigAudit';
-import { FOOT, GROUND as G2, centerOfMass, fillPose, footLowestY, footPinned, footSpan, footDirOf as fdo, facingFlip as ff, poseAt as pa2, showFarArm, skeleton as sk2 } from '@/utils/rig';
-import { RIG_ARCHETYPES as A2 } from '@/data/rigArchetypes';
 
 describe('yan görünüm saf ortografik', () => {
   it('uzak kalça ve omuz yakının tam arkasında', () => {
-    const ex = A2.squat;
-    const S = sk2(ex, pa2(ex, 0.5).p);
+    const ex = RIG_ARCHETYPES.squat;
+    const S = skeleton(ex, poseAt(ex, 0.5).p);
     expect(S.hipF).toEqual(S.pelvis);
     expect(S.shF).toEqual(S.sh);
   });
   it('özdeş hareket yapan uzak kol çizilmez, çapraz hareketteki çizilir', () => {
-    expect(showFarArm(A2.squat)).toBe(false);
-    expect(showFarArm(A2.seated_overhead_press)).toBe(false);
-    expect(showFarArm(A2.bird_dog)).toBe(true);
+    expect(showFarArm(RIG_ARCHETYPES.squat)).toBe(false);
+    expect(showFarArm(RIG_ARCHETYPES.seated_overhead_press)).toBe(false);
+    expect(showFarArm(RIG_ARCHETYPES.bird_dog)).toBe(true);
   });
 });
 
 describe('basılı uzak ayak (plantF)', () => {
   it('iki basılı kare arasında ayak yerinden kıpırdamaz', () => {
-    const ex = A2.unilateral_lunge;
-    const rel = (t: number) => { const S = sk2(ex, pa2(ex, t).p); return [S.ankleF[0] - S.ankle[0], S.ankleF[1] - S.ankle[1]]; };
+    const ex = RIG_ARCHETYPES.unilateral_lunge;
+    const rel = (t: number) => { const S = skeleton(ex, poseAt(ex, t).p); return [S.ankleF[0] - S.ankle[0], S.ankleF[1] - S.ankle[1]]; };
     const r0 = rel(0.22);
     for (let t = 0.22; t <= 0.78; t += 0.02) {
       const r = rel(t);
@@ -230,39 +231,39 @@ describe('basılı uzak ayak (plantF)', () => {
     }
   });
   it('sehpadaki ayak (Bulgar) hiç kaymaz', () => {
-    const ex = A2.bulgarian_split_squat;
-    const xs = Array.from({ length: 41 }, (_, i) => sk2(ex, pa2(ex, i / 40).p).ankleF[0]);
+    const ex = RIG_ARCHETYPES.bulgarian_split_squat;
+    const xs = Array.from({ length: 41 }, (_, i) => skeleton(ex, poseAt(ex, i / 40).p).ankleF[0]);
     expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(1.5);
   });
 });
 
 describe('parmak eklemi', () => {
   it('topuk kalkınca ayak topu yerde kalır, parmaklar yere gömülmez', () => {
-    const ex = A2.calf_raise;
+    const ex = RIG_ARCHETYPES.calf_raise;
     let kalkti = 0;
     for (let i = 0; i <= 40; i++) {
-      const p = pa2(ex, i / 40).p;
-      const S = sk2(ex, p);
+      const p = poseAt(ex, i / 40).p;
+      const S = skeleton(ex, p);
       if (!footPinned(ex, p, S, false)) continue;
       kalkti++;
-      const low = footLowestY(S.ankle, fdo(ex, p), true, ff(ex.mode));
-      expect(Math.abs(low - G2), `t=${(i / 40).toFixed(2)}`).toBeLessThan(1);
+      const low = footLowestY(S.ankle, footDirOf(ex, p), true, facingFlip(ex.mode));
+      expect(Math.abs(low - GROUND), `t=${(i / 40).toFixed(2)}`).toBeLessThan(1);
     }
     expect(kalkti).toBeGreaterThan(5);
   });
   it('ayak anatomik boyda: 64px ≈ 25.5cm', () => {
     expect(FOOT.toe - FOOT.heel).toBe(64);
-    const [lo, hi] = footSpan([0, G2 - FOOT.sole], 90, false, 1);
+    const [lo, hi] = footSpan([0, GROUND - FOOT.sole], 90, false, 1);
     expect(hi - lo).toBeGreaterThan(55);
   });
 });
 
 describe('ağırlık merkezi', () => {
   it('dik duran figürde iki ayağın arasında ve gövde hizasında', () => {
-    const ex = A2.squat;
-    const S = sk2(ex, pa2(ex, 0).p);
+    const ex = RIG_ARCHETYPES.squat;
+    const S = skeleton(ex, poseAt(ex, 0).p);
     const [x, y] = centerOfMass(ex, S);
-    const [lo, hi] = footSpan(S.ankle, fdo(ex, pa2(ex, 0).p), false, 1);
+    const [lo, hi] = footSpan(S.ankle, footDirOf(ex, poseAt(ex, 0).p), false, 1);
     expect(x).toBeGreaterThan(lo);
     expect(x).toBeLessThan(hi);
     expect(y).toBeGreaterThan(S.thorax[1]);
@@ -272,28 +273,28 @@ describe('ağırlık merkezi', () => {
 
 describe('önden görünüm', () => {
   it('kol boyları önden bakışta kemik boyunu aşmaz, yana açılınca kemik boyuna ulaşır', () => {
-    const ex = A2.lateral_raise_front;
+    const ex = RIG_ARCHETYPES.lateral_raise_front;
     for (let i = 0; i <= 20; i++) {
-      const p = pa2(ex, i / 20).p;
-      const F = frontPoints(ex, p, sk2(ex, p));
+      const p = poseAt(ex, i / 20).p;
+      const F = frontPoints(ex, p, skeleton(ex, p));
       for (const s of [F.L, F.R]) {
         expect(Math.hypot(s.elbow[0] - s.sh[0], s.elbow[1] - s.sh[1])).toBeLessThanOrEqual(B.upper + 0.01);
         expect(Math.hypot(s.hand[0] - s.elbow[0], s.hand[1] - s.elbow[1])).toBeLessThanOrEqual(B.fore + 0.01);
       }
     }
     // Omuz hizasında (t=0.5), armAz 90: kol tam kemik boyu yana uzanır.
-    const F = frontPoints(ex, pa2(ex, 0.5).p, sk2(ex, pa2(ex, 0.5).p));
+    const F = frontPoints(ex, poseAt(ex, 0.5).p, skeleton(ex, poseAt(ex, 0.5).p));
     expect(Math.abs(F.R.hand[0] - F.R.sh[0])).toBeGreaterThan(B.upper + B.fore - 8);
   });
   it('öne uzanan kol önden bakışta kısalır (bant açma kapalı konum)', () => {
-    const ex = A2.band_pull_apart_front;
-    const F = frontPoints(ex, pa2(ex, 0).p, sk2(ex, pa2(ex, 0).p));
+    const ex = RIG_ARCHETYPES.band_pull_apart_front;
+    const F = frontPoints(ex, poseAt(ex, 0).p, skeleton(ex, poseAt(ex, 0).p));
     expect(Math.abs(F.R.hand[0] - F.R.sh[0])).toBeLessThan(50);
   });
   it('dış rotasyonda dirsek yerinde kalır, el yana döner', () => {
-    const ex = A2.band_ext_rotation_front;
-    const F0 = frontPoints(ex, pa2(ex, 0).p, sk2(ex, pa2(ex, 0).p));
-    const F1 = frontPoints(ex, pa2(ex, 0.5).p, sk2(ex, pa2(ex, 0.5).p));
+    const ex = RIG_ARCHETYPES.band_ext_rotation_front;
+    const F0 = frontPoints(ex, poseAt(ex, 0).p, skeleton(ex, poseAt(ex, 0).p));
+    const F1 = frontPoints(ex, poseAt(ex, 0.5).p, skeleton(ex, poseAt(ex, 0.5).p));
     expect(Math.abs(F1.R.elbow[0] - F0.R.elbow[0])).toBeLessThan(2);
     expect(F1.R.hand[0] - F0.R.hand[0]).toBeGreaterThan(50);
   });
@@ -303,17 +304,17 @@ describe('parmak eklemi kontrolü', () => {
   it('havadaki ayakta toe parmakları yukarı çevirir, yerdeki ayakta parmaklar yere yatık kalır', () => {
     // Havada: bilek yüksek, parmak açısı parmak ucunu kaldırır
     // Parmaklar topa menteşeli yukarı dönünce ayağın yatay uzantısı kısalır
-    const A: Vec = [200, G2 - 80];
+    const A: Vec = [200, GROUND - 80];
     const w0 = footSpan(A, 90, false, 1, 0);
     const w1 = footSpan(A, 90, false, 1, 50);
     expect(w1[1] - w1[0]).toBeLessThan(w0[1] - w0[0] - 3);
     // Yerde (topuk kalkmış, top yerde): toe ne olursa olsun en alt nokta zemin
-    const B2: Vec = [200, G2 - 30];
-    expect(Math.abs(footLowestY(B2, 90, true, 1, 50) - G2)).toBeLessThan(1);
+    const B2: Vec = [200, GROUND - 30];
+    expect(Math.abs(footLowestY(B2, 90, true, 1, 50) - GROUND)).toBeLessThan(1);
   });
   it('bant: parmak ±30/70 dışını yakalar', () => {
-    const ex = A2.squat;
+    const ex = RIG_ARCHETYPES.squat;
     const p = fillPose({ ...poseAt(ex, 0).p, toe: 85 });
-    expect(af2(ex, p, 0).map((i) => i.rule)).toContain('parmak');
+    expect(auditFrame(ex, p, 0).map((i) => i.rule)).toContain('parmak');
   });
 });
