@@ -337,9 +337,10 @@ kombinasyon `bg0` değil, çip ve rozetlerin oturduğu `surf2`:
 `sub`'ı (`s:0.06`, açıkta `l:0.4`, koyuda `l:0.65`) en kötü hâlde 4.72 / 5.00
 veriyor.
 
-### K4 · Açık temada semantik renkler `surf2` üstünde AA'yı geçmiyor *(P2, açık)*
+### K4 · Açık temada `p` ve semantik renkler AA'yı geçmiyordu *(düzeltildi)*
 
-K2'yi ölçerken çıktı. Aynı tablo, `sub` dışındaki ön plan renkleri için:
+K2'yi ölçerken çıktı. `sub` dışındaki ön plan renkleri, en düşük değerleriyle
+(hepsi `bg1`/`surf2` üstünde; beyaz `surf` üstünde geçiyorlardı):
 
 | palet | `p` | `danger` | `warn` | `ok` |
 |---|---|---|---|---|
@@ -347,19 +348,45 @@ K2'yi ölçerken çıktı. Aynı tablo, `sub` dışındaki ön plan renkleri iç
 | Tarabya Light | **3.00** | **4.07** | **4.23** | **4.22** |
 | Koyu paletler | 5.48-6.04 ✓ | 5.54 ✓ | 9.18 ✓ | 7.97-8.81 ✓ |
 
-(en düşük değer; hepsi `bg1`/`surf2` üstünde. Beyaz `surf` üstünde geçiyorlar.)
+`StatusBadge` ve `Chip` zeminini `surf2` yapıp metni bu renklerle yazıyor;
+`p` ayrıca bağlantı metni ve kart ikonu olarak kullanılıyor.
 
-Gerçek bir kombinasyon: `StatusBadge` zeminini `surf2` yapıp metni
-`ok`/`warn`/`danger` ile yazıyor, `Chip` de öyle. Yani açık temada her durum
-rozeti sınırın altında.
+**Düzeltmesi tek başına duran bir renk ayarı değildi.** `p` koyulaşınca
+`onColorFor` beyaza dönüyor — ve pulse butonunun etiketi `p`'nin değil,
+`g1→g2→g3` gradyanının üstünde duruyor. Ölçünce açık temanın gradyanının
+**bugün de hiçbir mürekkeple** AA'yı geçmediği çıktı:
 
-- [ ] **K4-1.** Açık palet semantik renklerini yeniden ayarla. Bu bir eşik
-      düzeltmesi değil, **tasarım kararı**: renkler gözle görülür biçimde
-      koyulaşacak. Koyu tema birincil olduğu için acil değil ama açık tema
-      "destekleniyor" deniyorsa borç.
-- [ ] **K4-2.** Düzeltildikten sonra `contrast.test.ts`'teki `FOREGROUNDS`
-      dizisine `p`/`danger`/`warn`/`ok` eklensin — test o gün tek satırla
-      genişler.
+| GymEntra Light gradyan | `g1 #059669` | `g2 #0891B2` | `g3 #2563EB` |
+|---|---|---|---|
+| koyu mürekkep | 5.13 | 5.25 | **3.74** |
+| beyaz mürekkep | **3.77** | **3.68** | 5.17 |
+
+Yani tek renk seçmek yetmiyordu, gradyanın `p` ile aynı tarafa geçmesi
+gerekiyordu.
+
+- [x] **K4-1 · Açık paletler yeniden ayarlandı.** `p`, gradyan durakları ve
+      semantik üçlü birer basamak koyulaştırıldı. Sonuç, dört yüzeyin
+      hepsinde en düşük değerler:
+
+      | palet | `sub` | `p` | `danger` | `warn` | `ok` | pulse gradyanı (beyaz) |
+      |---|---|---|---|---|---|---|
+      | GymEntra Light | 4.90 | 4.84 | 5.71 | 6.25 | 4.84 | 5.48 / 5.36 / 6.70 |
+      | Tarabya Light | 4.90 | 5.07 | 5.45 | 5.97 | 5.57 | 6.02 / 5.18 / 4.92 |
+
+      Koyu paletlere dokunulmadı; hepsi zaten 5.25 üstündeydi.
+- [x] **K4-2 · Türetilmiş paletler de kapsandı.** Buradaki asıl hata sabit
+      açıklık eşiğiydi: HSL 0.42, sarıda maviye göre üç kat parlak, yani tek
+      bir eşik bazı ton için hep yanlış. `contrast.ts` → `adjustForContrast`
+      eklendi (bir rengi, hedef kontrastı yakalayana kadar diğerinden uzağa
+      iter) ve `derivePalette` içinde şuraya uygulandı: açık `p` (yüzeye
+      karşı), koyu `p` (`surf2`'ye karşı — düşük doygunluklu bir marka orada
+      3.96'ya düşüyordu), gradyan durakları (mürekkebe karşı) ve semantik
+      üçlü (türetilmiş yüzeye karşı — sıcak bir `surf2` üstünde red-400
+      4.46'da kalıyordu).
+- [x] **K4-3 · Test genişletildi.** `FOREGROUNDS` artık `p`/`danger`/`warn`/`ok`'i
+      de içeriyor, türetilmiş palet taraması 3 doygunluk × 120 ton × 2 mod'a
+      çıktı, ve pulse gradyanı için ayrı bir test var: `onColorFor(p)`'nin
+      seçtiği tek mürekkep üç durağın hepsinde ≥ 4.5:1 olmalı.
 
 ### K3 · Antrenör sekme adı ile ekran başlığı çelişiyor *(P3)*
 
@@ -372,14 +399,15 @@ sekme "Üyeler" kaldı; bu tutarlı ama bilinçli olmalı.
 
 ## Sıradaki tur için önerilen sıra
 
-~~K1~~, ~~K2~~ ve ~~F1~~ tamamlandı. Kalanlar:
+Kod tarafındaki bulguların hepsi (~~K1~~, ~~K2~~, ~~K4~~) ve ~~F1~~
+tamamlandı; kontrast artık 354 testlik takımda nöbetçiye bağlı. Kalanlar:
 
 1. **F1-3'ün devamı** — ekranları `callout` basamağına taşı. Basamak artık
    kodda var ama kimse kullanmıyor; Figma hangi metnin 15pt olduğunu
    söylüyor, ekran ekran uygulanması gerekiyor.
-2. **K4** — açık temada semantik renkler `surf2` üstünde 3.00-4.43:1.
-   Koyu tema birincil olduğu için acil değil, ama açık tema destekleniyorsa borç.
-3. **F3-1 / F3-2** — yönetici üye yönetimi ve raporlar; dosyadaki en büyük boşluk.
-4. **F2-3** — kart/satır/çip bileşenleri; bundan sonraki her ekranı ucuzlatır.
-5. **F4-4 / F4-1** — metin olarak çizilmiş ikonların temizliği (listesi
+2. **F3-1 / F3-2** — yönetici üye yönetimi ve raporlar; dosyadaki en büyük boşluk.
+3. **F2-3** — kart/satır/çip bileşenleri; bundan sonraki her ekranı ucuzlatır.
+4. **F4-4 / F4-1** — metin olarak çizilmiş ikonların temizliği (listesi
    hazır), sonra elevation.
+5. **K3** — antrenör sekmesi "Üyeler" / ekran başlığı "Üyelerim"; hangisi
+   olacağına karar verilmeli.
