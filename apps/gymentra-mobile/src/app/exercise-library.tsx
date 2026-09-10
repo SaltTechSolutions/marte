@@ -8,7 +8,7 @@ import { ListGroup, ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
-import { EXERCISES, Exercise, exerciseById, exerciseByName } from '@/data/exerciseLibrary';
+import { EXERCISES, Exercise, exerciseById, exerciseByName, exerciseNames } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
 import { useAuth } from '@/context/AuthContext';
 import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
@@ -70,7 +70,9 @@ export default function ExerciseLibrary() {
   const pool = programOnly ? assigned : EXERCISES;
   const trimmed = query.trim();
   const results = useMemo(
-    () => (trimmed ? pool.filter((e) => matchesTr(e.tr, trimmed) || matchesTr(e.en, trimmed)) : []),
+    // Üç ad da aranıyor: antrenör hareketi hangi adla öğrendiyse onu yazıyor —
+    // "bacak presi" arayan da "leg press" arayan da aynı sayfaya varmalı.
+    () => (trimmed ? pool.filter((e) => exerciseNames(e).some((n) => matchesTr(n, trimmed))) : []),
     [trimmed, pool],
   );
 
@@ -84,7 +86,7 @@ export default function ExerciseLibrary() {
           {e.tr}
         </Text>
         <Text variant="label" tone="sub" numberOfLines={1}>
-          {e.en} · {e.equipTr}
+          {e.trAlt ?? e.en} · {e.equipTr}
         </Text>
       </View>
       <Text tone="sub">›</Text>

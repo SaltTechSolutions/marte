@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { LIBRARY_GROUPS } from './exerciseGroups';
+import { RIG_ARCHETYPES } from './rigArchetypes';
 import {
   EXERCISES,
+  exerciseNames,
   MUSCLE_LABELS,
   NAME_TO_EXERCISE,
-  POSE_ARCHETYPES,
   exerciseById,
   exerciseByName,
 } from './exerciseLibrary';
@@ -17,9 +19,13 @@ describe('exercise library', () => {
     }
   });
 
-  it('every exercise references an archetype that exists', () => {
+  // Against RIG_ARCHETYPES, not POSE_ARCHETYPES: the detail screen looks the
+  // key up in the rig table and hands the result straight to RigFigure, so a
+  // key missing THERE is a crash. POSE_ARCHETYPES is the older static-frame
+  // table and nothing outside this file reads it any more.
+  it('every exercise references a rig archetype that exists', () => {
     for (const e of EXERCISES) {
-      expect(POSE_ARCHETYPES[e.archetype], `${e.id} → ${e.archetype}`).toBeDefined();
+      expect(RIG_ARCHETYPES[e.archetype], `${e.id} → ${e.archetype}`).toBeDefined();
     }
   });
 
@@ -65,6 +71,51 @@ describe('exercise library', () => {
     expect(exerciseByName(undefined)).toBeNull();
     expect(exerciseById(undefined)).toBeNull();
     expect(exerciseById('nope')).toBeNull();
+  });
+
+  // The browsing taxonomy is hand-written (exerciseGroups.ts) while EXERCISES is
+  // generated, so nothing kept the two in step. Both readers — the library
+  // screen and the programme builder's picker — drop an unknown id silently
+  // (`.filter(e => e !== null)`), so a movement listed in a group but missing
+  // from the library is invisible with no error anywhere. That is exactly how
+  // twelve machine and cable movements went missing when they were dropped
+  // from the generator on 3 Sep 2026 and the groups were left behind.
+  it('every group id is a real exercise', () => {
+    const ids = new Set(EXERCISES.map((e) => e.id));
+    for (const group of LIBRARY_GROUPS) {
+      for (const id of group.ids) expect(ids, `${group.label} → ${id}`).toContain(id);
+    }
+  });
+
+  it('every exercise is shelved in exactly one group', () => {
+    const shelved = LIBRARY_GROUPS.flatMap((g) => g.ids);
+    for (const e of EXERCISES) {
+      expect(shelved.filter((id) => id === e.id), e.id).toHaveLength(1);
+    }
+  });
+
+  // The gym floor uses two vocabularies for the same movement — the English
+  // loanword and the Turkish description — and which one a trainer knows is
+  // an accident of where they trained. Both resolve, both are searched.
+  it('the counterpart name resolves to the same movement', () => {
+    expect(exerciseByName('Bacak presi')?.id).toBe('leg-press');
+    expect(exerciseByName('Kalça itişi')?.id).toBe('hip-thrust');
+    expect(exerciseByName('Topuk yükseltme')?.id).toBe('calf-raise');
+    expect(exerciseByName('Leg press')?.id).toBe('leg-press');
+  });
+
+  it('a counterpart name is never just the primary name again', () => {
+    for (const e of EXERCISES) {
+      if (e.trAlt) expect(e.trAlt.toLocaleLowerCase('tr'), e.id).not.toBe(e.tr.toLocaleLowerCase('tr'));
+    }
+  });
+
+  it('exerciseNames carries every name the movement answers to', () => {
+    const legPress = exerciseById('leg-press')!;
+    expect(exerciseNames(legPress)).toEqual(['Leg press', 'Bacak presi', 'Leg press']);
+    // Karşılığı olmayan hareket uydurma bir ad taşımıyor.
+    expect(exerciseById('plank')!.trAlt).toBeUndefined();
+    expect(exerciseNames(exerciseById('plank')!)).toHaveLength(2);
   });
 
   it('poses carry the review flag until a trainer has checked them', () => {

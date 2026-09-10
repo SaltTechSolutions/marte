@@ -127,7 +127,7 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
 /** Kimlikler ASCII slug: URL'de, dosya adında ve anahtar olarak sorun çıkarmaz. */
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const CATALOG_KEYS = ['name', 'archetype'];
+const CATALOG_KEYS = ['name', 'archetype', 'alt'];
 const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source', 'reviewed'];
 const STATUSES = ['pending', 'authored'];
 
@@ -156,6 +156,11 @@ export function validateExercises(data: unknown, archetypeKeys: string[]): strin
       if (!CATALOG_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
     });
     if (typeof e.name !== 'string' || e.name.trim() === '') bad('name boş olmayan metin olmalı');
+    // `alt`: salonda söylenen ÖTEKİ ad — birincil Türkçeyse İngilizce
+    // karşılığı, birincil yabancıysa Türkçesi. Arama ve gösterim ikisini de
+    // okuyor; karşılığı olmayan harekette yazılmıyor.
+    if (e.alt !== undefined && (typeof e.alt !== 'string' || e.alt.trim() === '')) bad('alt yazıldıysa boş olmayan metin olmalı');
+    if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) bad('alt ile name aynı');
     if (typeof e.archetype !== 'string') bad('archetype metin olmalı');
     else if (!archetypeKeys.includes(e.archetype)) bad(`archetype "${e.archetype}" rigArchetypes.json'da yok`);
   });

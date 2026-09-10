@@ -28,6 +28,10 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESIGN = os.path.join(HERE, 'exercise_library', 'Exercise Library.dc.html')
 SEED = os.path.join(HERE, 'program_templates.seed.json')
+# Türkçe ad TEK YERDE yaşıyor: hareket kimliklerini `packages/rig` sahipleniyor
+# (bkz. rig README, "Devir sözleşmesi"), ad da kimliğin yanına ait. Burada ikinci
+# bir kopya tutulunca 46 adı iki dosyada elle senkron tutmak gerekiyordu.
+RIG_CATALOG = os.path.normpath(os.path.join(HERE, '..', '..', 'packages', 'rig', 'data', 'exercises.json'))
 OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'apps', 'gymentra-mobile', 'src', 'data', 'exerciseLibrary.ts'))
 
 
@@ -291,8 +295,16 @@ ARCH = {
  },
 }
 
-def pattern(id_, tr, en, primary, secondary, diff, equip_tr, equip_en, arch, sets="", rest="", steps=None):
-    return dict(id=id_, tr=tr, en=en, difficulty=diff, equipTr=equip_tr, equipEn=equip_en,
+_RIG_NAMES = json.load(open(RIG_CATALOG))
+
+def pattern(id_, en, primary, secondary, diff, equip_tr, equip_en, arch, sets="", rest="", steps=None):
+    entry = _RIG_NAMES.get(id_)
+    if entry is None:
+        raise SystemExit(f'"{id_}" packages/rig/data/exercises.json icinde yok — once orada tanimla')
+    if entry['archetype'] != arch:
+        raise SystemExit(f'"{id_}" arketibi ayrisiyor: rig "{entry["archetype"]}", burada "{arch}"')
+    return dict(id=id_, tr=entry['name'], trAlt=entry.get('alt'), en=en,
+                difficulty=diff, equipTr=equip_tr, equipEn=equip_en,
                 primary=primary, secondary=secondary, archetype=arch,
                 setsHint=sets, restHint=rest, steps=steps or [], poseReviewed=False)
 
@@ -300,116 +312,158 @@ EXO = []
 def add(*a, **k): EXO.append(pattern(*a, **k))
 
 # ---- ISINMA / MOBILITY (6) ----
-add("arm-circles","Kol çevirme","Arm circles",[],[],"BAŞLANGIÇ","Yok","None","arm_circles_front",
+add("arm-circles","Arm circles",[],[],"BAŞLANGIÇ","Yok","None","arm_circles_front",
     steps=[["Kolları yana aç, küçük daireler çiz, gitgide büyüt.","Extend arms out, small circles growing larger."]])
-add("cat-cow","Kedi-deve","Cat-cow",["erector"],["absMid"],"BAŞLANGIÇ","Mat","Mat","quadruped_spine",
+add("cat-cow","Cat-cow",["erector"],["absMid"],"BAŞLANGIÇ","Mat","Mat","quadruped_spine",
     steps=[["Emekleme pozisyonunda, nefes verirken sırtı yuvarla, nefes alırken kavis ver.","On all fours, round the spine on exhale, arch on inhale."]])
-add("band-pull-apart","Bant pull-apart","Band pull-apart",["deltPost","trapMid"],["infra"],"BAŞLANGIÇ","Direnç bandı","Resistance band","band_pull_apart_front",
+add("band-pull-apart","Band pull-apart",["deltPost","trapMid"],["infra"],"BAŞLANGIÇ","Direnç bandı","Resistance band","band_pull_apart_front",
     steps=[["Bandı iki elle omuz genişliğinde tut, kürek kemiklerini sıkarak yanlara çek.","Hold band shoulder-width, pull apart squeezing shoulder blades."]])
-add("band-external-rotation","Bant ile dış rotasyon","Band external rotation",["infra","teres"],["deltPost"],"BAŞLANGIÇ","Direnç bandı","Resistance band","band_ext_rotation_front",
+add("band-external-rotation","Band external rotation",["infra","teres"],["deltPost"],"BAŞLANGIÇ","Direnç bandı","Resistance band","band_ext_rotation_front",
     steps=[["Dirsek gövdeye yapışık 90°, ön kolu dışarı döndür.","Elbow pinned to side at 90°, rotate forearm outward."]])
-add("chin-tuck","Çene içeri çekme","Chin tuck",["sterno"],[],"BAŞLANGIÇ","Yok","None","chin_tuck_side",
+add("chin-tuck","Chin tuck",["sterno"],[],"BAŞLANGIÇ","Yok","None","chin_tuck_side",
     steps=[["Başı geriye kaydır, 5 sn tut, çeneyi kaldırma.","Glide head straight back, hold 5s, don't lift the chin."]])
-add("worlds-greatest-stretch","Lunge + gövde rotasyonu","World's greatest stretch",["adductors","oblique"],["gluteMax"],"BAŞLANGIÇ","Yok","None","unilateral_lunge",
+add("worlds-greatest-stretch","World's greatest stretch",["adductors","oblique"],["gluteMax"],"BAŞLANGIÇ","Yok","None","unilateral_lunge",
     steps=[["Uzun adımla çök, ön diz 90°, göğsü o taraf dizin üstüne döndürerek aç.","Long-step lunge, front knee 90°, rotate chest open over the front knee."]])
 
 # ---- ALT VÜCUT (14) ----
-add("goblet-squat","Goblet squat","Goblet squat",["quadRF","quadVL","quadVM","gluteMax"],["adductors","erector"],"BAŞLANGIÇ","Dumbbell/Kettlebell","Dumbbell or kettlebell","squat_goblet",
+add("goblet-squat","Goblet squat",["quadRF","quadVL","quadVM","gluteMax"],["adductors","erector"],"BAŞLANGIÇ","Dumbbell/Kettlebell","Dumbbell or kettlebell","squat_goblet",
     sets="3×10",rest="60-90 sn",
     steps=[["Dumbbell'ı göğüs önünde iki elle tut.","Hold the dumbbell at chest height with both hands."],["Kalçayı geriye-aşağı götürerek in, dizler ayak ucu yönünde.","Sit hips back and down, knees tracking over toes."],["Topuklardan iterek kalk.","Drive up through the heels."]])
-add("back-squat","Back squat","Barbell back squat",["quadRF","quadVL","quadVM","gluteMax","erector","adductors"],["hamBF","hamST","gastroMed","absMid","trapUpper"],"ORTA-İLERİ","Squat rack + Bar","Squat rack, barbell","squat",
+add("back-squat","Barbell back squat",["quadRF","quadVL","quadVM","gluteMax","erector","adductors"],["hamBF","hamST","gastroMed","absMid","trapUpper"],"ORTA-İLERİ","Squat rack + Bar","Squat rack, barbell","squat",
     sets="4×5-8",rest="120-180 sn",
     steps=[["Barı üst trapezin üstüne yerleştir.","Rack the bar on the upper traps."],["Kalçayı geriye-aşağı götürerek in, uyluk en az paralel.","Sit back and down until thighs are at least parallel."],["Topuklardan iterek kalk, dizler içe düşmesin.","Drive through the heels, knees track out."]])
-add("front-hack-squat","Front squat","Front squat",["quadRF","quadVL","quadVM"],["gluteMax","adductors","absMid"],"ORTA","Squat rack","Squat rack","squat_goblet",
+add("front-hack-squat","Front squat",["quadRF","quadVL","quadVM"],["gluteMax","adductors","absMid"],"ORTA","Squat rack","Squat rack","squat_goblet",
     sets="3×8-10",rest="90-120 sn",
     steps=[["Bar ön omuzlarda ya da makinede sırt sabit.","Bar racked on front shoulders, or back braced on the machine."],["Diklemesine in, göğüs yukarıda kalsın.","Descend vertically, chest stays up."]])
-add("rdl","Romanian deadlift","Romanian deadlift",["hamBF","hamST","gluteMax","erector"],["addMagnus","forearmFlex"],"ORTA","Bar veya dumbbell","Barbell or dumbbell","hip_hinge_dumbbell",
+add("rdl","Romanian deadlift",["hamBF","hamST","gluteMax","erector"],["addMagnus","forearmFlex"],"ORTA","Bar veya dumbbell","Barbell or dumbbell","hip_hinge_dumbbell",
     sets="3×8-10",rest="90-120 sn",
     steps=[["Kalçayı geriye it, bar/dumbbell bacağa yakın kalsın.","Push hips back, keep the weight close to the legs."],["Hamstring gerginliğini hissedince kalçayı öne sıkarak kalk.","Feel the hamstring stretch, then drive hips forward to stand."]])
-add("deadlift","Deadlift","Conventional deadlift",["erector","gluteMax","hamBF","hamST","lat","trapMid","trapUpper"],["quadRF","forearmFlex","absMid"],"İLERİ","Bar + Plakalar","Barbell and plates","hinge",
+add("deadlift","Conventional deadlift",["erector","gluteMax","hamBF","hamST","lat","trapMid","trapUpper"],["quadRF","forearmFlex","absMid"],"İLERİ","Bar + Plakalar","Barbell and plates","hinge",
     sets="3×4-6",rest="150-240 sn",
     steps=[["Bar orta ayak hizasında, kalçayı geriye it, sırt düz.","Bar over mid-foot, hinge hips back, neutral spine."],["Yerden iterek barı bacak hattına yakın tutup kalk.","Push the floor away, drag the bar close, stand tall."]])
-add("hip-thrust","Hip thrust","Hip thrust",["gluteMax"],["hamBF","hamST","absMid"],"BAŞLANGIÇ","Bar veya makine","Barbell or machine","hip_thrust",
+add("hip-thrust","Hip thrust",["gluteMax"],["hamBF","hamST","absMid"],"BAŞLANGIÇ","Bar veya makine","Barbell or machine","hip_thrust",
     sets="3×10-12",rest="90-120 sn",
     steps=[["Üst sırt sedyeye yaslı, kalçayı yukarı it.","Upper back braced on the bench, drive hips upward."],["Üstte kalçayı 1 sn sık, çene içeride.","Squeeze glutes 1s at the top, chin tucked."]])
-add("bulgarian-split-squat","Bulgarian split squat","Bulgarian split squat",["quadRF","quadVL","gluteMax"],["adductors"],"ORTA","Bench + dumbbell","Bench and dumbbells","bulgarian_split_squat",
+add("bulgarian-split-squat","Bulgarian split squat",["quadRF","quadVL","gluteMax"],["adductors"],"ORTA","Bench + dumbbell","Bench and dumbbells","bulgarian_split_squat",
     sets="3×8",rest="90 sn",
     steps=[["Arka ayak arkadaki banka yerleştir.","Rear foot elevated on a bench behind you."],["Ön dizle in, topuktan iterek kalk.","Descend on the front leg, drive up through that heel."]])
-add("walking-lunge","Walking lunge","Walking lunge",["quadRF","quadVL","gluteMax"],["adductors","hamBF"],"BAŞLANGIÇ","Dumbbell (opsiyonel)","Dumbbells (optional)","unilateral_lunge",
+add("walking-lunge","Walking lunge",["quadRF","quadVL","gluteMax"],["adductors","hamBF"],"BAŞLANGIÇ","Dumbbell (opsiyonel)","Dumbbells (optional)","unilateral_lunge",
     sets="3×10/bacak",rest="60-90 sn",
     steps=[["Uzun adım at, ön diz 90° olana kadar in.","Step forward, lower until the front knee is ~90°."],["Arka ayağı öne getirerek bir sonraki adıma geç.","Bring the rear foot forward into the next step."]])
-add("reverse-lunge","Reverse lunge","Reverse lunge",["quadRF","gluteMax"],["adductors"],"BAŞLANGIÇ","Yok / hafif dumbbell","None or light dumbbells","unilateral_lunge",
+add("reverse-lunge","Reverse lunge",["quadRF","gluteMax"],["adductors"],"BAŞLANGIÇ","Yok / hafif dumbbell","None or light dumbbells","unilateral_lunge",
     sets="2-3×8/bacak",rest="60-90 sn",
     steps=[["Bir adım geriye çık, ön dizle in.","Step one leg back, lower on the front leg."],["Ön topuktan iterek başlangıca dön.","Drive through the front heel back to start."]])
-add("step-up","Step-up","Step-up",["quadRF","gluteMax"],["hamBF"],"BAŞLANGIÇ","Kutu/bench","Box or bench","step_up",
+add("step-up","Step-up",["quadRF","gluteMax"],["hamBF"],"BAŞLANGIÇ","Kutu/bench","Box or bench","step_up",
     sets="3×10/bacak",rest="60-90 sn",
     steps=[["Bir ayağı kutuya koy, o bacakla it.","Place one foot on the box, drive through that leg."],["Üstte dikleş, kontrollü in.","Stand tall at the top, step down with control."]])
-add("calf-raise","Calf raise","Calf raise",["gastroLat","gastroMed","soleus"],[],"BAŞLANGIÇ","Yok / makine","Bodyweight or machine","calf_raise",
+add("calf-raise","Calf raise",["gastroLat","gastroMed","soleus"],[],"BAŞLANGIÇ","Yok / makine","Bodyweight or machine","calf_raise",
     sets="3×15",rest="45-60 sn",
     steps=[["Topuğu tam indir, sonra parmak ucunda yüksel.","Lower the heel fully, then rise onto the toes."],["Üstte 1 sn tut.","Hold 1s at the top."]])
 
 # ---- ÜST VÜCUT — İTİŞ (5) ----
-add("bench-press","Bench press","Barbell bench press",["pecSternal","pecClav","deltFront","triLat","triLong"],["serratus","trapMid","absUpper","lat"],"ORTA","Bench + Bar","Flat bench, barbell","bench_press",
+add("bench-press","Barbell bench press",["pecSternal","pecClav","deltFront","triLat","triLong"],["serratus","trapMid","absUpper","lat"],"ORTA","Bench + Bar","Flat bench, barbell","bench_press",
     sets="4×8-10",rest="90-120 sn",
     steps=[["Kürek kemiklerini sık ve aşağı bastır.","Retract and depress the shoulder blades."],["Barı göğsün alt kısmına indir, dirsekler ~45°.","Lower to the lower chest, elbows ~45°."],["Göğüsten iterek kilitle.","Press up and lock out."]])
-add("incline-press","Incline dumbbell pres","Incline dumbbell press",["pecClav","deltFront","triLat"],["serratus"],"ORTA","Bank (30°) + dumbbell","Incline bench, dumbbells","incline_press",
+add("incline-press","Incline dumbbell press",["pecClav","deltFront","triLat"],["serratus"],"ORTA","Bank (30°) + dumbbell","Incline bench, dumbbells","incline_press",
     sets="3×10-12",rest="75-90 sn",
     steps=[["Bank 30°, dumbbell'lar göğüs hizasında.","Bench at 30°, dumbbells at chest height."],["Yukarı it, tam kilitleme yapma.","Press up without fully locking the elbows."]])
-add("shoulder-press","Omuz pres","Overhead press",["deltFront","triLat","triLong"],["trapUpper","absUpper"],"ORTA","Bar/dumbbell/makine","Barbell, dumbbells, or machine","seated_overhead_press",
+add("shoulder-press","Overhead press",["deltFront","triLat","triLong"],["trapUpper","absUpper"],"ORTA","Bar/dumbbell/makine","Barbell, dumbbells, or machine","seated_overhead_press",
     sets="3×8-10",rest="90-120 sn",
     steps=[["Ağırlığı omuz hizasında tut, karnı sık.","Hold the weight at shoulder height, brace the core."],["Baş üstüne it, kilitle.","Press overhead to lockout."]])
 
 # ---- ÜST VÜCUT — ÇEKİŞ (8) ----
-add("barbell-row","Barbell row","Barbell row",["lat","trapMid","deltPost","biceps"],["erector","forearmFlex"],"ORTA","Bar","Barbell","standing_row_hinged",
+add("barbell-row","Barbell row",["lat","trapMid","deltPost","biceps"],["erector","forearmFlex"],"ORTA","Bar","Barbell","standing_row_hinged",
     sets="3-4×6-8",rest="120-150 sn",
     steps=[["Gövde ~45° öne eğik, sırt düz.","Torso hinged ~45°, spine neutral."],["Barı karın altına çek, kürek kemiklerini sık.","Pull the bar to the lower belly, squeeze the shoulder blades."]])
-add("single-arm-row","Tek kol dumbbell row","Single-arm dumbbell row",["lat","trapMid","biceps"],["deltPost"],"BAŞLANGIÇ","Bank + dumbbell","Bench, dumbbell","standing_row_hinged",
+add("single-arm-row","Single-arm dumbbell row",["lat","trapMid","biceps"],["deltPost"],"BAŞLANGIÇ","Bank + dumbbell","Bench, dumbbell","standing_row_hinged",
     sets="3×10-12/kol",rest="60-90 sn",
     steps=[["Bir el ve diz bankta, sırt düz.","One hand and knee on the bench, flat back."],["Dumbbell'ı kalçaya doğru çek.","Row the dumbbell toward the hip."]])
 
 
-add("reverse-fly","Dumbbell reverse fly","Dumbbell reverse fly",["deltPost","trapMid"],["infra"],"BAŞLANGIÇ","Dumbbell","Dumbbells","hinged_fly",
+add("reverse-fly","Dumbbell reverse fly",["deltPost","trapMid"],["infra"],"BAŞLANGIÇ","Dumbbell","Dumbbells","hinged_fly",
     sets="3×12-15",rest="45-60 sn",
     steps=[["Öne eğil, kolları yana açarak kaldır.","Hinge forward, raise arms out to the sides."],["Kürek kemiklerini sıkarak üstte tut.","Squeeze shoulder blades at the top."]])
 
 # ---- İZOLASYON KOL / OMUZ (4) ----
-add("lateral-raise","Lateral raise","Lateral raise",["deltFront"],["deltPost"],"BAŞLANGIÇ","Dumbbell","Dumbbells","lateral_raise_front",
+add("lateral-raise","Lateral raise",["deltFront"],["deltPost"],"BAŞLANGIÇ","Dumbbell","Dumbbells","lateral_raise_front",
     sets="3×12-15",rest="45-60 sn",
     steps=[["Kolları omuz hizasına kadar yana kaldır.","Raise arms out to shoulder height."],["Kontrollü indir.","Lower with control."]])
-add("biceps-curl","Biceps curl","Biceps curl",["biceps","brachialis"],["forearmFlex"],"BAŞLANGIÇ","Dumbbell/bar","Dumbbells or barbell","standing_arm_isolation",
+add("biceps-curl","Biceps curl",["biceps","brachialis"],["forearmFlex"],"BAŞLANGIÇ","Dumbbell/bar","Dumbbells or barbell","standing_arm_isolation",
     sets="3×12",rest="45-60 sn",
     steps=[["Dirsekleri gövdeye sabitle, ağırlığı kaldır.","Pin elbows to the sides, curl the weight up."]])
-add("shrug","Omuz silkme","Shrug",["trapUpper"],[],"BAŞLANGIÇ","Dumbbell/bar","Dumbbells or barbell","shrug_front",
+add("shrug","Shrug",["trapUpper"],[],"BAŞLANGIÇ","Dumbbell/bar","Dumbbells or barbell","shrug_front",
     sets="3×12",rest="45-60 sn",
     steps=[["Omuzları kulağa doğru kaldır, 1 sn tut.","Shrug shoulders toward the ears, hold 1s."]])
 
 # ---- CORE (10) ----
-add("plank","Plank","Plank",["absMid","absUpper"],["oblique","gluteMax"],"BAŞLANGIÇ","Mat","Mat","plank_prone",
+add("plank","Plank",["absMid","absUpper"],["oblique","gluteMax"],"BAŞLANGIÇ","Mat","Mat","plank_prone",
     sets="3×30 sn",rest="30-45 sn",
     steps=[["Dirsekler omuz altında, gövde düz bir çizgi.","Elbows under shoulders, body in a straight line."],["Kalçayı sık, nefes al.","Brace the glutes, breathe."]])
-add("side-plank","Side plank","Side plank",["oblique"],["gluteMed"],"BAŞLANGIÇ","Mat","Mat","side_plank",
+add("side-plank","Side plank",["oblique"],["gluteMed"],"BAŞLANGIÇ","Mat","Mat","side_plank",
     sets="3×20-30 sn/taraf",rest="30 sn",
     steps=[["Dirsek omuz altında, kalça, omuz, diz bir çizgide.","Elbow under shoulder, hip-shoulder-knee in one line."]])
 
-add("bird-dog","Bird-dog","Bird-dog",["erector","gluteMax"],["absMid"],"BAŞLANGIÇ","Mat","Mat","bird_dog",
+add("bird-dog","Bird-dog",["erector","gluteMax"],["absMid"],"BAŞLANGIÇ","Mat","Mat","bird_dog",
     sets="3×6/taraf",rest="30-45 sn",
     steps=[["Emekleme pozisyonunda, karşı kol ve bacağı uzat.","On all fours, extend opposite arm and leg."],["Bel düz kalsın, 5 sn tut.","Keep the spine neutral, hold 5s."]])
 
-add("pallof-press","Pallof pres","Pallof press",["oblique","absMid"],[],"ORTA","Kablo/bant","Cable or band","anti_rotation_standing",
+add("pallof-press","Pallof press",["oblique","absMid"],[],"ORTA","Kablo/bant","Cable or band","anti_rotation_standing",
     sets="3×12/taraf",rest="45 sn",
     steps=[["Kabloyu göğüs önünde tut, öne uzat.","Hold the cable at chest, press straight out."],["Gövde dönmesin.","Resist rotation."]])
-add("ab-wheel-rollout","Ab wheel rollout","Ab wheel rollout",["absMid","absUpper"],["lat"],"ORTA","Ab wheel","Ab wheel","rollout",
+add("ab-wheel-rollout","Ab wheel rollout",["absMid","absUpper"],["lat"],"ORTA","Ab wheel","Ab wheel","rollout",
     sets="3×8",rest="60 sn",
     steps=[["Dizden başla, bel çökmeden ileri yuvarla.","Start kneeling, roll forward without the low back sagging."],["Kalçayı sıkarak geri çek.","Squeeze glutes to pull back."]])
-add("hanging-knee-raise","Asılı diz çekme","Hanging knee raise",["absLower","absMid"],["forearmFlex"],"ORTA","Barfiks barı","Pull-up bar","hanging_knee_raise",
+add("hanging-knee-raise","Hanging knee raise",["absLower","absMid"],["forearmFlex"],"ORTA","Barfiks barı","Pull-up bar","hanging_knee_raise",
     sets="3×10-12",rest="45-60 sn",
     steps=[["Barda asıl, sallanmadan dizleri göğse çek.","Hang from the bar, raise knees to chest without swinging."]])
-add("suitcase-carry","Suitcase carry","Suitcase carry",["oblique","absMid"],["forearmFlex","trapUpper"],"BAŞLANGIÇ","Kettlebell/dumbbell","Kettlebell or dumbbell","carry",
+add("suitcase-carry","Suitcase carry",["oblique","absMid"],["forearmFlex","trapUpper"],"BAŞLANGIÇ","Kettlebell/dumbbell","Kettlebell or dumbbell","carry",
     sets="3×30 sn/kol",rest="45 sn",
     steps=[["Tek elde ağırlıkla dik dur, yana eğilmeden yürü.","Stand tall with weight in one hand, walk without leaning."]])
-add("glute-bridge","Kalça köprüsü","Glute bridge",["gluteMax"],["hamBF","absMid"],"BAŞLANGIÇ","Mat","Mat","glute_bridge",
+add("glute-bridge","Glute bridge",["gluteMax"],["hamBF","absMid"],"BAŞLANGIÇ","Mat","Mat","glute_bridge",
     sets="3×12-15",rest="30-45 sn",
     steps=[["Sırtüstü, dizler bükük, ayaklar yerde.","Lie on back, knees bent, feet flat."],["Kalçayı yukarı it, üstte 1-2 sn sık.","Drive hips up, squeeze 1-2s at the top."]])
+
+# ---- MAKİNE ve KABLO (12) ----
+# 3 Eylül'de düşürülmüşlerdi: figür motorunda "makinede oturuyor" diye bir kök
+# nokta yoktu. `seat` modu geldi, geri döndüler. LIBRARY_GROUPS bu 12'yi zaten
+# listeliyordu, yani şablonların yarısı sessizce anlatımsızdı.
+add("leg-press","Leg press",["quadRF","quadVL","quadVM","gluteMax"],["adductors","hamBF","soleus"],"BAŞLANGIÇ","Leg press makinesi","Leg press machine","leg_press_seated",
+    sets="3×10-12",rest="90-120 sn",
+    steps=[["Sırtı ve beli yastığa yasla, ayaklar omuz genişliğinde platformda.","Back and lower back against the pad, feet shoulder-width on the platform."],["Dizleri göğse doğru kontrollü indir, bel yastıktan kalkmasın.","Lower the knees toward the chest under control; keep the lower back on the pad."],["Topuklardan it; dizi sonda kilitleme.","Drive through the heels; don't lock the knees at the top."]])
+add("leg-extension","Leg extension",["quadRF","quadVL","quadVM"],[],"BAŞLANGIÇ","Leg extension makinesi","Leg extension machine","leg_extension_seated",
+    sets="3×12-15",rest="60 sn",
+    steps=[["Diz ekseni makinenin dönme ekseniyle aynı hizada otur.","Sit so the knee joint lines up with the machine's pivot."],["Dizi açarak kaldır, üstte 1 sn sık.","Extend the knee and squeeze for 1s at the top."],["Yavaş indir — asıl gelişim inişte.","Lower slowly; the lowering half is where the work is."]])
+add("leg-curl","Leg curl",["hamBF","hamST"],["gastroLat","gastroMed"],"BAŞLANGIÇ","Leg curl makinesi","Leg curl machine","leg_curl_seated",
+    sets="3×12",rest="60-75 sn",
+    steps=[["Yastık aşil tendonunun hemen üstünde olsun.","Set the pad just above the Achilles tendon."],["Topuğu kalçaya doğru çek, üstte 1 sn sık.","Curl the heel toward the hips, squeeze 1s."],["Kontrollü aç; kalça yastıktan kalkmasın.","Return under control; keep the hips down."]])
+add("lat-pulldown","Lat pulldown",["lat","trapMid"],["biceps","brachialis","deltPost","trapLower"],"BAŞLANGIÇ","Pulldown makinesi","Lat pulldown machine","lat_pulldown_seated",
+    sets="3×10-12",rest="90 sn",
+    steps=[["Uyluk yastığını sıkıştır, barı omuzdan geniş tut.","Wedge the thigh pad, grip the bar wider than the shoulders."],["Barı köprücük kemiğine çek; dirsekler aşağı-geri.","Pull the bar to the collarbone; elbows down and back."],["Kürek kemiklerini önce indir, sonra kolu kullan.","Depress the shoulder blades first, then pull with the arms."]])
+add("seated-cable-row","Seated cable row",["trapMid","lat","deltPost"],["biceps","brachialis","erector","trapLower"],"BAŞLANGIÇ","Kablo kürek makinesi","Seated row machine","seated_row_cable",
+    sets="3×10-12",rest="90 sn",
+    steps=[["Dizler hafif bükük, gövde dik.","Knees slightly bent, torso upright."],["Tutamağı göbeğe çek; dirsekler gövdeye yakın.","Pull the handle to the navel; elbows close to the body."],["Göğsü aç, omuzları kulaktan uzak tut.","Open the chest, keep the shoulders away from the ears."]])
+add("chest-supported-row","Chest-supported row",["trapMid","deltPost","lat"],["biceps","brachialis","trapLower"],"ORTA","Eğik sehpa + dumbbell","Incline bench, dumbbells","seated_row_cable",
+    sets="4×10",rest="75 sn",
+    steps=[["Göğüs sehpaya yaslı — bel devre dışı, sadece sırt çalışır.","Chest on the pad; the lower back is out of it, only the back works."],["Dumbbell'ları kaburgaya doğru çek.","Row the dumbbells toward the ribs."],["Üstte kürek kemiklerini sık.","Squeeze the shoulder blades at the top."]])
+add("machine-chest-press","Machine chest press",["pecSternal","pecClav"],["deltFront","triLat","triLong"],"BAŞLANGIÇ","Göğüs pres makinesi","Chest press machine","chest_press_seated",
+    sets="3×10-12",rest="90 sn",
+    steps=[["Tutamaklar göğüs ortası hizasında olacak şekilde koltuğu ayarla.","Set the seat so the handles line up with mid-chest."],["Kürek kemikleri sıkı, öne it.","Shoulder blades tight, press forward."],["Kontrollü geri gel; dirsek omuz hizasını geçmesin.","Return under control; don't take the elbows behind the shoulder line."]])
+add("pullup","Pull-up",["lat","trapMid"],["biceps","brachialis","deltPost","forearmFlex"],"İLERİ","Barfiks barı","Pull-up bar","pull_up_hang",
+    sets="3×AMRAP",rest="120 sn",
+    steps=[["Bara omuzdan geniş asıl, omuzları aktif tut.","Hang wider than shoulder-width, shoulders active."],["Çeneyi barın üstüne çıkar; sallanma.","Pull until the chin clears the bar; no swinging."],["Tam kol uzunluğuna kontrollü in.","Lower under control to full arm length."]])
+add("triceps-pushdown","Triceps pushdown",["triLat","triLong"],["forearmExt"],"BAŞLANGIÇ","Kablo makinesi","Cable machine","triceps_pushdown_standing",
+    sets="3×12-15",rest="45-60 sn",
+    steps=[["Dirsekler gövdeye yapışık, hareket etmez.","Elbows pinned to the sides; they do not travel."],["Yalnızca ön kolu aşağı aç, altta 1 sn sık.","Only the forearm moves down; squeeze 1s at the bottom."],["Gövdeyi öne yaslayıp ağırlığı itme.","Don't lean in and push the weight with your body."]])
+add("face-pull","Face pull",["deltPost","trapMid"],["infra","teres","trapLower"],"BAŞLANGIÇ","Kablo + halat","Cable, rope","face_pull_standing",
+    sets="3-4×15",rest="45-60 sn",
+    steps=[["Kabloyu göz hizasına ayarla.","Set the cable at eye height."],["Halatı yüze çek; dirsekler yukarı-geri.","Pull the rope to the face; elbows up and back."],["Bitişte omuzları dışa döndür — omuz sağlığı burada.","Finish with external rotation; that is the shoulder-health part."]])
+add("dead-bug","Dead bug",["absMid","absLower"],["absUpper","oblique"],"BAŞLANGIÇ","Mat","Mat","dead_bug_supine",
+    sets="3×8-10/taraf",rest="30-45 sn",
+    steps=[["Sırtüstü; kalça ve diz 90°, kollar tavana.","On your back; hips and knees at 90°, arms to the ceiling."],["Çapraz kol ve bacağı yavaşça uzat.","Slowly extend the opposite arm and leg."],["Bel yere yapışık kalsın — kalkıyorsa mesafeyi kısalt.","Keep the lower back flat; shorten the reach if it lifts."]])
+add("mcgill-curl-up","McGill curl-up",["absUpper","absMid"],["oblique"],"BAŞLANGIÇ","Mat","Mat","curl_up_supine",
+    sets="5-3-1 piramit",rest="30 sn",
+    steps=[["Eller belin altında, bir diz bükük diğer bacak düz.","Hands under the lower back, one knee bent and the other leg straight."],["Baş ve omuzları 2-3 cm kaldır, 8 sn tut.","Lift the head and shoulders 2-3 cm and hold 8s."],["Boyun bükülmez — baş, boyun ve gövde tek parça.","The neck does not bend; head, neck and trunk move as one."]])
+
 
 
 ALIAS = {
@@ -431,7 +485,7 @@ ALIAS = {
  "Torasik açılma (yan yatarak kitap açma)": None,
  "Torasik açılma (foam roller üstünde)": None,
  "Scapular şınav / duvarda scapular kaydırma": None,
- "Dead hang (barda asılma)": None,
+ "Dead hang (barda asılma)": "pullup",
  "Yerinde hafif koşu / ip atlama": None,
  "Yerinde yürüyüş / hafif zıplama": None,
  "Bisiklet / kürek / yürüyüş bandı": None,
@@ -455,7 +509,7 @@ ALIAS = {
  "Goblet squat veya leg press": "goblet-squat",
  "Back squat": "back-squat",
  "Hack squat veya front squat": "front-hack-squat",
- "Leg press": None,
+ "Leg press": "leg-press",
  "Romanian deadlift": "rdl",
  "Romanian deadlift (bar)": "rdl",
  "Romanian deadlift (dumbbell)": "rdl",
@@ -469,16 +523,16 @@ ALIAS = {
  "Walking lunge": "walking-lunge",
  "Reverse lunge (geriye adım) — destekle": "reverse-lunge",
  "Step-up (kutu)": "step-up",
- "Leg extension": None,
- "Leg curl": None,
+ "Leg extension": "leg-extension",
+ "Leg curl": "leg-curl",
  "Calf raise": "calf-raise",
 
  # upper push
  "Bench press": "bench-press",
  "Bench press (bar veya dumbbell)": "bench-press",
  "Incline dumbbell pres": "incline-press",
- "Göğüs pres (makine veya dumbbell)": None,
- "Göğüs pres (makine)": None,
+ "Göğüs pres (makine veya dumbbell)": "machine-chest-press",
+ "Göğüs pres (makine)": "machine-chest-press",
  "Dumbbell omuz pres": "shoulder-press",
  "Dumbbell omuz pres (oturarak)": "shoulder-press",
  "Omuz pres (makine veya dumbbell)": "shoulder-press",
@@ -488,17 +542,17 @@ ALIAS = {
  "Barbell row": "barbell-row",
  "Barbell / kablo row": "barbell-row",
  "Tek kol dumbbell row": "single-arm-row",
- "Chest-supported dumbbell row": None,
- "Kablo kürek (chest-supported row)": None,
- "Oturarak kürek": None,
- "Oturarak kürek (seated row)": None,
- "Lat pulldown": None,
- "Lat pulldown (geniş)": None,
- "Lat pulldown (nötr tutuş)": None,
- "Lat pulldown veya barfiks": None,
- "Weighted barfiks veya ağır lat pulldown": None,
- "Yüz çekişi": None,
- "Yüz çekişi (face pull)": None,
+ "Chest-supported dumbbell row": "chest-supported-row",
+ "Kablo kürek (chest-supported row)": "chest-supported-row",
+ "Oturarak kürek": "seated-cable-row",
+ "Oturarak kürek (seated row)": "seated-cable-row",
+ "Lat pulldown": "lat-pulldown",
+ "Lat pulldown (geniş)": "lat-pulldown",
+ "Lat pulldown (nötr tutuş)": "lat-pulldown",
+ "Lat pulldown veya barfiks": "lat-pulldown",
+ "Weighted barfiks veya ağır lat pulldown": "pullup",
+ "Yüz çekişi": "face-pull",
+ "Yüz çekişi (face pull)": "face-pull",
  "Dumbbell reverse fly": "reverse-fly",
  "Dumbbell reverse fly (öne eğik)": "reverse-fly",
  "Omuz silkme (shrug)": "shrug",
@@ -514,11 +568,11 @@ ALIAS = {
  "Side bridge (dizden)": "side-plank",
  "Side plank": "side-plank",
  "Side plank (ayaktan) + üst bacak kaldırma": "side-plank",
- "Ölü böcek": None,
- "Ölü böcek (dead bug)": None,
+ "Ölü böcek": "dead-bug",
+ "Ölü böcek (dead bug)": "dead-bug",
  "Bird-dog": "bird-dog",
  "Bird-dog (dirsek-diz temaslı)": "bird-dog",
- "McGill curl-up": None,
+ "McGill curl-up": "mcgill-curl-up",
  "Pallof pres": "pallof-press",
  "Ab wheel rollout (dizden)": "ab-wheel-rollout",
  "Asılı bacak kaldırma": "hanging-knee-raise",
@@ -768,6 +822,16 @@ A("};\n")
 A("""export interface Exercise {
   id: string;
   tr: string;
+  /**
+   * The other name the movement goes by on the gym floor — the English one
+   * when `tr` is Turkish, the Turkish one when `tr` is a loanword. Absent
+   * where there is genuinely no counterpart in use (goblet squat, plank,
+   * bird-dog, Pallof press): a name nobody says is worse than none.
+   *
+   * Both names are searched and both are shown, so a trainer finds the
+   * movement by whichever one they learned.
+   */
+  trAlt?: string;
   en: string;
   /** BAŞLANGIÇ | ORTA | ORTA-İLERİ | İLERİ */
   difficulty: string;
@@ -775,7 +839,14 @@ A("""export interface Exercise {
   equipEn: string;
   primary: MuscleId[];
   secondary: MuscleId[];
-  archetype: keyof typeof POSE_ARCHETYPES;
+  /**
+   * Which rig archetype draws this movement — the key is looked up in
+   * `RIG_ARCHETYPES` (src/data/rigArchetypes.ts), NOT in `POSE_ARCHETYPES`
+   * below. `exercise-detail.tsx` reads the rig table and renders `RigFigure`
+   * with the result; a key missing there is a crash, which is what
+   * `exerciseLibrary.test.ts` guards.
+   */
+  archetype: string;
   setsHint: string;
   restHint: string;
   /** [Turkish, English] pairs. */
@@ -787,7 +858,8 @@ A("""export interface Exercise {
 A("export const EXERCISES: Exercise[] = [")
 for e in EXO:
     A("  {")
-    A(f"    id: {js(e['id'])}, tr: {js(e['tr'])}, en: {js(e['en'])},")
+    alt = f" trAlt: {js(e['trAlt'])}," if e.get('trAlt') else ""
+    A(f"    id: {js(e['id'])}, tr: {js(e['tr'])},{alt} en: {js(e['en'])},")
     A(f"    difficulty: {js(e['difficulty'])}, equipTr: {js(e['equipTr'])}, equipEn: {js(e['equipEn'])},")
     A(f"    primary: [{', '.join(js(m) for m in e['primary'])}],")
     A(f"    secondary: [{', '.join(js(m) for m in e['secondary'])}],")
@@ -834,11 +906,15 @@ export function exerciseByName(name: string | undefined): Exercise | null {
   const exact = NAME_TO_EXERCISE[name];
   if (exact !== undefined) return exact ? (BY_ID.get(exact) ?? null) : null;
   const needle = name.toLocaleLowerCase('tr');
-  const hit = EXERCISES.find(
-    (e) => needle.includes(e.tr.toLocaleLowerCase('tr')) || needle.includes(e.en.toLocaleLowerCase('tr')),
+  const hit = EXERCISES.find((e) =>
+    exerciseNames(e).some((n) => needle.includes(n.toLocaleLowerCase('tr'))),
   );
   return hit ?? null;
-}""")
+}
+
+/** Every name a movement answers to — display and search both read this. */
+export const exerciseNames = (e: Exercise): string[] =>
+  e.trAlt ? [e.tr, e.trAlt, e.en] : [e.tr, e.en];""")
 
 out = "\n".join(L)
 open(OUT, 'w').write(out)

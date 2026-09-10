@@ -1,434 +1,600 @@
 {
-  "arm-circles": {
-    "status": "pending",
-    "primary": [],
-    "secondary": []
-  },
-  "cat-cow": {
-    "status": "authored",
-    "primary": [
-      "erector"
-    ],
-    "secondary": [
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "band-pull-apart": {
-    "status": "authored",
-    "primary": [
-      "deltPost",
-      "trapMid"
-    ],
-    "secondary": [
-      "infra"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "band-external-rotation": {
-    "status": "authored",
-    "primary": [
-      "infra",
-      "teres"
-    ],
-    "secondary": [
-      "deltPost"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "chin-tuck": {
-    "status": "authored",
-    "primary": [
-      "sterno"
-    ],
-    "secondary": [],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "worlds-greatest-stretch": {
-    "status": "authored",
-    "primary": [
-      "adductors",
-      "oblique"
-    ],
-    "secondary": [
-      "gluteMax"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "goblet-squat": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "quadVL",
-      "quadVM",
-      "gluteMax"
-    ],
-    "secondary": [
-      "adductors",
-      "erector"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "back-squat": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "quadVL",
-      "quadVM",
-      "gluteMax",
-      "erector",
-      "adductors"
-    ],
-    "secondary": [
-      "hamBF",
-      "hamST",
-      "gastroMed",
-      "absMid",
-      "trapUpper"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "front-hack-squat": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "quadVL",
-      "quadVM"
-    ],
-    "secondary": [
-      "gluteMax",
-      "adductors",
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "rdl": {
-    "status": "authored",
-    "primary": [
-      "hamBF",
-      "hamST",
-      "gluteMax",
-      "erector"
-    ],
-    "secondary": [
-      "addMagnus",
-      "forearmFlex"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "deadlift": {
-    "status": "authored",
-    "primary": [
-      "erector",
-      "gluteMax",
-      "hamBF",
-      "hamST",
-      "lat",
-      "trapMid",
-      "trapUpper"
-    ],
-    "secondary": [
-      "quadRF",
-      "forearmFlex",
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "hip-thrust": {
-    "status": "authored",
-    "primary": [
-      "gluteMax"
-    ],
-    "secondary": [
-      "hamBF",
-      "hamST",
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "bulgarian-split-squat": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "quadVL",
-      "gluteMax"
-    ],
-    "secondary": [
-      "adductors"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "walking-lunge": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "quadVL",
-      "gluteMax"
-    ],
-    "secondary": [
-      "adductors",
-      "hamBF"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "reverse-lunge": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "gluteMax"
-    ],
-    "secondary": [
-      "adductors"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "step-up": {
-    "status": "authored",
-    "primary": [
-      "quadRF",
-      "gluteMax"
-    ],
-    "secondary": [
-      "hamBF"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "calf-raise": {
-    "status": "authored",
-    "primary": [
-      "gastroLat",
-      "gastroMed",
-      "soleus"
-    ],
-    "secondary": [],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "bench-press": {
-    "status": "authored",
-    "primary": [
-      "pecSternal",
-      "pecClav",
-      "deltFront",
-      "triLat",
-      "triLong"
-    ],
-    "secondary": [
-      "serratus",
-      "trapMid",
-      "absUpper",
-      "lat"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "incline-press": {
-    "status": "authored",
-    "primary": [
-      "pecClav",
-      "deltFront",
-      "triLat"
-    ],
-    "secondary": [
-      "serratus"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "shoulder-press": {
-    "status": "authored",
-    "primary": [
-      "deltFront",
-      "triLat",
-      "triLong"
-    ],
-    "secondary": [
-      "trapUpper",
-      "absUpper"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "barbell-row": {
-    "status": "authored",
-    "primary": [
-      "lat",
-      "trapMid",
-      "deltPost",
-      "biceps"
-    ],
-    "secondary": [
-      "erector",
-      "forearmFlex"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "single-arm-row": {
-    "status": "authored",
-    "primary": [
-      "lat",
-      "trapMid",
-      "biceps"
-    ],
-    "secondary": [
-      "deltPost"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "reverse-fly": {
-    "status": "authored",
-    "primary": [
-      "deltPost",
-      "trapMid"
-    ],
-    "secondary": [
-      "infra"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "lateral-raise": {
-    "status": "authored",
-    "primary": [
-      "deltFront"
-    ],
-    "secondary": [
-      "deltPost"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "biceps-curl": {
-    "status": "authored",
-    "primary": [
-      "biceps",
-      "brachialis"
-    ],
-    "secondary": [
-      "forearmFlex"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "shrug": {
-    "status": "authored",
-    "primary": [
-      "trapUpper"
-    ],
-    "secondary": [],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "plank": {
-    "status": "authored",
-    "primary": [
-      "absMid",
-      "absUpper"
-    ],
-    "secondary": [
-      "oblique",
-      "gluteMax"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "side-plank": {
-    "status": "authored",
-    "primary": [
-      "oblique"
-    ],
-    "secondary": [
-      "gluteMed"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "bird-dog": {
-    "status": "authored",
-    "primary": [
-      "erector",
-      "gluteMax"
-    ],
-    "secondary": [
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "pallof-press": {
-    "status": "authored",
-    "primary": [
-      "oblique",
-      "absMid"
-    ],
-    "secondary": [],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "ab-wheel-rollout": {
-    "status": "authored",
-    "primary": [
-      "absMid",
-      "absUpper"
-    ],
-    "secondary": [
-      "lat"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "hanging-knee-raise": {
-    "status": "authored",
-    "primary": [
-      "absLower",
-      "absMid"
-    ],
-    "secondary": [
-      "forearmFlex"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "suitcase-carry": {
-    "status": "authored",
-    "primary": [
-      "oblique",
-      "absMid"
-    ],
-    "secondary": [
-      "forearmFlex",
-      "trapUpper"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  },
-  "glute-bridge": {
-    "status": "authored",
-    "primary": [
-      "gluteMax"
-    ],
-    "secondary": [
-      "hamBF",
-      "absMid"
-    ],
-    "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
-    "reviewed": false
-  }
+ "arm-circles": {
+  "status": "pending",
+  "primary": [],
+  "secondary": []
+ },
+ "cat-cow": {
+  "status": "authored",
+  "primary": [
+   "erector"
+  ],
+  "secondary": [
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "band-pull-apart": {
+  "status": "authored",
+  "primary": [
+   "deltPost",
+   "trapMid"
+  ],
+  "secondary": [
+   "infra"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "band-external-rotation": {
+  "status": "authored",
+  "primary": [
+   "infra",
+   "teres"
+  ],
+  "secondary": [
+   "deltPost"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "chin-tuck": {
+  "status": "authored",
+  "primary": [
+   "sterno"
+  ],
+  "secondary": [],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "worlds-greatest-stretch": {
+  "status": "authored",
+  "primary": [
+   "adductors",
+   "oblique"
+  ],
+  "secondary": [
+   "gluteMax"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "goblet-squat": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax"
+  ],
+  "secondary": [
+   "adductors",
+   "erector"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "back-squat": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax",
+   "erector",
+   "adductors"
+  ],
+  "secondary": [
+   "hamBF",
+   "hamST",
+   "gastroMed",
+   "absMid",
+   "trapUpper"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "front-hack-squat": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "quadVM"
+  ],
+  "secondary": [
+   "gluteMax",
+   "adductors",
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "rdl": {
+  "status": "authored",
+  "primary": [
+   "hamBF",
+   "hamST",
+   "gluteMax",
+   "erector"
+  ],
+  "secondary": [
+   "addMagnus",
+   "forearmFlex"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "deadlift": {
+  "status": "authored",
+  "primary": [
+   "erector",
+   "gluteMax",
+   "hamBF",
+   "hamST",
+   "lat",
+   "trapMid",
+   "trapUpper"
+  ],
+  "secondary": [
+   "quadRF",
+   "forearmFlex",
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "hip-thrust": {
+  "status": "authored",
+  "primary": [
+   "gluteMax"
+  ],
+  "secondary": [
+   "hamBF",
+   "hamST",
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "bulgarian-split-squat": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "gluteMax"
+  ],
+  "secondary": [
+   "adductors"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "walking-lunge": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "gluteMax"
+  ],
+  "secondary": [
+   "adductors",
+   "hamBF"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "reverse-lunge": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "gluteMax"
+  ],
+  "secondary": [
+   "adductors"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "step-up": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "gluteMax"
+  ],
+  "secondary": [
+   "hamBF"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "calf-raise": {
+  "status": "authored",
+  "primary": [
+   "gastroLat",
+   "gastroMed",
+   "soleus"
+  ],
+  "secondary": [],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "bench-press": {
+  "status": "authored",
+  "primary": [
+   "pecSternal",
+   "pecClav",
+   "deltFront",
+   "triLat",
+   "triLong"
+  ],
+  "secondary": [
+   "serratus",
+   "trapMid",
+   "absUpper",
+   "lat"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "incline-press": {
+  "status": "authored",
+  "primary": [
+   "pecClav",
+   "deltFront",
+   "triLat"
+  ],
+  "secondary": [
+   "serratus"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "shoulder-press": {
+  "status": "authored",
+  "primary": [
+   "deltFront",
+   "triLat",
+   "triLong"
+  ],
+  "secondary": [
+   "trapUpper",
+   "absUpper"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "barbell-row": {
+  "status": "authored",
+  "primary": [
+   "lat",
+   "trapMid",
+   "deltPost",
+   "biceps"
+  ],
+  "secondary": [
+   "erector",
+   "forearmFlex"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "single-arm-row": {
+  "status": "authored",
+  "primary": [
+   "lat",
+   "trapMid",
+   "biceps"
+  ],
+  "secondary": [
+   "deltPost"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "reverse-fly": {
+  "status": "authored",
+  "primary": [
+   "deltPost",
+   "trapMid"
+  ],
+  "secondary": [
+   "infra"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "lateral-raise": {
+  "status": "authored",
+  "primary": [
+   "deltFront"
+  ],
+  "secondary": [
+   "deltPost"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "biceps-curl": {
+  "status": "authored",
+  "primary": [
+   "biceps",
+   "brachialis"
+  ],
+  "secondary": [
+   "forearmFlex"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "shrug": {
+  "status": "authored",
+  "primary": [
+   "trapUpper"
+  ],
+  "secondary": [],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "plank": {
+  "status": "authored",
+  "primary": [
+   "absMid",
+   "absUpper"
+  ],
+  "secondary": [
+   "oblique",
+   "gluteMax"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "side-plank": {
+  "status": "authored",
+  "primary": [
+   "oblique"
+  ],
+  "secondary": [
+   "gluteMed"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "bird-dog": {
+  "status": "authored",
+  "primary": [
+   "erector",
+   "gluteMax"
+  ],
+  "secondary": [
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "pallof-press": {
+  "status": "authored",
+  "primary": [
+   "oblique",
+   "absMid"
+  ],
+  "secondary": [],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "ab-wheel-rollout": {
+  "status": "authored",
+  "primary": [
+   "absMid",
+   "absUpper"
+  ],
+  "secondary": [
+   "lat"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "hanging-knee-raise": {
+  "status": "authored",
+  "primary": [
+   "absLower",
+   "absMid"
+  ],
+  "secondary": [
+   "forearmFlex"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "suitcase-carry": {
+  "status": "authored",
+  "primary": [
+   "oblique",
+   "absMid"
+  ],
+  "secondary": [
+   "forearmFlex",
+   "trapUpper"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "glute-bridge": {
+  "status": "authored",
+  "primary": [
+   "gluteMax"
+  ],
+  "secondary": [
+   "hamBF",
+   "absMid"
+  ],
+  "source": "GymEntra exerciseLibrary.ts (2026-09-06 taşındı)",
+  "reviewed": false
+ },
+ "leg-press": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax"
+  ],
+  "secondary": [
+   "adductors",
+   "hamBF",
+   "soleus"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "leg-extension": {
+  "status": "authored",
+  "primary": [
+   "quadRF",
+   "quadVL",
+   "quadVM"
+  ],
+  "secondary": [],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "leg-curl": {
+  "status": "authored",
+  "primary": [
+   "hamBF",
+   "hamST"
+  ],
+  "secondary": [
+   "gastroLat",
+   "gastroMed"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "lat-pulldown": {
+  "status": "authored",
+  "primary": [
+   "lat",
+   "trapMid"
+  ],
+  "secondary": [
+   "biceps",
+   "brachialis",
+   "deltPost",
+   "trapLower"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "seated-cable-row": {
+  "status": "authored",
+  "primary": [
+   "trapMid",
+   "lat",
+   "deltPost"
+  ],
+  "secondary": [
+   "biceps",
+   "brachialis",
+   "erector",
+   "trapLower"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "chest-supported-row": {
+  "status": "authored",
+  "primary": [
+   "trapMid",
+   "deltPost",
+   "lat"
+  ],
+  "secondary": [
+   "biceps",
+   "brachialis",
+   "trapLower"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "machine-chest-press": {
+  "status": "authored",
+  "primary": [
+   "pecSternal",
+   "pecClav"
+  ],
+  "secondary": [
+   "deltFront",
+   "triLat",
+   "triLong"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "pullup": {
+  "status": "authored",
+  "primary": [
+   "lat",
+   "trapMid"
+  ],
+  "secondary": [
+   "biceps",
+   "brachialis",
+   "deltPost",
+   "forearmFlex"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "triceps-pushdown": {
+  "status": "authored",
+  "primary": [
+   "triLat",
+   "triLong"
+  ],
+  "secondary": [
+   "forearmExt"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "face-pull": {
+  "status": "authored",
+  "primary": [
+   "deltPost",
+   "trapMid"
+  ],
+  "secondary": [
+   "infra",
+   "teres",
+   "trapLower"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "dead-bug": {
+  "status": "authored",
+  "primary": [
+   "absMid",
+   "absLower"
+  ],
+  "secondary": [
+   "absUpper",
+   "oblique"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ },
+ "mcgill-curl-up": {
+  "status": "authored",
+  "primary": [
+   "absUpper",
+   "absMid"
+  ],
+  "secondary": [
+   "oblique"
+  ],
+  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
+  "reviewed": false
+ }
 }

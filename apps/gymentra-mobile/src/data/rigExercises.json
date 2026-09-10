@@ -1,138 +1,224 @@
 {
-  "arm-circles": {
-    "name": "Kol çevirme",
-    "archetype": "arm_circles_front"
-  },
-  "cat-cow": {
-    "name": "Kedi-deve",
-    "archetype": "quadruped_spine"
-  },
-  "band-pull-apart": {
-    "name": "Bant pull-apart",
-    "archetype": "band_pull_apart_front"
-  },
-  "band-external-rotation": {
-    "name": "Bant ile dış rotasyon",
-    "archetype": "band_ext_rotation_front"
-  },
-  "chin-tuck": {
-    "name": "Çene içeri çekme",
-    "archetype": "chin_tuck_side"
-  },
-  "worlds-greatest-stretch": {
-    "name": "Lunge + gövde rotasyonu",
-    "archetype": "unilateral_lunge"
-  },
-  "goblet-squat": {
-    "name": "Goblet squat",
-    "archetype": "squat_goblet"
-  },
-  "back-squat": {
-    "name": "Back squat",
-    "archetype": "squat"
-  },
-  "front-hack-squat": {
-    "name": "Front squat",
-    "archetype": "squat_goblet"
-  },
-  "rdl": {
-    "name": "Romanian deadlift",
-    "archetype": "hip_hinge_dumbbell"
-  },
-  "deadlift": {
-    "name": "Deadlift",
-    "archetype": "hinge"
-  },
-  "hip-thrust": {
-    "name": "Hip thrust",
-    "archetype": "hip_thrust"
-  },
-  "bulgarian-split-squat": {
-    "name": "Bulgarian split squat",
-    "archetype": "bulgarian_split_squat"
-  },
-  "walking-lunge": {
-    "name": "Walking lunge",
-    "archetype": "unilateral_lunge"
-  },
-  "reverse-lunge": {
-    "name": "Reverse lunge",
-    "archetype": "unilateral_lunge"
-  },
-  "step-up": {
-    "name": "Step-up",
-    "archetype": "step_up"
-  },
-  "calf-raise": {
-    "name": "Calf raise",
-    "archetype": "calf_raise"
-  },
-  "bench-press": {
-    "name": "Bench press",
-    "archetype": "bench_press"
-  },
-  "incline-press": {
-    "name": "Incline dumbbell pres",
-    "archetype": "incline_press"
-  },
-  "shoulder-press": {
-    "name": "Omuz pres",
-    "archetype": "seated_overhead_press"
-  },
-  "barbell-row": {
-    "name": "Barbell row",
-    "archetype": "standing_row_hinged"
-  },
-  "single-arm-row": {
-    "name": "Tek kol dumbbell row",
-    "archetype": "standing_row_hinged"
-  },
-  "reverse-fly": {
-    "name": "Dumbbell reverse fly",
-    "archetype": "hinged_fly"
-  },
-  "lateral-raise": {
-    "name": "Lateral raise",
-    "archetype": "lateral_raise_front"
-  },
-  "biceps-curl": {
-    "name": "Biceps curl",
-    "archetype": "standing_arm_isolation"
-  },
-  "shrug": {
-    "name": "Omuz silkme",
-    "archetype": "shrug_front"
-  },
-  "plank": {
-    "name": "Plank",
-    "archetype": "plank_prone"
-  },
-  "side-plank": {
-    "name": "Side plank",
-    "archetype": "side_plank"
-  },
-  "bird-dog": {
-    "name": "Bird-dog",
-    "archetype": "bird_dog"
-  },
-  "pallof-press": {
-    "name": "Pallof pres",
-    "archetype": "anti_rotation_standing"
-  },
-  "ab-wheel-rollout": {
-    "name": "Ab wheel rollout",
-    "archetype": "rollout"
-  },
-  "hanging-knee-raise": {
-    "name": "Asılı diz çekme",
-    "archetype": "hanging_knee_raise"
-  },
-  "suitcase-carry": {
-    "name": "Suitcase carry",
-    "archetype": "carry"
-  },
-  "glute-bridge": {
-    "name": "Kalça köprüsü",
-    "archetype": "glute_bridge"
-  }
+ "arm-circles": {
+  "name": "Kol çevirme",
+  "archetype": "arm_circles_front",
+  "alt": "Arm circles"
+ },
+ "cat-cow": {
+  "name": "Kedi-deve",
+  "archetype": "quadruped_spine",
+  "alt": "Cat-cow"
+ },
+ "band-pull-apart": {
+  "name": "Bant pull-apart",
+  "archetype": "band_pull_apart_front"
+ },
+ "band-external-rotation": {
+  "name": "Bant ile dış rotasyon",
+  "archetype": "band_ext_rotation_front",
+  "alt": "Band external rotation"
+ },
+ "chin-tuck": {
+  "name": "Çene içeri çekme",
+  "archetype": "chin_tuck_side",
+  "alt": "Chin tuck"
+ },
+ "worlds-greatest-stretch": {
+  "name": "Lunge + gövde rotasyonu",
+  "archetype": "unilateral_lunge",
+  "alt": "World's greatest stretch"
+ },
+ "goblet-squat": {
+  "name": "Goblet squat",
+  "archetype": "squat_goblet"
+ },
+ "back-squat": {
+  "name": "Back squat",
+  "archetype": "squat"
+ },
+ "front-hack-squat": {
+  "name": "Front squat",
+  "archetype": "squat_goblet",
+  "alt": "Ön squat"
+ },
+ "rdl": {
+  "name": "Romanian deadlift",
+  "archetype": "hip_hinge_dumbbell",
+  "alt": "Romen deadlift"
+ },
+ "deadlift": {
+  "name": "Deadlift",
+  "archetype": "hinge",
+  "alt": "Ölü kaldırış"
+ },
+ "hip-thrust": {
+  "name": "Hip thrust",
+  "archetype": "hip_thrust",
+  "alt": "Kalça itişi"
+ },
+ "bulgarian-split-squat": {
+  "name": "Bulgarian split squat",
+  "archetype": "bulgarian_split_squat"
+ },
+ "walking-lunge": {
+  "name": "Walking lunge",
+  "archetype": "unilateral_lunge",
+  "alt": "Yürüyen hamle"
+ },
+ "reverse-lunge": {
+  "name": "Reverse lunge",
+  "archetype": "unilateral_lunge",
+  "alt": "Geriye hamle"
+ },
+ "step-up": {
+  "name": "Step-up",
+  "archetype": "step_up",
+  "alt": "Basamak çıkma"
+ },
+ "calf-raise": {
+  "name": "Calf raise",
+  "archetype": "calf_raise",
+  "alt": "Topuk yükseltme"
+ },
+ "bench-press": {
+  "name": "Bench press",
+  "archetype": "bench_press",
+  "alt": "Göğüs presi"
+ },
+ "incline-press": {
+  "name": "Incline dumbbell pres",
+  "archetype": "incline_press",
+  "alt": "Eğik sehpada dumbbell pres"
+ },
+ "shoulder-press": {
+  "name": "Omuz pres",
+  "archetype": "seated_overhead_press",
+  "alt": "Shoulder press"
+ },
+ "barbell-row": {
+  "name": "Barbell row",
+  "archetype": "standing_row_hinged",
+  "alt": "Barbell kürek çekme"
+ },
+ "single-arm-row": {
+  "name": "Tek kol dumbbell row",
+  "archetype": "standing_row_hinged",
+  "alt": "Tek kol kürek çekme"
+ },
+ "reverse-fly": {
+  "name": "Dumbbell reverse fly",
+  "archetype": "hinged_fly",
+  "alt": "Arka omuz açış"
+ },
+ "lateral-raise": {
+  "name": "Lateral raise",
+  "archetype": "lateral_raise_front",
+  "alt": "Yana açış"
+ },
+ "biceps-curl": {
+  "name": "Biceps curl",
+  "archetype": "standing_arm_isolation",
+  "alt": "Kol bükme"
+ },
+ "shrug": {
+  "name": "Omuz silkme",
+  "archetype": "shrug_front",
+  "alt": "Shrug"
+ },
+ "plank": {
+  "name": "Plank",
+  "archetype": "plank_prone"
+ },
+ "side-plank": {
+  "name": "Side plank",
+  "archetype": "side_plank",
+  "alt": "Yan plank"
+ },
+ "bird-dog": {
+  "name": "Bird-dog",
+  "archetype": "bird_dog"
+ },
+ "pallof-press": {
+  "name": "Pallof pres",
+  "archetype": "anti_rotation_standing"
+ },
+ "ab-wheel-rollout": {
+  "name": "Ab wheel rollout",
+  "archetype": "rollout",
+  "alt": "Tekerlekle açılma"
+ },
+ "hanging-knee-raise": {
+  "name": "Asılı diz çekme",
+  "archetype": "hanging_knee_raise",
+  "alt": "Hanging knee raise"
+ },
+ "suitcase-carry": {
+  "name": "Suitcase carry",
+  "archetype": "carry",
+  "alt": "Tek el ağırlık taşıma"
+ },
+ "glute-bridge": {
+  "name": "Kalça köprüsü",
+  "archetype": "glute_bridge",
+  "alt": "Glute bridge"
+ },
+ "leg-press": {
+  "name": "Leg press",
+  "archetype": "leg_press_seated",
+  "alt": "Bacak presi"
+ },
+ "leg-extension": {
+  "name": "Leg extension",
+  "archetype": "leg_extension_seated",
+  "alt": "Ön bacak makinesi"
+ },
+ "leg-curl": {
+  "name": "Leg curl",
+  "archetype": "leg_curl_seated",
+  "alt": "Arka bacak makinesi"
+ },
+ "lat-pulldown": {
+  "name": "Lat pulldown",
+  "archetype": "lat_pulldown_seated",
+  "alt": "Lat çekişi"
+ },
+ "seated-cable-row": {
+  "name": "Oturarak kürek",
+  "archetype": "seated_row_cable",
+  "alt": "Seated cable row"
+ },
+ "chest-supported-row": {
+  "name": "Göğüs destekli kürek",
+  "archetype": "seated_row_cable",
+  "alt": "Chest-supported row"
+ },
+ "machine-chest-press": {
+  "name": "Makine göğüs pres",
+  "archetype": "chest_press_seated",
+  "alt": "Machine chest press"
+ },
+ "pullup": {
+  "name": "Barfiks",
+  "archetype": "pull_up_hang",
+  "alt": "Pull-up"
+ },
+ "triceps-pushdown": {
+  "name": "Triceps pushdown",
+  "archetype": "triceps_pushdown_standing",
+  "alt": "Triceps itişi"
+ },
+ "face-pull": {
+  "name": "Yüz çekişi",
+  "archetype": "face_pull_standing",
+  "alt": "Face pull"
+ },
+ "dead-bug": {
+  "name": "Ölü böcek",
+  "archetype": "dead_bug_supine",
+  "alt": "Dead bug"
+ },
+ "mcgill-curl-up": {
+  "name": "McGill curl-up",
+  "archetype": "curl_up_supine"
+ }
 }

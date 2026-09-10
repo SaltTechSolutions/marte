@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '@/utils/rig';
+import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '@/utils/rig';
 import { auditExercise, auditLoop, auditSegments } from '@/utils/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -26,6 +26,26 @@ describe('rig kinematics', () => {
     const far = ik([0, 0], [0, 900], B.upper, B.fore, 1);
     expect(len([0, 0], far.elbow)).toBeCloseTo(B.upper, 6);
     expect(len(far.elbow, far.hand)).toBeCloseTo(B.fore, 6);
+  });
+
+  // Makine hareketleri (bacak presi, lat pulldown, oturarak kürek…) modelde
+  // yoktu, çünkü "makinede oturuyor" diye bir kök nokta yoktu. `seat` onu
+  // ekliyor: kalça koltuk yüksekliğinde SABİT durur ve zemine oturtulmaz —
+  // bacak presinde ayak zaten havadadır, oraya çekilseydi figür kayardı.
+  it('oturan modda kalça koltuk yüksekliğinde sabit kalır', () => {
+    const ex = {
+      mode: 'seat' as const, arm: 'angles' as const, bar: null,
+      bend: 0, dur: 3000,
+      kf: [
+        { t: 0, tr: 'başla', p: { thighA: 90, shinA: 180, torso: 0 } },
+        { t: 1, tr: 'bitir', p: { thighA: 90, shinA: 120, torso: 0 } },
+      ],
+    };
+    for (let i = 0; i <= 4; i++) {
+      const { p } = poseAt(ex, i / 4);
+      // Kadraj kaydırması yatayda; dikeyde kalça oynamamalı.
+      expect(skeleton(ex, p).pelvis[1], `@${i / 4}`).toBeCloseTo(SEAT_Y, 6);
+    }
   });
 
   it('viewBox tekrar boyunca sabit', () => {
@@ -142,7 +162,11 @@ describe('rig hareket denetimi', () => {
   it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {
     // Kural: ikinci bacak birincinin kopyasıysa çizimde bilgi taşımıyor.
     const gorunur = entries.filter(([, ex]) => showFarLeg(ex)).map(([k]) => k);
-    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'step_up', 'unilateral_lunge']);
+    // Sırtüstü ikisi de çapraz çalışıyor: ölü böcekte uzak bacak uzanırken
+    // yakın bacak masa üstünde kalır, McGill curl-up'ta bir diz bükük diğeri düz.
+    expect(gorunur.sort()).toEqual([
+      'bird_dog', 'bulgarian_split_squat', 'carry', 'curl_up_supine', 'dead_bug_supine', 'step_up', 'unilateral_lunge',
+    ]);
     // Yan plank'ta bacaklar bilerek üst üste: ayrı hareket değil, gizli.
     expect(showFarLeg(RIG_ARCHETYPES.side_plank)).toBe(false);
     expect(showFarLeg(RIG_ARCHETYPES.squat)).toBe(false);

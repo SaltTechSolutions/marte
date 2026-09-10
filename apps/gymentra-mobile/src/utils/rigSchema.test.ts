@@ -77,6 +77,13 @@ describe('rigSchema — geçerli veri', () => {
     expect(validateArchetypes(ok())).toEqual([]);
   });
 
+  // Şema motorla aynı anda büyümezse editör yeni modu kaydedemez: kayıt yolu
+  // `validateBundle`'dan geçiyor ve geçerli bir arketibi geçersiz sayardı.
+  it('makine hareketleri için oturan mod ve koltuk/kızak destekleri geçerli', () => {
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'seatback' }))).toEqual([]);
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'sled' }))).toEqual([]);
+  });
+
   it('isteğe bağlı alanlar yazılınca da geçiyor', () => {
     expect(
       errs((d) => {
@@ -393,11 +400,11 @@ describe('validateBundle — devir paketi', () => {
     });
   });
 
-  it('34 hareket, 30 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
-    expect(Object.keys(rawExercises)).toHaveLength(34);
-    expect(Object.keys(rawArchetypes)).toHaveLength(30);
+  it('46 hareket, 41 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+    expect(Object.keys(rawExercises)).toHaveLength(46);
+    expect(Object.keys(rawArchetypes)).toHaveLength(41);
     const used = new Set(Object.values(rawExercises as Record<string, { archetype: string }>).map((e) => e.archetype));
-    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(30);
+    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(41);
   });
 });
 

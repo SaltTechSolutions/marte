@@ -132,9 +132,21 @@ export const ROM_BANDS: RomBand[] = [
     rule: 'kalça',
     label: 'kalça',
     // 0 = uyluk gövdenin uzantısı, pozitif = öne bükülme, negatif = geriye açılma.
+    // Büyüklük her modda anlamlı: 150°'den fazla bükülen kalça yok.
+    angle: (p) => Math.abs(norm(180 - (p.thighA - p.torso))),
+    hi: 150,
+  },
+  {
+    rule: 'kalça',
+    label: 'kalça geriye açılma',
+    // İşaret, dizde olduğu gibi, yalnızca AYAKTA anlamlı. Sırtüstü yatan bir
+    // figürde gövde yönü tersine döndüğü için aynı formül masa üstü poza
+    // (kalça 90° bükülü, ölü böceğin başlangıcı) −90° diyor ve normal bir
+    // hareketi imkânsız sayıyordu. Diz bandı bu ayrımı zaten yapıyor;
+    // gerekçe birebir aynı.
     angle: (p) => norm(180 - (p.thighA - p.torso)),
     lo: -35,
-    hi: 150,
+    skip: (ex) => ex.mode !== 'stand',
   },
   {
     rule: 'gövde',

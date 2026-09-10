@@ -251,6 +251,21 @@ export function RigFigure({
             <Rect x={S0.ankleF[0] - 56} y={S0.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S0.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
           </G>
         )}
+        {/* Makine koltuğu: kalçanın altında yastık, arkasında sırt dayaması.
+            Lat pulldown, oturarak kürek, göğüs presi ve bacak makineleri
+            buna yaslanıyor — çizilmezse figür havada oturuyor görünüyor. */}
+        {rig.prop === 'seatback' && (
+          <G key="seatback">
+            <Rect x={S0.pelvis[0] - 46} y={S0.pelvis[1] + 22} width={150} height={18} rx={8} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] - 64} y={S0.pelvis[1] - 96} width={20} height={122} rx={8} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {/* Bacak presi kızağı: ayağın ittiği platform. Ayak yerde değil, o
+            yüzden zemine değil ayağın kendisine göre konumlanıyor. */}
+        {rig.prop === 'sled' && (
+          <Rect key="sled" x={S0.ankle[0] + 6} y={S0.ankle[1] - 72} width={18} height={150} rx={6} fill={metal} stroke={line} />
+        )}
         {/* Step-up: ayağın çıktığı basamak. */}
         {rig.prop === 'box' && (
           <Rect

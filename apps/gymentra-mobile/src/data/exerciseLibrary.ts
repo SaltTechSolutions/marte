@@ -1,7 +1,7 @@
 // GENERATED — do not hand-edit. Rebuild with
 // `backend/scripts/build_exercise_library.py` (source data lives beside it).
 //
-// The exercise visualiser (PER-19): 34 canonical movements distilled from the
+// The exercise visualiser (PER-19): 46 canonical movements distilled from the
 // ~146 lines across the 14 program templates (machine and cable moves were
 // dropped on 3 Sep 2026 — barbell, dumbbell, bench, band and bodyweight only), each with a muscle-activation
 // map and start/end pose frames. Ported from the Claude Design canvas
@@ -297,6 +297,11 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
     end: { head: [150.0, 66.0], shoulder: [150.0, 92.0], elbow: [178.0, 62.0], wrist: [186, 34], hip: [150.0, 150.0], knee: [173.3, 126.7], ankle: [166.6, 149.8], toe: [166.4, 157.8], bar: [186, 32], arrow: [196, 176, 196, 146] },
     view: 'front',
   },
+  curl_up_supine: {
+    start: { head: [248.0, 194.0], shoulder: [220.0, 194.0], elbow: [232.0, 200.0], wrist: [210.0, 202.0], hip: [150, 194], knee: [118.0, 164.0], ankle: [90.0, 194.0], toe: [72.0, 194.0] },
+    end: { head: [247.0, 179.5], shoulder: [219.3, 183.8], elbow: [229.0, 193.1], wrist: [209.0, 202.5], hip: [150, 194], knee: [118.0, 164.0], ankle: [90.0, 194.0], toe: [72.0, 194.0], arrow: [262, 206, 258, 182] },
+    face: 'up',
+  },
   band_pull_apart_front: {
     start: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [164.0, 82.0], wrist: [168.0, 86.0], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [168.0, 86.0] },
     end: { head: [150.0, 52.0], shoulder: [150.0, 78.0], elbow: [164.5, 79.6], wrist: [170.2, 79.8], hip: [150.0, 146.0], knee: [158.0, 178.0], ankle: [160, 206], toe: [168.0, 206.0], bar: [170.2, 79.8], arrow: [182, 104, 214, 104] },
@@ -312,6 +317,16 @@ export const POSE_ARCHETYPES: Record<string, PoseArchetype> = {
 export interface Exercise {
   id: string;
   tr: string;
+  /**
+   * The other name the movement goes by on the gym floor — the English one
+   * when `tr` is Turkish, the Turkish one when `tr` is a loanword. Absent
+   * where there is genuinely no counterpart in use (goblet squat, plank,
+   * bird-dog, Pallof press): a name nobody says is worse than none.
+   *
+   * Both names are searched and both are shown, so a trainer finds the
+   * movement by whichever one they learned.
+   */
+  trAlt?: string;
   en: string;
   /** BAŞLANGIÇ | ORTA | ORTA-İLERİ | İLERİ */
   difficulty: string;
@@ -319,7 +334,14 @@ export interface Exercise {
   equipEn: string;
   primary: MuscleId[];
   secondary: MuscleId[];
-  archetype: keyof typeof POSE_ARCHETYPES;
+  /**
+   * Which rig archetype draws this movement — the key is looked up in
+   * `RIG_ARCHETYPES` (src/data/rigArchetypes.ts), NOT in `POSE_ARCHETYPES`
+   * below. `exercise-detail.tsx` reads the rig table and renders `RigFigure`
+   * with the result; a key missing there is a crash, which is what
+   * `exerciseLibrary.test.ts` guards.
+   */
+  archetype: string;
   setsHint: string;
   restHint: string;
   /** [Turkish, English] pairs. */
@@ -330,7 +352,7 @@ export interface Exercise {
 
 export const EXERCISES: Exercise[] = [
   {
-    id: 'arm-circles', tr: 'Kol çevirme', en: 'Arm circles',
+    id: 'arm-circles', tr: 'Kol çevirme', trAlt: 'Arm circles', en: 'Arm circles',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok', equipEn: 'None',
     primary: [],
     secondary: [],
@@ -342,7 +364,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'cat-cow', tr: 'Kedi-deve', en: 'Cat-cow',
+    id: 'cat-cow', tr: 'Kedi-deve', trAlt: 'Cat-cow', en: 'Cat-cow',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Mat', equipEn: 'Mat',
     primary: ['erector'],
     secondary: ['absMid'],
@@ -366,7 +388,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'band-external-rotation', tr: 'Bant ile dış rotasyon', en: 'Band external rotation',
+    id: 'band-external-rotation', tr: 'Bant ile dış rotasyon', trAlt: 'Band external rotation', en: 'Band external rotation',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Direnç bandı', equipEn: 'Resistance band',
     primary: ['infra', 'teres'],
     secondary: ['deltPost'],
@@ -378,7 +400,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'chin-tuck', tr: 'Çene içeri çekme', en: 'Chin tuck',
+    id: 'chin-tuck', tr: 'Çene içeri çekme', trAlt: 'Chin tuck', en: 'Chin tuck',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok', equipEn: 'None',
     primary: ['sterno'],
     secondary: [],
@@ -390,7 +412,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'worlds-greatest-stretch', tr: 'Lunge + gövde rotasyonu', en: 'World\'s greatest stretch',
+    id: 'worlds-greatest-stretch', tr: 'Lunge + gövde rotasyonu', trAlt: 'World\'s greatest stretch', en: 'World\'s greatest stretch',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok', equipEn: 'None',
     primary: ['adductors', 'oblique'],
     secondary: ['gluteMax'],
@@ -430,7 +452,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'front-hack-squat', tr: 'Front squat', en: 'Front squat',
+    id: 'front-hack-squat', tr: 'Front squat', trAlt: 'Ön squat', en: 'Front squat',
     difficulty: 'ORTA', equipTr: 'Squat rack', equipEn: 'Squat rack',
     primary: ['quadRF', 'quadVL', 'quadVM'],
     secondary: ['gluteMax', 'adductors', 'absMid'],
@@ -443,7 +465,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'rdl', tr: 'Romanian deadlift', en: 'Romanian deadlift',
+    id: 'rdl', tr: 'Romanian deadlift', trAlt: 'Romen deadlift', en: 'Romanian deadlift',
     difficulty: 'ORTA', equipTr: 'Bar veya dumbbell', equipEn: 'Barbell or dumbbell',
     primary: ['hamBF', 'hamST', 'gluteMax', 'erector'],
     secondary: ['addMagnus', 'forearmFlex'],
@@ -456,7 +478,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'deadlift', tr: 'Deadlift', en: 'Conventional deadlift',
+    id: 'deadlift', tr: 'Deadlift', trAlt: 'Ölü kaldırış', en: 'Conventional deadlift',
     difficulty: 'İLERİ', equipTr: 'Bar + Plakalar', equipEn: 'Barbell and plates',
     primary: ['erector', 'gluteMax', 'hamBF', 'hamST', 'lat', 'trapMid', 'trapUpper'],
     secondary: ['quadRF', 'forearmFlex', 'absMid'],
@@ -469,7 +491,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'hip-thrust', tr: 'Hip thrust', en: 'Hip thrust',
+    id: 'hip-thrust', tr: 'Hip thrust', trAlt: 'Kalça itişi', en: 'Hip thrust',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Bar veya makine', equipEn: 'Barbell or machine',
     primary: ['gluteMax'],
     secondary: ['hamBF', 'hamST', 'absMid'],
@@ -495,7 +517,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'walking-lunge', tr: 'Walking lunge', en: 'Walking lunge',
+    id: 'walking-lunge', tr: 'Walking lunge', trAlt: 'Yürüyen hamle', en: 'Walking lunge',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Dumbbell (opsiyonel)', equipEn: 'Dumbbells (optional)',
     primary: ['quadRF', 'quadVL', 'gluteMax'],
     secondary: ['adductors', 'hamBF'],
@@ -508,7 +530,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'reverse-lunge', tr: 'Reverse lunge', en: 'Reverse lunge',
+    id: 'reverse-lunge', tr: 'Reverse lunge', trAlt: 'Geriye hamle', en: 'Reverse lunge',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok / hafif dumbbell', equipEn: 'None or light dumbbells',
     primary: ['quadRF', 'gluteMax'],
     secondary: ['adductors'],
@@ -521,7 +543,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'step-up', tr: 'Step-up', en: 'Step-up',
+    id: 'step-up', tr: 'Step-up', trAlt: 'Basamak çıkma', en: 'Step-up',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Kutu/bench', equipEn: 'Box or bench',
     primary: ['quadRF', 'gluteMax'],
     secondary: ['hamBF'],
@@ -534,7 +556,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'calf-raise', tr: 'Calf raise', en: 'Calf raise',
+    id: 'calf-raise', tr: 'Calf raise', trAlt: 'Topuk yükseltme', en: 'Calf raise',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Yok / makine', equipEn: 'Bodyweight or machine',
     primary: ['gastroLat', 'gastroMed', 'soleus'],
     secondary: [],
@@ -547,7 +569,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'bench-press', tr: 'Bench press', en: 'Barbell bench press',
+    id: 'bench-press', tr: 'Bench press', trAlt: 'Göğüs presi', en: 'Barbell bench press',
     difficulty: 'ORTA', equipTr: 'Bench + Bar', equipEn: 'Flat bench, barbell',
     primary: ['pecSternal', 'pecClav', 'deltFront', 'triLat', 'triLong'],
     secondary: ['serratus', 'trapMid', 'absUpper', 'lat'],
@@ -561,7 +583,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'incline-press', tr: 'Incline dumbbell pres', en: 'Incline dumbbell press',
+    id: 'incline-press', tr: 'Incline dumbbell pres', trAlt: 'Eğik sehpada dumbbell pres', en: 'Incline dumbbell press',
     difficulty: 'ORTA', equipTr: 'Bank (30°) + dumbbell', equipEn: 'Incline bench, dumbbells',
     primary: ['pecClav', 'deltFront', 'triLat'],
     secondary: ['serratus'],
@@ -574,7 +596,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'shoulder-press', tr: 'Omuz pres', en: 'Overhead press',
+    id: 'shoulder-press', tr: 'Omuz pres', trAlt: 'Shoulder press', en: 'Overhead press',
     difficulty: 'ORTA', equipTr: 'Bar/dumbbell/makine', equipEn: 'Barbell, dumbbells, or machine',
     primary: ['deltFront', 'triLat', 'triLong'],
     secondary: ['trapUpper', 'absUpper'],
@@ -587,7 +609,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'barbell-row', tr: 'Barbell row', en: 'Barbell row',
+    id: 'barbell-row', tr: 'Barbell row', trAlt: 'Barbell kürek çekme', en: 'Barbell row',
     difficulty: 'ORTA', equipTr: 'Bar', equipEn: 'Barbell',
     primary: ['lat', 'trapMid', 'deltPost', 'biceps'],
     secondary: ['erector', 'forearmFlex'],
@@ -600,7 +622,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'single-arm-row', tr: 'Tek kol dumbbell row', en: 'Single-arm dumbbell row',
+    id: 'single-arm-row', tr: 'Tek kol dumbbell row', trAlt: 'Tek kol kürek çekme', en: 'Single-arm dumbbell row',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Bank + dumbbell', equipEn: 'Bench, dumbbell',
     primary: ['lat', 'trapMid', 'biceps'],
     secondary: ['deltPost'],
@@ -613,7 +635,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'reverse-fly', tr: 'Dumbbell reverse fly', en: 'Dumbbell reverse fly',
+    id: 'reverse-fly', tr: 'Dumbbell reverse fly', trAlt: 'Arka omuz açış', en: 'Dumbbell reverse fly',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Dumbbell', equipEn: 'Dumbbells',
     primary: ['deltPost', 'trapMid'],
     secondary: ['infra'],
@@ -626,7 +648,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'lateral-raise', tr: 'Lateral raise', en: 'Lateral raise',
+    id: 'lateral-raise', tr: 'Lateral raise', trAlt: 'Yana açış', en: 'Lateral raise',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Dumbbell', equipEn: 'Dumbbells',
     primary: ['deltFront'],
     secondary: ['deltPost'],
@@ -639,7 +661,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'biceps-curl', tr: 'Biceps curl', en: 'Biceps curl',
+    id: 'biceps-curl', tr: 'Biceps curl', trAlt: 'Kol bükme', en: 'Biceps curl',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Dumbbell/bar', equipEn: 'Dumbbells or barbell',
     primary: ['biceps', 'brachialis'],
     secondary: ['forearmFlex'],
@@ -651,7 +673,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'shrug', tr: 'Omuz silkme', en: 'Shrug',
+    id: 'shrug', tr: 'Omuz silkme', trAlt: 'Shrug', en: 'Shrug',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Dumbbell/bar', equipEn: 'Dumbbells or barbell',
     primary: ['trapUpper'],
     secondary: [],
@@ -676,7 +698,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'side-plank', tr: 'Side plank', en: 'Side plank',
+    id: 'side-plank', tr: 'Side plank', trAlt: 'Yan plank', en: 'Side plank',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Mat', equipEn: 'Mat',
     primary: ['oblique'],
     secondary: ['gluteMed'],
@@ -714,7 +736,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'ab-wheel-rollout', tr: 'Ab wheel rollout', en: 'Ab wheel rollout',
+    id: 'ab-wheel-rollout', tr: 'Ab wheel rollout', trAlt: 'Tekerlekle açılma', en: 'Ab wheel rollout',
     difficulty: 'ORTA', equipTr: 'Ab wheel', equipEn: 'Ab wheel',
     primary: ['absMid', 'absUpper'],
     secondary: ['lat'],
@@ -727,7 +749,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'hanging-knee-raise', tr: 'Asılı diz çekme', en: 'Hanging knee raise',
+    id: 'hanging-knee-raise', tr: 'Asılı diz çekme', trAlt: 'Hanging knee raise', en: 'Hanging knee raise',
     difficulty: 'ORTA', equipTr: 'Barfiks barı', equipEn: 'Pull-up bar',
     primary: ['absLower', 'absMid'],
     secondary: ['forearmFlex'],
@@ -739,7 +761,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'suitcase-carry', tr: 'Suitcase carry', en: 'Suitcase carry',
+    id: 'suitcase-carry', tr: 'Suitcase carry', trAlt: 'Tek el ağırlık taşıma', en: 'Suitcase carry',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Kettlebell/dumbbell', equipEn: 'Kettlebell or dumbbell',
     primary: ['oblique', 'absMid'],
     secondary: ['forearmFlex', 'trapUpper'],
@@ -751,7 +773,7 @@ export const EXERCISES: Exercise[] = [
     poseReviewed: false,
   },
   {
-    id: 'glute-bridge', tr: 'Kalça köprüsü', en: 'Glute bridge',
+    id: 'glute-bridge', tr: 'Kalça köprüsü', trAlt: 'Glute bridge', en: 'Glute bridge',
     difficulty: 'BAŞLANGIÇ', equipTr: 'Mat', equipEn: 'Mat',
     primary: ['gluteMax'],
     secondary: ['hamBF', 'absMid'],
@@ -760,6 +782,174 @@ export const EXERCISES: Exercise[] = [
     steps: [
       ['Sırtüstü, dizler bükük, ayaklar yerde.', 'Lie on back, knees bent, feet flat.'],
       ['Kalçayı yukarı it, üstte 1-2 sn sık.', 'Drive hips up, squeeze 1-2s at the top.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'leg-press', tr: 'Leg press', trAlt: 'Bacak presi', en: 'Leg press',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Leg press makinesi', equipEn: 'Leg press machine',
+    primary: ['quadRF', 'quadVL', 'quadVM', 'gluteMax'],
+    secondary: ['adductors', 'hamBF', 'soleus'],
+    archetype: 'leg_press_seated',
+    setsHint: '3×10-12', restHint: '90-120 sn',
+    steps: [
+      ['Sırtı ve beli yastığa yasla, ayaklar omuz genişliğinde platformda.', 'Back and lower back against the pad, feet shoulder-width on the platform.'],
+      ['Dizleri göğse doğru kontrollü indir, bel yastıktan kalkmasın.', 'Lower the knees toward the chest under control; keep the lower back on the pad.'],
+      ['Topuklardan it; dizi sonda kilitleme.', 'Drive through the heels; don\'t lock the knees at the top.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'leg-extension', tr: 'Leg extension', trAlt: 'Ön bacak makinesi', en: 'Leg extension',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Leg extension makinesi', equipEn: 'Leg extension machine',
+    primary: ['quadRF', 'quadVL', 'quadVM'],
+    secondary: [],
+    archetype: 'leg_extension_seated',
+    setsHint: '3×12-15', restHint: '60 sn',
+    steps: [
+      ['Diz ekseni makinenin dönme ekseniyle aynı hizada otur.', 'Sit so the knee joint lines up with the machine\'s pivot.'],
+      ['Dizi açarak kaldır, üstte 1 sn sık.', 'Extend the knee and squeeze for 1s at the top.'],
+      ['Yavaş indir — asıl gelişim inişte.', 'Lower slowly; the lowering half is where the work is.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'leg-curl', tr: 'Leg curl', trAlt: 'Arka bacak makinesi', en: 'Leg curl',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Leg curl makinesi', equipEn: 'Leg curl machine',
+    primary: ['hamBF', 'hamST'],
+    secondary: ['gastroLat', 'gastroMed'],
+    archetype: 'leg_curl_seated',
+    setsHint: '3×12', restHint: '60-75 sn',
+    steps: [
+      ['Yastık aşil tendonunun hemen üstünde olsun.', 'Set the pad just above the Achilles tendon.'],
+      ['Topuğu kalçaya doğru çek, üstte 1 sn sık.', 'Curl the heel toward the hips, squeeze 1s.'],
+      ['Kontrollü aç; kalça yastıktan kalkmasın.', 'Return under control; keep the hips down.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'lat-pulldown', tr: 'Lat pulldown', trAlt: 'Lat çekişi', en: 'Lat pulldown',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Pulldown makinesi', equipEn: 'Lat pulldown machine',
+    primary: ['lat', 'trapMid'],
+    secondary: ['biceps', 'brachialis', 'deltPost', 'trapLower'],
+    archetype: 'lat_pulldown_seated',
+    setsHint: '3×10-12', restHint: '90 sn',
+    steps: [
+      ['Uyluk yastığını sıkıştır, barı omuzdan geniş tut.', 'Wedge the thigh pad, grip the bar wider than the shoulders.'],
+      ['Barı köprücük kemiğine çek; dirsekler aşağı-geri.', 'Pull the bar to the collarbone; elbows down and back.'],
+      ['Kürek kemiklerini önce indir, sonra kolu kullan.', 'Depress the shoulder blades first, then pull with the arms.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'seated-cable-row', tr: 'Oturarak kürek', trAlt: 'Seated cable row', en: 'Seated cable row',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo kürek makinesi', equipEn: 'Seated row machine',
+    primary: ['trapMid', 'lat', 'deltPost'],
+    secondary: ['biceps', 'brachialis', 'erector', 'trapLower'],
+    archetype: 'seated_row_cable',
+    setsHint: '3×10-12', restHint: '90 sn',
+    steps: [
+      ['Dizler hafif bükük, gövde dik.', 'Knees slightly bent, torso upright.'],
+      ['Tutamağı göbeğe çek; dirsekler gövdeye yakın.', 'Pull the handle to the navel; elbows close to the body.'],
+      ['Göğsü aç, omuzları kulaktan uzak tut.', 'Open the chest, keep the shoulders away from the ears.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'chest-supported-row', tr: 'Göğüs destekli kürek', trAlt: 'Chest-supported row', en: 'Chest-supported row',
+    difficulty: 'ORTA', equipTr: 'Eğik sehpa + dumbbell', equipEn: 'Incline bench, dumbbells',
+    primary: ['trapMid', 'deltPost', 'lat'],
+    secondary: ['biceps', 'brachialis', 'trapLower'],
+    archetype: 'seated_row_cable',
+    setsHint: '4×10', restHint: '75 sn',
+    steps: [
+      ['Göğüs sehpaya yaslı — bel devre dışı, sadece sırt çalışır.', 'Chest on the pad; the lower back is out of it, only the back works.'],
+      ['Dumbbell\'ları kaburgaya doğru çek.', 'Row the dumbbells toward the ribs.'],
+      ['Üstte kürek kemiklerini sık.', 'Squeeze the shoulder blades at the top.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'machine-chest-press', tr: 'Makine göğüs pres', trAlt: 'Machine chest press', en: 'Machine chest press',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Göğüs pres makinesi', equipEn: 'Chest press machine',
+    primary: ['pecSternal', 'pecClav'],
+    secondary: ['deltFront', 'triLat', 'triLong'],
+    archetype: 'chest_press_seated',
+    setsHint: '3×10-12', restHint: '90 sn',
+    steps: [
+      ['Tutamaklar göğüs ortası hizasında olacak şekilde koltuğu ayarla.', 'Set the seat so the handles line up with mid-chest.'],
+      ['Kürek kemikleri sıkı, öne it.', 'Shoulder blades tight, press forward.'],
+      ['Kontrollü geri gel; dirsek omuz hizasını geçmesin.', 'Return under control; don\'t take the elbows behind the shoulder line.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'pullup', tr: 'Barfiks', trAlt: 'Pull-up', en: 'Pull-up',
+    difficulty: 'İLERİ', equipTr: 'Barfiks barı', equipEn: 'Pull-up bar',
+    primary: ['lat', 'trapMid'],
+    secondary: ['biceps', 'brachialis', 'deltPost', 'forearmFlex'],
+    archetype: 'pull_up_hang',
+    setsHint: '3×AMRAP', restHint: '120 sn',
+    steps: [
+      ['Bara omuzdan geniş asıl, omuzları aktif tut.', 'Hang wider than shoulder-width, shoulders active.'],
+      ['Çeneyi barın üstüne çıkar; sallanma.', 'Pull until the chin clears the bar; no swinging.'],
+      ['Tam kol uzunluğuna kontrollü in.', 'Lower under control to full arm length.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'triceps-pushdown', tr: 'Triceps pushdown', trAlt: 'Triceps itişi', en: 'Triceps pushdown',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo makinesi', equipEn: 'Cable machine',
+    primary: ['triLat', 'triLong'],
+    secondary: ['forearmExt'],
+    archetype: 'triceps_pushdown_standing',
+    setsHint: '3×12-15', restHint: '45-60 sn',
+    steps: [
+      ['Dirsekler gövdeye yapışık, hareket etmez.', 'Elbows pinned to the sides; they do not travel.'],
+      ['Yalnızca ön kolu aşağı aç, altta 1 sn sık.', 'Only the forearm moves down; squeeze 1s at the bottom.'],
+      ['Gövdeyi öne yaslayıp ağırlığı itme.', 'Don\'t lean in and push the weight with your body.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'face-pull', tr: 'Yüz çekişi', trAlt: 'Face pull', en: 'Face pull',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Kablo + halat', equipEn: 'Cable, rope',
+    primary: ['deltPost', 'trapMid'],
+    secondary: ['infra', 'teres', 'trapLower'],
+    archetype: 'face_pull_standing',
+    setsHint: '3-4×15', restHint: '45-60 sn',
+    steps: [
+      ['Kabloyu göz hizasına ayarla.', 'Set the cable at eye height.'],
+      ['Halatı yüze çek; dirsekler yukarı-geri.', 'Pull the rope to the face; elbows up and back.'],
+      ['Bitişte omuzları dışa döndür — omuz sağlığı burada.', 'Finish with external rotation; that is the shoulder-health part.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'dead-bug', tr: 'Ölü böcek', trAlt: 'Dead bug', en: 'Dead bug',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Mat', equipEn: 'Mat',
+    primary: ['absMid', 'absLower'],
+    secondary: ['absUpper', 'oblique'],
+    archetype: 'dead_bug_supine',
+    setsHint: '3×8-10/taraf', restHint: '30-45 sn',
+    steps: [
+      ['Sırtüstü; kalça ve diz 90°, kollar tavana.', 'On your back; hips and knees at 90°, arms to the ceiling.'],
+      ['Çapraz kol ve bacağı yavaşça uzat.', 'Slowly extend the opposite arm and leg.'],
+      ['Bel yere yapışık kalsın — kalkıyorsa mesafeyi kısalt.', 'Keep the lower back flat; shorten the reach if it lifts.'],
+    ],
+    poseReviewed: false,
+  },
+  {
+    id: 'mcgill-curl-up', tr: 'McGill curl-up', en: 'McGill curl-up',
+    difficulty: 'BAŞLANGIÇ', equipTr: 'Mat', equipEn: 'Mat',
+    primary: ['absUpper', 'absMid'],
+    secondary: ['oblique'],
+    archetype: 'curl_up_supine',
+    setsHint: '5-3-1 piramit', restHint: '30 sn',
+    steps: [
+      ['Eller belin altında, bir diz bükük diğer bacak düz.', 'Hands under the lower back, one knee bent and the other leg straight.'],
+      ['Baş ve omuzları 2-3 cm kaldır, 8 sn tut.', 'Lift the head and shoulders 2-3 cm and hold 8s.'],
+      ['Boyun bükülmez — baş, boyun ve gövde tek parça.', 'The neck does not bend; head, neck and trunk move as one.'],
     ],
     poseReviewed: false,
   },
@@ -799,8 +989,8 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Bitiş: yürüyüş bandı eğimli': null,
   'Bulgarian split squat': 'bulgarian-split-squat',
   'Calf raise': 'calf-raise',
-  'Chest-supported dumbbell row': null,
-  'Dead hang (barda asılma)': null,
+  'Chest-supported dumbbell row': 'chest-supported-row',
+  'Dead hang (barda asılma)': 'pullup',
   'Deadlift (trap bar tercih) ': 'deadlift',
   'Devre: goblet squat → şınav → dumbbell row → kettlebell swing → mountain climber': null,
   'Dumbbell devre: curl → lateral raise → pushdown': null,
@@ -811,8 +1001,8 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Goblet squat': 'goblet-squat',
   'Goblet squat (hafif dumbbell)': 'goblet-squat',
   'Goblet squat veya leg press': 'goblet-squat',
-  'Göğüs pres (makine veya dumbbell)': null,
-  'Göğüs pres (makine)': null,
+  'Göğüs pres (makine veya dumbbell)': 'machine-chest-press',
+  'Göğüs pres (makine)': 'machine-chest-press',
   'Günün ilk hareketi — boş bar / hafif': null,
   'Hack squat veya front squat': 'front-hack-squat',
   'Hammer curl + overhead triceps (süperset)': 'biceps-curl',
@@ -820,7 +1010,7 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Incline dumbbell pres': 'incline-press',
   'Isınma: hafif kardiyo': null,
   'Kablo dış rotasyon': 'band-external-rotation',
-  'Kablo kürek (chest-supported row)': null,
+  'Kablo kürek (chest-supported row)': 'chest-supported-row',
   'Kalça köprüsü': 'glute-bridge',
   'Kalça köprüsü (glute bridge)': 'glute-bridge',
   'Kalça köprüsü / hip thrust': 'hip-thrust',
@@ -830,20 +1020,20 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Kol çevirme + kedi-deve': 'arm-circles',
   'Kol çevirme + omuz silkme': 'arm-circles',
   'Kürek / kol ergometresi / ip atlama': null,
-  'Lat pulldown': null,
-  'Lat pulldown (geniş)': null,
-  'Lat pulldown (nötr tutuş)': null,
-  'Lat pulldown veya barfiks': null,
+  'Lat pulldown': 'lat-pulldown',
+  'Lat pulldown (geniş)': 'lat-pulldown',
+  'Lat pulldown (nötr tutuş)': 'lat-pulldown',
+  'Lat pulldown veya barfiks': 'lat-pulldown',
   'Lateral raise': 'lateral-raise',
-  'Leg curl': null,
-  'Leg extension': null,
-  'Leg press': null,
+  'Leg curl': 'leg-curl',
+  'Leg extension': 'leg-extension',
+  'Leg press': 'leg-press',
   'Lunge + gövde rotasyonu (world\'s greatest stretch)': 'worlds-greatest-stretch',
-  'McGill curl-up': null,
+  'McGill curl-up': 'mcgill-curl-up',
   'Omuz pres (makine veya dumbbell)': 'shoulder-press',
   'Omuz silkme (shrug)': 'shrug',
-  'Oturarak kürek': null,
-  'Oturarak kürek (seated row)': null,
+  'Oturarak kürek': 'seated-cable-row',
+  'Oturarak kürek (seated row)': 'seated-cable-row',
   'Overhead press (bar)': 'shoulder-press',
   'Pallof pres': 'pallof-press',
   'Plank': 'plank',
@@ -865,15 +1055,15 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Torasik açılma (yan yatarak kitap açma)': null,
   'Vücut ağırlığıyla squat': 'goblet-squat',
   'Walking lunge': 'walking-lunge',
-  'Weighted barfiks veya ağır lat pulldown': null,
+  'Weighted barfiks veya ağır lat pulldown': 'pullup',
   'Yan yatarak bacak kaldırma / bantlı yan adım': null,
   'Yerinde hafif koşu / ip atlama': null,
   'Yerinde yürüyüş / hafif zıplama': null,
-  'Yüz çekişi': null,
-  'Yüz çekişi (face pull)': null,
+  'Yüz çekişi': 'face-pull',
+  'Yüz çekişi (face pull)': 'face-pull',
   'Çene içeri çekme (chin tuck)': 'chin-tuck',
-  'Ölü böcek': null,
-  'Ölü böcek (dead bug)': null,
+  'Ölü böcek': 'dead-bug',
+  'Ölü böcek (dead bug)': 'dead-bug',
 };
 
 const BY_ID = new Map(EXERCISES.map((e) => [e.id, e]));
@@ -892,8 +1082,12 @@ export function exerciseByName(name: string | undefined): Exercise | null {
   const exact = NAME_TO_EXERCISE[name];
   if (exact !== undefined) return exact ? (BY_ID.get(exact) ?? null) : null;
   const needle = name.toLocaleLowerCase('tr');
-  const hit = EXERCISES.find(
-    (e) => needle.includes(e.tr.toLocaleLowerCase('tr')) || needle.includes(e.en.toLocaleLowerCase('tr')),
+  const hit = EXERCISES.find((e) =>
+    exerciseNames(e).some((n) => needle.includes(n.toLocaleLowerCase('tr'))),
   );
   return hit ?? null;
 }
+
+/** Every name a movement answers to — display and search both read this. */
+export const exerciseNames = (e: Exercise): string[] =>
+  e.trAlt ? [e.tr, e.trAlt, e.en] : [e.tr, e.en];
