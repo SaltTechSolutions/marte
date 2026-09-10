@@ -271,11 +271,36 @@ export function RigFigure({
             <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
           </G>
         )}
-        {/* Bacak presi kızağı: ayağın ittiği platform. Ayak yerde değil, o
-            yüzden zemine değil ayağın kendisine göre konumlanıyor. */}
-        {rig.prop === 'sled' && (
-          <Rect key="sled" x={S0.ankle[0] + 6} y={S0.ankle[1] - 72} width={18} height={150} rx={6} fill={metal} stroke={line} />
-        )}
+        {/* Bacak presi MAKİNESİ: koltuk + sırt dayaması + zemine inen ayak +
+            itilen platform. Yalnızca platform çizilince figür zeminin 110px
+            üstünde hiçbir şeyin üstünde oturuyordu — `prop` tek değer aldığı
+            için `sled` seçmek `seatback`'i düşürüyor. Bir kızak yalnızca
+            bacak presinde bulunduğuna göre tek prop bütün makineyi çizer. */}
+        {rig.prop === 'sled' && (() => {
+          const dx = S0.thorax[0] - S0.pelvis[0];
+          const dy = S0.thorax[1] - S0.pelvis[1];
+          const L = Math.hypot(dx, dy) || 1;
+          let nx = dy / L;
+          let ny = -dx / L;
+          // Bacaklar önde; sırt dayaması onların ters yönünde.
+          if ((S0.knee[0] - S0.pelvis[0]) * nx + (S0.knee[1] - S0.pelvis[1]) * ny > 0) {
+            nx = -nx;
+            ny = -ny;
+          }
+          const o = 30;
+          const seatA: Vec = [S0.pelvis[0] + nx * o, S0.pelvis[1] + ny * o];
+          const seatB: Vec = [S0.thorax[0] + nx * o + (dx / L) * 26, S0.thorax[1] + ny * o + (dy / L) * 26];
+          const padX = S0.pelvis[0] + nx * 16;
+          const padY = S0.pelvis[1] + ny * 16;
+          return (
+            <G key="sled">
+              <Path d={capsule(seatA, seatB, 22, 19)} fill={colors.surf2} stroke={line} />
+              <Path d={capsule([padX, padY], [padX + 78, padY + 10], 18, 15)} fill={colors.surf2} stroke={line} />
+              <Rect x={padX + 4} y={padY + 14} width={16} height={Math.max(0, GROUND - padY - 14)} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.ankle[0] + 6} y={S0.ankle[1] - 72} width={18} height={150} rx={6} fill={metal} stroke={line} />
+            </G>
+          );
+        })()}
         {/* Step-up: ayağın çıktığı basamak. */}
         {rig.prop === 'box' && (
           <Rect

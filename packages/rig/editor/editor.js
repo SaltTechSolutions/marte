@@ -69,7 +69,6 @@ let playT = 0;
 let scrubT = null;
 let dragging = null;
 let dirty = false;
-let onion = true;
 let filter = '';
 /** Mobil önizleme: hangi cihaz ve açık mı. */
 let phoneOn = true;
@@ -479,6 +478,9 @@ function drawPose(svg, e, p) {
   const limb = mkLimb(seg);
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
+  // Ekipman figürün ARKASINDA: sahne önce kurulur. Konumlar 0. karenin
+  // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
+  drawProps(e, skeleton(e, poseAt(e, 0).p), push);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
   // çiziyor, ad verilmeyince kapsüle düşüyor. Önizleme bu yüzden uygulamanın
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
@@ -592,28 +594,6 @@ function draw() {
   // opak kalıyor ki tabağın sınırı belirsizleşmesin.
   const plate = plateAt;
 
-  // Gölge: bir önceki ve bir sonraki karenin izi. Çömelmenin dibini yazarken
-  // tepesini görmek, iki kareyi ilişkilendirmenin tek yolu.
-  if (onion && editable()) {
-    const ghost = css('--ghost');
-    [kfIndex - 1, kfIndex + 1].forEach((i) => {
-      const k = e.kf[i];
-      if (!k) return;
-      const gp = fillPose(k.p);
-      const gs = skeleton(e, gp);
-      const bones = [
-        [gs.pelvis, gs.knee], [gs.knee, gs.ankle], [gs.pelvis, gs.lumbar], [gs.lumbar, gs.thorax],
-        [gs.thorax, gs.neck], [gs.sh, gs.elbow], [gs.elbow, gs.hand],
-        ...(showFarLeg(e) ? [[gs.hipF, gs.kneeF], [gs.kneeF, gs.ankleF]] : []),
-      ];
-      bones.forEach(([a, b]) => svg.appendChild(el('line', {
-        x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: ghost, 'stroke-width': 7,
-        'stroke-linecap': 'round', opacity: .55,
-      })));
-      svg.appendChild(el('circle', { cx: gs.head[0], cy: gs.head[1], r: 20, fill: 'none', stroke: ghost, 'stroke-width': 5, opacity: .55 }));
-    });
-  }
-
   push([
     el('ellipse', { cx: S.pelvis[0], cy: GROUND + 4, rx: 96, ry: 12, fill: floor, opacity: .25 }),
     el('line', { x1: S0.pelvis[0] - 220, y1: GROUND, x2: S0.pelvis[0] + 280, y2: GROUND, stroke: floor, 'stroke-width': 2 }),
@@ -650,41 +630,7 @@ function draw() {
     return drawHandles(svg, e, S, view);
   }
 
-  if (e.prop === 'bar') push([
-    el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
-    el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
-    el('rect', { x: S0.hand[0] + 138, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
-  ]);
-  if (e.prop === 'box') push([el('rect', { x: S0.ankle[0] - 62, y: S0.ankle[1] + 12, width: 150, height: Math.max(0, GROUND - S0.ankle[1] - 12), rx: 6, fill: surf2, stroke: line })]);
-  if (e.prop === 'hipbench') push([
-    el('rect', { x: S0.thorax[0] - 96, y: S0.thorax[1] + 26, width: 210, height: 18, rx: 8, fill: surf2, stroke: line }),
-    el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
-    el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
-  ]);
-  // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması. Makine
-  // hareketlerinin tamamı buna yaslanıyor — lat pulldown, oturarak kürek,
-  // göğüs presi, bacak ekstansiyonu.
-  if (e.prop === 'seatback') push([
-    el('rect', { x: S0.pelvis[0] - 46, y: S0.pelvis[1] + 22, width: 150, height: 18, rx: 8, fill: surf2, stroke: line }),
-    el('rect', { x: S0.pelvis[0] - 64, y: S0.pelvis[1] - 96, width: 20, height: 122, rx: 8, fill: surf2, stroke: line }),
-    el('rect', { x: S0.pelvis[0] - 32, y: S0.pelvis[1] + 40, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 40), fill: surf2, stroke: line }),
-  ]);
-  // Kızak: bacak presinde ayağın bastığı eğik platform. Ayak yerde DEĞİL,
-  // bu yüzden zemin yerine ayağın kendisine göre çiziliyor.
-  if (e.prop === 'sled') push([
-    el('rect', { x: S0.ankle[0] + 6, y: S0.ankle[1] - 72, width: 18, height: 150, rx: 6, fill: metal, stroke: line }),
-  ]);
-  if (e.prop === 'bench' && e.mode === 'bench') {
-    const t0 = poseAt(e, 0).p.torso;
-    const deg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
-    svg.appendChild(el('g', { transform: `rotate(${deg} ${S0.pelvis[0]} ${S0.pelvis[1]})` }, [
-      el('rect', { x: S0.pelvis[0] - 70, y: S0.pelvis[1] + 24, width: 330, height: 20, rx: 10, fill: surf2, stroke: line })]));
-    push([el('rect', { x: S0.pelvis[0] - 56, y: S0.pelvis[1] + 44, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 44), fill: surf2, stroke: line })]);
-  }
-  if (e.prop === 'bench' && e.mode !== 'bench') push([
-    el('rect', { x: S0.ankleF[0] - 70, y: S0.ankleF[1] + 16, width: 150, height: 16, rx: 8, fill: surf2, stroke: line }),
-  ]);
-
+  drawProps(e, S0, push);
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
@@ -758,6 +704,73 @@ function draw() {
   if (e.bar === 'hands') push(plate(S.bar));
 
   drawHandles(svg, e, S, view);
+}
+
+/**
+ * Sahnedeki ekipman — sehpa, basamak, barfiks barı, koltuk, bacak presi.
+ *
+ * Ana sahne ve telefon önizlemesi AYNI ekipmanı çizmek zorunda: önizleme
+ * bunları hiç çizmiyordu ve figür sehpasız, barsız, koltuksuz görünüyordu —
+ * bacak presinde adam zeminin 110px üstünde havada oturuyordu. Uygulamanın
+ * `RigFigure.tsx`'i hepsini çiziyor; önizlemenin işi onu göstermek.
+ *
+ * Kareler arası değişmeyen şey sahne: konumlar 0. karenin iskeletinden
+ * (`S0`) okunuyor, yoksa bar figürle birlikte kayardı.
+ */
+function drawProps(e, S0, push) {
+  const surf2 = css('--surf2'), metal = css('--metal'), line = css('--line');
+    if (e.prop === 'bar') push([
+      el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
+      el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
+      el('rect', { x: S0.hand[0] + 138, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
+    ]);
+    if (e.prop === 'box') push([el('rect', { x: S0.ankle[0] - 62, y: S0.ankle[1] + 12, width: 150, height: Math.max(0, GROUND - S0.ankle[1] - 12), rx: 6, fill: surf2, stroke: line })]);
+    if (e.prop === 'hipbench') push([
+      el('rect', { x: S0.thorax[0] - 96, y: S0.thorax[1] + 26, width: 210, height: 18, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
+      el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
+    ]);
+    // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması. Makine
+    // hareketlerinin tamamı buna yaslanıyor — lat pulldown, oturarak kürek,
+    // göğüs presi, bacak ekstansiyonu.
+    if (e.prop === 'seatback') push([
+      el('rect', { x: S0.pelvis[0] - 46, y: S0.pelvis[1] + 22, width: 150, height: 18, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.pelvis[0] - 64, y: S0.pelvis[1] - 96, width: 20, height: 122, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.pelvis[0] - 32, y: S0.pelvis[1] + 40, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 40), fill: surf2, stroke: line }),
+    ]);
+    // Bacak presi makinesi: koltuk + sırt dayaması + zemine inen ayak + itilen
+    // platform. Yalnızca platform çizildiğinde figür zeminin 110px üstünde
+    // HİÇBİR ŞEYİN üstünde oturuyordu — `prop` tek değer aldığı için `sled`
+    // seçmek `seatback`'i düşürüyor. Bir kızak yalnızca bacak presinde
+    // bulunduğuna göre, tek prop bütün makineyi çizer.
+    if (e.prop === 'sled') {
+      const dx = S0.thorax[0] - S0.pelvis[0], dy = S0.thorax[1] - S0.pelvis[1];
+      const L = Math.hypot(dx, dy) || 1;
+      let nx = dy / L, ny = -dx / L;
+      // Bacaklar önde; sırt dayaması onların ters yönünde.
+      if ((S0.knee[0] - S0.pelvis[0]) * nx + (S0.knee[1] - S0.pelvis[1]) * ny > 0) { nx = -nx; ny = -ny; }
+      const o = 30;
+      const seatA = [S0.pelvis[0] + nx * o, S0.pelvis[1] + ny * o];
+      const seatB = [S0.thorax[0] + nx * o + (dx / L) * 26, S0.thorax[1] + ny * o + (dy / L) * 26];
+      const padX = S0.pelvis[0] + nx * 16, padY = S0.pelvis[1] + ny * 16;
+      push([
+        el('path', { d: capsule(seatA, seatB, 22, 19), fill: surf2, stroke: line }),
+        el('path', { d: capsule([padX, padY], [padX + 78, padY + 10], 18, 15), fill: surf2, stroke: line }),
+        el('rect', { x: padX + 4, y: padY + 14, width: 16, height: Math.max(0, GROUND - padY - 14), fill: surf2, stroke: line }),
+        el('rect', { x: S0.ankle[0] + 6, y: S0.ankle[1] - 72, width: 18, height: 150, rx: 6, fill: metal, stroke: line }),
+      ]);
+    }
+    if (e.prop === 'bench' && e.mode === 'bench') {
+      const t0 = poseAt(e, 0).p.torso;
+      const deg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
+      push([el('g', { transform: `rotate(${deg} ${S0.pelvis[0]} ${S0.pelvis[1]})` }, [
+        el('rect', { x: S0.pelvis[0] - 70, y: S0.pelvis[1] + 24, width: 330, height: 20, rx: 10, fill: surf2, stroke: line })])]);
+      push([el('rect', { x: S0.pelvis[0] - 56, y: S0.pelvis[1] + 44, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 44), fill: surf2, stroke: line })]);
+    }
+    if (e.prop === 'bench' && e.mode !== 'bench') push([
+      el('rect', { x: S0.ankleF[0] - 70, y: S0.ankleF[1] + 16, width: 150, height: 16, rx: 8, fill: surf2, stroke: line }),
+    ]);
+
 }
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */
@@ -1177,12 +1190,6 @@ $('parts').onclick = () => {
   useParts = !useParts;
   $('parts').setAttribute('aria-pressed', String(useParts));
   $('parts').textContent = useParts ? 'Parça' : 'Kapsül';
-  draw();
-};
-
-$('onion').onclick = () => {
-  onion = !onion;
-  $('onion').setAttribute('aria-pressed', String(onion));
   draw();
 };
 

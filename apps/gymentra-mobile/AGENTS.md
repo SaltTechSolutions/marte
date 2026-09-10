@@ -286,8 +286,6 @@ Kullanım notları:
 - **Zaman çubuğu** kareler ARASINI da gösterir. Geçiş hataları orada yaşar
   (kolun uzun yoldan dönüp yerin içinden geçmesi böyle bulundu). Ara karede
   düzenleme kapalıdır: o poz hiçbir kareye ait değildir.
-- **Gölge** komşu karelerin izini çizer; çömelmenin dibini yazarken tepesini
-  görmenin tek yolu.
 - **Denetim uyarısına tıklamak** sorunun yaşandığı ana götürür.
 - `⌘Z` geri alır, `⇧⌘Z` ileri alır, `⌘S` kaydeder, boşluk oynatır. Ok tuşları
   seçili kaydırıcıyı 1° (Shift ile 5°) oynatır.

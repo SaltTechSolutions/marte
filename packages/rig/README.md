@@ -118,7 +118,6 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
   Kalçayı sürüklemek iki kemiği birden çözer (çömelme derinliği).
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
-- Gölge komşu karelerin izini çizer.
 - Denetim uyarısına tıklamak sorunun yaşandığı ana götürür.
 - `⌘Z` / `⇧⌘Z` / `⌘S`, boşluk oynatır, ok tuşları seçili kaydırıcıyı 1° (Shift
   ile 5°) oynatır. **Diske dön** kaydedilmemiş her şeyi atar.

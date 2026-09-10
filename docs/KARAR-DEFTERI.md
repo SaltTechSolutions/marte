@@ -89,7 +89,14 @@ taşımasından kalan yola yazıyordu.
   gövde yönü döndüğü için formül masa üstü pozu imkânsız sayıyordu. Büyüklük
   denetimi her modda duruyor.
 
-**Kapandı (aynı oturum).** Uygulamadaki tabağa editörle aynı saydamlık
+**Kapandı (aynı oturum).** Bacak presinde figür zeminin 110px üstünde
+**hiçbir şeyin üstünde** oturuyordu: `prop` tek değer aldığı için `sled`
+seçmek `seatback`'i düşürüyordu. Bir kızak yalnızca bacak presinde
+bulunduğuna göre `sled` artık bütün makineyi çiziyor (koltuk + sırt dayaması
++ zemine inen ayak + platform). Ekipman çizimi `drawProps` olarak ortak
+fonksiyona alındı — telefon önizlemesi ekipmanı **hiç** çizmiyordu, yani
+sehpasız, barsız, koltuksuz bir figür gösteriyordu. Gölge (onion skin)
+düğmesi ve özelliği kaldırıldı: kullanılmıyordu. Uygulamadaki tabağa editörle aynı saydamlık
 verildi (`fillOpacity .62`) — kafadan sonra çizilmeye başlayınca kafayı
 tamamen örtüyordu, bu oturumda açılan hataydı. Mobil önizleme artık
 uygulamanın çizdiğini çiziyor: parça siluetleri, `headProfile`, ana sahnenin
