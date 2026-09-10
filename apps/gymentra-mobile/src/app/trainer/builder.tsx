@@ -10,10 +10,14 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
 import { newLocalId, saveProgramDays, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
+import { watchProgramTemplates } from '@/data/firebase/programTemplateRepo';
+import { daysFromTemplate, formatDose } from '@/data/programTemplate';
+import { useAuth } from '@/context/AuthContext';
+import { isStaff, tenantIdIf } from '@/data/membership';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
 import { programDays } from '@/data/program';
-import { Program, ProgramDay, ProgramExercise } from '@/data/types';
+import { Program, ProgramDay, ProgramExercise, ProgramTemplate } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { confirmDestructive } from '@/utils/confirm';
@@ -65,7 +69,19 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   const [dayId, setDayId] = useState<string>(programDays(program)[0].id);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pickingFromLibrary, setPickingFromLibrary] = useState(false);
+  const [pickingTemplate, setPickingTemplate] = useState(false);
+  const [templates, setTemplates] = useState<ProgramTemplate[]>([]);
   const [assigning, setAssigning] = useState(false);
+
+  const { activeMembership } = useAuth();
+  const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
+
+  // Şablonlar yalnızca seçici açıkken dinleniyor: kurucuya her girişte 19
+  // belge çekmenin karşılığı yok, antrenörlerin çoğu elle yazmaya devam edecek.
+  useEffect(() => {
+    if (!pickingTemplate || !tenantId) return;
+    return watchProgramTemplates(tenantId, setTemplates);
+  }, [pickingTemplate, tenantId]);
 
   const activeDay = days.find((d) => d.id === dayId) ?? days[0];
   const exercises = activeDay.exercises;
@@ -99,6 +115,23 @@ function ProgramBuilderForm({ program }: { program: Program }) {
         setExpandedId(null);
       },
     });
+  };
+
+  /**
+   * Şablon ATANMAZ, KOPYALANIR — kopyadan sonra bağ yok.
+   *
+   * Şablonun günleri programın günlerinin YERİNE geçer, sonuna eklenmez:
+   * "şablondan başla" düğmesi yalnızca program boşken görünüyor, yani
+   * ezilecek bir şey zaten yok.
+   */
+  const startFromTemplate = (template: ProgramTemplate) => {
+    const next = daysFromTemplate(template, newLocalId);
+    setDays(next);
+    setDayId(next[0].id);
+    setExpandedId(null);
+    setPickingTemplate(false);
+    saveProgramDays(program.id, next, { warmup: template.warmup, templateId: template.id });
+    toast.success(`${template.title} kopyalandı — düzenleyip atayabilirsin.`);
   };
 
   const addFromLibrary = (entryId: string, name: string) => {
@@ -202,7 +235,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     {ex.name}
                   </Text>
                   <Text variant="label" tone="sub" numberOfLines={1}>
-                    {ex.sets} set × {ex.reps} tekrar · {ex.targetWeightKg} kg
+                    {formatDose(ex)}
+                    {ex.type === 'time' ? '' : ` · ${ex.targetWeightKg} kg`}
                   </Text>
                 </View>
                 {(ex.libraryId ? exerciseById(ex.libraryId) : exerciseByName(ex.name)) && (
@@ -252,6 +286,61 @@ function ProgramBuilderForm({ program }: { program: Program }) {
             </View>
           );
         })}
+
+        {/* Şablondan başlama yalnızca program BOŞKEN: dolu bir programın
+            üstüne şablon kopyalamak antrenörün yazdığını sessizce silerdi. */}
+        {exercises.length === 0 && !pickingFromLibrary && (
+          pickingTemplate ? (
+            <View style={{ gap: 8 }}>
+              <Text variant="label" tone="sub">
+                HAZIR ŞABLONLAR
+              </Text>
+              {templates.length === 0 ? (
+                <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
+                  Şablonlar yükleniyor…
+                </Text>
+              ) : (
+                templates.map((t) => (
+                  <Pressable
+                    key={t.id}
+                    onPress={() => startFromTemplate(t)}
+                    style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12, gap: 4, minHeight: 44 }}>
+                    <Text variant="helper" weight="700">
+                      {t.title}
+                    </Text>
+                    <Text variant="label" tone="sub">
+                      {t.level === 'beginner' ? 'Başlangıç' : t.level === 'intermediate' ? 'Orta' : 'Her seviye'} ·{' '}
+                      {t.durationMinutes} dk · {t.days.reduce((n, d) => n + d.exercises.length, 0)} egzersiz
+                      {t.tenantId ? ' · salonun kendi şablonu' : ''}
+                    </Text>
+                    <Text variant="label" tone="sub" numberOfLines={2}>
+                      {t.summary}
+                    </Text>
+                  </Pressable>
+                ))
+              )}
+              <Text variant="label" tone="sub">
+                Şablon kopyalanır, atanmaz — kopyaladıktan sonra üyeye göre serbestçe düzenle.
+              </Text>
+              <Pressable onPress={() => setPickingTemplate(false)}>
+                <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
+                  Vazgeç
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => setPickingTemplate(true)}
+              style={{ borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surf, borderRadius: radius.md, padding: 12, alignItems: 'center', minHeight: 44, justifyContent: 'center' }}>
+              <Text variant="helper" weight="700">
+                Şablondan başla
+              </Text>
+              <Text variant="label" tone="sub">
+                Kanıta dayalı hazır programlar
+              </Text>
+            </Pressable>
+          )
+        )}
 
         {pickingFromLibrary ? (
           <View style={{ gap: 8 }}>

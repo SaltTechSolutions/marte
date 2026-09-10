@@ -72,10 +72,24 @@ export function watchProgram(
  * görmektense ilk günü görmeli. Tek doğruluk kaynağı `days`; `exercises`
  * onun aynası.
  */
-export async function saveProgramDays(programId: string, days: ProgramDay[]): Promise<void> {
+/**
+ * `exercises` aynası bilerek: eski istemciler `days`'i bilmiyor ve ilk günü
+ * tek listelik program sanıyor (PER-17).
+ *
+ * `origin`, şablondan kopyalanınca yazılıyor — ısınma bloğu ve kaynağın
+ * kimliği. Kopyadan sonra şablonla canlı bir bağ YOK; bu alanlar yalnızca
+ * "bu program nereden geldi" sorusunu yanıtlıyor.
+ */
+export async function saveProgramDays(
+  programId: string,
+  days: ProgramDay[],
+  origin?: { warmup?: string; templateId?: string },
+): Promise<void> {
   await updateDoc(doc(db, 'programs', programId), {
     days,
     exercises: days[0]?.exercises ?? [],
+    ...(origin?.warmup ? { warmup: origin.warmup } : {}),
+    ...(origin?.templateId ? { templateId: origin.templateId } : {}),
     updatedAt: serverTimestamp(),
   });
 }

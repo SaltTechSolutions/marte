@@ -74,6 +74,14 @@ export default function WorkoutOverview() {
         <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
           Antrenörün senin için bir program hazırladığında burada göreceksin.
         </Text>
+        {/* Beklerken boş ekran yerine bir şey öğrenmesi mümkün: ne istediğini
+            kendi diliyle seçsin, ne çalışması gerektiğini ve nedenini görsün.
+            Atama yine antrenörde — bu ekran program vermiyor, anlatıyor. */}
+        <Pressable onPress={() => router.push('/member/goals')} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text variant="helper" weight="700" style={{ color: colors.p, textAlign: 'center' }}>
+            Bu arada: ne istediğine bak
+          </Text>
+        </Pressable>
       </View>
     );
   }
