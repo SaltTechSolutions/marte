@@ -17,16 +17,17 @@ Ezberden Expo/React Native API'si yazma. SDK 57 birçok API'yi değiştirdi.
 
 ## 1. Referans dosyaları — ne zaman okunmalı
 
-Token verimliliği için bu dosyalar **her oturumda değil, yalnızca ilgili iş
-yapılırken** okunur:
+Karar defteri **her oturumda** okunur; gerisi token verimliliği için
+**yalnızca ilgili iş yapılırken**:
 
 | Dosya | Ne zaman oku |
 |---|---|
-| `../SCHEMA.md` | Veritabanı şeması, koleksiyon ilişkisi, güvenlik kuralı, yeni sorgu veya index işi yaparken. **Veri katmanına dokunan her değişiklikten önce zorunlu.** |
-| `../plan.md` | İyileştirme/hata giderme işine başlarken; bir madde tamamlanınca güncellemek için |
-| `../designplan.md` | UI/UX tasarım işi yaparken |
+| `../../docs/KARAR-DEFTERI.md` | **Her oturumun başında en üstteki üç kayıt** — önceki oturumların kararları ve bilerek yapılmayanlar orada. Oturum sonunda kod değiştiyse kayıt eklenir. |
+| `../../docs/SCHEMA.md` | Veritabanı şeması, koleksiyon ilişkisi, güvenlik kuralı, yeni sorgu veya index işi yaparken. **Veri katmanına dokunan her değişiklikten önce zorunlu.** |
+| `../../docs/plan.md` | İyileştirme/hata giderme işine başlarken; bir madde tamamlanınca güncellemek için |
+| `../../docs/designplan.md` | UI/UX tasarım işi yaparken |
 
-**Şema değiştiyse `SCHEMA.md` aynı commit içinde güncellenir.** Kod ile
+**Şema değiştiyse `docs/SCHEMA.md` aynı commit içinde güncellenir.** Kod ile
 şema dosyası çelişirse kod doğrudur; dosya hemen düzeltilir.
 
 ---
@@ -264,7 +265,9 @@ elle Firestore'a yazmak yerine seed script'ine ekle — yoksa bir sonraki
   demeden önce çalıştığını gör.
 - Geri alınamaz işlemler (production deploy, veri silme, dış servise gönderim)
   öncesinde onay al.
-- Tamamlanan `plan.md` maddelerini işaretle ve altına nasıl çözüldüğünü yaz.
+- Tamamlanan `docs/plan.md` maddelerini işaretle ve altına nasıl çözüldüğünü yaz.
+- Kod değiştiren oturumun sonunda `docs/KARAR-DEFTERI.md`'ye kayıt ekle:
+  ne karara bağlandı, ne bilerek yapılmadı, ne açık kaldı.
 
 ## Kukla editörü (hareket çizimleri)
 

@@ -9,6 +9,8 @@ Firebase (Auth/Firestore/Storage/Functions) arka ucu; istemci
   (`npm run test:rules`, JDK 21+; `scripts/with-jdk.cjs` bulur).
 
 ## Kurallar
+- Oturum başında `../docs/KARAR-DEFTERI.md`'nin en üstteki üç kaydını oku;
+  kod değiştiren oturumun sonunda kayıt ekle.
 - Kural ya da callable imzası değişince mobildeki yansımaları da güncelle
   (`apps/gymentra-mobile/src/data/seats.ts`, `membershipRepo.ts`).
 - `secrets/`, `.env`, `archive/` asla commit edilmez.
