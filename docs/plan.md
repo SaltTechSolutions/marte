@@ -390,9 +390,20 @@ kullanıldı (build başlarken %91 uyarısı geldi); sonrası ücretli tarife.
 artık build istemiyor, iOS'ta ise `expo-updates`'li ilk sürüm (1.0.1) için
 mutlaka bir build gerekiyor ve o olmadan iOS'ta OTA hiç başlamıyor.
 
-**Henüz gönderilmedi.** Internal track'te hâlâ sürüm kodu 7 var; 8'in
-yüklenmesi ve üç cihaz doğrulamasının production imzasıyla yapılması
-kullanıcı onayı bekliyor.
+**Internal track'e yüklendi ve doğrulandı** *(10 Eylül 2026, kullanıcı
+onayıyla).* `eas submit` ile gitti; doğrulama yine CLI çıktısına değil **Play
+API'sine** bakılarak yapıldı (`play.mjs status`: internal 1.0.0 / sürüm kodu
+**8** `completed`) — 8 Eylül'de CLI "already submitted" hatası verip aslında
+yüklemişti, o yüzden tek doğruluk kaynağı API.
+
+Yeni sürüm yeni bir not istiyor, eskisi taşınmıyor: sürüm kodu 8 için not
+yazıldı (412/500). Gövdesi yine bir **test görevi** — üç doğrulama en üstte,
+altında 7'den farkı (anatomi düzeltmeleri, yeni uyarı metni, çökme
+raporlamasında tekrar sınırı).
+
+**Kalan tek şey cihazda:** Play'den kurup **production imzasıyla** Google
+girişi, push ve QR denenecek. Üretime terfi ondan sonra, %20 kademeli
+başlangıçla (bkz. D-4).
 
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
