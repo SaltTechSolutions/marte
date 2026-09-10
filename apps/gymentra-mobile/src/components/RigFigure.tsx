@@ -336,7 +336,6 @@ export function RigFigure({
           {limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, false, 'fore')}
           {ball('e', S.elbow, 10)}
         </G>
-        {rig.bar === 'hands' && plate(S.bar)}
         {hand('h', S.hand, S.elbow)}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
@@ -346,6 +345,13 @@ export function RigFigure({
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
           <Path d={headProfile()} fill={skin} stroke={line} strokeWidth={1} />
         </G>
+        {/* Elde tutulan halter KAFADAN SONRA: figürün önünde duruyor, o yüzden
+            en üstte. Tabak bilerek saydam — kafanın konumu içinden okunuyor
+            (bkz. `plate`). Önden görünüm barı zaten en üste çiziyordu; yandan
+            görünüm çizmiyordu ve aynı hareket iki görünümde ters katmanlanıyordu.
+            Ölçüldü: `seated_overhead_press` t=0.80'de tabak kafa merkezinin
+            24px içinde, `face_pull_standing` 4px, `lat_pulldown_seated` 2px. */}
+        {rig.bar === 'hands' && plate(S.bar)}
       </>
     );
 

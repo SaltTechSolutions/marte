@@ -792,7 +792,6 @@ function draw() {
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
   push([ball(S.elbow, 10)]);
-  if (e.bar === 'hands') push(plate(S.bar));
   push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
   if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
@@ -809,6 +808,18 @@ function draw() {
           el('path', { d: 'M -4 4 L 21 6 L 14 23 L -8 22 Z', fill: skin, stroke: line }),
         ]),
   );
+
+  // Elde tutulan halter KAFADAN SONRA çiziliyor: figürün önünde duruyor, o
+  // yüzden en üstte — `plate`'in başındaki not zaten bunu söylüyor. Sıra
+  // ilk sürümden beri kafadan ÖNCEYDİ, yani not ile kod ayrışmıştı: tabak
+  // bilerek saydamken kafa onu opak örtüyordu ve saydamlık tam da bu durum
+  // için konmuştu. Önden görünüm barı zaten en üste çiziyor; aynı hareketin
+  // iki görünümü ters katmanlanıyordu.
+  //
+  // Ölçüldü (41 arketip × 41 kare): tabak kafa merkezinin içine giren üç
+  // hareket var — `seated_overhead_press` 24px, `face_pull_standing` 4px,
+  // `lat_pulldown_seated` 2px. İlki bu turdan önce de vardı.
+  if (e.bar === 'hands') push(plate(S.bar));
 
   drawHandles(svg, e, S, view);
 }
