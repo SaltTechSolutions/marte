@@ -75,7 +75,12 @@ taşımasından kalan yola yazıyordu.
 - Yeni `ProgramExercise` alanlarının hepsi **opsiyonel** — zorunlu olsalardı
   yazılmış her program ve her `workout_log` geçersiz olurdu.
 
-**Subtree şüphesi — tarihlerle kapandı.** "Bazı şeyler eski haline gelmiş"
+**Subtree şüphesi — KAPANDI, bir daha açılmayacak.** Kullanıcı kararı
+(2026-09-10): eski depo monorepo ile birleştirildi ve arşivlendi; orada son
+duruma ait bilgi yok, peşine düşülmeyecek. Bu depo `packages/rig` için tek
+doğruluk kaynağıdır.
+
+Şüphe yine de araştırıldı ve tarihler kaybolan iş olmadığını gösteriyor: "Bazı şeyler eski haline gelmiş"
 şüphesi araştırıldı: kesim commit'i `fbb1fb2c` **2026-09-07 16:29:35**,
 monorepo'ya alınışı **16:34:36** — beş dakika sonra. Kesim, varsayılan dala
 yapılan PR #1 birleştirmesi, yani o andaki depo ucu. O beş dakikada kimse
@@ -130,11 +135,6 @@ düz tabağı. `TODOS.md` kaydı reddedilen yön olarak yeniden yazıldı.
   kopyası ve uygulamanın **üretilmiş** `rigArchetypes.json`'ına yazıyor —
   tek yön sözleşmesini kırıyor. `AGENTS.md`'nin "Kukla editörü" bölümü de
   hâlâ onu tarif ediyor.
-- `Tarki1151/antrenman-simulatoru` ile **birebir diff yapılamadı**: oturum
-  farklı sahipten depo eklemiyor (`add_repo` v1 sınırı, izin değil) ve depo
-  kimlik doğrulaması istiyor. Kesin karşılaştırma için o depoyu ilk kaynak
-  alan yeni bir oturum gerekir:
-  `git log --oneline fbb1fb2c..origin/main -- editor/ src/`.
 
 **Nerede.** `packages/rig/{src,data,editor,scripts}` · `docs/program_templates.md`
 · `docs/hareket-adlari-onay.md` · `backend/scripts/{build_exercise_library.py,program_templates.seed.json}`
