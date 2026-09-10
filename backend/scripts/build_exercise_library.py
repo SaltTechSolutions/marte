@@ -551,6 +551,7 @@ ALIAS = {
  "Lat pulldown (nötr tutuş)": "lat-pulldown",
  "Lat pulldown veya barfiks": "lat-pulldown",
  "Weighted barfiks veya ağır lat pulldown": "pullup",
+ "Barfiks": "pullup",
  "Yüz çekişi": "face-pull",
  "Yüz çekişi (face pull)": "face-pull",
  "Dumbbell reverse fly": "reverse-fly",
@@ -559,6 +560,8 @@ ALIAS = {
 
  # arm isolation
  "Lateral raise": "lateral-raise",
+ "Biceps curl": "biceps-curl",
+ "Triceps pushdown": "triceps-pushdown",
  "Biceps curl + triceps pushdown (süperset)": "biceps-curl",
  "Hammer curl + overhead triceps (süperset)": "biceps-curl",
 

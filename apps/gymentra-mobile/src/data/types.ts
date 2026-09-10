@@ -285,6 +285,23 @@ export interface ProgramExercise {
    * isim hâlâ yedek yol.
    */
   libraryId?: string;
+  /**
+   * How the line is measured (PER-18). Absent on every programme written
+   * before templates existed, and `'weight'` is what those meant — an
+   * exercise with a set count, a rep count and a target weight. A template
+   * can also ask for time (`plank`, `3×30 sn`) or plain reps with no load.
+   *
+   * Optional, not defaulted at the type level: making it required would
+   * invalidate every stored `programs` document and every `workout_logs`
+   * entry that mirrors these fields.
+   */
+  type?: 'weight' | 'reps' | 'time';
+  /** Seconds to hold, when `type` is `'time'`. `reps` is meaningless then. */
+  durationSeconds?: number;
+  /** Rest between sets, in seconds — templates prescribe it, trainers may not. */
+  restSeconds?: number;
+  /** The one-line coaching cue the template carries ("topuk yerde, dizler ayak ucu yönünde"). */
+  cue?: string;
 }
 
 /**
@@ -316,8 +333,85 @@ export interface Program {
   exercises: ProgramExercise[];
   /** Çok günlü program. Yazılmadıysa program tek günlüktür. */
   days?: ProgramDay[];
+  /**
+   * Isınma bloğunun şablon kimliği (`warmup-general`, `warmup-short`…).
+   * Şablondan kopyalanan programlarda dolu; antrenörün elle yazdığında boş.
+   */
+  warmup?: string;
+  /** Hangi şablondan kopyalandığı — kopyadan sonra bağ yok, yalnızca köken. */
+  templateId?: string;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/* ---------------------------------------------------------------------- *
+ * Hazır program şablonları (PER-18)
+ * ---------------------------------------------------------------------- */
+
+export type TemplateLevel = 'beginner' | 'intermediate' | 'all';
+
+/** Bir şablon satırı. `Program`'a kopyalanınca `ProgramExercise` olur. */
+export interface TemplateExercise {
+  name: string;
+  type: 'weight' | 'reps' | 'time';
+  sets: number;
+  reps?: number;
+  durationSeconds?: number;
+  restSeconds: number;
+  cue: string;
+  /** Şablon ağırlık söylemez: ilk seansta antrenör belirler. */
+  targetWeightKg: number | null;
+}
+
+export interface TemplateDay {
+  name: string;
+  exercises: TemplateExercise[];
+}
+
+/**
+ * Salonun atayabileceği hazır program (PER-18).
+ *
+ * `tenantId: null` olan belgeler GLOBAL: yayımlanmış kılavuz ve
+ * araştırmalara dayanan, seed betiğiyle yazılan ortak şablonlar. Salonun
+ * kendi şablonları aynı koleksiyonda ama `tenantId` dolu.
+ *
+ * Şablon atanmaz, KOPYALANIR: üyeye giden şey bir `Program`'dır ve
+ * antrenör onu serbestçe düzenler. Şablonun sonradan değişmesi atanmış
+ * programları etkilemez — antrenörün üstünde çalıştığı şeyin altından
+ * veri çekilmemeli.
+ */
+export interface ProgramTemplate {
+  id: string;
+  /** null = global şablon; dolu = o salonun kendi şablonu. */
+  tenantId: string | null;
+  category: string;
+  level: TemplateLevel;
+  title: string;
+  durationMinutes: number;
+  weeklyFrequency: string;
+  equipment: string[];
+  summary: string;
+  /** Kaynakça kimlikleri; metin `program_templates.md`'de. */
+  sources: string[];
+  /** Önüne gelen ısınma bloğunun şablon kimliği. */
+  warmup?: string;
+  days: TemplateDay[];
+  /**
+   * Popüler hedefin dürüst karşılığı — "karnım incelsin" diyen üyeyi bu
+   * şablona getiren metin. İddia yalnızca kanıtı olan şey kadar: bölgesel
+   * yağ kaybı yok, bölgesel kas gelişimi var.
+   */
+  goal?: TemplateGoal;
+}
+
+/** Hedef keşif katmanının bir satırı. */
+export interface TemplateGoal {
+  /** Üyenin kendi diliyle söylediği şey. */
+  wants: string;
+  /** Neden bu program — tek cümle, kanıta bağlı. */
+  because: string;
+  /** Birlikte önerilen öteki şablon (yağ kaybı ↔ kas). */
+  pairsWith?: string;
 }
 
 export interface ExerciseLog {
