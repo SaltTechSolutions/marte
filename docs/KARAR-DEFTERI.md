@@ -50,6 +50,16 @@ tablosunda **20 şablon satırı** "hareket yok"a bağlıydı, yani üye program
 taşımasından kalan yola yazıyordu.
 
 **Karar.**
+- **3/4 ve açılı gösterimden TAMAMEN vazgeçildi.** Ne editörde ne uygulamada
+  açılı figür olacak. Kaldırıldı: derinlik izdüşümü (`skel3`, `proj`),
+  `cmpFigure`'ın `depth` kipi, Karşılaştır ekranındaki "Derinlik denemesi"
+  hücresi ve **mobil önizlemedeki perspektif halter** — sonuncusu bu yönün
+  son kalıntısıydı ve uygulama onu hiç çizmediği için önizleme yalan
+  söylüyordu. Ölçüm ve gerekçe `packages/rig/TODOS.md`'de reddedilen yön
+  olarak duruyor; okunurluk bundan sonra 2B içinde çözülür.
+- **Elde tutulan halter kafadan SONRA çizilir**, iki çizicide de. `plate`'in
+  notu bunu ilk günden söylüyordu, kod söylemiyordu; tabak bilerek saydam ve
+  saydamlık tam bu durum için konmuştu.
 - **Bölgesel yağ kaybı yok, bölgesel kas gelişimi var.** Ürünün bütün hedef
   dili bu ayrıma bağlı. "Karın inceltme" adı yasak kalıyor (PER-18 kararı);
   yeni paket **"Karın Kasları"** — kası hedefler, görünürlüğün yağ oranına
@@ -79,17 +89,13 @@ taşımasından kalan yola yazıyordu.
   gövde yönü döndüğü için formül masa üstü pozu imkânsız sayıyordu. Büyüklük
   denetimi her modda duruyor.
 
+**Kapandı (aynı oturum).** Uygulamadaki tabağa editörle aynı saydamlık
+verildi (`fillOpacity .62`) — kafadan sonra çizilmeye başlayınca kafayı
+tamamen örtüyordu, bu oturumda açılan hataydı. Mobil önizleme artık
+uygulamanın çizdiğini çiziyor: parça siluetleri, `headProfile`, ana sahnenin
+düz tabağı. `TODOS.md` kaydı reddedilen yön olarak yeniden yazıldı.
+
 **Açık.**
-- ⚠️ **Uygulamadaki tabakta `fillOpacity` yok.** Halteri kafadan sonraya
-  aldım (editörde tabak %62 saydam, sorun yok) ama `RigFigure.tsx`'te
-  saydamlık kararı hiç uygulanmamış — uygulamada tabak artık kafayı tamamen
-  örtüyor. **Bu bu oturumda açılan bir hata, önce bu düzelmeli.**
-- **Mobil önizleme (`drawPose`) ne uygulamaya ne ana sahneye benziyor:**
-  kapsül uzuvlar + daire kafa + **perspektif elips halter**. Bu sonuncusu
-  terk edilen 3/4 yönünün son kalıntısı. `mkLimb` parça desteğini zaten
-  taşıyor, çağrılarda `name` argümanı verilmiyor.
-- `TODOS.md:109` "perspektif barbell yapıldı, önizlemede duruyor" diyor;
-  yön tamamen bırakıldığı için bu kayıt artık yanlış.
 - 12 poz ve yeni kas verisi **gözle/uzman onayı bekliyor**
   (`poseReviewed: false`, `reviewed: false`).
 - Ad tablosu antrenör onayı bekliyor → `docs/hareket-adlari-onay.md`.

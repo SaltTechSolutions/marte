@@ -103,7 +103,7 @@ ${styles}
     .col + .col { border-left:0; border-top:1px solid var(--line); }
     .mid { overflow:visible; }
     .stage { height:58vh; flex:none; }
-    #cmp .grid { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+    #cmp .grid { grid-template-columns:1fr; grid-template-rows:repeat(3,1fr); }
   }
 </style>
 

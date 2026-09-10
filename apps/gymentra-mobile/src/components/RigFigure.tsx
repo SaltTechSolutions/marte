@@ -194,11 +194,21 @@ export function RigFigure({
       </G>
     );
   };
+  /**
+   * Halter tabağı. Dış disk SAYDAM: 50px yarıçapla kafanın önüne geldiğinde
+   * onu tamamen örterdi, saydamlık kafanın konumunu görünür bırakıyor. Kenar
+   * çizgisi tam opak kalıyor ki tabağın sınırı belirsizleşmesin.
+   *
+   * Saydamlık kararı editörde alınmıştı (rig 1c7c1a17) ama buraya hiç
+   * taşınmamıştı; tabak kafadan sonra çizilmeye başlayınca kafa tamamen
+   * kayboldu. Sayılar editörün `plate`'iyle birebir aynı olmak zorunda —
+   * çizim iki yerde ayrı yazılıyor, görünüm ayrışamaz.
+   */
   const plate = (c: Vec | null) =>
     c ? (
       <G key="plate">
-        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} stroke={colors.p} strokeWidth={2} />
-        <Circle cx={c[0]} cy={c[1]} r={38} fill="none" stroke={line} strokeWidth={1.5} />
+        <Circle cx={c[0]} cy={c[1]} r={50} fill={metal} fillOpacity={0.62} stroke={colors.p} strokeWidth={2} />
+        <Circle cx={c[0]} cy={c[1]} r={38} fill="none" stroke={line} strokeWidth={1.5} opacity={0.8} />
         <Circle cx={c[0]} cy={c[1]} r={11} fill={joint} stroke={colors.p} strokeWidth={2} />
       </G>
     ) : null;
