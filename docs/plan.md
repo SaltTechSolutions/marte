@@ -153,9 +153,47 @@ tekrarı), **Uptime (her durum kontrolü)**, *Performance* (her transaction) ve
 demek, yani 1.000'lik kotanın neredeyse tamamı — hata için yer kalmaz.
 **Kontrol edilmeli:** organizasyonda tanımlı bir uptime monitörü var mı.
 
-*Kotayı görmek için:* app.glitchtip.com'da organizasyonun abonelik/kullanım
-sayfası. Tam menü yolu doğrulanmadı — oturum gerektiriyor ve DSN (yazma amaçlı)
-panel okuyamıyor.
+*(10 Eylül 2026 — panele bakıldı, üçü de doğrulandı.)* `/profile/notifications`
+sayfasında tek ayar var: "Send me project alerts" (+ proje bazlı istisna). **Kota
+uyarısı diye bir seçenek yok**, belgelerdeki boşluk arayüzde de böyle.
+Kullanım: `salt-tech-solutions-llc/settings/subscription` → **bu ay 33 olay,
+limitin %3'ü**; ay sonu tahmini 59 (%6); geçen ay 0. Yani kota bugün bir sorun
+değil, endişe teorikti.
+
+**Uptime monitörü yok (0).** Yukarıda "kontrol edilmeli" dediğim kalem
+mevcut değil, kotayı yiyen bir monitör bulunmuyor.
+
+⚠️ **Ama panele bakınca iki gerçek şey çıktı — ikisi de bu plana hiç
+girmemişti.**
+
+**(1) DSN başka bir ürünün projesini gösteriyor.** `EXPO_PUBLIC_SENTRY_DSN`
+`app.glitchtip.com/27190`'a bakıyor ve 27190, organizasyondaki **`yuvva`**
+adlı proje. GymEntra'nın çökme raporları oraya düşüyor (içerikten belli:
+`tenant-logos/tarabya-mart…`). Tek proje o olduğu için veri kaybolmuyor ama
+isim yanlış; ikinci bir ürün aynı projeye rapor ederse ayırt edilemez hâle
+gelir. *Yapılacak:* GymEntra için ayrı bir proje açıp DSN'i değiştirmek
+(EAS ortam değişkeni, üç ortamda birden).
+
+**(2) Çözülmemiş altı hata duruyor ve biri canlı.**
+
+| Hata | Yaş | Olay |
+|---|---|---|
+| **`FirebaseError: Missing or insufficient permissions.`** | 16 gün, **3 saat önce görüldü** | **26** |
+| `WatchdogTermination: OS watchdog terminated your app (RAM)` | 5 gün | 1 |
+| `FirebaseError: Storage: no permission for 'tenant-logos/tarabya-mart…'` | 11 gün, 7 gün önce | 3 |
+| `FirebaseError: The query requires an index (building)` | 7 gün | 1 |
+| `FirebaseError: The query requires an index (create it here)` | 8 gün | 1 |
+| `Invariant Violation: 'RNGoogleSignin' could not be found` | 8 gün | 1 |
+
+**İlki yayın öncesi bakılmalı:** 26 kez tekrarlamış ve **hâlâ oluyor** (3 saat
+önce). Bir kural reddi canlı salonda bir ekranı boş bırakıyor olabilir; hangi
+sorgu olduğu koddan değil olayın kendisinden okunmalı. Bu, "yayına ne kaldı"
+listesine kimsenin GlitchTip'e bakmadığı için girmemişti.
+
+*İki index hatası muhtemelen kapanmış* — index'ler bugün dosyayla birebir
+eşleşiyor (36/36) ve kayıtlar 7–8 günlük. `RNGoogleSignin` hatası ise native
+modülü olmayan bir çalıştırmadan (Expo Go ya da eksik build); Google girişi
+doğrulaması sırasında akılda tutulmalı.
 
 *Bizim tarafımızdaki azaltmalar zaten GlitchTip'in kendi önerisiyle aynı yönde:*
 SSS "aşırı olayın en yaygın kaynağı performance" deyip `tracesSampleRate`'i
