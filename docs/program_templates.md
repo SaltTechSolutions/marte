@@ -74,6 +74,14 @@ NSCA-CPT) gözüyle incelendi. Yapılan değişiklikler ve reddedilenler:
 (Tarabya'da trap bar, ab wheel, chest-supported row makinesi var mı?) ve
 Türkçe hareket adlarının salonda kullanılan karşılıkları için.
 
+> **10 Eylül 2026 — ad kaydı açıldı.** Türkçe karşılıklar yazıldı ve
+> `docs/hareket-adlari-onay.md`'de üç sütunlu bir tablo olarak antrenör
+> onayına hazır duruyor. Aynı turda şablonların 20 satırı ilk kez gerçek
+> bir harekete bağlandı: leg press, lat pulldown, oturarak kürek, yüz
+> çekişi, ölü böcek ve McGill curl-up dahil — bunlar figür motorunda
+> çizilemedikleri için kütüphaneden düşürülmüştü, `seat` ve `supine` kök
+> noktaları gelince geri döndüler.
+
 ## Şablon listesi
 
 | ID | Başlık | Seviye | Gün/hafta | Süre |
