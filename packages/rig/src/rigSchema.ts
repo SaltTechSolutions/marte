@@ -14,10 +14,10 @@ import { MUSCLES } from './muscles';
  * testlerin reddettiği veriyi diske yazabilirdi — nitekim yazabiliyordu.
  */
 
-const MODES = ['stand', 'quad', 'bench', 'supine', 'hang'];
+const MODES = ['stand', 'quad', 'bench', 'supine', 'hang', 'seat'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
-const PROPS = ['bench', 'box', 'bar', 'hipbench'];
+const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled'];
 const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
 

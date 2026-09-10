@@ -77,6 +77,13 @@ describe('rigSchema — geçerli veri', () => {
     expect(validateArchetypes(ok())).toEqual([]);
   });
 
+  // Şema motorla aynı anda büyümezse editör yeni modu kaydedemez: kayıt yolu
+  // `validateBundle`'dan geçiyor ve geçerli bir arketibi geçersiz sayardı.
+  it('makine hareketleri için oturan mod ve koltuk/kızak destekleri geçerli', () => {
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'seatback' }))).toEqual([]);
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'sled' }))).toEqual([]);
+  });
+
   it('isteğe bağlı alanlar yazılınca da geçiyor', () => {
     expect(
       errs((d) => {

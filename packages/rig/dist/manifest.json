@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-07T12:52:32.268Z",
+  "generated": "2026-09-10T12:38:45.159Z",
   "source": {
-    "commit": "2ab47d4",
+    "commit": "9d1964f7",
     "dirty": true
   },
   "counts": {
@@ -14,8 +14,8 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "d2191e21c65e9ca9fd40e42e5728de518e20300e1c4fd2ff318ac7e5b1ce27da",
-      "bytes": 34941,
+      "sha256": "d1803f942edd6514db9bea509cdd2171f03f04ec55ecf051db3d3bf40895d928",
+      "bytes": 35658,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "d8af2072e297a249f8cb65cdceb54ae71ab802ba1a7e6887fbbf55dc30cbacc7",
-      "bytes": 16053,
+      "sha256": "be89b8e79a443766c2e7d3f842db3f5901e49bc663536d937fd02ef4cfcc8d46",
+      "bytes": 16081,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -84,8 +84,8 @@
       "to": "src/data/rigArchetypes.ts"
     },
     "rig.test.ts": {
-      "sha256": "dc4bc1b7deba74bcbd5e5361af7b9e970ef72b33b7eb2f49e87fcf66de7ca700",
-      "bytes": 9251,
+      "sha256": "419ab1b212f74fc9e4fab37339ca619a5cba67c5fe39f4bcf900b16ea4020fc7",
+      "bytes": 10160,
       "from": "tests/rig.test.ts",
       "what": "motor testleri",
       "to": "src/utils/rig.test.ts"
@@ -98,8 +98,8 @@
       "to": "src/utils/rigAudit.test.ts"
     },
     "rigSchema.test.ts": {
-      "sha256": "6d429d2a49e8414ff1b3cc3ee769822dc490c4b56a790565b008ee7b276a5448",
-      "bytes": 19566,
+      "sha256": "cffd60882699f721eed615ea023c70514d07621f3e1081af3b2690a3973a45ba",
+      "bytes": 20008,
       "from": "tests/rigSchema.test.ts",
       "what": "şema testleri",
       "to": "src/utils/rigSchema.test.ts"

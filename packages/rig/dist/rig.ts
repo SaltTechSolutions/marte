@@ -48,6 +48,16 @@ export const CENTER_X = 210;
  * ayaklar zeminin altında kalır.
  */
 export const BAR_Y = 56;
+/**
+ * Oturma yüksekliği: makinede kalçanın durduğu y.
+ *
+ * Baldır boyu kadar (`B.shin` = 100) zeminin üstünde + ayak kalınlığı payı.
+ * Dik oturan ve ayağı yerde olan bir figürde baldır dikey, uyluk yataydır;
+ * kalça o yüzden tam diz hizasında durur. Bacak presi gibi ayağın havada
+ * olduğu hareketlerde de aynı yükseklik kullanılır — orada zemine basan
+ * bir şey yoktur, referans koltuğun kendisidir.
+ */
+export const SEAT_Y = GROUND - 112;
 
 export const rad = (d: number): number => (d * Math.PI) / 180;
 export const D = (d: number): Vec => [Math.sin(rad(d)), -Math.cos(rad(d))];
@@ -95,10 +105,10 @@ export interface RigKeyframe {
   p: Partial<RigPose>;
 }
 
-export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang';
+export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang' | 'seat';
 export type RigArm = 'angles' | 'ik' | 'floor';
 export type RigBar = 'back' | 'hands' | 'hips' | null;
-export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | null;
+export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | 'seatback' | 'sled' | null;
 
 /**
  * Elde taşınan yük. `bar` barın NEREDE olduğunu söyler (sırtta, elde,
@@ -350,6 +360,9 @@ const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
   bench: [],
   supine: ['pelvis', 'thorax', 'head', 'ankle', 'hand'],
   hang: [],
+  // Oturan figürü yere oturtacak bir temas noktası YOK: referans koltuktur,
+  // zemin değil. `bench` ile aynı gerekçe — kalça sabit, dünya sabit.
+  seat: [],
 };
 
 /**
@@ -439,7 +452,7 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
     knee = sub(ankle, D(p.shinA), B.shin);
     pelvis = sub(knee, D(p.thighA), B.thigh);
   } else {
-    pelvis = ex.mode === 'quad' ? [150, GROUND - 119] : [150, 430];
+    pelvis = ex.mode === 'quad' ? [150, GROUND - 119] : ex.mode === 'seat' ? [150, SEAT_Y] : [150, 430];
     knee = add(pelvis, D(p.thighA), B.thigh);
     ankle = add(knee, D(p.shinA), B.shin);
   }

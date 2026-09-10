@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate `gymentra-mobile/src/data/exerciseLibrary.ts` (PER-19).
+"""Regenerate `apps/gymentra-mobile/src/data/exerciseLibrary.ts` (PER-19).
 
 Three inputs, one output:
 
@@ -28,7 +28,7 @@ import re
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESIGN = os.path.join(HERE, 'exercise_library', 'Exercise Library.dc.html')
 SEED = os.path.join(HERE, 'program_templates.seed.json')
-OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'gymentra-mobile', 'src', 'data', 'exerciseLibrary.ts'))
+OUT = os.path.normpath(os.path.join(HERE, '..', '..', 'apps', 'gymentra-mobile', 'src', 'data', 'exerciseLibrary.ts'))
 
 
 MUSCLES = {
@@ -674,7 +674,7 @@ def joints(p):
 L = []
 A = L.append
 A(f"""// GENERATED — do not hand-edit. Rebuild with
-// `marte06/scripts/build_exercise_library.py` (source data lives beside it).
+// `backend/scripts/build_exercise_library.py` (source data lives beside it).
 //
 // The exercise visualiser (PER-19): {len(EXO)} canonical movements distilled from the
 // ~146 lines across the 14 program templates (machine and cable moves were

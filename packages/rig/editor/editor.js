@@ -43,7 +43,7 @@ const OPTIONS = {
   arm: [['angles', 'Açıyla'], ['ik', 'Hedefe (ters kinematik)'], ['floor', 'Yerde']],
   bar: [['', 'Yok'], ['back', 'Sırtta'], ['hands', 'Elde'], ['hips', 'Kalçada']],
   load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl']],
-  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası']],
+  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası'], ['seatback', 'Koltuk'], ['sled', 'Bacak presi kızağı']],
   view: [['side', 'Yandan'], ['front', 'Önden']],
   bend: [['1', 'İleri (+1)'], ['-1', 'Geri (−1)']],
 };
@@ -724,6 +724,19 @@ function draw() {
     el('rect', { x: S0.thorax[0] - 96, y: S0.thorax[1] + 26, width: 210, height: 18, rx: 8, fill: surf2, stroke: line }),
     el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
     el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
+  ]);
+  // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması. Makine
+  // hareketlerinin tamamı buna yaslanıyor — lat pulldown, oturarak kürek,
+  // göğüs presi, bacak ekstansiyonu.
+  if (e.prop === 'seatback') push([
+    el('rect', { x: S0.pelvis[0] - 46, y: S0.pelvis[1] + 22, width: 150, height: 18, rx: 8, fill: surf2, stroke: line }),
+    el('rect', { x: S0.pelvis[0] - 64, y: S0.pelvis[1] - 96, width: 20, height: 122, rx: 8, fill: surf2, stroke: line }),
+    el('rect', { x: S0.pelvis[0] - 32, y: S0.pelvis[1] + 40, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 40), fill: surf2, stroke: line }),
+  ]);
+  // Kızak: bacak presinde ayağın bastığı eğik platform. Ayak yerde DEĞİL,
+  // bu yüzden zemin yerine ayağın kendisine göre çiziliyor.
+  if (e.prop === 'sled') push([
+    el('rect', { x: S0.ankle[0] + 6, y: S0.ankle[1] - 72, width: 18, height: 150, rx: 6, fill: metal, stroke: line }),
   ]);
   if (e.prop === 'bench' && e.mode === 'bench') {
     const t0 = poseAt(e, 0).p.torso;
