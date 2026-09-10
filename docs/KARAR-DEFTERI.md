@@ -50,6 +50,11 @@ tablosunda **20 şablon satırı** "hareket yok"a bağlıydı, yani üye program
 taşımasından kalan yola yazıyordu.
 
 **Karar.**
+- **Sahne durağan, kızak değil.** Ekipmanın konumu kural olarak 0. karenin
+  iskeletinden okunur (sehpa, basamak, barfiks barı yerinde durmalı, yoksa
+  figürle birlikte kayar). Bacak presi platformu bu kuralın **istisnası**:
+  ayak ona basılı kalır ve ikisi birlikte gider, o yüzden geçerli kareden
+  çizilir ve itiş eksenine dik durur.
 - **3/4 ve açılı gösterimden TAMAMEN vazgeçildi.** Ne editörde ne uygulamada
   açılı figür olacak. Kaldırıldı: derinlik izdüşümü (`skel3`, `proj`),
   `cmpFigure`'ın `depth` kipi, Karşılaştır ekranındaki "Derinlik denemesi"

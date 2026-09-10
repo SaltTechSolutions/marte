@@ -480,7 +480,7 @@ function drawPose(svg, e, p) {
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   // Ekipman figürün ARKASINDA: sahne önce kurulur. Konumlar 0. karenin
   // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
-  drawProps(e, skeleton(e, poseAt(e, 0).p), push);
+  drawProps(e, skeleton(e, poseAt(e, 0).p), S, push);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
   // çiziyor, ad verilmeyince kapsüle düşüyor. Önizleme bu yüzden uygulamanın
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
@@ -630,7 +630,7 @@ function draw() {
     return drawHandles(svg, e, S, view);
   }
 
-  drawProps(e, S0, push);
+  drawProps(e, S0, S, push);
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
@@ -717,7 +717,7 @@ function draw() {
  * Kareler arası değişmeyen şey sahne: konumlar 0. karenin iskeletinden
  * (`S0`) okunuyor, yoksa bar figürle birlikte kayardı.
  */
-function drawProps(e, S0, push) {
+function drawProps(e, S0, S, push) {
   const surf2 = css('--surf2'), metal = css('--metal'), line = css('--line');
     if (e.prop === 'bar') push([
       el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
@@ -757,8 +757,23 @@ function drawProps(e, S0, push) {
         el('path', { d: capsule(seatA, seatB, 22, 19), fill: surf2, stroke: line }),
         el('path', { d: capsule([padX, padY], [padX + 78, padY + 10], 18, 15), fill: surf2, stroke: line }),
         el('rect', { x: padX + 4, y: padY + 14, width: 16, height: Math.max(0, GROUND - padY - 14), fill: surf2, stroke: line }),
-        el('rect', { x: S0.ankle[0] + 6, y: S0.ankle[1] - 72, width: 18, height: 150, rx: 6, fill: metal, stroke: line }),
       ]);
+      // Ayak platformu SABİT DEĞİL. Sehpa, basamak ve barfiks barı sahnenin
+      // durağan parçaları, o yüzden 0. kareden çiziliyorlar; bacak presinde
+      // kızak sahnenin HAREKET EDEN parçası — ayak ona basılı kalır ve ikisi
+      // birlikte gider. Sabit çizilince bacak tekrar boyunca levhanın
+      // içinden geçiyordu.
+      //
+      // Levha itiş eksenine (diz → ayak bileği) DİK duruyor: gerçek makinede
+      // taban ona düz basar.
+      const ax = S.ankle[0] - S.knee[0], ay = S.ankle[1] - S.knee[1];
+      const aL = Math.hypot(ax, ay) || 1;
+      const ux = ax / aL, uy = ay / aL;
+      const cx = S.ankle[0] + ux * 24, cy = S.ankle[1] + uy * 24;
+      push([el('path', {
+        d: capsule([cx - uy * 62, cy + ux * 62], [cx + uy * 62, cy - ux * 62], 15, 15),
+        fill: metal, stroke: line,
+      })]);
     }
     if (e.prop === 'bench' && e.mode === 'bench') {
       const t0 = poseAt(e, 0).p.torso;

@@ -297,7 +297,23 @@ export function RigFigure({
               <Path d={capsule(seatA, seatB, 22, 19)} fill={colors.surf2} stroke={line} />
               <Path d={capsule([padX, padY], [padX + 78, padY + 10], 18, 15)} fill={colors.surf2} stroke={line} />
               <Rect x={padX + 4} y={padY + 14} width={16} height={Math.max(0, GROUND - padY - 14)} fill={colors.surf2} stroke={line} />
-              <Rect x={S0.ankle[0] + 6} y={S0.ankle[1] - 72} width={18} height={150} rx={6} fill={metal} stroke={line} />
+              {/* Ayak platformu SABİT DEĞİL: sehpa ve basamak sahnenin durağan
+                  parçaları ama bacak presinde kızak HAREKET EDEN parça — ayak
+                  ona basılı kalır, ikisi birlikte gider. Sabit çizilince bacak
+                  tekrar boyunca levhanın içinden geçiyordu. Levha itiş eksenine
+                  (diz → ayak bileği) dik: gerçek makinede taban ona düz basar. */}
+              {(() => {
+                const ax = S.ankle[0] - S.knee[0];
+                const ay = S.ankle[1] - S.knee[1];
+                const aL = Math.hypot(ax, ay) || 1;
+                const ux = ax / aL;
+                const uy = ay / aL;
+                const cx = S.ankle[0] + ux * 24;
+                const cy = S.ankle[1] + uy * 24;
+                const p1: Vec = [cx - uy * 62, cy + ux * 62];
+                const p2: Vec = [cx + uy * 62, cy - ux * 62];
+                return <Path d={capsule(p1, p2, 15, 15)} fill={metal} stroke={line} />;
+              })()}
             </G>
           );
         })()}
