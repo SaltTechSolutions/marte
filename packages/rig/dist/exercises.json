@@ -189,13 +189,8 @@
  },
  "chest-supported-row": {
   "name": "Göğüs destekli kürek",
-  "archetype": "seated_row_cable",
+  "archetype": "standing_row_hinged",
   "alt": "Chest-supported row"
- },
- "machine-chest-press": {
-  "name": "Makine göğüs pres",
-  "archetype": "chest_press_seated",
-  "alt": "Machine chest press"
  },
  "pullup": {
   "name": "Barfiks",

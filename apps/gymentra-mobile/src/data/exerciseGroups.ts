@@ -15,7 +15,7 @@ export const LIBRARY_GROUPS: { label: string; ids: string[] }[] = [
       'leg-extension', 'leg-curl', 'calf-raise',
     ],
   },
-  { label: 'İTİŞ', ids: ['bench-press', 'incline-press', 'machine-chest-press', 'shoulder-press'] },
+  { label: 'İTİŞ', ids: ['bench-press', 'incline-press', 'shoulder-press'] },
   {
     label: 'ÇEKİŞ',
     ids: [

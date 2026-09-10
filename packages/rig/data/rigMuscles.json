@@ -517,20 +517,6 @@
   "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
   "reviewed": false
  },
- "machine-chest-press": {
-  "status": "authored",
-  "primary": [
-   "pecSternal",
-   "pecClav"
-  ],
-  "secondary": [
-   "deltFront",
-   "triLat",
-   "triLong"
-  ],
-  "source": "GymEntra exerciseLibrary.ts kalıbı (2026-09-10 yazıldı)",
-  "reviewed": false
- },
  "pullup": {
   "status": "authored",
   "primary": [

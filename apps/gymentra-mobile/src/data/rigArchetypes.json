@@ -2211,7 +2211,7 @@
   ]
  },
  "seated_row_cable": {
-  "note": "Oturarak yatay çekiş; kollar uzar, dirsek gövdeye çekilir. Göğüs destekli kürek de bu kalıpta.",
+  "note": "Kablo küreği: alçak sehpada oturulur, bacaklar öne uzanır ve ayaklar plakaya basar. Kablo alçak makaradan yükselir; çeken şey odur.",
   "mode": "seat",
   "arm": "ik",
   "bar": null,
@@ -2224,8 +2224,8 @@
     "t": 0,
     "tr": "Başla",
     "p": {
-     "thighA": 90,
-     "shinA": 180,
+     "thighA": 100,
+     "shinA": 85,
      "torso": 8,
      "thoraxA": 0,
      "neckA": 2,
@@ -2237,8 +2237,8 @@
     "t": 0.42,
     "tr": "Bitir",
     "p": {
-     "thighA": 90,
-     "shinA": 180,
+     "thighA": 100,
+     "shinA": 85,
      "torso": -4,
      "thoraxA": 0,
      "neckA": 2,
@@ -2250,8 +2250,8 @@
     "t": 0.55,
     "tr": "Bitir",
     "p": {
-     "thighA": 90,
-     "shinA": 180,
+     "thighA": 100,
+     "shinA": 85,
      "torso": -4,
      "thoraxA": 0,
      "neckA": 2,
@@ -2263,83 +2263,19 @@
     "t": 1,
     "tr": "Başla",
     "p": {
-     "thighA": 90,
-     "shinA": 180,
+     "thighA": 100,
+     "shinA": 85,
      "torso": 8,
      "thoraxA": 0,
      "neckA": 2,
      "hx": 128,
      "hy": 18
-    }
-   }
-  ]
- },
- "chest_press_seated": {
-  "note": "Oturarak yatay itiş; eller göğüsten öne uzar.",
-  "mode": "seat",
-  "arm": "ik",
-  "bar": null,
-  "prop": "cable",
-  "cableFrom": "back",
-  "bend": 1,
-  "dur": 3200,
-  "kf": [
-   {
-    "t": 0,
-    "tr": "Başla",
-    "p": {
-     "thighA": 90,
-     "shinA": 180,
-     "torso": 0,
-     "thoraxA": 0,
-     "neckA": 2,
-     "hx": 28,
-     "hy": 6
-    }
-   },
-   {
-    "t": 0.42,
-    "tr": "Bitir",
-    "p": {
-     "thighA": 90,
-     "shinA": 180,
-     "torso": 0,
-     "thoraxA": 0,
-     "neckA": 2,
-     "hx": 128,
-     "hy": 0
-    }
-   },
-   {
-    "t": 0.55,
-    "tr": "Bitir",
-    "p": {
-     "thighA": 90,
-     "shinA": 180,
-     "torso": 0,
-     "thoraxA": 0,
-     "neckA": 2,
-     "hx": 128,
-     "hy": 0
-    }
-   },
-   {
-    "t": 1,
-    "tr": "Başla",
-    "p": {
-     "thighA": 90,
-     "shinA": 180,
-     "torso": 0,
-     "thoraxA": 0,
-     "neckA": 2,
-     "hx": 28,
-     "hy": 6
     }
    }
   ]
  },
  "pull_up_hang": {
-  "note": "Barda asılı gövde yukarı çekilir; dirsek bükülür, omuz bara yaklaşır.",
+  "note": "Barda asılı gövde yukarı çekilir. Dizler geriye bükülü ve ayaklar yerden KESİK: düz bacakla asılınca ayak zemine değiyor ve figür barın altında duruyor gibi okunuyordu.",
   "mode": "hang",
   "arm": "angles",
   "bar": null,
@@ -2356,8 +2292,8 @@
      "torso": 2,
      "thoraxA": 2,
      "neckA": 3,
-     "thighA": 190,
-     "shinA": 206
+     "thighA": 205,
+     "shinA": 285
     }
    },
    {
@@ -2369,8 +2305,8 @@
      "torso": 6,
      "thoraxA": 4,
      "neckA": 2,
-     "thighA": 194,
-     "shinA": 210
+     "thighA": 205,
+     "shinA": 285
     }
    },
    {
@@ -2382,8 +2318,8 @@
      "torso": 6,
      "thoraxA": 4,
      "neckA": 2,
-     "thighA": 194,
-     "shinA": 210
+     "thighA": 205,
+     "shinA": 285
     }
    },
    {
@@ -2395,8 +2331,8 @@
      "torso": 2,
      "thoraxA": 2,
      "neckA": 3,
-     "thighA": 190,
-     "shinA": 206
+     "thighA": 205,
+     "shinA": 285
     }
    }
   ]

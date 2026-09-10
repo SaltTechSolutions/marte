@@ -748,7 +748,16 @@ function drawProps(e, S0, S, push) {
     // nereden geldiği görünmüyordu. Kablo onu söylüyor: makara nerede, kuvvet
     // o yönden geliyor.
     if (e.prop === 'cable') {
-      if (e.mode === 'seat') push(seat());
+      // Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar öne
+      // uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek hareketi
+      // göğüs destekli kürek gibi gösteriyordu.
+      if (e.mode === 'seat' && e.cableFrom === 'low') push([
+        el('rect', { x: S0.pelvis[0] - 54, y: S0.pelvis[1] + 22, width: 128, height: 16, rx: 7, fill: surf2, stroke: line }),
+        el('rect', { x: S0.pelvis[0] - 24, y: S0.pelvis[1] + 38, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 38), fill: surf2, stroke: line }),
+        // Ayak plakası: bacağın ittiği yüzey, ayağın olduğu yerde ve dik.
+        el('path', { d: capsule([S0.ankle[0] + 14, S0.ankle[1] - 40], [S0.ankle[0] + 14, S0.ankle[1] + 40], 9, 9), fill: surf2, stroke: line }),
+      ]);
+      else if (e.mode === 'seat') push(seat());
       const from = e.cableFrom || 'front';
       const ahead = Math.max(S.hand[0], S0.hand[0]);
       // Makaranın YERİ direncin yönü demek. Yanlış yer hareketi başka bir

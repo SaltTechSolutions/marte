@@ -395,11 +395,11 @@ describe('validateBundle — devir paketi', () => {
     });
   });
 
-  it('46 hareket, 41 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
-    expect(Object.keys(rawExercises)).toHaveLength(46);
-    expect(Object.keys(rawArchetypes)).toHaveLength(41);
+  it('45 hareket, 40 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+    expect(Object.keys(rawExercises)).toHaveLength(45);
+    expect(Object.keys(rawArchetypes)).toHaveLength(40);
     const used = new Set(Object.values(rawExercises as Record<string, { archetype: string }>).map((e) => e.archetype));
-    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(41);
+    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(40);
   });
 });
 

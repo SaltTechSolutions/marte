@@ -442,12 +442,9 @@ add("lat-pulldown","Lat pulldown",["lat","trapMid"],["biceps","brachialis","delt
 add("seated-cable-row","Seated cable row",["trapMid","lat","deltPost"],["biceps","brachialis","erector","trapLower"],"BAŞLANGIÇ","Kablo kürek makinesi","Seated row machine","seated_row_cable",
     sets="3×10-12",rest="90 sn",
     steps=[["Dizler hafif bükük, gövde dik.","Knees slightly bent, torso upright."],["Tutamağı göbeğe çek; dirsekler gövdeye yakın.","Pull the handle to the navel; elbows close to the body."],["Göğsü aç, omuzları kulaktan uzak tut.","Open the chest, keep the shoulders away from the ears."]])
-add("chest-supported-row","Chest-supported row",["trapMid","deltPost","lat"],["biceps","brachialis","trapLower"],"ORTA","Eğik sehpa + dumbbell","Incline bench, dumbbells","seated_row_cable",
+add("chest-supported-row","Chest-supported row",["trapMid","deltPost","lat"],["biceps","brachialis","trapLower"],"ORTA","Eğik sehpa + dumbbell","Incline bench, dumbbells","standing_row_hinged",
     sets="4×10",rest="75 sn",
     steps=[["Göğüs sehpaya yaslı — bel devre dışı, sadece sırt çalışır.","Chest on the pad; the lower back is out of it, only the back works."],["Dumbbell'ları kaburgaya doğru çek.","Row the dumbbells toward the ribs."],["Üstte kürek kemiklerini sık.","Squeeze the shoulder blades at the top."]])
-add("machine-chest-press","Machine chest press",["pecSternal","pecClav"],["deltFront","triLat","triLong"],"BAŞLANGIÇ","Göğüs pres makinesi","Chest press machine","chest_press_seated",
-    sets="3×10-12",rest="90 sn",
-    steps=[["Tutamaklar göğüs ortası hizasında olacak şekilde koltuğu ayarla.","Set the seat so the handles line up with mid-chest."],["Kürek kemikleri sıkı, öne it.","Shoulder blades tight, press forward."],["Kontrollü geri gel; dirsek omuz hizasını geçmesin.","Return under control; don't take the elbows behind the shoulder line."]])
 add("pullup","Pull-up",["lat","trapMid"],["biceps","brachialis","deltPost","forearmFlex"],"İLERİ","Barfiks barı","Pull-up bar","pull_up_hang",
     sets="3×AMRAP",rest="120 sn",
     steps=[["Bara omuzdan geniş asıl, omuzları aktif tut.","Hang wider than shoulder-width, shoulders active."],["Çeneyi barın üstüne çıkar; sallanma.","Pull until the chin clears the bar; no swinging."],["Tam kol uzunluğuna kontrollü in.","Lower under control to full arm length."]])
@@ -531,8 +528,8 @@ ALIAS = {
  "Bench press": "bench-press",
  "Bench press (bar veya dumbbell)": "bench-press",
  "Incline dumbbell pres": "incline-press",
- "Göğüs pres (makine veya dumbbell)": "machine-chest-press",
- "Göğüs pres (makine)": "machine-chest-press",
+ "Göğüs pres (makine veya dumbbell)": "bench-press",
+ "Göğüs pres (makine)": "bench-press",
  "Dumbbell omuz pres": "shoulder-press",
  "Dumbbell omuz pres (oturarak)": "shoulder-press",
  "Omuz pres (makine veya dumbbell)": "shoulder-press",

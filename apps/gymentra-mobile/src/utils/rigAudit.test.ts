@@ -91,7 +91,7 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   it('bandın hiçbir hareket için atlaması yok', () => {
     // T2'nin doğrudan iddiası: kapı yok, band her arketipte değerlendiriliyor.
     expect(dirsek.skip, 'dirsek bandında skip olmamalı').toBeUndefined();
-    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(12);
+    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(11);
   });
 
   ik.forEach(([k, ex]) => {

@@ -265,11 +265,28 @@ export function RigFigure({
         {/* Makine koltuğu: kalçanın altında yastık, arkasında sırt dayaması.
             Lat pulldown, oturarak kürek, göğüs presi ve bacak makineleri
             buna yaslanıyor — çizilmezse figür havada oturuyor görünüyor. */}
-        {(rig.prop === 'seatback' || rig.prop === 'cable' || rig.prop === 'legpad') && rig.mode === 'seat' && (
+        {(rig.prop === 'seatback' || rig.prop === 'cable' || rig.prop === 'legpad') &&
+          rig.mode === 'seat' &&
+          rig.cableFrom !== 'low' && (
           <G key="seatback">
             <Rect x={S0.pelvis[0] - 46} y={S0.pelvis[1] + 22} width={150} height={18} rx={8} fill={colors.surf2} stroke={line} />
             <Rect x={S0.pelvis[0] - 64} y={S0.pelvis[1] - 96} width={20} height={122} rx={8} fill={colors.surf2} stroke={line} />
             <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
+          </G>
+        )}
+        {/* Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar
+            öne uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek
+            hareketi göğüs destekli kürek gibi gösteriyordu. */}
+        {rig.prop === 'cable' && rig.mode === 'seat' && rig.cableFrom === 'low' && (
+          <G key="lowbench">
+            <Rect x={S0.pelvis[0] - 54} y={S0.pelvis[1] + 22} width={128} height={16} rx={7} fill={colors.surf2} stroke={line} />
+            <Rect x={S0.pelvis[0] - 24} y={S0.pelvis[1] + 38} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 38)} fill={colors.surf2} stroke={line} />
+            {/* Ayak plakası: bacağın ittiği yüzey, ayağın olduğu yerde ve dik. */}
+            <Path
+              d={capsule([S0.ankle[0] + 14, S0.ankle[1] - 40], [S0.ankle[0] + 14, S0.ankle[1] + 40], 9, 9)}
+              fill={colors.surf2}
+              stroke={line}
+            />
           </G>
         )}
         {/* Kablo istasyonu: makara, kablo ve tutamak. Bu hareketler önce

@@ -26,7 +26,7 @@ import { ROOT, OUT, buildEngine } from './engine-build.mjs';
 /** Bu turda yazılan arketipler; listede işaretleniyor ve başa alınıyor. */
 const NEW_ARCHETYPES = [
   'leg_press_seated', 'leg_extension_seated', 'leg_curl_seated',
-  'lat_pulldown_seated', 'seated_row_cable', 'chest_press_seated',
+  'lat_pulldown_seated', 'seated_row_cable',
   'pull_up_hang', 'triceps_pushdown_standing', 'face_pull_standing',
   'dead_bug_supine', 'curl_up_supine',
 ];

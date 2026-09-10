@@ -31,6 +31,42 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-10 — istasyonlar gerçekçileşti, makine göğüs presi kaldırıldı
+
+**Yapıldı.** Yeni hareketlerin durağan hâlleri tek tek gözden geçirildi.
+Barfikste dizler geriye büküldü (`thighA: 205, shinA: 285`) — düz bacakla
+asılan figürün ayağı zemine değiyor, hareket "barın altında durmak" gibi
+okunuyordu. Oturarak kürek sandalyeden alçak sehpaya taşındı: `cableFrom:
+'low'` için ayrı bir çizim dalı yazıldı (sırtlıksız alçak minder, zemin
+direği, dikey ayak plakası) ve bacaklar öne uzatıldı (`thighA: 100, shinA:
+85`). `chest_press_seated` arketibi ve `machine-chest-press` hareketi
+tamamen silindi; `chest-supported-row` `standing_row_hinged`'e bağlandı ve
+iki ALIAS satırı `bench-press`'e yönlendirildi (41→40 arketip, 46→45
+hareket).
+
+**Karar.** **Çizilemeyen makine çizilmez.** Makine göğüs presi karmaşık
+mekanizmalı bir alettir; iki boyutlu siluetle çizilince hangi aletle
+yapıldığı anlaşılmıyordu. Ürünün derdi makine kullanmak değil hareketin
+doğru yapılması: aynı kas kalıbını veren makinesiz sürüm (`bench-press`)
+zaten vardı, hareket ona bağlandı.
+
+**Bilerek yapılmadı.** Makine göğüs presine daha iyi bir çizim aranmadı —
+`sled` ve `legpad` istasyonlarının aksine bunun tanınabilir tek bir silueti
+yok. Ölü böceğe de dokunulmadı: gövde yerde, uyluk dik, baldır yatay, kollar
+tavana — poz zaten doğru okunuyor.
+
+**Açık.** 11 poz ve yeni kas verisi hâlâ uzman onayı bekliyor
+(`poseReviewed: false`, `reviewed: false`). Ad tablosu antrenör onayında
+(`docs/hareket-adlari-onay.md`). `seed_program_templates.cjs` üretime karşı
+çalıştırılmadı.
+
+**Nerede.** `packages/rig/data/rigArchetypes.json`,
+`packages/rig/editor/editor.js` (`drawProps`),
+`apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`backend/scripts/build_exercise_library.py`.
+
+---
+
 ## 2026-09-10 — makine hareketleri, hedef paketleri, çizim katmanları
 
 **Yapıldı.** Figür motoruna `seat` kök noktası eklendi ve motorda duran ama

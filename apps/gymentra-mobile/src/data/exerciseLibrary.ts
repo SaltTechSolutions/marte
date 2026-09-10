@@ -1,7 +1,7 @@
 // GENERATED — do not hand-edit. Rebuild with
 // `backend/scripts/build_exercise_library.py` (source data lives beside it).
 //
-// The exercise visualiser (PER-19): 46 canonical movements distilled from the
+// The exercise visualiser (PER-19): 45 canonical movements distilled from the
 // ~146 lines across the 14 program templates (machine and cable moves were
 // dropped on 3 Sep 2026 — barbell, dumbbell, bench, band and bodyweight only), each with a muscle-activation
 // map and start/end pose frames. Ported from the Claude Design canvas
@@ -860,26 +860,12 @@ export const EXERCISES: Exercise[] = [
     difficulty: 'ORTA', equipTr: 'Eğik sehpa + dumbbell', equipEn: 'Incline bench, dumbbells',
     primary: ['trapMid', 'deltPost', 'lat'],
     secondary: ['biceps', 'brachialis', 'trapLower'],
-    archetype: 'seated_row_cable',
+    archetype: 'standing_row_hinged',
     setsHint: '4×10', restHint: '75 sn',
     steps: [
       ['Göğüs sehpaya yaslı — bel devre dışı, sadece sırt çalışır.', 'Chest on the pad; the lower back is out of it, only the back works.'],
       ['Dumbbell\'ları kaburgaya doğru çek.', 'Row the dumbbells toward the ribs.'],
       ['Üstte kürek kemiklerini sık.', 'Squeeze the shoulder blades at the top.'],
-    ],
-    poseReviewed: false,
-  },
-  {
-    id: 'machine-chest-press', tr: 'Makine göğüs pres', trAlt: 'Machine chest press', en: 'Machine chest press',
-    difficulty: 'BAŞLANGIÇ', equipTr: 'Göğüs pres makinesi', equipEn: 'Chest press machine',
-    primary: ['pecSternal', 'pecClav'],
-    secondary: ['deltFront', 'triLat', 'triLong'],
-    archetype: 'chest_press_seated',
-    setsHint: '3×10-12', restHint: '90 sn',
-    steps: [
-      ['Tutamaklar göğüs ortası hizasında olacak şekilde koltuğu ayarla.', 'Set the seat so the handles line up with mid-chest.'],
-      ['Kürek kemikleri sıkı, öne it.', 'Shoulder blades tight, press forward.'],
-      ['Kontrollü geri gel; dirsek omuz hizasını geçmesin.', 'Return under control; don\'t take the elbows behind the shoulder line.'],
     ],
     poseReviewed: false,
   },
@@ -1003,8 +989,8 @@ export const NAME_TO_EXERCISE: Record<string, string | null> = {
   'Goblet squat': 'goblet-squat',
   'Goblet squat (hafif dumbbell)': 'goblet-squat',
   'Goblet squat veya leg press': 'goblet-squat',
-  'Göğüs pres (makine veya dumbbell)': 'machine-chest-press',
-  'Göğüs pres (makine)': 'machine-chest-press',
+  'Göğüs pres (makine veya dumbbell)': 'bench-press',
+  'Göğüs pres (makine)': 'bench-press',
   'Günün ilk hareketi — boş bar / hafif': null,
   'Hack squat veya front squat': 'front-hack-squat',
   'Hammer curl + overhead triceps (süperset)': 'biceps-curl',
