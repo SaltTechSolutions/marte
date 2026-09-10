@@ -6,7 +6,8 @@ Hareket figürünün motoru, kare editörü ve mekanik denetimi. Kendi başına
 ```bash
 npm install
 npm run editor      # http://127.0.0.1:8123 — hareketleri düzenle
-npm test            # mekanik denetim + şema + ROM bantları (48 test)
+npm run review      # editörü tek bir HTML'e paketler (dist/review.html)
+npm test            # mekanik denetim + şema + ROM bantları
 npm run export      # uygulamaya devredilecek dosyaları dist/ altına üretir
 ```
 
@@ -124,6 +125,23 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 
 Kaydet doğrudan `data/rigArchetypes.json` üstüne yazar; değişiklik git
 diff'inde görünür.
+
+### Uzaktan inceleme
+
+`npm run review` editörü **tek bir HTML dosyasına** paketler
+(`dist/review.html`): motor derlenir, `editor/editor.js` esbuild ile
+paketlenir, sunucunun servis ettiği beş JSON sayfaya gömülür ve `fetch`'in
+üstüne bir vekil konur. `editor/editor.js` ve `editor/index.html` HİÇ
+DEĞİŞMEZ — sayfa neyi gösteriyorsa editörün gösterdiği odur.
+
+Ne işe yarar: editör yalnızca 127.0.0.1'i dinliyor. Pozları onaylayacak kişi
+başka bir makinedeyse ekran görüntüsü yetmiyor — geçiş hataları ara karelerde
+yaşıyor ve kaydırılamayan bir tabaka onları gizliyor. Paketlenen sayfa
+herhangi bir yere konabilir ve zaman çubuğu çalışır.
+
+**Kaydetmez.** Sunucu yok, `PUT /data` gidecek bir yer yok; kaydet ve diske
+dön düğmeleri gizlenir. Sürükleme açık kalır — "bu açı 46 değil 52 olmalı"
+demenin yolu açıyı deneyip panelden okumaktır.
 
 ## Denetim kuralları tek yerde
 

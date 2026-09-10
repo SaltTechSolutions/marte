@@ -20,51 +20,15 @@
  * Yalnızca 127.0.0.1'i dinler ve depo dışına hiçbir şey yazmaz.
  */
 
-import { spawnSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
+import { buildEngine, OUT, ROOT } from './engine-build.mjs';
 import { loadSchema } from './schema.mjs';
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'data/rigArchetypes.json');
-const OUT = join(ROOT, '.editor-build');
 const PORT = Number(process.env.RIG_PORT || 8123);
-
-/** Motoru tarayıcı modülüne derle. Editör her açılışta güncel kodu alır. */
-function buildEngine() {
-  mkdirSync(OUT, { recursive: true });
-  // Dosyaları komut satırında saymak yerine geçici bir tsconfig yazıyoruz:
-  // TypeScript 5 komut satırı dosyalarında proje ayarını sessizce yok sayıyor,
-  // 6 ise hata veriyor. Proje dosyası ikisinde de aynı çalışıyor.
-  const cfg = join(OUT, 'tsconfig.editor.json');
-  writeFileSync(
-    cfg,
-    JSON.stringify(
-      {
-        compilerOptions: {
-          target: 'es2020',
-          module: 'es2020',
-          moduleResolution: 'bundler',
-          outDir: '.',
-          skipLibCheck: true,
-          resolveJsonModule: true,
-        },
-        files: ['../src/rig.ts', '../src/rigEdit.ts', '../src/rigAudit.ts', '../src/muscles.ts'],
-      },
-      null,
-      2,
-    ),
-  );
-  const res = spawnSync('npx', ['tsc', '-p', cfg], { cwd: ROOT, encoding: 'utf8' });
-  if (res.status !== 0) {
-    console.error(res.stdout || res.stderr);
-    throw new Error('motor derlenemedi');
-  }
-  console.log('✓ motor derlendi →', OUT);
-}
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
