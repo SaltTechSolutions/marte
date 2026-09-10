@@ -126,15 +126,18 @@ tamamen örtüyordu, bu oturumda açılan hataydı. Mobil önizleme artık
 uygulamanın çizdiğini çiziyor: parça siluetleri, `headProfile`, ana sahnenin
 düz tabağı. `TODOS.md` kaydı reddedilen yön olarak yeniden yazıldı.
 
+Uygulamadaki **ikinci editör kopyası silindi** (`tools/rig-editor/`,
+`scripts/rig-editor.mjs`, `npm run rig`): canonical editörün eski bir
+kopyasıydı ve uygulamanın ÜRETİLMİŞ `rigArchetypes.json`'ına yazıyordu, yani
+tek yön sözleşmesini kıran şeyi `AGENTS.md` tavsiye ediyordu. O bölüm
+`packages/rig`'i gösterecek şekilde yeniden yazıldı; neyin neden silindiği
+orada bir not olarak duruyor.
+
 **Açık.**
 - 12 poz ve yeni kas verisi **gözle/uzman onayı bekliyor**
   (`poseReviewed: false`, `reviewed: false`).
 - Ad tablosu antrenör onayı bekliyor → `docs/hareket-adlari-onay.md`.
 - `seed_program_templates.cjs` üretime **çalıştırılmadı**.
-- `apps/gymentra-mobile`'daki `npm run rig`, canonical editörün eski bir
-  kopyası ve uygulamanın **üretilmiş** `rigArchetypes.json`'ına yazıyor —
-  tek yön sözleşmesini kırıyor. `AGENTS.md`'nin "Kukla editörü" bölümü de
-  hâlâ onu tarif ediyor.
 
 **Nerede.** `packages/rig/{src,data,editor,scripts}` · `docs/program_templates.md`
 · `docs/hareket-adlari-onay.md` · `backend/scripts/{build_exercise_library.py,program_templates.seed.json}`

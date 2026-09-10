@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Kukla editörü — `npm run rig`.
+ * Kukla editörü — `npm run editor`.
  *
  * Tarayıcıda açılan yerel bir düzenleyici: hareketi seç, kareyi seç, figürün
  * eklemini sürükle, ekipmanı değiştir, denetim uyarılarını canlı gör, kaydet.
@@ -139,7 +139,7 @@ const server = createServer((req, res) => {
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`\n${PORT} portu dolu — editör zaten açık olabilir: http://127.0.0.1:${PORT}`);
-    console.error('Başka bir port için:  RIG_PORT=8124 npm run rig\n');
+    console.error('Başka bir port için:  RIG_PORT=8124 npm run editor\n');
     process.exit(1);
   }
   throw err;
