@@ -192,8 +192,23 @@ ayarlarında **"No alerts"** yazıyor: yeni bir hata çıktığında kimseye
 bildirim gitmiyor. D-4'ün aradığı şey aslında buymuş — kota uyarısı (yok
 öyle bir ayar) değil, **issue alert** (var ve kurulmamış). İzin hatasının 16
 gün boyunca 26 kez tekrarlayıp kimsenin haberi olmamasının sebebi tam olarak
-bu. *Yapılacak:* projeye bir alert kuralı eklemek (yeni issue → e-posta).
-Kullanıcı onayı bekliyor.
+bu.
+
+*(10 Eylül 2026 — kuruldu, kullanıcı onayıyla.)* Projede artık **"Alert 1"**
+var: *bir olay olursa, 1 dakikada 1 olay eşiğiyle e-posta*, alıcı proje
+ekibi. Yeniden yüklemeyle kalıcı olduğu doğrulandı ("No alerts" gitti).
+Eşik bilerek en hassas ayarda: proje ayda 33 olay görüyor, yani gürültü
+riski yok ve şu ana kadarki görünürlük sıfırdı. Yayından sonra gürültü
+yaparsa Quantity/Timespan yükseltilir.
+
+**D-4'ün izleme boşluğu asıl bununla kapandı**, kotayla değil: kademeli
+sürümde (%20) "durdurayım mı" kararını verecek sinyal bu e-posta.
+
+⚠️ *Yeniden adlandırmanın yarım kalan yanı:* GlitchTip **görünen adı**
+değiştiriyor ama **slug'ı** değiştirmiyor. Panelde her yerde `gymentra`
+yazıyor, ama URL'ler hâlâ `/settings/projects/yuvva`. Kozmetik; DSN sayısal
+kimliği kullandığı için hiçbir şeyi etkilemiyor. Slug'ı düzeltmenin tek yolu
+yeni proje açmak olurdu ve o geçmişi kaybettirirdi — değmez.
 
 **(2) Çözülmemiş altı hata duruyor ve biri canlı.**
 
