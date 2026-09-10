@@ -133,10 +133,35 @@ e-posta gider. *Yapılan:* iki eşik eklendi — **%10 (₺50) erken tel** ve
 mertebelik bir sapma demek. Tavan ₺500'de bırakıldı — altı Firebase
 projesinin hepsinde aynı düzen var, onu bozmanın sebebi yok.
 
-**GlitchTip kota uyarısı — kurulamadı, panelde yapılacak.** Elimizde yalnızca
-DSN var (`app.glitchtip.com/27190`); DSN yazma amaçlı bir anahtar, organizasyon
-ayarı yönetemiyor ve depoda bir API jetonu yok. **Kullanıcı yapacak:**
-GlitchTip → organizasyon ayarları → kota/kullanım e-posta uyarısı.
+**GlitchTip kota uyarısı — böyle bir ayar yok.** *(10 Eylül 2026, belgeler
+okundu — önceki not yanlıştı, "panelden aç" diye bir yer aramaya göndermiş.)*
+GlitchTip'in dokümantasyonunda ve fiyatlandırma SSS'inde açılıp kapatılan bir
+kota uyarısı geçmiyor. Onun yerine **kademeli kısıtlama** var:
+
+> *"After your quota is full, we throttle by 10%. We increase this gradually
+> until at 2x the quota we block fully."*
+
+**Bu, D-4'ün özgün korkusunu kısmen çürütüyor.** "Bir çökme döngüsü kotayı
+sessizce yakar ve o andan sonra hiçbir şey görmeyiz" cümlesi yanlış: 1.000'de
+kör olmuyoruz, 1.000'de %10 kısılıyor ve tam körlük ancak **2.000** olayda
+geliyor. Yani pencere sanılandan iki kat geniş ve düşüş kademeli.
+
+⚠️ **Ama daha sinsi bir kalem çıktı: uptime kontrolleri de olay sayılıyor.**
+GlitchTip'in tanımı net — olaylar dört şeyi ölçüyor: *Issues* (her hata
+tekrarı), **Uptime (her durum kontrolü)**, *Performance* (her transaction) ve
+*Releases* (her MB sürüm dosyası). Saatte bir uptime kontrolü ayda 720 olay
+demek, yani 1.000'lik kotanın neredeyse tamamı — hata için yer kalmaz.
+**Kontrol edilmeli:** organizasyonda tanımlı bir uptime monitörü var mı.
+
+*Kotayı görmek için:* app.glitchtip.com'da organizasyonun abonelik/kullanım
+sayfası. Tam menü yolu doğrulanmadı — oturum gerektiriyor ve DSN (yazma amaçlı)
+panel okuyamıyor.
+
+*Bizim tarafımızdaki azaltmalar zaten GlitchTip'in kendi önerisiyle aynı yönde:*
+SSS "aşırı olayın en yaygın kaynağı performance" deyip `tracesSampleRate`'i
+düşürmeyi öneriyor — bizde zaten **0**. Hata tarafı için `sampleRate`
+öneriyor; biz onun yerine imza başına tekrar sınırı koyduk (aşağıya bkz.),
+çünkü kör örnekleme nadir bir hatayı da eler.
 
 *Ama asıl korkulan senaryo koda bağlandı.* D-4'ün kendi cümlesi "bir çökme
 döngüsü kotayı sessizce yakar" diyordu; `src/services/eventBudget.ts` tam
