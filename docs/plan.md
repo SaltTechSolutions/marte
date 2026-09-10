@@ -166,13 +166,34 @@ mevcut değil, kotayı yiyen bir monitör bulunmuyor.
 ⚠️ **Ama panele bakınca iki gerçek şey çıktı — ikisi de bu plana hiç
 girmemişti.**
 
-**(1) DSN başka bir ürünün projesini gösteriyor.** `EXPO_PUBLIC_SENTRY_DSN`
-`app.glitchtip.com/27190`'a bakıyor ve 27190, organizasyondaki **`yuvva`**
-adlı proje. GymEntra'nın çökme raporları oraya düşüyor (içerikten belli:
-`tenant-logos/tarabya-mart…`). Tek proje o olduğu için veri kaybolmuyor ama
-isim yanlış; ikinci bir ürün aynı projeye rapor ederse ayırt edilemez hâle
-gelir. *Yapılacak:* GymEntra için ayrı bir proje açıp DSN'i değiştirmek
-(EAS ortam değişkeni, üç ortamda birden).
+**(1) [x] Proje yanlış isimliydi — `yuvva` → `gymentra`** *(10 Eylül 2026,
+kullanıcı onayıyla yeniden adlandırıldı).* DSN `app.glitchtip.com/27190`'a
+bakıyor ve 27190 organizasyondaki tek proje; adı `yuvva`'ydı ama içine
+GymEntra rapor ediyordu.
+
+*Önce "iki ürün karışmış" diye tarif etmiştim, yanlıştı:* `~/Codes/yuvva`'da
+Sentry/GlitchTip entegrasyonu **hiç yok**, yani projeye yalnızca GymEntra
+yazıyor. Karışma değil, yanlış isimlendirme. Zarar bugünde değil gelecekteydi
+— yuvva'ya bir gün hata takibi eklenip aynı projeye bağlanması, ya da panele
+bakan birinin "yuvva" başlığı altında GymEntra hatalarını görüp yanlış sonuca
+varması.
+
+*Yeni proje açmak yerine yeniden adlandırma seçildi:* DSN **sayısal** proje
+kimliğini taşıdığı için ad değişikliği onu bozmuyor (doğrulandı: rename
+sonrası DSN hâlâ `…/27190`), 16 günlük geçmiş ve çözümlenmiş kayıtların
+regression takibi korunuyor, kod ve build değişmiyor. Yeni proje olsaydı
+geçmiş eski projede kalır, DSN üç EAS ortamında birden değişir ve ancak yeni
+build/OTA ile devreye girerdi. Kota da bölünmezdi zaten: ücretsiz sınır
+**organizasyon başına**. Yuvva'ya hata takibi eklendiği gün ona ayrı bir
+proje açılır.
+
+**(1b) ⚠️ Proje uyarısı hiç kurulmamış — asıl izleme boşluğu bu.** Proje
+ayarlarında **"No alerts"** yazıyor: yeni bir hata çıktığında kimseye
+bildirim gitmiyor. D-4'ün aradığı şey aslında buymuş — kota uyarısı (yok
+öyle bir ayar) değil, **issue alert** (var ve kurulmamış). İzin hatasının 16
+gün boyunca 26 kez tekrarlayıp kimsenin haberi olmamasının sebebi tam olarak
+bu. *Yapılacak:* projeye bir alert kuralı eklemek (yeni issue → e-posta).
+Kullanıcı onayı bekliyor.
 
 **(2) Çözülmemiş altı hata duruyor ve biri canlı.**
 
