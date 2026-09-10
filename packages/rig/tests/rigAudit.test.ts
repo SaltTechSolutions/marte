@@ -29,8 +29,9 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },
   // Kalça öne bu kadar bükülemez.
   [key('kalça', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 20 } },
-  // Kalça geriye bu kadar açılamaz.
-  [key('kalça', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
+  // Kalça geriye bu kadar açılamaz — işaret yalnızca AYAKTA anlamlı olduğu
+  // için prob da ayakta duran bir arketipte.
+  [key('kalça geriye açılma', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
   // Gövde öne bu kadar katlanamaz.
   [key('gövde', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thoraxA: 100 } },
   // Gövde geriye bu kadar açılamaz.
@@ -83,9 +84,9 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   const floor = Object.entries(RIG_ARCHETYPES).filter(([, ex]) => ex.arm === 'floor');
 
   it('bandın hiçbir hareket için atlaması yok', () => {
-    // T2'nin doğrudan iddiası: kapı yok, band 30/30 harekette değerlendiriliyor.
+    // T2'nin doğrudan iddiası: kapı yok, band her arketipte değerlendiriliyor.
     expect(dirsek.skip, 'dirsek bandında skip olmamalı').toBeUndefined();
-    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(8);
+    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(12);
   });
 
   ik.forEach(([k, ex]) => {
