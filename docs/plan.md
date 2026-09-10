@@ -180,7 +180,7 @@ gelir. *Yapılacak:* GymEntra için ayrı bir proje açıp DSN'i değiştirmek
 |---|---|---|
 | **`FirebaseError: Missing or insufficient permissions.`** | 16 gün, **3 saat önce görüldü** | **26** |
 | `WatchdogTermination: OS watchdog terminated your app (RAM)` | 5 gün | 1 |
-| `FirebaseError: Storage: no permission for 'tenant-logos/tarabya-mart…'` | 11 gün, 7 gün önce | 3 |
+| ~~`FirebaseError: Storage: no permission for 'tenant-logos/…'`~~ — **bayat, zaten düzeltilmiş** | 11 gün, 7 gün önce | 3 |
 | `FirebaseError: The query requires an index (building)` | 7 gün | 1 |
 | `FirebaseError: The query requires an index (create it here)` | 8 gün | 1 |
 | `Invariant Violation: 'RNGoogleSignin' could not be found` | 8 gün | 1 |
@@ -213,6 +213,20 @@ bulamaz, okuma reddedilir.
 oluşturup sonra okuyordu, yani dokümanın ömrünün çoğunu geçirdiği durumu
 hiç denemiyordu. 4 yeni test (222 → 226). *Bundan sonra deterministik
 kimlikli her kural boş hâliyle de sınanmalı.*
+
+**[x] Storage izin hatası — inceleme sonucu: yapılacak bir şey yok.**
+*(10 Eylül 2026.)* Olay `environment: development`, iOS **simülatöründen**,
+**3 Eylül 11:27 UTC**. `tenant-logos` kuralı ise **4 Eylül 15:19 UTC**'de
+deploy edilmiş (`170fe0e8`, canlıdan doğrulandı: `allow read: if true`,
+yazma tamamen kapalı, yükleme `uploadTenantLogo` callable'ında Admin SDK
+ile). Düzeltme olaydan **28 saat sonra** gelmiş ve o tarihten beri yeni olay
+yok — toplam 3 olayın sonuncusu 3 Eylül.
+
+*Öncekiyle karıştırılmamalı:* renewal hatası üretimden geliyordu ve devam
+ediyordu; bu geliştirme ortamından ve ölü. GlitchTip'te açık görünmesinin
+tek sebebi kimsenin çözümlenmiş işaretlememesi. İstemci kodu `tenant-logos`
+yoluna hiç dokunmuyor (tek referans `functions/src/branding.ts`), yani
+kalan bir yüzey de yok.
 
 **Uygulama değişikliği gerekmedi:** kural düzeltmesi olduğu için deploy
 anında mevcut bütün build'lere ulaştı — Tarabya'daki Android sürümlerine de,
