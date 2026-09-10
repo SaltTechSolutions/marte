@@ -15,6 +15,7 @@ import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthRedirect } from '@/context/AuthRedirect';
 import { PushNotificationSync } from '@/notifications/PushNotificationSync';
+import { createEventBudget } from '@/services/eventBudget';
 import { ThemeProvider as AppThemeProvider } from '@/theme/ThemeContext';
 import { ThemeSync } from '@/theme/ThemeSync';
 
@@ -27,6 +28,12 @@ SplashScreen.preventAutoHideAsync();
 // if the env var isn't set, so a contributor without a DSN still gets a
 // working app rather than a crash on startup.
 if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
+  // plan.md D-4. `reportError`'ın kendi süzgeci (data/errors.ts) yalnızca
+  // *bizim* çağırdığımız yolu görüyor; bir çökme döngüsü oradan geçmiyor,
+  // SDK'nın küresel yakalayıcısından geliyor. Kotayı yakan da o, bu yüzden
+  // kapı en dışta, `beforeSend`'de duruyor.
+  const allowEvent = createEventBudget();
+
   Sentry.init({
     dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
     // Sends stack traces without also recording user session replay/
@@ -34,6 +41,7 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
     // capture is more of the free tier's monthly event budget spent on
     // something other than the errors it exists to catch.
     tracesSampleRate: 0,
+    beforeSend: (event) => (allowEvent(event) ? event : null),
   });
 }
 

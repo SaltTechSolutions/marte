@@ -118,18 +118,79 @@ yükleme provası hiç yapılmadı. Yanlış bir toplu script ya da hatalı bir 
 deploy'u geri alınamaz. *En küçük hâli:* PITR (7 gün) + günlük export'un bir
 GCS bucket'ına yazılması.
 
-**D-4. Yayın sonrası izleme kör.** Üçü de yok: Play'de **kademeli sürüm**
-(staged rollout) kararı, GlitchTip'in **1.000 olay/ay** ücretsiz kotası
-dolduğunda uyarı (bir çökme döngüsü kotayı sessizce yakar ve o andan sonra
-hiçbir şey görmeyiz), ve Firebase Blaze **bütçe alarmı**. İlk gerçek
-kullanıcı dalgası bunların olmadığı bir anda gelirse ne olduğunu sonradan
-öğreniriz.
+**D-4. [x] Yayın sonrası izleme kör.** *(10 Eylül 2026 — üçü de ele alındı;
+biri zaten varmış, biri koda indi, biri panelde kaldı.)*
 
-**D-5. `poseReviewed` hâlâ `false`.** Mağazaya giden build'de bütün poz
-kareleri "antrenör onayı bekliyor" etiketiyle çiziliyor. Ürün kararı: ya
-kareler onaylanır, ya etiket incelemeye giden sürümde daha az düşündürücü bir
-metne döner. Bugünkü hâli, incelemeciye ve ilk üyeye "bu içerik doğrulanmadı"
-diyor.
+**Bütçe alarmı — zaten vardı, sıkılaştırıldı.** "Yok" tespiti yanlıştı:
+`Firebase Project tarabyamarte` bütçesi ₺500/ay olarak duruyordu, doğru
+eşiklerle (%50/90/100, aylık, yalnızca proje `171027427019`). `notificationsRule`
+boş görünüyor ama bu bildirimlerin kapalı olduğu anlamına gelmiyor —
+Budgets API'sinde boş kural **varsayılan** demek, yani fatura yöneticilerine
+e-posta gider. *Yapılan:* iki eşik eklendi — **%10 (₺50) erken tel** ve
+**%100 FORECASTED_SPEND**. Gerekçe: bugünkü harcama kuruşlar mertebesinde
+(`freeTier: true`, tek salon), dolayısıyla ilk uyarının ₺250'de gelmesi
+"kaçağı büyümeden yakala" işini görmüyordu; ₺50 bu ölçekte zaten üç
+mertebelik bir sapma demek. Tavan ₺500'de bırakıldı — altı Firebase
+projesinin hepsinde aynı düzen var, onu bozmanın sebebi yok.
+
+**GlitchTip kota uyarısı — kurulamadı, panelde yapılacak.** Elimizde yalnızca
+DSN var (`app.glitchtip.com/27190`); DSN yazma amaçlı bir anahtar, organizasyon
+ayarı yönetemiyor ve depoda bir API jetonu yok. **Kullanıcı yapacak:**
+GlitchTip → organizasyon ayarları → kota/kullanım e-posta uyarısı.
+
+*Ama asıl korkulan senaryo koda bağlandı.* D-4'ün kendi cümlesi "bir çökme
+döngüsü kotayı sessizce yakar" diyordu; `src/services/eventBudget.ts` tam
+buna karşı bir kapı ve `Sentry.init`'in `beforeSend`'ine takıldı.
+`data/errors.ts`'teki mevcut süzgeç bunu yakalayamazdı — o yalnızca *bizim*
+`reportError` çağrılarımızı görüyor, çökme döngüsü ise SDK'nın küresel
+yakalayıcısından geliyor.
+
+Sınır **imza başına** (tür + sebep), küresel değil: tek bir sayaç olsaydı
+gürültülü bir hata sessiz olanı susturur, yani tam kaçınmak istediğimiz şeyi
+yapardı. Üstündeki oturum tavanı (25) her tekrarında *yeni* imza üreten
+döngüyü sınırlıyor — mesajında zaman damgası taşıyan bir hata imza sınırını
+hiç görmez. 10 birim testi (mobil 354 → 364).
+
+⚠️ **Bu bir azaltma, garanti değil.** Sayaç bellekte, yani açılışta çöküp
+yeniden başlayan bir uygulama her seferinde sıfırdan sayar. O senaryoyu ancak
+GlitchTip tarafındaki kısıtlama yakalar — yukarıdaki panel işi bu yüzden hâlâ
+gerekli.
+
+**Kademeli sürüm — karar: evet, %20 ile başla.** Üretime çıkarken tek seferde
+%100 verilmeyecek; **%20 → (48 saat temiz) → %50 → %100**. *Gerekçe istatistik
+değil:* tek salonla %20 ≈ 10 kişi, anlamlı bir örneklem değil. Sebep **durdurma
+düğmesi** — Play kademeli bir sürümü duraklatıp durdurabiliyor, tamamlanmış bir
+sürümü geri alamıyorsun (kullanıcı zaten güncellemiş olur). Google girişi, push
+ve QR üretim imzasıyla hiç denenmemişken (aşağıda 3. madde) o düğmenin
+elimizde olması gerekiyor. İlk %20 penceresinde bakılacaklar: Play Console
+vitals'ta çökmesiz oturum oranı, GlitchTip'te yeni imza, ve üç doğrulamanın
+sahada tutması.
+
+**D-5. [x] `poseReviewed` hâlâ `false`.** *(10 Eylül 2026 — etiket yeniden
+yazıldı; kareler onaylanmadı ve onaylanmış gibi de gösterilmedi.)*
+
+İki seçenekten ilki (kareleri onaylamak) gerçekte seçenek değildi: bayrağın
+anlamı "yetkin bir antrenör baktı" ve bakan olmadı. `true`'ya çekmek, olmayan
+bir denetimi iddia etmek olurdu — üstelik dosya üretilmiş (`build_exercise_library.py`),
+elle düzenlenmiyor.
+
+*Asıl sorun metnin kendisiydi:* tek cümlede iki ayrı şey vardı — bizim **iç
+kalite durumumuz** ("antrenör onayı bekliyor") ve kullanıcının **güvenliği**
+("tekniği antrenörüne doğrulat"). Birincisi kullanıcının yapabileceği bir şey
+değil ve hem incelemeciye hem ilk üyeye "bu içerik doğrulanmadı" diye
+okunuyor. İkincisi gerçek ve kalması gereken uyarı. Yeni metin ikincisini
+tutuyor, birincisini atıyor:
+
+> ⓘ Çizimler şematiktir; hareketin yolunu gösterir, tekniği anlatmaz.
+> Tekniği antrenörüne doğrulat.
+
+**Uyarı artık `poseReviewed`'a bağlı değil** — ve bu bilinçli. Doğru olduğu
+koşul o bayrak değil: bir antrenör kareleri onaylasa bile çizimler şematik
+kalır ve teknik yine antrenörden öğrenilir. Bayrağa bağlı bıraksaydık, onay
+geldiği gün güvenlik uyarısı sessizce kaybolurdu. `poseReviewed` veride
+duruyor ama artık hiçbir yerde okunmuyor; karelerin nasıl üretildiğini
+söyleyen bir künye olarak bırakıldı. *Küçük borç:* okuyucusu kalmadığı için
+ya üreticiden de kaldırılmalı ya da bu rolü açıkça belgelenmeli.
 
 **D-6. `packages/rig` bu planın dışında.** 5 Eylül'den bu yana yapılan
 **bütün** commitler hareket motoru ve kare editörü; onlar
