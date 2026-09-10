@@ -185,10 +185,38 @@ gelir. *Yapılacak:* GymEntra için ayrı bir proje açıp DSN'i değiştirmek
 | `FirebaseError: The query requires an index (create it here)` | 8 gün | 1 |
 | `Invariant Violation: 'RNGoogleSignin' could not be found` | 8 gün | 1 |
 
-**İlki yayın öncesi bakılmalı:** 26 kez tekrarlamış ve **hâlâ oluyor** (3 saat
-önce). Bir kural reddi canlı salonda bir ekranı boş bırakıyor olabilir; hangi
-sorgu olduğu koddan değil olayın kendisinden okunmalı. Bu, "yayına ne kaldı"
-listesine kimsenin GlitchTip'e bakmadığı için girmemişti.
+**[x] İlki çözüldü ve deploy edildi** *(10 Eylül 2026, ruleset `41ce71b8`).*
+
+Olayın `watchContext` etiketi ("Yenileme talebi") hangi dinleyici olduğunu
+doğrudan söyledi — P2-1'de eklenen o etiket olmasa 29 dinleyici arasından
+koddan bulunamazdı. Etiketin bedelini burada geri ödedi.
+
+*Kök sebep:* okuma kuralı `resource.data.memberId`'ye bakıyordu, ama
+**`resource` var olmayan bir doküman için `null`** ve o durumda kural `false`
+dönmüyor, komple hata verip isteği reddediyor. `RenewalRequestRow` bu
+dokümanı ekran açılır açılmaz dinliyor; üye hiç yenileme istemediyse doküman
+yok. Yani **boş durum istisna değil, normal durum.**
+
+*Bir değil dört koleksiyonda vardı* — deseni arayınca üçü daha çıktı, hepsi
+önce kırmızı testle kanıtlandı: `renewal_requests` (üretimin yakaladığı),
+`member_entitlements` (paketi olmayan üye), `trainer_availability` (saatini
+girmemiş antrenör), `member_notes` (notu olmayan üye). `user_settings` ve
+`tenant_memberships` temizdi çünkü kuralları zaten kimliğe bakıyor — **bu
+sınıf bir kez yaşanıp `tenant_memberships`'te düzeltilmiş ama diğerlerine
+taşınmamıştı.**
+
+*Çözüm:* doküman yoksa yetkiyi kimlikten oku. Varsayım `tenantOfId()` içinde
+tek yerde adlandırıldı ve yanlışsa fail-closed — eşleşmeyen önek üyelik
+bulamaz, okuma reddedilir.
+
+⚠️ **Testlerin bunu görememesinin sebebi kayda değer:** hepsi dokümanı önce
+oluşturup sonra okuyordu, yani dokümanın ömrünün çoğunu geçirdiği durumu
+hiç denemiyordu. 4 yeni test (222 → 226). *Bundan sonra deterministik
+kimlikli her kural boş hâliyle de sınanmalı.*
+
+**Uygulama değişikliği gerekmedi:** kural düzeltmesi olduğu için deploy
+anında mevcut bütün build'lere ulaştı — Tarabya'daki Android sürümlerine de,
+App Store incelemesinde bekleyen iOS build 22'ye de.
 
 *İki index hatası muhtemelen kapanmış* — index'ler bugün dosyayla birebir
 eşleşiyor (36/36) ve kayıtlar 7–8 günlük. `RNGoogleSignin` hatası ise native
