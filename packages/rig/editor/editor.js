@@ -749,22 +749,34 @@ function drawProps(e, S0, S, push) {
     // o yönden geliyor.
     if (e.prop === 'cable') {
       if (e.mode === 'seat') push(seat());
-      const high = e.cableFrom === 'high';
-      // Makara: baş üstünde (pulldown) ya da önde (kürek, pres, yüz çekişi).
-      // Direği zemine iniyor, yani istasyon havada asılı değil.
-      const px = high ? S0.hand[0] : Math.max(S.hand[0], S0.hand[0]) + 120;
-      const py = high ? BAR_Y + 24 : S0.hand[1];
+      const from = e.cableFrom || 'front';
+      const ahead = Math.max(S.hand[0], S0.hand[0]);
+      // Makaranın YERİ direncin yönü demek. Yanlış yer hareketi başka bir
+      // hareket gibi gösteriyor: göğüs presine ÖNDEN kablo koymak onu kürek
+      // yapıyordu, çünkü kablo eli öne çekiyordu.
+      const anchor = {
+        high:  [S0.hand[0], BAR_Y + 24],                    // baş üstü makara
+        front: [ahead + 100, S0.hand[1]],                   // önde, el hizası
+        low:   [ahead + 110, GROUND - 34],                  // önde, zemine yakın
+        back:  [S0.pelvis[0] - 132, S0.sh[1]],              // arkada, omuz hizası
+      }[from];
+      const px = anchor[0], py = anchor[1];
+      const postTop = from === 'high' ? BAR_Y : py;
       push([
-        el('rect', { x: px - 9, y: high ? BAR_Y : py, width: 18, height: Math.max(0, GROUND - (high ? BAR_Y : py)), rx: 4, fill: surf2, stroke: line }),
-        ...(high ? [el('rect', { x: Math.min(px, S0.pelvis[0]) - 30, y: BAR_Y, width: Math.abs(px - S0.pelvis[0]) + 60, height: 16, rx: 6, fill: surf2, stroke: line })] : []),
+        el('rect', { x: px - 9, y: postTop, width: 18, height: Math.max(0, GROUND - postTop), rx: 4, fill: surf2, stroke: line }),
+        ...(from === 'high' ? [el('rect', { x: Math.min(px, S0.pelvis[0]) - 30, y: BAR_Y, width: Math.abs(px - S0.pelvis[0]) + 60, height: 16, rx: 6, fill: surf2, stroke: line })] : []),
         el('circle', { cx: px, cy: py, r: 13, fill: metal, stroke: line }),
-        // Kablo makaradan ELE: figür oynarken uzayıp kısalıyor, çünkü çeken şey o.
-        el('line', { x1: px, y1: py, x2: S.hand[0], y2: S.hand[1], stroke: metal, 'stroke-width': 4, 'stroke-linecap': 'round' }),
-        // Tutamak: kabloya dik kısa bir çubuk. Pulldown'da geniş bar, ötekinde kol tutamağı.
+        // `back` bir KOL, kablo değil: makine göğüs presinde direnci taşıyan
+        // şey kaldıraç kolu. Kalın çiziliyor ve gövdenin arkasında kalıyor.
+        from === 'back'
+          ? el('path', { d: capsule([px, py], [S.hand[0], S.hand[1]], 11, 9), fill: surf2, stroke: line })
+          // Kablo makaradan ELE: figür oynarken uzayıp kısalıyor, çeken şey o.
+          : el('line', { x1: px, y1: py, x2: S.hand[0], y2: S.hand[1], stroke: metal, 'stroke-width': 4, 'stroke-linecap': 'round' }),
+        // Tutamak: kabloya dik kısa çubuk. Pulldown'da geniş bar, ötekinde kol tutamağı.
         (() => {
           const dx = S.hand[0] - px, dy = S.hand[1] - py, L = Math.hypot(dx, dy) || 1;
-          const w = high ? 74 : 26;
-          return el('path', { d: capsule([S.hand[0] - (-dy / L) * w, S.hand[1] - (dx / L) * w], [S.hand[0] + (-dy / L) * w, S.hand[1] + (dx / L) * w], 8, 8), fill: metal, stroke: line });
+          const w = from === 'high' ? 74 : 26;
+          return el('path', { d: capsule([S.hand[0] + (dy / L) * w, S.hand[1] - (dx / L) * w], [S.hand[0] - (dy / L) * w, S.hand[1] + (dx / L) * w], 8, 8), fill: metal, stroke: line });
         })(),
       ]);
     }

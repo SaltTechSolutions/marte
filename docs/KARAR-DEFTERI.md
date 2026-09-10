@@ -158,7 +158,12 @@ incelendi. İkisi düzeltildi, dördü karar bekliyor:
 - **`cable` istasyonu eklendi.** Dört harekette (lat pulldown, oturarak
   kürek, makine göğüs presi, yüz çekişi) `bar: 'hands'` elde TABAKLI HALTER
   çiziyordu — direncin nereden geldiği görünmüyordu. Artık makara + kablo +
-  tutamak var; `cableFrom: 'high' | 'front'` makaranın yerini söylüyor.
+  tutamak var. **`cableFrom` çizim süsü değil, kuvvetin yönü:** `high`
+  (pulldown), `front` (yüz çekişi), `low` (oturarak kürek — kablo yerden
+  yükselir), `back` (göğüs presi — kaldıraç kolu arkadan gelir). İlk denemede
+  presin makarası ÖNDEYDİ, yani kablo eli öne çekiyordu ve hareket kürek gibi
+  okunuyordu; kürekte de makara el hizasındaydı ve yatay bir sırık gibi
+  duruyordu.
 - **`legpad` istasyonu eklendi.** Leg extension ve leg curl yastıksızdı;
   kullanıcının deyişiyle "gücün ne yöne uygulandığı belli olmuyordu". Rulo
   ayağın GİTTİĞİ yönde duruyor (direnç harekete karşı koyar), bir kolla

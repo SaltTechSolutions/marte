@@ -110,8 +110,18 @@ export type RigBar = 'back' | 'hands' | 'hips' | null;
  */
 export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | 'seatback' | 'sled' | 'cable' | 'legpad' | null;
 
-/** Kablo makarasının yeri: baş üstü (lat pulldown) ya da önde (kürek, pres). */
-export type RigCableFrom = 'high' | 'front';
+/**
+ * Direncin GELDİĞİ yer. Kuvvetin yönünü bu belirliyor, çizim süsü değil:
+ * yanlış seçilirse hareket başka bir hareket gibi okunuyor — göğüs presine
+ * önden kablo koymak onu kürek yapıyordu.
+ *
+ * `high`  baş üstü makara — lat pulldown
+ * `front` önde, el hizasında makara — yüz çekişi
+ * `low`   önde, zemine yakın makara — oturarak kürek (kablo yerden yükselir)
+ * `back`  arkada makara ve İTME KOLU — göğüs presi; direnç öne itişe karşı
+ *         koyar, yani arkadan gelir
+ */
+export type RigCableFrom = 'high' | 'front' | 'low' | 'back';
 
 /**
  * Elde taşınan yük. `bar` barın NEREDE olduğunu söyler (sırtta, elde,

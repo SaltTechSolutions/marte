@@ -2216,7 +2216,7 @@
   "arm": "ik",
   "bar": null,
   "prop": "cable",
-  "cableFrom": "front",
+  "cableFrom": "low",
   "bend": 1,
   "dur": 3200,
   "kf": [
@@ -2280,7 +2280,7 @@
   "arm": "ik",
   "bar": null,
   "prop": "cable",
-  "cableFrom": "front",
+  "cableFrom": "back",
   "bend": 1,
   "dur": 3200,
   "kf": [

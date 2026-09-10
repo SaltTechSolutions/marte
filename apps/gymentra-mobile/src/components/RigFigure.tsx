@@ -276,20 +276,29 @@ export function RigFigure({
             `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER çiziliyordu —
             direncin nereden geldiği görünmüyordu. Kablo onu söylüyor. */}
         {rig.prop === 'cable' && (() => {
-          const high = rig.cableFrom === 'high';
-          const px = high ? S0.hand[0] : Math.max(S.hand[0], S0.hand[0]) + 120;
-          const py = high ? BAR_Y + 24 : S0.hand[1];
-          const postY = high ? BAR_Y : py;
+          // Makaranın YERİ direncin yönü demek — çizim süsü değil. Göğüs
+          // presine ÖNDEN kablo koymak onu kürek yapıyordu, çünkü kablo eli
+          // öne çekiyordu.
+          const from = rig.cableFrom ?? 'front';
+          const ahead = Math.max(S.hand[0], S0.hand[0]);
+          const anchor: Record<string, Vec> = {
+            high: [S0.hand[0], BAR_Y + 24],
+            front: [ahead + 100, S0.hand[1]],
+            low: [ahead + 110, GROUND - 34],
+            back: [S0.pelvis[0] - 132, S0.sh[1]],
+          };
+          const [px, py] = anchor[from];
+          const postY = from === 'high' ? BAR_Y : py;
           const dx = S.hand[0] - px;
           const dy = S.hand[1] - py;
           const L = Math.hypot(dx, dy) || 1;
-          const w = high ? 74 : 26;
+          const w = from === 'high' ? 74 : 26;
           const h1: Vec = [S.hand[0] + (dy / L) * w, S.hand[1] - (dx / L) * w];
           const h2: Vec = [S.hand[0] - (dy / L) * w, S.hand[1] + (dx / L) * w];
           return (
             <G key="cable">
               <Rect x={px - 9} y={postY} width={18} height={Math.max(0, GROUND - postY)} rx={4} fill={colors.surf2} stroke={line} />
-              {high && (
+              {from === 'high' && (
                 <Rect
                   x={Math.min(px, S0.pelvis[0]) - 30}
                   y={BAR_Y}
@@ -301,7 +310,13 @@ export function RigFigure({
                 />
               )}
               <Circle cx={px} cy={py} r={13} fill={metal} stroke={line} />
-              <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
+              {/* `back` bir KOL, kablo değil: makine göğüs presinde direnci
+                  taşıyan şey kaldıraç kolu, ve gövdenin arkasında kalıyor. */}
+              {from === 'back' ? (
+                <Path d={capsule([px, py], [S.hand[0], S.hand[1]], 11, 9)} fill={colors.surf2} stroke={line} />
+              ) : (
+                <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
+              )}
               <Path d={capsule(h1, h2, 8, 8)} fill={metal} stroke={line} />
             </G>
           );

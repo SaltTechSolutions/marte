@@ -23,7 +23,7 @@ const MODES = ['stand', 'quad', 'bench', 'supine', 'hang', 'seat'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
 const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled', 'cable', 'legpad'];
-const CABLE_FROM = ['high', 'front'];
+const CABLE_FROM = ['high', 'front', 'low', 'back'];
 const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
 
