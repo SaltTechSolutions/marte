@@ -75,6 +75,25 @@ taşımasından kalan yola yazıyordu.
 - Yeni `ProgramExercise` alanlarının hepsi **opsiyonel** — zorunlu olsalardı
   yazılmış her program ve her `workout_log` geçersiz olurdu.
 
+**Subtree şüphesi — tarihlerle kapandı.** "Bazı şeyler eski haline gelmiş"
+şüphesi araştırıldı: kesim commit'i `fbb1fb2c` **2026-09-07 16:29:35**,
+monorepo'ya alınışı **16:34:36** — beş dakika sonra. Kesim, varsayılan dala
+yapılan PR #1 birleştirmesi, yani o andaki depo ucu. O beş dakikada kimse
+push etmediyse (eden kişi zaten devri yapan olurdu) devirde hiçbir şey
+kaybolmadı; eski depolar da README'ye göre arşivli.
+
+Bulgular bunu doğruluyor: üç kusurun üçü de deponun **kendi içindeki eski
+tutarsızlıklar**, kaybolmuş iş değil. Tabak/kafa sırası `git log -L` ile ilk
+commit'e (`a49474a8`) kadar izleniyor, hiç değişmemiş. Perspektif halter
+zaten vardı ve `TODOS.md` onu bilinçli konvansiyon diye kaydetmiş. Önizleme
+kapsül çizimi ilk yazıldığından beri öyle.
+
+"Çizim katmanlarını netleştirmiştik" hatırası da gerçek commit'lere denk
+geliyor ve **hepsi monorepo'da**: `04832fa2` (karşılaştırmadaki 2B hücresi,
+6 Eyl), `30b45bfa` (uzak eldeki ağırlık gövdenin arkasına, 7 Eyl),
+`2ab47d48` (sırtüstü figür aynalandı, 7 Eyl). Hiçbirinde yapılmamış olan
+şey tabak/kafa sırasıydı — gerileme değil, boşluk.
+
 **Bilerek yapılmadı.**
 - **Birincil hareket adları Türkçeleştirilmedi.** Mevcut adların hepsi zaten
   bu deponun antrenör incelemesinden geçmiş şablonlarının kullandığı adlar;
@@ -111,10 +130,11 @@ düz tabağı. `TODOS.md` kaydı reddedilen yön olarak yeniden yazıldı.
   kopyası ve uygulamanın **üretilmiş** `rigArchetypes.json`'ına yazıyor —
   tek yön sözleşmesini kırıyor. `AGENTS.md`'nin "Kukla editörü" bölümü de
   hâlâ onu tarif ediyor.
-- `Tarki1151/antrenman-simulatoru` deposu oturuma eklenemedi (izin), yani
-  subtree'nin alındığı `fbb1fb2c`'nin o deponun son hâli olup olmadığı
-  **doğrulanmadı**. Bu turdaki bulguların hiçbiri subtree kaynaklı kayba
-  işaret etmiyor, ama şüpheyi kesin kapatan tek şey o karşılaştırma.
+- `Tarki1151/antrenman-simulatoru` ile **birebir diff yapılamadı**: oturum
+  farklı sahipten depo eklemiyor (`add_repo` v1 sınırı, izin değil) ve depo
+  kimlik doğrulaması istiyor. Kesin karşılaştırma için o depoyu ilk kaynak
+  alan yeni bir oturum gerekir:
+  `git log --oneline fbb1fb2c..origin/main -- editor/ src/`.
 
 **Nerede.** `packages/rig/{src,data,editor,scripts}` · `docs/program_templates.md`
 · `docs/hareket-adlari-onay.md` · `backend/scripts/{build_exercise_library.py,program_templates.seed.json}`
