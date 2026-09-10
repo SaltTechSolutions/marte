@@ -2400,7 +2400,6 @@
  },
  "triceps_pushdown_standing": {
   "note": "Dirsek gövdeye sabit; yalnızca ön kol AŞAĞI açılır. Biceps curl'ün tersi.",
-  "load": "dumbbell",
   "mode": "stand",
   "arm": "angles",
   "bar": null,
@@ -2602,10 +2601,11 @@
   ]
  },
  "curl_up_supine": {
-  "note": "McGill curl-up: eller belin altında, bir diz bükük; yalnızca baş ve omuzlar 2-3 cm kalkar.",
+  "note": "McGill curl-up: bir diz bükük, yalnızca baş ve omuzlar 2-3 cm kalkar. Eller çizimde gövde hizasında yerde: gerçekte belin altındalar ama modelde kalınlık yok, el en alçak temas noktası olunca bütün figürü havaya kaldırıyordu.",
   "mode": "supine",
   "arm": "angles",
   "bar": null,
+  "footDir": 25,
   "bend": 1,
   "dur": 3600,
   "kf": [
@@ -2616,14 +2616,14 @@
      "torso": 90,
      "thoraxA": 90,
      "neckA": 92,
-     "thighA": 250,
-     "shinA": 138,
-     "upperA": 210,
-     "foreA": 198,
-     "thighF": 268,
-     "shinF": 268,
-     "upperF": 210,
-     "foreF": 198
+     "thighA": 330,
+     "shinA": 204,
+     "upperA": 268,
+     "foreA": 268,
+     "thighF": 270,
+     "shinF": 270,
+     "upperF": 268,
+     "foreF": 268
     }
    },
    {
@@ -2633,14 +2633,14 @@
      "torso": 90,
      "thoraxA": 76,
      "neckA": 70,
-     "thighA": 250,
-     "shinA": 138,
-     "upperA": 210,
-     "foreA": 198,
-     "thighF": 268,
-     "shinF": 268,
-     "upperF": 210,
-     "foreF": 198
+     "thighA": 330,
+     "shinA": 204,
+     "upperA": 268,
+     "foreA": 268,
+     "thighF": 270,
+     "shinF": 270,
+     "upperF": 268,
+     "foreF": 268
     }
    },
    {
@@ -2650,14 +2650,14 @@
      "torso": 90,
      "thoraxA": 76,
      "neckA": 70,
-     "thighA": 250,
-     "shinA": 138,
-     "upperA": 210,
-     "foreA": 198,
-     "thighF": 268,
-     "shinF": 268,
-     "upperF": 210,
-     "foreF": 198
+     "thighA": 330,
+     "shinA": 204,
+     "upperA": 268,
+     "foreA": 268,
+     "thighF": 270,
+     "shinF": 270,
+     "upperF": 268,
+     "foreF": 268
     }
    },
    {
@@ -2667,14 +2667,14 @@
      "torso": 90,
      "thoraxA": 90,
      "neckA": 92,
-     "thighA": 250,
-     "shinA": 138,
-     "upperA": 210,
-     "foreA": 198,
-     "thighF": 268,
-     "shinF": 268,
-     "upperF": 210,
-     "foreF": 198
+     "thighA": 330,
+     "shinA": 204,
+     "upperA": 268,
+     "foreA": 268,
+     "thighF": 270,
+     "shinF": 270,
+     "upperF": 268,
+     "foreF": 268
     }
    }
   ]

@@ -138,6 +138,22 @@ tek yön sözleşmesini kıran şeyi `AGENTS.md` tavsiye ediyordu. O bölüm
 `packages/rig`'i gösterecek şekilde yeniden yazıldı; neyin neden silindiği
 orada bir not olarak duruyor.
 
+**11 yeni pozun gözle durum kontrolü (2026-09-10).** Hepsi tek tek
+incelendi. İkisi düzeltildi, dördü karar bekliyor:
+
+- **McGill curl-up havada duruyordu** — eller belin altına konunca el en
+  alçak temas noktası oldu ve bütün gövdeyi kaldırdı; sonra bükük dizin
+  ayağı aynısını yaptı. Kollar gövde hizasına, bacak açıları yere yatacak
+  şekilde çözüldü, `footDir: 25` ile ayak parmakları yukarı. Sırtüstü figürde
+  kural: gövde VE ayak ikisi birden zemin düzleminde olmalı.
+- **Triceps pushdown'da elde dambıl çiziliyordu** (`load: 'dumbbell'`,
+  `standing_arm_isolation`'dan kopyalanmış) — kablo hareketi, kaldırıldı.
+- **Karar bekleyen:** `bar: 'hands'` dört harekette tabaklı halter çiziyor
+  (lat pulldown, oturarak kürek, makine göğüs presi, yüz çekişi). Kablo /
+  tutamak / halat diye bir prop modelde yok.
+- **Karar bekleyen:** leg extension ve leg curl'de makinenin direnç yastığı
+  (baldır rulosu) yok; hareket yüksüz oturup tekme atmak gibi okunuyor.
+
 **Açık.**
 - 12 poz ve yeni kas verisi **gözle/uzman onayı bekliyor**
   (`poseReviewed: false`, `reviewed: false`).
