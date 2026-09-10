@@ -207,8 +207,13 @@ sürümde (%20) "durdurayım mı" kararını verecek sinyal bu e-posta.
 ⚠️ *Yeniden adlandırmanın yarım kalan yanı:* GlitchTip **görünen adı**
 değiştiriyor ama **slug'ı** değiştirmiyor. Panelde her yerde `gymentra`
 yazıyor, ama URL'ler hâlâ `/settings/projects/yuvva`. Kozmetik; DSN sayısal
-kimliği kullandığı için hiçbir şeyi etkilemiyor. Slug'ı düzeltmenin tek yolu
-yeni proje açmak olurdu ve o geçmişi kaybettirirdi — değmez.
+kimliği kullandığı için hiçbir şeyi etkilemiyor.
+
+**Karar (kullanıcı, 10 Eylül 2026): slug için yeni proje açılmayacak, böyle
+kalacak.** Tek düzeltme yolu yeni bir proje açmaktı; o da 16 günlük geçmişi,
+çözümlenmiş iki kaydın regression takibini ve az önce kurulan alert'i
+kaybettirirdi. Kalan tutarsızlık yalnızca URL'de görünüyor. *Yeniden
+açılmasın diye yazıldı.*
 
 **(2) Çözülmemiş altı hata duruyor ve biri canlı.**
 
