@@ -192,6 +192,45 @@ duruyor ama artık hiçbir yerde okunmuyor; karelerin nasıl üretildiğini
 söyleyen bir künye olarak bırakıldı. *Küçük borç:* okuyucusu kalmadığı için
 ya üreticiden de kaldırılmalı ya da bu rolü açıkça belgelenmeli.
 
+**D-2 eki — OTA yolu `preview` için açıldı (10 Eylül 2026).** *"Rig
+iyileştirmeleri uygulamaya yansımıyor" şikâyetinin kökü buymuş; rig tarafında
+eksik yoktu.* `packages/rig`'de `npm run export` on dört dosyanın hiçbirini
+değiştirmedi — motor, kareler, siluetler, katalog ve programlar mobil kaynakta
+zaten güncel. Yansımayan şey çalışan binary'ydi ve sebebi runtime uyuşmazlığı:
+
+| | runtime |
+|---|---|
+| sürüm kodu 7 (internal, yerel build) | `2b3bc0e5…` |
+| bugünkü ağaç ve `preview` güncellemesi | `a58c519b36…` |
+
+Üstelik **`production` kanalına bugüne kadar hiç güncelleme yayınlanmamış**
+(`eas branch:list` → N/A). Yani mağazadaki soyun OTA ile beslenmesi iki
+sebepten birden imkânsızdı.
+
+*Yapılan:* EAS'ta **bulutta** bir `preview` build alındı (`686fd820`, sürüm
+kodu 7, APK). Bulut build'in parmak izi `eas update`'in hesapladığıyla aynı
+şekilde hesaplandığı için — yerel `--local` build'in tuzağı tam buydu — artık
+`eas update --branch preview --platform android --environment preview` ile
+JS-only değişiklikler saniyeler içinde cihaza iniyor. Poz ayarları saf
+JS/JSON olduğundan rig iterasyonu artık build gerektirmiyor.
+
+İlk güncelleme yayınlandı ve paket açılıp içi doğrulandı: RevenueCat Android
+anahtarı ve D-5'in yeni etiketi içeride, eski etiket yok. *Doğrularken not:*
+Hermes ASCII olmayan dizeleri **UTF-16** saklıyor, `strings` ya da düz UTF-8
+arama Türkçe metni bulamıyor — `.encode('utf-16-le')` ile aranmalı.
+
+**`EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` `preview` ortamına da eklendi.** Orada
+iOS anahtarı vardı, Android'inki yoktu — bir Android APK'sı için tam tersi.
+Build ortamını başlangıçta çözdüğü için APK'da yok; anahtar JS'ten okunduğu
+(`purchases.ts:25`, `configure` çalışma zamanında) OTA ile taşındı, ikinci
+build gerekmedi.
+
+⚠️ **Mağaza soyu hâlâ açıkta.** Bu APK `preview` profilinden, imzası
+production imzası değil — yayını bekleten üç doğrulama (Google ile giriş,
+push, QR) bununla geçmiş sayılamaz. Ayrıca sürüm kodu 7'nin runtime'ı
+artık orphan: üretim sürümü yeni bir build ister (D-2 zaten böyle diyordu) ve
+o build de **bulutta** alınmalı, yoksa production kanalı da OTA'sız kalır.
+
 **D-6. `packages/rig` bu planın dışında.** 5 Eylül'den bu yana yapılan
 **bütün** commitler hareket motoru ve kare editörü; onlar
 `packages/rig/TODOS.md`'de ayrı takip ediliyor ve plan.md onlardan haberdar
