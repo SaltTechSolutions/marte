@@ -369,6 +369,31 @@ tamamını yerine koyduğu için eksik alan göndermek sürüm kodunu düşürü
 sürümün açıklamasını değiştirmek kullanıcı onayına bağlı).
 Kalan: aşağıdaki cihaz doğrulaması.
 
+**2b. [x] Sürüm kodu 8 — bulutta, OTA'lı, mağaza adayı** *(10 Eylül 2026).*
+EAS'ta **bulutta** alındı (`51e3a062`, AAB, commit `c0e7166a`), runtime
+`a58c519b36…`, kanal `production`. Sürüm kodu 7'nin üstüne üç şey taşıyor:
+D-4'ün olay bütçesi, D-5'in yeni poz etiketi ve 8 Eylül'den sonraki rig
+düzeltmeleri.
+
+**Sürüm kodu 7 artık aday değil.** Runtime'ı `2b3bc0e5…` ve bugünkü ağaçla
+tutmuyor; o soya OTA gönderilemez. Üretime 8 çıkmalı.
+
+*Bulutta alınmasının sebebi kota değil, OTA:* yerel `--local` build parmak
+izini kendi geçici dizininde hesapladığı için `eas update` ona hiç ulaşamıyor
+(bkz. AGENTS §7). Bulut build'le `production` kanalı ilk kez gerçekten
+beslenebilir hâle geldi — yayından sonraki ilk JS hatası artık tam bir mağaza
+turu değil.
+
+⚠️ **Kota:** bu build sonrası EAS'ın dâhil build kredisinin **%95'i**
+kullanıldı (build başlarken %91 uyarısı geldi); sonrası ücretli tarife.
+*Karar önerisi:* kalan kredi iOS'a saklanmalı — Android'de JS değişiklikleri
+artık build istemiyor, iOS'ta ise `expo-updates`'li ilk sürüm (1.0.1) için
+mutlaka bir build gerekiyor ve o olmadan iOS'ta OTA hiç başlamıyor.
+
+**Henüz gönderilmedi.** Internal track'te hâlâ sürüm kodu 7 var; 8'in
+yüklenmesi ve üç cihaz doğrulamasının production imzasıyla yapılması
+kullanıcı onayı bekliyor.
+
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
