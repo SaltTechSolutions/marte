@@ -43,7 +43,7 @@ const OPTIONS = {
   arm: [['angles', 'Açıyla'], ['ik', 'Hedefe (ters kinematik)'], ['floor', 'Yerde']],
   bar: [['', 'Yok'], ['back', 'Sırtta'], ['hands', 'Elde'], ['hips', 'Kalçada']],
   load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl']],
-  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası'], ['seatback', 'Koltuk'], ['sled', 'Bacak presi kızağı']],
+  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası'], ['seatback', 'Koltuk'], ['sled', 'Bacak presi'], ['cable', 'Kablo istasyonu'], ['legpad', 'Bacak makinesi']],
   view: [['side', 'Yandan'], ['front', 'Önden']],
   bend: [['1', 'İleri (+1)'], ['-1', 'Geri (−1)']],
 };
@@ -730,14 +730,66 @@ function drawProps(e, S0, S, push) {
       el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
       el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
     ]);
-    // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması. Makine
-    // hareketlerinin tamamı buna yaslanıyor — lat pulldown, oturarak kürek,
-    // göğüs presi, bacak ekstansiyonu.
-    if (e.prop === 'seatback') push([
+    // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması.
+    // Ayrı bir yardımcı, çünkü kablo ve bacak yastığı istasyonları da aynı
+    // koltuğun üstüne kuruluyor — `prop` tek değer aldığı için her istasyon
+    // kendi koltuğunu çizmek zorunda.
+    const seat = () => [
       el('rect', { x: S0.pelvis[0] - 46, y: S0.pelvis[1] + 22, width: 150, height: 18, rx: 8, fill: surf2, stroke: line }),
       el('rect', { x: S0.pelvis[0] - 64, y: S0.pelvis[1] - 96, width: 20, height: 122, rx: 8, fill: surf2, stroke: line }),
       el('rect', { x: S0.pelvis[0] - 32, y: S0.pelvis[1] + 40, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 40), fill: surf2, stroke: line }),
-    ]);
+    ];
+    if (e.prop === 'seatback') push(seat());
+
+    // Kablo istasyonu: makara, kablo ve tutamak.
+    //
+    // Bu hareketler önce `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER
+    // çiziliyordu — lat pulldown'da kafanın üstünde kocaman bir disk. Direncin
+    // nereden geldiği görünmüyordu. Kablo onu söylüyor: makara nerede, kuvvet
+    // o yönden geliyor.
+    if (e.prop === 'cable') {
+      if (e.mode === 'seat') push(seat());
+      const high = e.cableFrom === 'high';
+      // Makara: baş üstünde (pulldown) ya da önde (kürek, pres, yüz çekişi).
+      // Direği zemine iniyor, yani istasyon havada asılı değil.
+      const px = high ? S0.hand[0] : Math.max(S.hand[0], S0.hand[0]) + 120;
+      const py = high ? BAR_Y + 24 : S0.hand[1];
+      push([
+        el('rect', { x: px - 9, y: high ? BAR_Y : py, width: 18, height: Math.max(0, GROUND - (high ? BAR_Y : py)), rx: 4, fill: surf2, stroke: line }),
+        ...(high ? [el('rect', { x: Math.min(px, S0.pelvis[0]) - 30, y: BAR_Y, width: Math.abs(px - S0.pelvis[0]) + 60, height: 16, rx: 6, fill: surf2, stroke: line })] : []),
+        el('circle', { cx: px, cy: py, r: 13, fill: metal, stroke: line }),
+        // Kablo makaradan ELE: figür oynarken uzayıp kısalıyor, çünkü çeken şey o.
+        el('line', { x1: px, y1: py, x2: S.hand[0], y2: S.hand[1], stroke: metal, 'stroke-width': 4, 'stroke-linecap': 'round' }),
+        // Tutamak: kabloya dik kısa bir çubuk. Pulldown'da geniş bar, ötekinde kol tutamağı.
+        (() => {
+          const dx = S.hand[0] - px, dy = S.hand[1] - py, L = Math.hypot(dx, dy) || 1;
+          const w = high ? 74 : 26;
+          return el('path', { d: capsule([S.hand[0] - (-dy / L) * w, S.hand[1] - (dx / L) * w], [S.hand[0] + (-dy / L) * w, S.hand[1] + (dx / L) * w], 8, 8), fill: metal, stroke: line });
+        })(),
+      ]);
+    }
+
+    // Bacak makinesi yastığı: baldır rulosu ve onu koltuğun eksenine bağlayan
+    // kol. Yastıksız çizimde bacağın hangi yöne KUVVET UYGULADIĞI görünmüyor;
+    // hareket oturup boşluğa tekme atmak gibi okunuyordu.
+    //
+    // Yastık, ayağın gittiği YÖNDE duruyor: direnç harekete karşı koyar, yani
+    // ekstansiyonda baldırın önünde, curl'de arkasında. Yön veriden değil
+    // hareketin kendisinden çıkıyor (0. kare → orta kare).
+    if (e.prop === 'legpad') {
+      push(seat());
+      const mid = skeleton(e, poseAt(e, 0.45).p);
+      let vx = mid.ankle[0] - S0.ankle[0], vy = mid.ankle[1] - S0.ankle[1];
+      const vL = Math.hypot(vx, vy) || 1;
+      vx /= vL; vy /= vL;
+      const cx = S.ankle[0] + vx * 22, cy = S.ankle[1] + vy * 22;
+      // Kol: rulodan diz ekseninin altındaki mile. Ruloyu makineye bağlıyor.
+      push([
+        el('path', { d: capsule([cx, cy], [S0.knee[0], S0.knee[1] + 34], 8, 8), fill: surf2, stroke: line }),
+        el('circle', { cx, cy, r: 21, fill: metal, stroke: line }),
+        el('circle', { cx, cy, r: 8, fill: surf2, stroke: line }),
+      ]);
+    }
     // Bacak presi makinesi: koltuk + sırt dayaması + zemine inen ayak + itilen
     // platform. Yalnızca platform çizildiğinde figür zeminin 110px üstünde
     // HİÇBİR ŞEYİN üstünde oturuyordu — `prop` tek değer aldığı için `sled`

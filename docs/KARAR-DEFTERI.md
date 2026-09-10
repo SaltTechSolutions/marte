@@ -50,6 +50,13 @@ tablosunda **20 şablon satırı** "hareket yok"a bağlıydı, yani üye program
 taşımasından kalan yola yazıyordu.
 
 **Karar.**
+- **Her `prop` bir İSTASYON tarif eder, tek parça değil.** `prop` tek değer
+  aldığı için "koltuk + kızak" gibi bileşim yazılamıyor; yalnızca kızağı
+  seçmek figürü koltuksuz bırakıyordu. `sled`, `cable` ve `legpad` kendi
+  koltuklarını da çiziyor.
+- **Ekipman direncin yönünü göstermek zorunda.** Tabaklı halter, yastıksız
+  bacak makinesi ve havada duran levha üçü de aynı sorunun örneğiydi:
+  hareket görünüyor, KUVVET görünmüyordu.
 - **Sahne durağan, kızak değil.** Ekipmanın konumu kural olarak 0. karenin
   iskeletinden okunur (sehpa, basamak, barfiks barı yerinde durmalı, yoksa
   figürle birlikte kayar). Bacak presi platformu bu kuralın **istisnası**:
@@ -148,11 +155,14 @@ incelendi. İkisi düzeltildi, dördü karar bekliyor:
   kural: gövde VE ayak ikisi birden zemin düzleminde olmalı.
 - **Triceps pushdown'da elde dambıl çiziliyordu** (`load: 'dumbbell'`,
   `standing_arm_isolation`'dan kopyalanmış) — kablo hareketi, kaldırıldı.
-- **Karar bekleyen:** `bar: 'hands'` dört harekette tabaklı halter çiziyor
-  (lat pulldown, oturarak kürek, makine göğüs presi, yüz çekişi). Kablo /
-  tutamak / halat diye bir prop modelde yok.
-- **Karar bekleyen:** leg extension ve leg curl'de makinenin direnç yastığı
-  (baldır rulosu) yok; hareket yüksüz oturup tekme atmak gibi okunuyor.
+- **`cable` istasyonu eklendi.** Dört harekette (lat pulldown, oturarak
+  kürek, makine göğüs presi, yüz çekişi) `bar: 'hands'` elde TABAKLI HALTER
+  çiziyordu — direncin nereden geldiği görünmüyordu. Artık makara + kablo +
+  tutamak var; `cableFrom: 'high' | 'front'` makaranın yerini söylüyor.
+- **`legpad` istasyonu eklendi.** Leg extension ve leg curl yastıksızdı;
+  kullanıcının deyişiyle "gücün ne yöne uygulandığı belli olmuyordu". Rulo
+  ayağın GİTTİĞİ yönde duruyor (direnç harekete karşı koyar), bir kolla
+  koltuğa bağlı. Yön veriden değil hareketin kendisinden çıkıyor.
 
 **Açık.**
 - 12 poz ve yeni kas verisi **gözle/uzman onayı bekliyor**

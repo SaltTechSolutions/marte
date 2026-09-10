@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-10T20:00:35.483Z",
+  "generated": "2026-09-10T20:47:13.926Z",
   "source": {
-    "commit": "de33c93d",
+    "commit": "5122042c",
     "dirty": true
   },
   "counts": {
@@ -14,8 +14,8 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "bda17a45898a63c205a4ec397342428bcd3ffb40cd51ed6767cc0b2887f036db",
-      "bytes": 37100,
+      "sha256": "0e3eac220fd3cda92d162d16fe5c9004542a42ae52c70b3dae3d6ea93bc5b3c3",
+      "bytes": 37612,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "116910ba8b4cbcd1381b02b98c10b21365909785e9253cbd4dae387386fd1cda",
-      "bytes": 16647,
+      "sha256": "39dbb66564f4dfb6f29a8e60553b594521c88e2026067c028dda2489503409a0",
+      "bytes": 16991,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "24428e409754a47acc803ace3e9ea2752d2b9e7739a6e3fd57fc0041c958cec4",
-      "bytes": 42374,
+      "sha256": "58442745b0e91b4afa1272d4e521764757994202c2a2c8257a98e582118df944",
+      "bytes": 42463,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"

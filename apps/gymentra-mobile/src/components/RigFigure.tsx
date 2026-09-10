@@ -265,13 +265,66 @@ export function RigFigure({
         {/* Makine koltuğu: kalçanın altında yastık, arkasında sırt dayaması.
             Lat pulldown, oturarak kürek, göğüs presi ve bacak makineleri
             buna yaslanıyor — çizilmezse figür havada oturuyor görünüyor. */}
-        {rig.prop === 'seatback' && (
+        {(rig.prop === 'seatback' || rig.prop === 'cable' || rig.prop === 'legpad') && rig.mode === 'seat' && (
           <G key="seatback">
             <Rect x={S0.pelvis[0] - 46} y={S0.pelvis[1] + 22} width={150} height={18} rx={8} fill={colors.surf2} stroke={line} />
             <Rect x={S0.pelvis[0] - 64} y={S0.pelvis[1] - 96} width={20} height={122} rx={8} fill={colors.surf2} stroke={line} />
             <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
           </G>
         )}
+        {/* Kablo istasyonu: makara, kablo ve tutamak. Bu hareketler önce
+            `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER çiziliyordu —
+            direncin nereden geldiği görünmüyordu. Kablo onu söylüyor. */}
+        {rig.prop === 'cable' && (() => {
+          const high = rig.cableFrom === 'high';
+          const px = high ? S0.hand[0] : Math.max(S.hand[0], S0.hand[0]) + 120;
+          const py = high ? BAR_Y + 24 : S0.hand[1];
+          const postY = high ? BAR_Y : py;
+          const dx = S.hand[0] - px;
+          const dy = S.hand[1] - py;
+          const L = Math.hypot(dx, dy) || 1;
+          const w = high ? 74 : 26;
+          const h1: Vec = [S.hand[0] + (dy / L) * w, S.hand[1] - (dx / L) * w];
+          const h2: Vec = [S.hand[0] - (dy / L) * w, S.hand[1] + (dx / L) * w];
+          return (
+            <G key="cable">
+              <Rect x={px - 9} y={postY} width={18} height={Math.max(0, GROUND - postY)} rx={4} fill={colors.surf2} stroke={line} />
+              {high && (
+                <Rect
+                  x={Math.min(px, S0.pelvis[0]) - 30}
+                  y={BAR_Y}
+                  width={Math.abs(px - S0.pelvis[0]) + 60}
+                  height={16}
+                  rx={6}
+                  fill={colors.surf2}
+                  stroke={line}
+                />
+              )}
+              <Circle cx={px} cy={py} r={13} fill={metal} stroke={line} />
+              <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
+              <Path d={capsule(h1, h2, 8, 8)} fill={metal} stroke={line} />
+            </G>
+          );
+        })()}
+        {/* Bacak makinesi yastığı: baldır rulosu ve onu koltuğa bağlayan kol.
+            Yastıksız çizimde bacağın hangi yöne KUVVET UYGULADIĞI görünmüyor.
+            Rulo, ayağın gittiği YÖNDE duruyor — direnç harekete karşı koyar,
+            yani ekstansiyonda baldırın önünde, curl'de arkasında. */}
+        {rig.prop === 'legpad' && (() => {
+          const mid = skeleton(rig, poseAt(rig, 0.45).p);
+          const vx0 = mid.ankle[0] - S0.ankle[0];
+          const vy0 = mid.ankle[1] - S0.ankle[1];
+          const vL = Math.hypot(vx0, vy0) || 1;
+          const cx = S.ankle[0] + (vx0 / vL) * 22;
+          const cy = S.ankle[1] + (vy0 / vL) * 22;
+          return (
+            <G key="legpad">
+              <Path d={capsule([cx, cy], [S0.knee[0], S0.knee[1] + 34], 8, 8)} fill={colors.surf2} stroke={line} />
+              <Circle cx={cx} cy={cy} r={21} fill={metal} stroke={line} />
+              <Circle cx={cx} cy={cy} r={8} fill={colors.surf2} stroke={line} />
+            </G>
+          );
+        })()}
         {/* Bacak presi MAKİNESİ: koltuk + sırt dayaması + zemine inen ayak +
             itilen platform. Yalnızca platform çizilince figür zeminin 110px
             üstünde hiçbir şeyin üstünde oturuyordu — `prop` tek değer aldığı

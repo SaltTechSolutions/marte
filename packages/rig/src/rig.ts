@@ -103,7 +103,15 @@ export interface RigKeyframe {
 export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang' | 'seat';
 export type RigArm = 'angles' | 'ik' | 'floor';
 export type RigBar = 'back' | 'hands' | 'hips' | null;
-export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | 'seatback' | 'sled' | null;
+/**
+ * Sahnedeki ekipman. Her değer bir İSTASYONU tarif ediyor, tek bir parçayı
+ * değil: `prop` tek değer aldığı için "koltuk + kızak" diye bir bileşim
+ * yazılamıyor ve yalnızca kızağı seçmek figürü koltuksuz, havada bırakıyordu.
+ */
+export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | 'seatback' | 'sled' | 'cable' | 'legpad' | null;
+
+/** Kablo makarasının yeri: baş üstü (lat pulldown) ya da önde (kürek, pres). */
+export type RigCableFrom = 'high' | 'front';
 
 /**
  * Elde taşınan yük. `bar` barın NEREDE olduğunu söyler (sırtta, elde,
@@ -141,6 +149,8 @@ export interface RigExercise {
   prop?: RigProp;
   /** Ayak yönü, moda göre varsayılanı ezer (bkz. `footDirOf`). */
   footDir?: number;
+  /** `prop: 'cable'` iken makaranın yeri. Yazılmazsa `'front'`. */
+  cableFrom?: RigCableFrom;
   /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
   note?: string;
   kf: RigKeyframe[];

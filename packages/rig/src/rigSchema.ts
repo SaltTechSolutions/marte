@@ -17,7 +17,8 @@ import { MUSCLES } from './muscles';
 const MODES = ['stand', 'quad', 'bench', 'supine', 'hang', 'seat'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
-const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled'];
+const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled', 'cable', 'legpad'];
+const CABLE_FROM = ['high', 'front'];
 const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
 
@@ -27,7 +28,7 @@ const POSE_KEYS: (keyof RigPose)[] = [
   'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
 ];
 
-const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'note', 'kf'];
+const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'cableFrom', 'note', 'kf'];
 
 /**
  * Bir tekrarın en kısa süresi (ms). Testler de bunu okuyor: editörün daha
@@ -66,6 +67,8 @@ export function validateArchetypes(data: unknown): string[] {
     if (e.prop !== undefined && e.prop !== null && !PROPS.includes(e.prop as string)) bad(`prop "${String(e.prop)}" geçersiz`);
     if (e.view !== undefined && !VIEWS.includes(e.view as string)) bad(`view "${String(e.view)}" geçersiz`);
     if (e.footDir !== undefined && !num(e.footDir)) bad('footDir sayı olmalı');
+    if (e.cableFrom !== undefined && !CABLE_FROM.includes(e.cableFrom as string)) bad(`cableFrom "${String(e.cableFrom)}" geçersiz (${CABLE_FROM.join(', ')})`);
+    if (e.cableFrom !== undefined && e.prop !== 'cable') bad('cableFrom yalnızca prop "cable" iken anlamlı');
     if (e.note !== undefined && typeof e.note !== 'string') bad('note metin olmalı');
     (['hideFarLeg', 'hideFarArm'] as const).forEach((k) => {
       if (e[k] !== undefined && typeof e[k] !== 'boolean') bad(`${k} doğru/yanlış olmalı`);
