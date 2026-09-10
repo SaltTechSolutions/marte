@@ -139,6 +139,8 @@ export interface RigExercise {
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;
+  /** Ayak yönü, moda göre varsayılanı ezer (bkz. `footDirOf`). */
+  footDir?: number;
   /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
   note?: string;
   kf: RigKeyframe[];
@@ -896,6 +898,21 @@ function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: 
 }
 
 /**
+ * Ayak TABANININ iki ucu — topuk ve parmak, taban düzleminde.
+ *
+ * Ayağın oturduğu yüzeyi çizen kod bunu bilmek zorunda: bacak presi levhası
+ * tabana düz basmalı. Ayak bileğinden sabit bir mesafe ölçmek yetmiyor —
+ * ayak `FOOT.toe` kadar uzanıyor ve levha parmak ucunun içinden geçiyordu.
+ *
+ * Geometri MOTORDA, çizicide değil: aynı hesabı iki ayrı çizim katmanına
+ * yazmak, `capsule` ve `footPath` için zaten reddedilmiş bir desen.
+ */
+export function solePoints(ankle: Vec, dir: number, pinToe = false, flip = 1): [Vec, Vec] {
+  const P = footFrame(ankle, dir, pinToe, flip);
+  return [P(FOOT.heel, FOOT.sole), P(FOOT.toe, FOOT.sole)];
+}
+
+/**
  * Çizilen ayağın en alt noktası.
  *
  * Tabanı oluşturan eğrinin düğüm ve kontrol noktaları örnekleniyor — yani
@@ -949,3 +966,18 @@ export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): str
 export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);
+
+/**
+ * Bu hareketin ayak yönü.
+ *
+ * Varsayılan MODA bağlı: ayakta duran figürün ayağı öne-aşağı bakar. Makine
+ * hareketlerinde bu yetmiyor — bacak presinde taban platforma basar, yani
+ * ayak makinenin açısında durur, ayakta durur gibi değil.
+ *
+ * `footDir` bunun harekete özel geçersiz kılması. Modele ayak bileği AÇISI
+ * eklemiyor: o kare başına değişen bir şey ve `RigPose`'u büyütür
+ * (TODOS.md'de kayıtlı). Bu yalnızca hareket boyunca sabit bir yön —
+ * makinenin eğimi tekrar boyunca değişmiyor.
+ */
+export const footDirOf = (ex: Pick<RigExercise, 'mode' | 'footDir'>): number =>
+  ex.footDir ?? footDirFor(ex.mode);

@@ -149,6 +149,24 @@ ${body}
   };
   const host = document.getElementById('exList');
   if (host) { new MutationObserver(mark).observe(host, { childList: true }); mark(); }
+
+  // Adres cubugundaki #arketip o hareketi seciyor: incelemede tek tek bakmanın
+  // ve ekran görüntüsü almanın yolu. Liste düğmesine tıklıyoruz, çünkü seçim
+  // durumu editörün içinde yaşıyor.
+  // Seçim BİR KEZ yapılır. Gözlemci listenin yeniden çizilmesini dinliyor ve
+  // seçmek listeyi yeniden çizdiriyor: korumasız hâli kendini tetikleyen bir
+  // döngü kuruyor, sayfa hiç boşa çıkmıyor ve ekran görüntüsü alınamıyordu.
+  let picked = '';
+  const pick = () => {
+    const want = decodeURIComponent(location.hash.replace('#', ''));
+    if (!want || want === picked) return;
+    for (const b of document.querySelectorAll('#exList button')) {
+      const small = b.querySelector('small');
+      if (small && small.textContent.split('·').pop().trim() === want) { picked = want; b.click(); return; }
+    }
+  };
+  window.addEventListener('hashchange', () => { picked = ''; pick(); });
+  if (host) new MutationObserver(() => { if (host.children.length) pick(); }).observe(host, { childList: true });
 })();
 </script>
 

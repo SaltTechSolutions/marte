@@ -2088,6 +2088,7 @@
   "arm": "angles",
   "bar": null,
   "prop": "sled",
+  "footDir": 22,
   "bend": 1,
   "dur": 3200,
   "kf": [

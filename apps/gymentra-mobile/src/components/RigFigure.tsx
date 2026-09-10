@@ -17,7 +17,7 @@ import {
   boundsFor,
   capsule,
   facingFlip,
-  footDirFor,
+  footDirOf,
   footPath,
   frontPoints,
   frontTrunk,
@@ -28,6 +28,7 @@ import {
   partTransform,
   poseAt,
   skeleton,
+  solePoints,
 } from '@/utils/rig';
 import rigBodyParts from '@/data/rigBodyParts.json';
 
@@ -303,16 +304,27 @@ export function RigFigure({
                   tekrar boyunca levhanın içinden geçiyordu. Levha itiş eksenine
                   (diz → ayak bileği) dik: gerçek makinede taban ona düz basar. */}
               {(() => {
-                const ax = S.ankle[0] - S.knee[0];
-                const ay = S.ankle[1] - S.knee[1];
-                const aL = Math.hypot(ax, ay) || 1;
-                const ux = ax / aL;
-                const uy = ay / aL;
-                const cx = S.ankle[0] + ux * 24;
-                const cy = S.ankle[1] + uy * 24;
-                const p1: Vec = [cx - uy * 62, cy + ux * 62];
-                const p2: Vec = [cx + uy * 62, cy - ux * 62];
-                return <Path d={capsule(p1, p2, 15, 15)} fill={metal} stroke={line} />;
+                // Levha ayağın TABAN DÜZLEMİNE oturuyor (`solePoints`): ayak
+                // bileğinden sabit mesafe ölçmek parmak ucunu levhanın içinde
+                // bırakıyordu. Ray levhayı koltuğun direğine bağlıyor — makine
+                // tek parça, plaka havada asılı değil.
+                const [heelP, toeP] = solePoints(S.ankle, footDirOf(rig), false, flip);
+                const sx = toeP[0] - heelP[0];
+                const sy = toeP[1] - heelP[1];
+                const sL = Math.hypot(sx, sy) || 1;
+                const tx = sx / sL;
+                const ty = sy / sL;
+                const px = -ty * flip;
+                const py = tx * flip;
+                const A: Vec = [heelP[0] - tx * 34 + px * 8, heelP[1] - ty * 34 + py * 8];
+                const B: Vec = [toeP[0] + tx * 34 + px * 8, toeP[1] + ty * 34 + py * 8];
+                const mid: Vec = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+                return (
+                  <>
+                    <Path d={capsule(mid, [padX + 12, padY + 6], 7, 7)} fill={colors.surf2} stroke={line} />
+                    <Path d={capsule(A, B, 15, 15)} fill={metal} stroke={line} />
+                  </>
+                );
               })()}
             </G>
           );
@@ -347,7 +359,7 @@ export function RigFigure({
         <G key="far" opacity={0.95}>
           {farLeg && (
             <>
-              <Path d={footPath(S.ankleF, footDirFor(rig.mode), pinToe, flip)} fill={skinFar} stroke={line} />
+              <Path d={footPath(S.ankleF, footDirOf(rig), pinToe, flip)} fill={skinFar} stroke={line} />
               {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
               {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
               {ball('fk', S.kneeF, 12, true)}
@@ -378,7 +390,7 @@ export function RigFigure({
           <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
         </G>
         <G key="near">
-          <Path d={footPath(S.ankle, footDirFor(rig.mode), pinToe, flip)} fill={skin} stroke={line} />
+          <Path d={footPath(S.ankle, footDirOf(rig), pinToe, flip)} fill={skin} stroke={line} />
           {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
           {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
           {ball('k', S.knee, 13)}

@@ -27,7 +27,7 @@ const POSE_KEYS: (keyof RigPose)[] = [
   'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
 ];
 
-const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'note', 'kf'];
+const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'note', 'kf'];
 
 /**
  * Bir tekrarın en kısa süresi (ms). Testler de bunu okuyor: editörün daha
@@ -65,6 +65,7 @@ export function validateArchetypes(data: unknown): string[] {
     if (e.load !== undefined && !LOADS.includes(e.load as string)) bad(`load "${String(e.load)}" geçersiz`);
     if (e.prop !== undefined && e.prop !== null && !PROPS.includes(e.prop as string)) bad(`prop "${String(e.prop)}" geçersiz`);
     if (e.view !== undefined && !VIEWS.includes(e.view as string)) bad(`view "${String(e.view)}" geçersiz`);
+    if (e.footDir !== undefined && !num(e.footDir)) bad('footDir sayı olmalı');
     if (e.note !== undefined && typeof e.note !== 'string') bad('note metin olmalı');
     (['hideFarLeg', 'hideFarArm'] as const).forEach((k) => {
       if (e[k] !== undefined && typeof e[k] !== 'boolean') bad(`${k} doğru/yanlış olmalı`);

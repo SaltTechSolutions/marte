@@ -2,7 +2,7 @@ import {
   B,
   MAX_ANKLE_LIFT,
   facingFlip,
-  footDirFor,
+  footDirOf,
   footLowestY,
   FrontSide,
   GROUND,
@@ -85,7 +85,7 @@ interface RomBand {
  * Omuz, boyun ve ayak bileği burada YOK. Omuz ve boyun türetmesi yatık pozlarda
  * klinik açıyla aynı referans eksenini kullanmıyor (`hip_thrust` omuzda −150°
  * okunuyor ve bunun sarmalama hatası mı gerçek sorun mu olduğu belirsiz); ayak
- * bileği ise modelde hiç yok, ayak yönü `footDirFor(mode)` sabiti. Üçü de
+ * bileği ise modelde hiç yok, ayak yönü hareket başına sabit (`footDirOf`). Üçü de
  * TODOS.md'de kayıtlı.
  */
 export const ROM_BANDS: RomBand[] = [
@@ -197,7 +197,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // Ölçüldü: `bench_press` ve `incline_press` ayağı 6.4px gömüyordu; diğer 28
   // arketip temizdi. Tolerans 2px, yuvarlama payı.
   {
-    const dir = footDirFor(ex.mode);
+    const dir = footDirOf(ex);
     const flip = facingFlip(ex.mode);
     const pin = ex.prop !== 'box' && p.ankleLift > 0;
     const feet: [string, Vec][] = [['ayak', S.ankle], ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF]] as [string, Vec][]) : [])];

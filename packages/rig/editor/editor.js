@@ -9,9 +9,9 @@
  */
 
 import {
-  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footPath,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirOf, footPath,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
-  shoulderWedge, showFarLeg, skeleton,
+  shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
 import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
@@ -206,7 +206,7 @@ function cmpFigure(e, p, mode) {
         ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
         : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
       + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
-    { d: `<path d="${footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
+    { d: `<path d="${footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
         + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
     { d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
   ];
@@ -497,7 +497,7 @@ function drawPose(svg, e, p) {
   push(trunk.length === 3
     ? [...trunk, el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
     : [seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
-  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'));
   push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'));
@@ -634,7 +634,7 @@ function draw() {
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
+    push([el('path', { d: footPath(S.ankleF, footDirOf(e), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
     push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
     push([ball(S.kneeF, 12, true)]);
   }
@@ -669,7 +669,7 @@ function draw() {
       ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
       : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirFor(e.mode), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
+  push([el('path', { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
   push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
   push([ball(S.knee, 13), ball(S.ankle, 9)]);
   push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
@@ -758,22 +758,29 @@ function drawProps(e, S0, S, push) {
         el('path', { d: capsule([padX, padY], [padX + 78, padY + 10], 18, 15), fill: surf2, stroke: line }),
         el('rect', { x: padX + 4, y: padY + 14, width: 16, height: Math.max(0, GROUND - padY - 14), fill: surf2, stroke: line }),
       ]);
-      // Ayak platformu SABİT DEĞİL. Sehpa, basamak ve barfiks barı sahnenin
-      // durağan parçaları, o yüzden 0. kareden çiziliyorlar; bacak presinde
-      // kızak sahnenin HAREKET EDEN parçası — ayak ona basılı kalır ve ikisi
-      // birlikte gider. Sabit çizilince bacak tekrar boyunca levhanın
-      // içinden geçiyordu.
+      // Kızak SABİT DEĞİL ve havada durmuyor.
       //
-      // Levha itiş eksenine (diz → ayak bileği) DİK duruyor: gerçek makinede
-      // taban ona düz basar.
-      const ax = S.ankle[0] - S.knee[0], ay = S.ankle[1] - S.knee[1];
-      const aL = Math.hypot(ax, ay) || 1;
-      const ux = ax / aL, uy = ay / aL;
-      const cx = S.ankle[0] + ux * 24, cy = S.ankle[1] + uy * 24;
-      push([el('path', {
-        d: capsule([cx - uy * 62, cy + ux * 62], [cx + uy * 62, cy - ux * 62], 15, 15),
-        fill: metal, stroke: line,
-      })]);
+      // Sehpa, basamak ve barfiks barı sahnenin durağan parçaları, o yüzden
+      // 0. kareden çiziliyorlar. Bacak presinde kızak sahnenin HAREKET EDEN
+      // parçası: ayak ona basılı kalır, ikisi birlikte gider ve levha bacağa
+      // kuvvet uygular. Sabit çizilince bacak tekrar boyunca içinden geçiyordu.
+      //
+      // Levha ayağın TABAN DÜZLEMİNE oturuyor (`solePoints`), itiş eksenine
+      // değil: ayak bileğinden sabit mesafe ölçmek parmak ucunu levhanın
+      // içinde bırakıyordu. Ray levhayı koltuğun direğine bağlıyor — makine
+      // tek parça, plaka havada asılı değil.
+      const [heelP, toeP] = solePoints(S.ankle, footDirOf(e), false, facingFlip(e.mode));
+      const sx = toeP[0] - heelP[0], sy = toeP[1] - heelP[1];
+      const sL = Math.hypot(sx, sy) || 1;
+      const tx = sx / sL, ty = sy / sL;              // taban ekseni
+      const ox = -ty * facingFlip(e.mode), oy = tx * facingFlip(e.mode);  // tabandan dışa
+      const A = [heelP[0] - tx * 34 + ox * 8, heelP[1] - ty * 34 + oy * 8];
+      const B = [toeP[0] + tx * 34 + ox * 8, toeP[1] + ty * 34 + oy * 8];
+      const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+      push([
+        el('path', { d: capsule(mid, [padX + 12, padY + 6], 7, 7), fill: surf2, stroke: line }),
+        el('path', { d: capsule(A, B, 15, 15), fill: metal, stroke: line }),
+      ]);
     }
     if (e.prop === 'bench' && e.mode === 'bench') {
       const t0 = poseAt(e, 0).p.torso;
