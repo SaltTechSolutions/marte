@@ -232,6 +232,19 @@ kalan bir yüzey de yok.
 anında mevcut bütün build'lere ulaştı — Tarabya'daki Android sürümlerine de,
 App Store incelemesinde bekleyen iOS build 22'ye de.
 
+*Kapsamı bağımsız olarak doğrulandı:* olayın `watchContext` etiketi tek
+değerli değilmiş (panelde "Yenileme talebi %48"). Olaylar tek tek gezilince
+**iki bağlam** çıktı — `Yenileme talebi` ve **`Üye notu`** — ve build 21 ile
+22'ye yayılıyorlar. Yani `member_notes` düzeltmesi test ararken bulunmuş bir
+tahmin değil, üretimin de çarptığı ikinci yüzeymiş. Kalan iki koleksiyon
+(`member_entitlements`, `trainer_availability`) örneklemde görünmedi ama
+aynı kusur onlarda da testle kanıtlanmıştı.
+
+**İki GlitchTip kaydı da çözümlenmiş işaretlendi** *(kullanıcı onayıyla)*:
+izin hatası ve storage hatası. Açık kayıt 6'dan 4'e indi; kalanların hepsi
+tek olaylık (`WatchdogTermination`, iki index, `RNGoogleSignin`). Düzeltme
+tutmazsa GlitchTip kaydı regression olarak yeniden açar — takip yolu bu.
+
 *İki index hatası muhtemelen kapanmış* — index'ler bugün dosyayla birebir
 eşleşiyor (36/36) ve kayıtlar 7–8 günlük. `RNGoogleSignin` hatası ise native
 modülü olmayan bir çalıştırmadan (Expo Go ya da eksik build); Google girişi
