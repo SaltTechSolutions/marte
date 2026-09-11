@@ -1308,7 +1308,7 @@ function renderIssues() {
  * POZUN değil HAREKETİN ayarı: tek kareyi değil hepsini birden kaydırıyor,
  * ayak ucu tutamakları gibi. O yüzden zaman çubuğundan bağımsız.
  */
-function renderNudge(host, e, xKey, yKey, aktif) {
+function renderNudge(host, e, xKey, yKey, aktif, dikeyKapali) {
   host.innerHTML = '';
   const adim = 4;
   const oku = (k) => e[k] ?? 0;
@@ -1320,37 +1320,43 @@ function renderNudge(host, e, xKey, yKey, aktif) {
     markDirty();
     renderAll();
   };
-  const dugme = (label, title, fn, alan) => {
+  const dugme = (label, title, fn, dikey) => {
     const b = el2('button', label);
-    b.title = title;
-    b.disabled = !aktif;
-    if (alan) b.style.gridColumn = alan;
+    b.title = dikey && dikeyKapali ? dikeyKapali : title;
+    b.disabled = !aktif || (dikey && !!dikeyKapali);
     b.onclick = fn;
     host.appendChild(b);
     return b;
   };
-  dugme('↖', '', () => {}, null).style.visibility = 'hidden';
-  dugme('↑', 'Yukarı', () => yaz(yKey, oku(yKey) - adim));
+  dugme('↖', '', () => {}).style.visibility = 'hidden';
+  dugme('↑', 'Yukarı', () => yaz(yKey, oku(yKey) - adim), true);
   dugme('↻', 'Sıfırla', () => { snapshot(); delete e[xKey]; delete e[yKey]; markDirty(); renderAll(); });
   dugme('←', 'Sola', () => yaz(xKey, oku(xKey) - adim));
-  dugme('↓', 'Aşağı', () => yaz(yKey, oku(yKey) + adim));
+  dugme('↓', 'Aşağı', () => yaz(yKey, oku(yKey) + adim), true);
   dugme('→', 'Sağa', () => yaz(xKey, oku(xKey) + adim));
   const val = el2('div', '');
   val.className = 'val';
-  const mk = (k, etiket) => {
+  const mk = (k, etiket, dikey) => {
     const lab = el2('span', etiket);
     const inp = document.createElement('input');
     inp.type = 'number';
     inp.step = '1';
     inp.value = String(oku(k));
-    inp.disabled = !aktif;
+    inp.disabled = !aktif || (dikey && !!dikeyKapali);
+    if (dikey && dikeyKapali) inp.title = dikeyKapali;
     inp.onchange = () => yaz(k, Number(inp.value) || 0);
     val.appendChild(lab);
     val.appendChild(inp);
   };
   mk(xKey, 'x');
-  mk(yKey, 'y');
+  mk(yKey, 'y', true);
   host.appendChild(val);
+  if (dikeyKapali) {
+    const not = el2('p', dikeyKapali);
+    not.className = 'hint';
+    not.style.gridColumn = '1 / -1';
+    host.appendChild(not);
+  }
 }
 
 /** Küçük yardımcı: metinli eleman. */
@@ -1362,9 +1368,15 @@ const el2 = (tag, text) => {
 
 function renderEquipment() {
   const e = ex();
-  renderNudge($('nudgeBody'), e, 'bodyDx', 'bodyDy', true);
+  // Dikey kaydırma yalnızca dikey dayanağı ZEMİN OLMAYAN kiplerde: ayakta,
+  // dört ayak ve sırtüstü figür yere oturuyor, orada yukarı çekmek figürü
+  // havada bırakmaktan başka bir şey yapmıyor. Şema da aynı kuralı koyuyor;
+  // buton en baştan kapalı olsun ki kullanıcı düzeltemediği bir hata üretmesin.
+  const zemine = ['stand', 'quad', 'supine'].includes(e.mode);
+  renderNudge($('nudgeBody'), e, 'bodyDx', 'bodyDy', true,
+    zemine ? 'Bu harekette figür yere basıyor: dikey kaydırma yok. Sahne eşyasını kaydır.' : '');
   // Eşya kaydırması yalnızca eşya varken anlamlı; şema da bunu zorluyor.
-  renderNudge($('nudgeProp'), e, 'propDx', 'propDy', !!e.prop);
+  renderNudge($('nudgeProp'), e, 'propDx', 'propDy', !!e.prop, '');
   const bind = (id, opts, value, apply) => {
     const sel = $(id);
     sel.innerHTML = '';

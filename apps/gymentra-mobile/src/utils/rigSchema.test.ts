@@ -295,6 +295,52 @@ describe('muscles.ts — uygulamanın kas bölgeleri', () => {
   });
 });
 
+describe('rigSchema — kaydırma alanları', () => {
+  // Dikey kaydırma, figürün dikey dayanağı zemin OLMAYAN kiplerde anlamlı.
+  // Ayakta/dört ayak/sırtüstü figür yere oturuyor; orada yukarı çekmek onu
+  // havada bırakmaktan başka bir şey yapmıyor ve kullanıcıya elle
+  // düzeltemediği bir hata bırakıyordu — kural en baştan kesiyor.
+  it('zemine basan kipte dikey kaydırma reddediliyor', () => {
+    (['stand', 'quad', 'supine'] as const).forEach((mode) => {
+      const e = errs((d) => {
+        d.x.mode = mode;
+        d.x.bodyDy = -28;
+      });
+      expect(e.join(' '), mode).toContain('bodyDy');
+    });
+  });
+
+  it('sehpa, koltuk ve asılı kipte dikey kaydırma serbest', () => {
+    (['bench', 'seat', 'hang'] as const).forEach((mode) => {
+      const e = errs((d) => {
+        d.x.mode = mode;
+        d.x.bodyDy = -28;
+      });
+      expect(e.filter((x) => x.includes('bodyDy')), mode).toEqual([]);
+    });
+  });
+
+  it('yatay kaydırma zemine basan kipte de serbest', () => {
+    expect(errs((d) => (d.x.bodyDx = 40))).toEqual([]);
+  });
+
+  it('eşyası olmayan harekette eşya kaydırması reddediliyor', () => {
+    expect(errs((d) => (d.x.propDx = 10)).join(' ')).toContain('propDx/propDy');
+  });
+
+  it('eşya varken eşya kaydırması serbest', () => {
+    expect(errs((d) => {
+      d.x.prop = 'bench';
+      d.x.propDx = 10;
+      d.x.propDy = -6;
+    })).toEqual([]);
+  });
+
+  it('kaydırma alanları sayı olmalı', () => {
+    expect(errs((d) => (d.x.bodyDx = 'sol')).join(' ')).toContain('bodyDx sayı olmalı');
+  });
+});
+
 describe('validateExercises — hareket kataloğu', () => {
   it('gerçek katalog geçiyor', () => {
     expect(validateExercises(rawExercises, ARCH_KEYS)).toEqual([]);

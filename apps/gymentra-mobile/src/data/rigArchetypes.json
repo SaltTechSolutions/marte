@@ -338,7 +338,8 @@
      "shinF": 195.3
     }
    }
-  ]
+  ],
+  "footDirFarAdj": 8
  },
  "hinge": {
   "mode": "stand",

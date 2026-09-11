@@ -26,6 +26,8 @@ const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled', 'cable', '
 const CABLE_FROM = ['high', 'front', 'low', 'back'];
 const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
+/** Figürün dikey dayanağı ZEMİN olan kipler — orada dikey kaydırma yok. */
+export const GROUND_RESTING = ['stand', 'quad', 'supine'];
 
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */
 const POSE_KEYS: (keyof RigPose)[] = [
@@ -76,6 +78,14 @@ export function validateArchetypes(data: unknown): string[] {
     (['bodyDx', 'bodyDy', 'propDx', 'propDy'] as const).forEach((k) => {
       if (e[k] !== undefined && !num(e[k])) bad(`${k} sayı olmalı`);
     });
+    // Dikey kaydırma YALNIZCA figürün dikey dayanağı zemin OLMAYAN kiplerde.
+    // `stand`, `quad` ve `supine` figürü yere oturtuyor; orada yukarı çekmek
+    // figürü havada bırakmaktan başka bir şey yapmıyor ve denetim haklı olarak
+    // şikâyet ediyor. Kontrolün buna izin verip sonra uyarması kullanıcıya
+    // düzeltemediği bir hata bırakıyordu; kural en baştan kesiyor.
+    if (e.bodyDy !== undefined && GROUND_RESTING.includes(e.mode as string)) {
+      bad(`bodyDy "${String(e.mode)}" kipinde anlamsız: figür zemine oturuyor, dikey dayanağı zemin`);
+    }
     if ((e.propDx !== undefined || e.propDy !== undefined) && (e.prop === undefined || e.prop === null)) {
       bad('propDx/propDy yalnızca sahne eşyası varken anlamlı');
     }

@@ -31,6 +31,38 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — dikey kaydırma zemine basan kiplerde kapatıldı
+
+**Yapıldı.** Yeni kaydırma kontrolü kullanıcının elinde hemen kırıldı: `squat`
+yukarı kaydırılıp KAYDEDİLDİ (`bodyDy: -28`), denetim "figür havada" dedi ve
+kullanıcı elle düzeltemedi. Geçersiz veri temizlendi; asıl kusur kontrolün
+kendisiydi.
+
+Ayakta, dört ayak ve sırtüstü kiplerde figürün dikey dayanağı ZEMİN: `stand`'de
+ayak doğrudan `GROUND - 12 - ankleLift`'e konuyor, `quad`/`supine`'de temas
+noktaları her karede zemine çekiliyor. Bu kiplerde dikey kaydırmanın
+yapabileceği tek şey figürü havada bırakmak. Kontrol buna izin verip sonra
+uyarıyordu — yani kullanıcıya düzeltemediği bir hata üretme imkânı veriyordu.
+
+Artık şema reddediyor ve editörde ↑/↓ ile y kutusu o kiplerde KAPALI, sebebi
+yazılı ("Bu harekette figür yere basıyor: dikey kaydırma yok. Sahne eşyasını
+kaydır."). Yatay kaydırma her kipte açık; sehpa/koltuk/asılı kiplerde dikey de
+açık.
+
+**Karar.** **Otomatik düzeltmek yerine üretilmesini engelle.** Kullanıcı
+"bunları otomatik düzeltemez mi?" diye sordu. Düzeltmek belirsiz: figürü geri
+indirmek kaydırmayı silmek demek, yani kullanıcının kastını tahmin etmek.
+Geçersiz durumun üretilememesi hem kesin hem açıklanabilir; uyarı da yerinde
+duruyor, çünkü başka yollardan (elle JSON) hâlâ gelebilir.
+
+**Bilerek yapılmadı.** Denetim uyarılarına genel bir "Düzelt" düğmesi
+yapılmadı: kuralların çoğunda tek bir doğru düzeltme yok (ters bükülen diz
+hangi açıdan düzeltilecek?), ve yanlış tahmin eden bir düzeltme sessizce pozu
+bozardı.
+
+**Nerede.** `packages/rig/src/rigSchema.ts` (`GROUND_RESTING`),
+`packages/rig/editor/editor.js`, `packages/rig/data/rigArchetypes.json`.
+
 ## 2026-09-11 — gövde ve sahne eşyası kaydırması
 
 **Yapıldı.** Arketipe dört alan eklendi: `bodyDx/bodyDy` figürün tamamını,

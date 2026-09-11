@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-11T17:25:57.711Z",
+  "generated": "2026-09-11T17:50:47.428Z",
   "source": {
-    "commit": "677aa589",
+    "commit": "631e33aa",
     "dirty": true
   },
   "counts": {
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "f7d99b6eeb75571bc3e32416da84b820c6bd8e09b4ca59a0ff34763b98f2b4e5",
-      "bytes": 19613,
+      "sha256": "7df158a645bf73b31c8ca0f860a26b9ae48388e8850f10095677ef335d24a4f9",
+      "bytes": 20355,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "051d83a70309339baf732214f684d8524509450633c30e232e0f92de23e7ec91",
-      "bytes": 42350,
+      "sha256": "ffa62996da33a33c613e8e6d8103f3e4d37dbea233d221a281e9ecf8d545b69a",
+      "bytes": 42372,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
@@ -98,8 +98,8 @@
       "to": "src/utils/rigAudit.test.ts"
     },
     "rigSchema.test.ts": {
-      "sha256": "dbf7e7142ca74c2352d73ce61224e47395e21eb15611bc40807adf591a7ad404",
-      "bytes": 21694,
+      "sha256": "23f4f4bc3bbf0b08f27027360d932b5fafdf44452523fe493afcda21b9ef8548",
+      "bytes": 23276,
       "from": "tests/rigSchema.test.ts",
       "what": "şema testleri",
       "to": "src/utils/rigSchema.test.ts"
