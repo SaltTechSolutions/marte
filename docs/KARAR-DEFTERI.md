@@ -31,6 +31,34 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — dört arketipte elle düzenleme; glute_bridge'in gövdesi yeniden çözüldü
+
+**Kullanıcının editörde yaptığı düzenlemeler** (benim değil):
+`bulgarian_split_squat` `bodyDx: 12` + t=0.45'te arka bacak,
+`hip_thrust` `propDx: -56` + kol açıları ve yeni `foreF`/`upperF`,
+`hanging_knee_raise` uç karelerde `shinA` 214 → 182.5,
+`glute_bridge` uç karelerde `thighA` 50 → 40.9, `shinA` 170 → 164.7.
+
+**Biri testi düşürdü, çözümü istendi.** `glute_bridge`'de uyluk açısını
+düşürmek kalçayı alçaltıyor, gövde de onunla iniyor ve omuz kayması 24px'e
+çıkıyordu (sınır 12). Kuralı gevşetmek yanlış olurdu: omuzun yerde kalması
+hareketin TANIMI, denetimin keyfi bir eşiği değil.
+
+**Çözüm: gövde açısı bacaktan TÜREVDİR.** Uç karelerde `torso` ve `thoraxA`
+sayısal olarak yeniden çözüldü (`torso` 274.8 → 284.9, `thoraxA` 268.6 →
+278.7) — kısıt, omuzun üst karedeki y'sine (504) oturması; sırtın gövdeye
+göre duruşu (`thoraxA − torso` = −6.2) korundu, yani biçim kullanıcının
+bıraktığı gibi. Sonuç: kayma 24.4 → **3.7px**, yani elle düzenlemeden önceki
+hâlinden de (10.5px) iyi.
+
+**Arketibin notuna yazıldı:** uyluk açısı değişirse gövde açısı yeniden
+çözülmek zorunda. Bu bağ kodda zorlanmıyor — zorlansaydı editörde kalçayı
+sürüklemek gövdeyi de oynatırdı ve düzenleme imkânsızlaşırdı. Denetim
+yakalıyor, not da nedenini söylüyor.
+
+**Nerede.** `packages/rig/data/rigArchetypes.json`.
+
+
 ## 2026-09-11 — iki program modelinden `program_templates` kaldı, dürüstlük şemaya bağlandı
 
 **Karar (kullanıcı).** "Bilimsel paketler" adıyla İKİ ayrı iş vardı ve ikisi

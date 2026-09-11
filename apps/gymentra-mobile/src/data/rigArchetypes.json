@@ -159,8 +159,8 @@
      "neckA": 8,
      "upperA": 186,
      "foreA": 184,
-     "thighF": 245,
-     "shinF": 260
+     "thighF": 172.9,
+     "shinF": 295.2
     }
    },
    {
@@ -193,7 +193,8 @@
      "shinF": 240
     }
    }
-  ]
+  ],
+  "bodyDx": 12
  },
  "unilateral_lunge": {
   "note": "Geri hamle: ön diz ~90°, arka diz yere yaklaşır, arka topuk havada.",
@@ -496,8 +497,9 @@
      "torso": 296,
      "thoraxA": 292,
      "neckA": 286,
-     "upperA": 262,
-     "foreA": 292
+     "upperA": 251,
+     "foreA": 259.5,
+     "foreF": 265.9
     }
    },
    {
@@ -509,8 +511,9 @@
      "torso": 275,
      "thoraxA": 273,
      "neckA": 270,
-     "upperA": 262,
-     "foreA": 292
+     "upperA": 238.4,
+     "foreA": 259.6,
+     "upperF": 241.7
     }
    },
    {
@@ -522,8 +525,9 @@
      "torso": 275,
      "thoraxA": 273,
      "neckA": 270,
-     "upperA": 262,
-     "foreA": 292
+     "upperA": 237.7,
+     "foreA": 263.9,
+     "foreF": 270.2
     }
    },
    {
@@ -535,14 +539,16 @@
      "torso": 296,
      "thoraxA": 292,
      "neckA": 286,
-     "upperA": 262,
-     "foreA": 292
+     "upperA": 251,
+     "foreA": 259.5,
+     "foreF": 265.9
     }
    }
-  ]
+  ],
+  "propDx": -56
  },
  "glute_bridge": {
-  "note": "Omuzlar yerde: kalça kalkarken omuz yerde kalır, gövde açısı buna göre açılır.",
+  "note": "Omuzlar yerde: kalça kalkarken omuz yerde kalır, gövde açısı buna göre açılır. Alt karedeki gövde açısı bacak açısından TÜREVDİR — uyluk açısı değişirse kalça yüksekliği değişir ve omuzun yerde kalması için torso yeniden çözülmeli.",
   "mode": "stand",
   "arm": "angles",
   "bar": null,
@@ -553,10 +559,10 @@
     "t": 0,
     "tr": "Alt",
     "p": {
-     "shinA": 170,
-     "thighA": 50,
-     "torso": 274.8,
-     "thoraxA": 268.6,
+     "shinA": 164.7,
+     "thighA": 40.9,
+     "torso": 284.9,
+     "thoraxA": 278.7,
      "neckA": 268,
      "upperA": 250,
      "foreA": 267.6,
@@ -593,10 +599,10 @@
     "t": 1,
     "tr": "Alt",
     "p": {
-     "shinA": 170,
-     "thighA": 50,
-     "torso": 274.8,
-     "thoraxA": 268.6,
+     "shinA": 164.7,
+     "thighA": 40.9,
+     "torso": 284.9,
+     "thoraxA": 278.7,
      "neckA": 268,
      "upperA": 250,
      "foreA": 267.6,
@@ -965,7 +971,7 @@
      "thoraxA": 2,
      "neckA": 3,
      "thighA": 186,
-     "shinA": 214
+     "shinA": 182.5
     }
    },
    {
@@ -1004,7 +1010,7 @@
      "thoraxA": 2,
      "neckA": 3,
      "thighA": 186,
-     "shinA": 214
+     "shinA": 182.5
     }
    }
   ]
