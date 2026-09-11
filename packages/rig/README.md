@@ -167,6 +167,23 @@ derin çömelme klinik normalleri zaten aşar, onları sınır yapmak doğru
 hareketleri hata sayardı. Omuz, boyun ve ayak bileği tabloda yok; gerekçeleri
 `TODOS.md`'de.
 
+### Katman sırası
+
+Figürün arkadan öne çizim sırası `rig.ts`'de veri: `SIDE_LAYERS` ve
+`FRONT_LAYERS`, her katmanın gerekçesiyle (`LAYER_WHY`). Çizim kodu bunu
+çalışma anında okumuyor — üç ayrı çizim gövdesi var (editörün ana sahnesi,
+telefon önizlemesi, uygulamanın `RigFigure.tsx`'i) ve ikisi farklı SVG
+lehçesi. Bunun yerine her katmanın başında bir `KATMAN` işareti duruyor ve
+iki test (`tests/layerOrder.test.ts` burada, `RigFigure.layers.test.ts`
+uygulamada) bu işaretlerin kaynaktaki sırasını diziyle karşılaştırıyor.
+
+Neden: 11 Eylül 2026'da üç katman hatası arka arkaya çıktı — halter tabağı
+gövdenin arkasında, yakın kol kafanın arkasında, sahne eşyası uzak bacağın
+önünde — ve üçünü de kullanıcı gözle buldu. Üçü de aynı kuralın ihlaliydi
+(**katman sırası yakınlık sırasıdır**) ama kural yalnızca yorumlarda
+yazılıydı. Test sıranın yanında KURALI da denetliyor: diziyi yeniden
+sıralamak yetmiyor, gerekçeyi de bozmak gerekiyor.
+
 Verinin ŞEKLİ ayrı bir soru: `src/rigSchema.ts` yüklenirken ve editör
 kaydederken çalışır. Bilinmeyen bir `mode`, sıfırdan başlamayan bir kare
 dizisi ya da 2000ms altı bir süre motora hiç ulaşamaz — mekanik denetim

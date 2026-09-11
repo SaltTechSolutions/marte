@@ -1183,3 +1183,83 @@ export function dragFootDirFar(ex: RigExercise, S: Skeleton, p: RigPose, target:
   if (d > 180) d -= 360;
   return Math.round(d * 10) / 10;
 }
+
+/* ------------------------------------------------------------------ *
+ * Katman sırası — çizimin TEK ortak sözleşmesi
+ * ------------------------------------------------------------------ */
+
+/**
+ * Figür arkadan öne hangi sırayla çizilir.
+ *
+ * ## Neden burada
+ *
+ * Çizim iki yerde ayrı yazılıyor (editörün tarayıcı SVG'si, uygulamanın
+ * `react-native-svg`'si) ve editörün içinde de iki kere: ana sahne ile telefon
+ * önizlemesi. Üç ayrı gövde, üç ayrı sıra. 11 Eylül 2026'da üç katman hatası
+ * arka arkaya çıktı ve ÜÇÜNÜ DE kullanıcı gözle buldu:
+ *
+ * 1. Halter tabağı gövdenin arkasına çiziliyordu — back squat'ta tabak
+ *    izleyiciye en yakın şeydir.
+ * 2. Yakın kol kafadan önce çiziliyordu — kol kafanın önünden geçen altı
+ *    harekette kafa kolun üstüne biniyordu.
+ * 3. Sahne eşyası en önce çiziliyordu — basamağa çıkmada arka bacak kutunun
+ *    önüne geçiyordu.
+ *
+ * Üçü de aynı kuralın ihlali: **katman sırası yakınlık sırasıdır.** Kural
+ * yorumlarda yazılıydı ama hiçbir yerde VERİ değildi, o yüzden hiçbir test
+ * onu kontrol edemiyordu. Burası o veri. `tests/layerOrder.test.ts` (rig) ve
+ * `RigFigure.layers.test.ts` (uygulama) üç çizim gövdesinin kaynağındaki
+ * `KATMAN` işaretlerini okuyup bu diziyle karşılaştırıyor.
+ *
+ * ## Bunun neyi OLMADIĞI
+ *
+ * Çizim kodu bu diziyi ÇALIŞMA ANINDA okumuyor; okusaydı üç renderer tek
+ * döngüye inerdi ve sözleşme kendiliğinden sağlanırdı. O büyük bir yeniden
+ * yazım ve `react-native-svg` ile tarayıcı SVG'sinin ilkelleri farklı.
+ * Burada seçilen şey daha ucuzu: sıra veri olarak burada, uyum testle
+ * kanıtlanıyor. Ayrışma imkânsız değil, ama sessiz de değil.
+ */
+export const SIDE_LAYERS = [
+  'floor',
+  'fleg',
+  'farm',
+  'dbfar',
+  'props',
+  'torso',
+  'nleg',
+  'head',
+  'narm',
+  'db',
+  'plate',
+] as const;
+
+/** Önden görünüm. `side` iki bacağın (bacak + kol + ağırlık) tek birimi. */
+export const FRONT_LAYERS = ['floor', 'barback', 'side', 'trunk', 'head', 'barhands'] as const;
+
+export type SideLayer = (typeof SIDE_LAYERS)[number];
+export type FrontLayer = (typeof FRONT_LAYERS)[number];
+
+/**
+ * Her katman NEDEN orada.
+ *
+ * Testin sıraya değil GEREKÇEYE bakan yarısı bunu kullanıyor: diziyi
+ * yeniden sıralamak yetmiyor, buradaki kuralı da bozmak gerekiyor. Kayıtsız
+ * bir katman eklemek testi düşürüyor.
+ */
+export const LAYER_WHY: Record<SideLayer | FrontLayer, string> = {
+  floor: 'zemin ve gölge her şeyin altında',
+  fleg: 'uzak bacak figürün arkasında',
+  farm: 'uzak kol figürün arkasında',
+  dbfar: 'uzak elin ağırlığı uzak kolla birlikte, gövdeden önce',
+  props: 'sahne eşyası uzak taraf ile izleyici arasında: arka bacak sehpanın ARKASINDA kalır',
+  torso: 'gövde figürün ana kütlesi, uzak taraftan sonra',
+  nleg: 'yakın bacak gövdenin önünden geçiyor',
+  head: 'kafa gövdeyle birlikte, yakın koldan önce',
+  narm: 'yakın kol izleyici ile kafa arasında: kafayı ÖRTER',
+  db: 'yakın elin ağırlığı o elden sonra',
+  plate: 'yakın haltere tabak izleyiciye en yakın şey; nerede tutulursa tutulsun en üstte',
+  barback: 'sırttaki bar önden görünümde figürün ARKASINDA',
+  side: 'iki taraf (bacak + kol + ağırlık) gövdeden önce',
+  trunk: 'gövde iki taraftan sonra',
+  barhands: 'elde tutulan bar önden görünümde figürün ÖNÜNDE',
+};

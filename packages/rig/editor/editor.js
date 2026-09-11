@@ -632,11 +632,13 @@ function drawPose(svg, e, p) {
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   const near = (specs) => push(chain(specs, skin, edge));
   const far = (specs) => push(chain(specs, skinFar, edgeFar));
+  // KATMAN yan: floor
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
   // çiziyor, ad verilmeyince kapsüle düşüyor. Önizleme bu yüzden uygulamanın
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
   // göstermek.
+  // KATMAN yan: fleg
   if (showFarLeg(e)) {
     // Uzak AYAK da çiziliyor: uygulama çiziyordu, önizleme çizmiyordu — yani
     // önizleme uygulamayı değil eksik bir figürü gösteriyordu.
@@ -644,41 +646,49 @@ function drawPose(svg, e, p) {
          ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
          ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 12)]);
   }
+  // KATMAN yan: farm
   if (!e.hideFarArm) {
     far([...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
          ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9),
          handAt(S.handF, S.elbowF)]);
     // Uzak ağırlık uzak kolun ardında, gövdeden ÖNCE: ikisi de figürün
     // arkasında. Uygulamadaki sıranın aynısı.
+    // KATMAN yan: dbfar
     if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
   // Sahne eşyası UZAK UZUVLARDAN SONRA, gövdeden ÖNCE: uzak taraf figürün
   // arkasında, eşya onunla izleyici arasında. Konumlar 0. karenin
   // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
+  // KATMAN yan: props
   drawProps(e, skeleton(e, poseAt(e, 0).p), S, push);
+  // KATMAN yan: torso
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
     ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
     : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
        { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
+  // KATMAN yan: nleg
   near([
     { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
     ball(S.knee, 13), ball(S.ankle, 9),
   ]);
+  // KATMAN yan: head
   push(headNodes(e, S, p, skin, edge));
   // YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
   // arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi oluyordu:
   // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
   // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
   // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
+  // KATMAN yan: narm
   near([
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
     ball(S.elbow, 10),
     handAt(S.hand, S.elbow),
   ]);
+  // KATMAN yan: db
   if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
 
   // Elde tutulan halter kafadan SONRA ve ana sahnenin diskiyle aynı.
@@ -687,6 +697,7 @@ function drawPose(svg, e, p) {
   // uygulama onu hiç çizmiyordu, yani önizleme yalan söylüyordu.
   // Sırt ve kalça halteri de dahil: önizleme back squat'ta HİÇ tabak
   // çizmiyordu, uygulama çiziyordu.
+  // KATMAN yan: plate
   if (e.bar) push(plateAt(S.bar));
 }
 
@@ -751,6 +762,7 @@ function draw() {
   // opak kalıyor ki tabağın sınırı belirsizleşmesin.
   const plate = plateAt;
 
+  // KATMAN yan+ön: floor
   push([
     el('ellipse', { cx: S.pelvis[0], cy: GROUND + 4, rx: 96, ry: 12, fill: floor, opacity: .25 }),
     el('line', { x1: S0.pelvis[0] - 220, y1: GROUND, x2: S0.pelvis[0] + 280, y2: GROUND, stroke: floor, 'stroke-width': 2 }),
@@ -765,8 +777,10 @@ function draw() {
       el('rect', { x: cx - 152, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
       el('rect', { x: cx + 137, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
     ]);
+    // KATMAN ön: barback
     if (e.bar === 'back') push(bar());
     const nearF = (specs) => push(chain(specs, skin, edge));
+    // KATMAN ön: side
     [F.L, F.R].forEach((s) => {
       nearF([
         { d: `M ${s.ankle[0] - 15} ${GROUND - 13} h 30 v 13 h -30 Z` },
@@ -782,6 +796,7 @@ function draw() {
     // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
     // omuz silkerken omuz gövdeden kopamıyor. Leğen, gövde, boyun ve iki
     // omuz kapağı tek zincir — ayrı konturlanınca ekleri dikiş bırakıyordu.
+    // KATMAN ön: trunk
     nearF([
       { d: ellipsePath([cx, F.pelvis[1] + 8], 38, 25) },
       { d: frontTorsoPath(F) },
@@ -789,10 +804,12 @@ function draw() {
       ball(F.L.sh, 16), ball(F.R.sh, 16),
     ]);
     // Kafa ve çene TEK zincir; çene uygulamada vardı, önizlemede yoktu.
+    // KATMAN ön: head
     nearF([
       { d: ellipsePath([F.head[0], F.head[1] - 3], 23, 27) },
       { d: `M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z` },
     ]);
+    // KATMAN ön: barhands
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view, p);
   }
@@ -801,6 +818,7 @@ function draw() {
   const near = (specs) => push(chain(specs, skin, edge));
   const far = (specs) => push(chain(specs, skinFar, edgeFar));
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
+  // KATMAN yan: fleg
   if (showFarLeg(e)) {
     far([
       { d: footPath(S.ankleF, footDirFarOf(e, p), pin, facingFlip(e.mode)) },
@@ -809,6 +827,7 @@ function draw() {
       ball(S.kneeF, 12),
     ]);
   }
+  // KATMAN yan: farm
   if (!e.hideFarArm) {
     // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
     // arkasında kalıyor. Önceden ikisi de en sona, gövdenin üstüne
@@ -820,12 +839,14 @@ function draw() {
       ball(S.elbowF, 9), ball(S.handF, 9),
       useParts ? handAt(S.handF, S.elbowF) : null,
     ]);
+    // KATMAN yan: dbfar
     if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
   // Sahne eşyası UZAK UZUVLARDAN SONRA: uzak taraf figürün arkasında, eşya da
   // onunla izleyici arasında duruyor. Basamağa çıkmada arka bacak kutunun
   // ARKASINDA kalmalı, Bulgar squat'ta arka ayak sehpanın arkasında. Eskiden
   // eşya en önce çiziliyordu ve uzak bacak onun üstüne biniyordu.
+  // KATMAN yan: props
   drawProps(e, S0, S, push);
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
@@ -841,6 +862,7 @@ function draw() {
   // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
   // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
   // ayrı ayrı okunuyor.
+  // KATMAN yan: torso
   near([
     // Leğen kütlesi: Bridgman'ın üç değişmez gövde kütlesinden biri. Kalça
     // ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin — kütleler uç uca
@@ -855,6 +877,7 @@ function draw() {
   ]);
   // Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği yerde
   // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
+  // KATMAN yan: nleg
   near([
     { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
@@ -864,6 +887,7 @@ function draw() {
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
+  // KATMAN yan: head
   svg.appendChild(
     useParts
       ? headNodes(e, S, p, skin, edge)[0]
@@ -881,12 +905,14 @@ function draw() {
   // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
   // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
   // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
+  // KATMAN yan: narm
   near([
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
     ball(S.elbow, 10),
     useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
   ]);
+  // KATMAN yan: db
   if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
 
   // Elde tutulan halter KAFADAN SONRA çiziliyor: figürün önünde duruyor, o
@@ -904,6 +930,7 @@ function draw() {
   // çiziliyordu, oysa yakın taraftaki tabak izleyiciye en yakın şeydir:
   // back squat'ta figürün önünde durur. Kural tek: halter nerede tutulursa
   // tutulsun, YAKIN TABAK en üstte ve saydam.
+  // KATMAN yan: plate
   if (e.bar) push(plate(S.bar));
 
   drawHandles(svg, e, S, view, p);

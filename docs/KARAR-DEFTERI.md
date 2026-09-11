@@ -31,6 +31,41 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — katman sırası veri oldu, üç çizici teste bağlandı
+
+**Yapıldı.** Aynı gün üç katman hatası arka arkaya çıktı (halter tabağı,
+yakın kol, sahne eşyası) ve **üçünü de kullanıcı gözle buldu**. Üçü de aynı
+kuralın ihlaliydi — katman sırası yakınlık sırasıdır — ama kural yalnızca
+yorumlarda yazılıydı, hiçbir yerde veri değildi, o yüzden hiçbir test onu
+kontrol edemiyordu. Sıra artık `rig.ts`'de: `SIDE_LAYERS`, `FRONT_LAYERS`,
+`LAYER_WHY`. Üç çizim gövdesinin (editör ana sahne, telefon önizlemesi,
+uygulamanın `RigFigure.tsx`'i) her katmanının başına bir `KATMAN` işareti
+kondu; iki test bu işaretlerin kaynaktaki sırasını diziyle karşılaştırıyor.
+
+**Karar.** Çizim kodu diziyi **çalışma anında okumuyor**. Okusaydı üç
+renderer tek döngüye iner ve sözleşme kendiliğinden sağlanırdı; ama bu büyük
+bir yeniden yazım ve `react-native-svg` ile tarayıcı SVG'sinin ilkelleri
+farklı. Seçilen daha ucuzu: sıra veri, uyum testle kanıtlanıyor. Ayrışma
+imkânsız değil — ama sessiz de değil.
+
+**Test sıraya değil KURALA da bakıyor.** Diziyi yeniden sıralayıp işaretleri
+de taşımak testi geçirir; bu yüzden ayrı bir test `SIDE_LAYERS` üstünde
+değişmezleri denetliyor (uzak uzuvlar eşyadan önce, eşya gövdeden önce, kafa
+yakın koldan önce, tabak en üstte). İkisini birden bozmak gerekiyor.
+
+**Doğrulandı, varsayılmadı.** Her iki test de bilerek bozulmuş sırada
+çalıştırıldı ve ateşledi — `rigAudit`'teki ölü `ayak` kuralının dersi:
+yalnızca "sustuğunu" doğrulayan test hiçbir şey kanıtlamıyor.
+
+**Bilerek yapılmadı.** İlkel listesi karşılaştırması (iki çizicinin ürettiği
+şekil ve sayılar) yapılmadı: bunun için editörü DOM'da, uygulamayı
+`react-test-renderer` ile çalıştırmak gerekiyor ve iki depo birbirinin test
+ortamını göremiyor. Bulunan üç hata da SIRA hatasıydı, ilkel hatası değil.
+
+**Nerede.** `packages/rig/src/rig.ts`, `packages/rig/tests/layerOrder.test.ts`,
+`apps/gymentra-mobile/src/components/RigFigure.layers.test.ts`.
+
+
 ## 2026-09-11 — sahne eşyası uzak uzuvlardan sonra çiziliyor
 
 **Yapıldı.** Kullanıcı bildirdi: bazı hareketlerde arkada kalan bacak

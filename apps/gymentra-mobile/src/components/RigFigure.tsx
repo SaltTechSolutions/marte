@@ -256,6 +256,7 @@ export function RigFigure({
       <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, edge, metal, floorC, accent: colors.p }} />
     ) : (
       <>
+        {/* KATMAN yan: floor */}
         <G key="floor">
           <Ellipse
             cx={farLeg ? (S.ankle[0] + S.ankleF[0]) / 2 + 6 : S.ankle[0] + 6}
@@ -274,6 +275,7 @@ export function RigFigure({
             en sona, gövdenin üstüne çiziliyordu; uzak dambıl gövdenin önünde
             belirdiği için yakın el iki ağırlık tutuyormuş gibi görünüyordu. */}
         <G key="far" opacity={0.95}>
+          {/* KATMAN yan: fleg */}
           {farLeg &&
             far('fleg', [
               { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
@@ -281,6 +283,7 @@ export function RigFigure({
               ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
               ball('fk', S.kneeF, 12),
             ])}
+          {/* KATMAN yan: farm */}
           {!rig.hideFarArm && (
             <>
               {far('farm', [
@@ -290,6 +293,7 @@ export function RigFigure({
                 ball('fw', S.handF, 9),
                 hand('fh', S.handF, S.elbowF),
               ])}
+              {/* KATMAN yan: dbfar */}
               {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
             </>
           )}
@@ -302,6 +306,7 @@ export function RigFigure({
         {/* Sahne eşyası TEK grupta: `propShift` bir kere uygulanıyor.
             Eşya konumları iskeletten türetildiği için figür kayınca eşya da
             kayıyor; `propDx/propDy` aradaki bağı gevşetiyor. */}
+        {/* KATMAN yan: props */}
         <G key="props" transform={propShift(rig)}>
           {/* Sehpa gövdenin ekseni boyunca, sırtın hemen altında çizilir: düz
               bench'te yatay, eğimli bench'te eğimli. Sabit yatay bir sehpa
@@ -521,6 +526,7 @@ export function RigFigure({
             Omuz yan görünümde gövdeden HEP 14px uzakta; yarıçapı 20 olan
             yuvarlak bir deltoid kapağı birleşimi zaten örtüyor. Kama
             gereksiz ve düz kenarları gövdenin üstünde çentik bırakıyordu. */}
+        {/* KATMAN yan: torso */}
         {near('torso', [
           // Leğen kütlesi: Bridgman'ın üç değişmez gövde kütlesinden biri.
           // Kalça ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin —
@@ -539,6 +545,7 @@ export function RigFigure({
         ])}
         {/* Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği
             yerde hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor. */}
+        {/* KATMAN yan: nleg */}
         {near('nleg', [
           { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
           ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
@@ -553,6 +560,7 @@ export function RigFigure({
         {/* Baş da zincirin iki geçişinden geçiyor: düz kontur yola ORTALANIR
             ve yarısı şeklin içinde kalır, yani gövdeninkinin yarı kalınlığında
             görünürdü. Dönüşüm iki geçişi birden sarıyor. */}
+        {/* KATMAN yan: head */}
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
           <Path d={headProfile()} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
           <Path d={headProfile()} fill={skin} />
@@ -563,12 +571,14 @@ export function RigFigure({
             (hip_thrust, glute_bridge, bird_dog, dead_bug, hanging_knee_raise,
             pull_up) kafa kolun üstüne biniyor ve kol arkadan geçiyormuş gibi
             görünüyordu. */}
+        {/* KATMAN yan: narm */}
         {near('narm', [
           ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
           ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
           ball('e', S.elbow, 10),
           hand('h', S.hand, S.elbow),
         ])}
+        {/* KATMAN yan: db */}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Elde tutulan halter KAFADAN SONRA: figürün önünde duruyor, o yüzden
             en üstte. Tabak bilerek saydam — kafanın konumu içinden okunuyor
@@ -581,6 +591,7 @@ export function RigFigure({
             çiziliyorlardı, oysa yakın taraftaki tabak izleyiciye en yakın
             şeydir — back squat'ta figürün önünde durur. Kural tek: halter
             nerede tutulursa tutulsun, YAKIN TABAK en üstte ve saydam. */}
+        {/* KATMAN yan: plate */}
         {rig.bar && plate(S.bar)}
       </>
     );
@@ -660,15 +671,19 @@ function FrontBody({
 
   return (
     <>
+      {/* KATMAN ön: floor */}
       <G key="floor">
         <Ellipse cx={cx} cy={GROUND + 4} rx={104} ry={12} fill={c.floorC} opacity={0.25} />
         <Line x1={cx - 190} y1={GROUND} x2={cx + 190} y2={GROUND} stroke={c.floorC} strokeWidth={2} />
       </G>
+      {/* KATMAN ön: barback */}
       {rig.bar === 'back' && bar('barback')}
+      {/* KATMAN ön: side */}
       {side('legL', F.L)}
       {side('legR', F.R)}
       {/* Gövde de tek zincir: leğen, bel, göğüs ve boyun arasındaki ekler
           ayrı konturlanınca gövdeyi enine kesen çizgiler bırakıyor. */}
+      {/* KATMAN ön: trunk */}
       {chain('trunk', [
         { key: 'pelvis', d: ellipsePath(cx, F.pelvis[1] + 8, 38, 25) },
         seg('waist', F.pelvis, F.lumbar, 66, 56),
@@ -678,10 +693,12 @@ function FrontBody({
       {/* Kafa ve çene TEK zincir: ayrı konturlandıklarında aralarındaki ek
           çenenin üstünden geçen bir çizgi bırakıyor, çene de gövde hattından
           farklı kalınlıkta okunuyordu. */}
+      {/* KATMAN ön: head */}
       {chain('headf', [
         { key: 'skull', d: ellipsePath(F.head[0], F.head[1] - 3, 23, 27) },
         { key: 'jaw', d: `M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z` },
       ])}
+      {/* KATMAN ön: barhands */}
       {rig.bar === 'hands' && bar('barhands')}
     </>
   );
