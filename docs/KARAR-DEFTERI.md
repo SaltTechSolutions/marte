@@ -31,6 +31,27 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — yakın kol kafadan sonra çiziliyor
+
+**Yapıldı.** Kullanıcı bildirdi: kol kafanın önünden geçtiği durumlarda arkadan
+geçiyormuş gibi görünüyor. Doğruydu — yakın kol KAFADAN ÖNCE çiziliyordu, yani
+kafa kolun üstüne biniyordu. Yan görünümde yakın kol izleyiciyle kafa arasında
+durur, kafayı ÖRTMELİ. Ölçüldü: altı arketipte yakın dirsek/el kafa
+yarıçapının içine giriyor — `hip_thrust` 17px, `glute_bridge` 18px, `bird_dog`
+18px, `dead_bug_supine` 21px, `hanging_knee_raise` 24px, `pull_up_hang` 25px.
+Yeni sıra: gövde → yakın bacak → KAFA → yakın kol + el + dambıl → halter tabağı.
+
+Aynı turda omuz kapağının yarıçapı 20 → 16'ya indi: üst kolun o uçtaki yarı
+genişliği 13 ve 20'de omuz kolun üstünde ayrı bir yumru gibi okunuyordu.
+Referans yandan çizimde omuz kolun devamıdır, ayrı bir top değil.
+
+**Karar.** **Katman sırası "yakınlık" sırasıdır.** Halter tabağı için zaten
+yazılıydı ("yakın tabak en üstte"); aynı kural yakın kol için de geçerli ve
+kodda uygulanmamıştı.
+
+**Nerede.** `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
 ## 2026-09-11 — kafa hattı ve erkek gövde profili
 
 **Yapıldı.** İki kusur, ikisi de kullanıcının gözüyle bulundu.

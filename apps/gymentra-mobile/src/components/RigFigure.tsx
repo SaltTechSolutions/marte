@@ -526,7 +526,11 @@ export function RigFigure({
           part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
           part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
           part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
-          ball('sh', S.sh, 20),
+          // Deltoid kapağı: yarıçap üst kolun o uçtaki yarı genişliğinden
+          // (13) türetiliyor, biraz payla. 20'de kolun üstünde ayrı bir
+          // yumru gibi okunuyordu — referans yandan çizimde omuz kolun
+          // devamıdır, ayrı bir top değil.
+          ball('sh', S.sh, 16),
         ])}
         {/* Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği
             yerde hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor. */}
@@ -537,13 +541,6 @@ export function RigFigure({
           ball('k', S.knee, 13),
           ball('a', S.ankle, 9),
         ])}
-        {near('narm', [
-          ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
-          ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
-          ball('e', S.elbow, 10),
-          hand('h', S.hand, S.elbow),
-        ])}
-        {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
             koyuyor ama yüzün hangi yöne baktığını söyleyemiyor: `quad`
             (yüzükoyun) ile `bench` (sırt üstü) neredeyse aynı açıyı taşıyor,
@@ -555,6 +552,19 @@ export function RigFigure({
           <Path d={headProfile()} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
           <Path d={headProfile()} fill={skin} />
         </G>
+        {/* YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
+            arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi
+            oluyordu: kolun kafanın önünden geçtiği altı harekette
+            (hip_thrust, glute_bridge, bird_dog, dead_bug, hanging_knee_raise,
+            pull_up) kafa kolun üstüne biniyor ve kol arkadan geçiyormuş gibi
+            görünüyordu. */}
+        {near('narm', [
+          ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
+          ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
+          ball('e', S.elbow, 10),
+          hand('h', S.hand, S.elbow),
+        ])}
+        {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Elde tutulan halter KAFADAN SONRA: figürün önünde duruyor, o yüzden
             en üstte. Tabak bilerek saydam — kafanın konumu içinden okunuyor
             (bkz. `plate`). Önden görünüm barı zaten en üste çiziyordu; yandan

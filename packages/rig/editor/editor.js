@@ -341,7 +341,7 @@ function cmpFigure(e, p, mode) {
     ...(mode === 'capsule'
       ? [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) }, { d: capsule(S.thorax, S.neck, 21, 19) }]
       : [pc('lumbar', S.pelvis, S.lumbar), pc('thorax', S.lumbar, S.thorax), pc('neck', S.thorax, S.neck)]),
-    circ(S.sh, 20),
+    circ(S.sh, 16),
   ], skin, edge);
   g += chainStr([
     { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
@@ -657,7 +657,7 @@ function drawPose(svg, e, p) {
   }
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
-    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 20)]
+    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
     : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
        { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
   near([
@@ -666,6 +666,12 @@ function drawPose(svg, e, p) {
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
     ball(S.knee, 13), ball(S.ankle, 9),
   ]);
+  push(headNodes(e, S, p, skin, edge));
+  // YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
+  // arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi oluyordu:
+  // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
+  // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
+  // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
   near([
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
@@ -673,7 +679,6 @@ function drawPose(svg, e, p) {
     handAt(S.hand, S.elbow),
   ]);
   if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
-  push(headNodes(e, S, p, skin, edge));
 
   // Elde tutulan halter kafadan SONRA ve ana sahnenin diskiyle aynı.
   // Burada bir zamanlar perspektif halter vardı — çubuk derinliğe uzanıyor,
@@ -841,7 +846,7 @@ function draw() {
     ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
     ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),
     ...(useParts ? [trunkPart('neck', S.thorax, S.neck)] : [{ d: capsule(S.thorax, S.neck, 21, 19) }]),
-    ...(useParts ? [ball(S.sh, 20)] : [{ d: shoulderWedge(S.thorax, S.sh, 20) }, ball(S.sh, 17)]),
+    ...(useParts ? [ball(S.sh, 16)] : [{ d: shoulderWedge(S.thorax, S.sh, 20) }, ball(S.sh, 17)]),
   ]);
   // Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği yerde
   // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
@@ -851,13 +856,6 @@ function draw() {
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
     ball(S.knee, 13), ball(S.ankle, 9),
   ]);
-  near([
-    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
-    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
-    ball(S.elbow, 10),
-    useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
-  ]);
-  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
@@ -872,6 +870,19 @@ function draw() {
           el('path', { d: 'M -4 4 L 21 6 L 14 23 L -8 22 Z', fill: skin, stroke: line }),
         ]),
   );
+
+  // YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
+  // arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi oluyordu:
+  // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
+  // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
+  // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
+  near([
+    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
+    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
+    ball(S.elbow, 10),
+    useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
+  ]);
+  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
 
   // Elde tutulan halter KAFADAN SONRA çiziliyor: figürün önünde duruyor, o
   // yüzden en üstte — `plate`'in başındaki not zaten bunu söylüyor. Sıra
