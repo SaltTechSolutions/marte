@@ -112,14 +112,35 @@ const PROFILE = {
     { u: 0.6, f: 19, b: 18 },
     { u: 1.0, f: 18, b: 16 },
   ],
-  // Belden göğse. Göğüs kafesi açılıyor, en derin yer sternum hizası; omuz
-  // kuşağına doğru yeniden daralıyor.
+  /**
+   * Belden göğse — ERKEK gövde profili.
+   *
+   * Bridgman (`Constructive Anatomy`, gövde profili) iki şey söylüyor ve eski
+   * profil ikisini de yapmıyordu:
+   *
+   * 0. Göğüs OMUZ HİZASINDA en derindir; daralma göğüste değil BOYUNDA olur.
+ *    İlk denemede üst ucu 19/21'e indirmiştim ve figür omzun hemen altında
+ *    boğum yapıyordu — referans yandan çizimde göğüs koltukaltı hizasından
+ *    omuza kadar dolu kalıyor, ince olan boyun.
+ *
+ * 1. Önden gövde TEK düz eğri değil: "göğüs kasının kenarında ve göbekte
+   *    çukurlarla üç küçük eğriye bölünüyor". Yani pektoralin ALT kenarının
+   *    altında bir çöküntü var (epigastrium). Eski profil önü aşağıdan yukarı
+   *    düz şişiriyordu.
+   * 2. Arkada "göğsün uzun arka kavisi" var — torasik kifoz, üstüne trapez ve
+   *    kürek kemiği kütlesi. Yani ÜST göğüste arka öndan daha dolgun. Eski
+   *    profil önü hep arkadan geniş tutuyordu ve göğüs öne çıkık, güvercin
+   *    göğsü gibi duruyordu.
+   *
+   * Kemik gövde EKSENİ (omurga değil, orta çizgi); rig'in omuz ve baş
+   * yerleşimi bu varsayıma göre kurulu.
+   */
   thorax: [
     { u: 0.0, f: 18, b: 16 },
-    { u: 0.25, f: 23, b: 21 },
-    { u: 0.5, f: 27, b: 25 },
-    { u: 0.75, f: 28, b: 25 },
-    { u: 1.0, f: 23, b: 21 },
+    { u: 0.25, f: 21, b: 20 },
+    { u: 0.5, f: 25, b: 24 },
+    { u: 0.75, f: 27, b: 26 },
+    { u: 1.0, f: 26, b: 26 },
   ],
   // Göğüsten başa. Neredeyse silindirik, arkada ense biraz daha dolgun.
   neck: [

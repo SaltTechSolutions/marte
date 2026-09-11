@@ -835,7 +835,10 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
   // belden daha ileri çıkmaz. Simetrik bir blok kalçanın önünde bir çıkıntı
   // bırakıyordu. Derinlik arkada: gluteal kütle orada.
   const FRONT = 20;
-  const BACK = 27;
+  // Kalça, yandan bakışta figürün EN ÇIKIK ARKA noktasıdır — kullanıcının
+  // verdiği anatomi referansında sırt çizgisi düz iner, çıkıntıyı gluteal
+  // kütle yapar. 27'de sırt hattıyla neredeyse aynı hizadaydı.
+  const BACK = 31;
   const RY = 25;
   const pts: Vec[] = [];
   for (let i = 0; i < 20; i++) {

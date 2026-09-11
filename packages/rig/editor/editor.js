@@ -238,6 +238,25 @@ const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
  * örterdi. Kenar çizgisi tam opak kalıyor ki sınırı belirsizleşmesin.
  */
 /**
+ * Baş profili — gövdeyle AYNI kalınlıkta hatla.
+ *
+ * Baş, zincirden geçmeyen tek parçaydı ve düz bir konturla çiziliyordu. Düz
+ * kontur yola ORTALANIR, yani yarısı şeklin içinde kalır; zincirin hattı ise
+ * tamamen dışarıda durur. Sonuç: gövdenin hattı belirgin, kafanınki yarı
+ * kalınlıkta. Ana sahnede daha da kötüydü — orada kafa sahne eşyasının soluk
+ * `--line` rengiyle konturlanıyordu, yani neredeyse hiç hattı yoktu.
+ *
+ * Aynı iki geçiş: altta hat renginde şişirilmiş kopya, üstte konturu olmayan
+ * dolgu. Dönüşüm ikisini birden sarıyor.
+ */
+const headNodes = (e, S, p, fill, edge) => [
+  el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` }, [
+    el('path', { d: headProfile(), fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }),
+    el('path', { d: headProfile(), fill }),
+  ]),
+];
+
+/**
  * El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı kemik dönüşümünü
  * kullanıyoruz, böylece elin yönü koldan geliyor — daire bunu söyleyemiyordu.
  *
@@ -347,7 +366,9 @@ function cmpFigure(e, p, mode) {
   }
   g += mode === 'capsule'
     ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}"/>`
-    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}" stroke-linejoin="round"/></g>`;
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)">`
+      + `<path d="${headProfile()}" fill="${edge}" stroke="${edge}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"/>`
+      + `<path d="${headProfile()}" fill="${skin}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
@@ -652,8 +673,7 @@ function drawPose(svg, e, p) {
     handAt(S.hand, S.elbow),
   ]);
   if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
-  push([el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` },
-    [el('path', { d: headProfile(), fill: skin, stroke: edge, 'stroke-width': EDGE_W, 'stroke-linejoin': 'round' })])]);
+  push(headNodes(e, S, p, skin, edge));
 
   // Elde tutulan halter kafadan SONRA ve ana sahnenin diskiyle aynı.
   // Burada bir zamanlar perspektif halter vardı — çubuk derinliğe uzanıyor,
@@ -762,7 +782,11 @@ function draw() {
       { d: capsule(F.thorax, F.neck, 27, 24) },
       ball(F.L.sh, 16), ball(F.R.sh, 16),
     ]);
-    push([el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: edge, 'stroke-width': EDGE_W })]);
+    // Kafa ve çene TEK zincir; çene uygulamada vardı, önizlemede yoktu.
+    nearF([
+      { d: ellipsePath([F.head[0], F.head[1] - 3], 23, 27) },
+      { d: `M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z` },
+    ]);
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view, p);
   }
@@ -839,7 +863,7 @@ function draw() {
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
   svg.appendChild(
     useParts
-      ? el('g', { transform: headT }, [el('path', { d: headProfile(), fill: skin, stroke: line })])
+      ? headNodes(e, S, p, skin, edge)[0]
         // Kapsül kipinin çene kaması da YEREL koordinatta: eskiden mutlak
         // noktalarla çizilip `rotate(a cx cy)` ile döndürülüyordu, o hâlde
         // aynalanamıyordu. Sayılar birebir aynı, yalnızca kafa merkezine göre.

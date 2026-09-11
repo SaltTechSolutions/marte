@@ -31,6 +31,41 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — kafa hattı ve erkek gövde profili
+
+**Yapıldı.** İki kusur, ikisi de kullanıcının gözüyle bulundu.
+
+**1. Kafanın hattı gövdeninkinden ince görünüyordu.** Sebep: baş zincirden
+geçmeyen tek parçaydı. Zincirin hattı şeklin TAMAMEN DIŞINDA duruyor (altta
+şişirilmiş kopya, üstte dolgu); düz kontur ise yola ORTALANIR, yani yarısı
+içeride kalır ve görünen kalınlık yarıya düşer. Ana sahnede daha da kötüydü —
+orada kafa sahne eşyasının soluk `--line` rengiyle konturlanıyordu. Dört çizim
+yeri de (ana sahne, önizleme, karşılaştırma, önden görünüm) ortak `headNodes`
+üzerinden zincire alındı. Önden görünümde çene de kafayla aynı zincire girdi;
+çene editörde hiç çizilmiyordu, uygulamada çiziliyordu.
+
+**2. Yandan göğüs profili yanlıştı.** Kullanıcı iki anatomi referansı verdi
+(yandan erkek figür, ve önden/arkadan/yandan üçlü). Bridgman'ın gövde profili
+bölümüyle birlikte üç düzeltme çıktı:
+- Göğüs OMUZ HİZASINDA en derindir; daralma göğüste değil BOYUNDA olur. İlk
+  denemem üst ucu 19/21'e indiriyordu ve figür omzun hemen altında boğum
+  yapıyordu.
+- Önden gövde tek düz eğri değil: pektoralin alt kenarında çöküntü var.
+- Arka kavis ABARTILMAZ: referansta üst sırt düzdür, en çıkık arka nokta
+  KALÇAdır. `pelvisMass` arka derinliği 27 → 31.
+
+**Karar.** **Referans varsa ölçü ondan alınır.** Bridgman metni "ne olduğunu"
+söylüyor ama "ne kadar" demiyor; oranları kullanıcının verdiği yandan çizimden
+okudum. Bu bir ölçüm değil GÖZLE okuma — siluetler hâlâ stilize.
+
+**Açık.** Referansa göre hâlâ ayrışan iki yer var: omuz topu (r=20) üst kolun
+üstünde ayrı bir yumru gibi okunuyor, ve kalça–uyluk geçişinde zincir sınırı
+kaba bir yatay hat bırakıyor.
+
+**Nerede.** `packages/rig/scripts/build-body-parts.mjs` (thorax profili),
+`packages/rig/src/rig.ts` (`pelvisMass`), `packages/rig/editor/editor.js`
+(`headNodes`), `apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
 ## 2026-09-11 — önizleme dambılı ve elleri çizmiyordu
 
 **Yapıldı.** Telefon önizlemesi halter tabağını çiziyordu ama DAMBILI hiç

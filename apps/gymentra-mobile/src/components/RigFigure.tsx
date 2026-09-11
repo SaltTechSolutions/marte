@@ -548,8 +548,12 @@ export function RigFigure({
             koyuyor ama yüzün hangi yöne baktığını söyleyemiyor: `quad`
             (yüzükoyun) ile `bench` (sırt üstü) neredeyse aynı açıyı taşıyor,
             biri yere biri tavana bakmalı. Bkz. `facingFlip`. */}
+        {/* Baş da zincirin iki geçişinden geçiyor: düz kontur yola ORTALANIR
+            ve yarısı şeklin içinde kalır, yani gövdeninkinin yarı kalınlığında
+            görünürdü. Dönüşüm iki geçişi birden sarıyor. */}
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
-          <Path d={headProfile()} fill={skin} stroke={edge} strokeWidth={EDGE_W} strokeLinejoin="round" />
+          <Path d={headProfile()} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
+          <Path d={headProfile()} fill={skin} />
         </G>
         {/* Elde tutulan halter KAFADAN SONRA: figürün önünde duruyor, o yüzden
             en üstte. Tabak bilerek saydam — kafanın konumu içinden okunuyor
@@ -656,14 +660,13 @@ function FrontBody({
         { key: 'rib', d: ellipsePath(cx, trunk.cy, trunk.rx, trunk.ry) },
         seg('neck', F.thorax, F.neck, 27, 24),
       ])}
-      <G key="head">
-        <Ellipse cx={F.head[0]} cy={F.head[1] - 3} rx={23} ry={27} fill={c.skin} stroke={c.edge} strokeWidth={EDGE_W} />
-        <Path
-          d={`M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z`}
-          fill={c.skin}
-          stroke={c.line}
-        />
-      </G>
+      {/* Kafa ve çene TEK zincir: ayrı konturlandıklarında aralarındaki ek
+          çenenin üstünden geçen bir çizgi bırakıyor, çene de gövde hattından
+          farklı kalınlıkta okunuyordu. */}
+      {chain('headf', [
+        { key: 'skull', d: ellipsePath(F.head[0], F.head[1] - 3, 23, 27) },
+        { key: 'jaw', d: `M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z` },
+      ])}
       {rig.bar === 'hands' && bar('barhands')}
     </>
   );
