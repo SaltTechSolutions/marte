@@ -369,9 +369,12 @@ zorlanmıyor.
 | `weeklyFrequency` | string | Serbest metin: "3 gün (A-B-A)" |
 | `equipment` | string[] | |
 | `summary` | string | Şablonun gerekçesi; kanıt burada anlatılıyor |
+| `limits` | string[] | **Boş olamaz** — şablonun ne YAPMADIĞI |
 | `sources` | string[] | Kaynakça kimlikleri; metin `sourceCitations`'ta |
 | `warmup` | string? | Önüne gelen ısınma bloğunun kimliği |
 | `days` | TemplateDay[] | `{ name, exercises: TemplateExercise[] }` |
+| `sessionsPerWeek` | number? | `weeklyFrequency`'nin sayısal hâli; **hipertrofide zorunlu** |
+| `targets` | string[]? | Büyütmeyi vaat ettiği kaslar; **hipertrofide zorunlu** |
 | `goal` | TemplateGoal? | `{ wants, because, pairsWith? }` — hedef keşif katmanı |
 | `isActive` / `sourceVersion` / `disclaimer` / `updatedAt` | | Seed betiği yazıyor |
 
@@ -383,6 +386,15 @@ restSeconds, cue, targetWeightKg }`. `targetWeightKg` her zaman `null`:
 çevirir ve programa yazar; sonrasında canlı bağ yoktur. Olsaydı kanıt
 güncellendiğinde antrenörün üstünde çalıştığı programın altından veri
 çekilirdi. `templateId` yalnızca kökeni kaydeder.
+
+**Dürüstlük denetimi veri şartıdır.** `backend/scripts/programTemplateAudit.cjs`
+dört kural koşuyor ve `seed_program_templates.cjs` denetimden geçmeyen hiçbir
+şeyi yazmıyor (dry-run'da da çalışır): `limits` boş olamaz; yanlış yönlendiren
+ifade — bölgesel yağ kaybı, inceltme, detoks, "garanti" — yalnızca İNKÂR eden
+cümlede geçebilir; her `sources` anahtarı kök kaynakçada bulunmak zorunda;
+`category: 'hypertrophy'` olan şablon `targets`'taki her kasa haftada en az 10
+birincil set vermek zorunda (sayım `sessionsPerWeek` ile `exercise_muscles.json`
+üstünden). Aynı kurallar `backend/tests/programTemplates.test.ts`'de de koşuyor.
 
 **Kurallar:** okuma = imzalı her kullanıcı (üye de hedef keşfinde başlığı ve
 özeti görüyor; şablonda kişisel veri yok). Yazma = **yalnızca salonun kendi

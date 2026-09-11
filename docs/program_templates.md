@@ -30,6 +30,55 @@
 - **İsimlendirme dürüst:** "karın inceltme" yok (bölgesel yağ kaybı için kanıt yok — Vispute 2011, Kostek 2007), "postür düzeltme" yok (kanıt karışık). Bunların yerine *core güçlendirme* ve *sırt-omuz güçlendirme* var; iddia sadece kanıtı olan şey.
 - **Hedef katmanı (v2, 10 Eylül 2026).** Popüler talebi isim değil `goal` alanı karşılıyor: üye "karnım incelsin" der, uygulama onu dürüst adlı programa götürür ve nedenini tek cümleyle söyler. Kural şu: **bölgesel YAĞ KAYBI yoktur, bölgesel KAS GELİŞİMİ vardır.** Bu yüzden *Kol Hipertrofisi*, *Kalça Hipertrofisi* ve *Sırt Genişliği* bölgesel hedef olarak dürüstçe adlandırılabilir; *Karın Kasları* da kası hedefler ama görünürlüğün yağ oranına bağlı olduğunu açıkça söyler ve Yağ Kaybı şablonuna bağlar.
 
+## Dürüstlük denetimi koda bağlandı (11 Eylül 2026)
+
+Yukarıdaki "isimlendirme dürüst" ilkesi 10 Eylül'e kadar yalnızca bu belgede
+yazılıydı — yani iyi niyete bağlıydı. 11 Eylül'de dört kural
+`backend/scripts/programTemplateAudit.cjs`'e taşındı ve hem
+`backend/tests/programTemplates.test.ts`'de hem seed betiğinin içinde
+çalışıyor: denetimden geçmeyen bir şablon üretime YAZILAMIYOR.
+
+1. **`limits` boş olamaz.** Her şablon ne YAPMADIĞINI da yazıyor. Yazılmayan
+   sınırı üye kendi varsayımıyla dolduruyor — zaten o varsayım yüzünden
+   "karın inceltme" diye arıyor. Metin üyenin "Hedefim" ekranında tam,
+   antrenörün şablon seçicisinde ilk madde olarak görünüyor.
+2. **Yanlış yönlendiren ifade yasak** — bölgesel yağ kaybı, inceltme,
+   selülit, detoks, "garanti/mucize/kesinlikle". Kural cümle düzeyinde: aynı
+   ifade İNKÂR edilirken serbest, çünkü ürünün dürüstlüğü tam olarak o
+   cümlelerde yaşıyor ("bölgesel yağ eritilemez"). `goal.wants` tamamen muaf
+   — orası üyenin kendi dili.
+3. **Kaynak zorunlu** ve gösterilen anahtar kök kaynakçada bulunmak zorunda.
+4. **Hipertrofi hacmi.** `category: 'hypertrophy'` olan şablon `targets`'ta
+   yazdığı her kasa haftada en az **10 birincil set** vermek zorunda
+   (Schoenfeld 2016). Sayım veriden: `sessionsPerWeek` × set sayısı, kasın
+   BİRİNCİL olduğu hareketlerde (`backend/scripts/exercise_muscles.json`,
+   `build_exercise_library.py` üretiyor).
+
+**Kural ilk çalıştırmada iki gerçek eksik buldu:**
+
+- *Kol Hipertrofisi* triceps uzun başına ve brachialis'e haftada 7 set
+  veriyordu, oysa şablonun kendi özeti "kas grubu başına 10–20 doğrudan set"
+  diyordu. Biceps curl ve triceps pushdown setleri 4/3'ten 5/5'e çıkarıldı;
+  doğrudan kol hacmi 14 → 20 set. Özetteki "biceps'e 14, triceps'e 17"
+  cümlesi de düzeltildi — o sayılar bileşik hareketleri de sayıyordu.
+- *Kalça Hipertrofisi*nin **yan kalça (gluteus medius) hacmi sıfır**. Hareket
+  kataloğunda o kası birincil çalıştıran hiçbir hareket yok. Şablon yan kalça
+  gelişimi iddia etmiyor; bu artık `limits`'te açıkça yazılı ve `targets`
+  yalnızca `gluteMax`.
+
+**Üst sınır bilerek konmadı.** Kuralların geldiği yerde (öbür program
+modelinin `validateProgrammes`'i) 40 setlik bir tavan da vardı. Bu veride
+ölçüldü ve YANLIŞ ateşledi: *Karın Kasları* 20 dakikalık tek blok, altı
+hareket, günde 17 set — ve altısı da kas haritasında "Karın (orta)"yı
+birincil sayıyor, sayım haftada 51 çıkarıyor. Bu sayı hacmi değil haritanın
+örtüşmesini ölçüyor. Alt sınırda bu yanlılık güvenli tarafta, üst sınırda
+değil; ilk gerçek veride yanlış ateşleyen kuralı taşımak taşımamaktan kötü.
+
+**`evidence` alanı taşınmadı.** Öbür model her iddiayı serbest metin bir
+gerekçeyle eşliyordu; burada aynı işi `sources` + kök kaynakça daha iyi
+yapıyor, çünkü 18 künyelik ortak listeye çözülen anahtarlar serbest metinden
+denetlenebilir.
+
 ## Antrenör personası incelemesi (2 Eylül 2026)
 
 Gerçek antrenör onayı yerine ilk sürüm, antrenör personası (Deniz — 8 yıl salon,

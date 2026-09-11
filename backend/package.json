@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "vitest run tests/programTemplates.test.ts",
     "test:rules": "node scripts/with-jdk.cjs npx firebase-tools emulators:exec --only firestore \"vitest run tests/firestore.rules.test.ts\"",
     "test:functions": "node scripts/with-jdk.cjs npx firebase-tools emulators:exec --only firestore \"npm --prefix functions run test\"",
     "backfill-silver": "node scripts/backfill_silver_2026-11-01.cjs",

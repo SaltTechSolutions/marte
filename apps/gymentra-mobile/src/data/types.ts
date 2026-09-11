@@ -391,11 +391,35 @@ export interface ProgramTemplate {
   weeklyFrequency: string;
   equipment: string[];
   summary: string;
+  /**
+   * Şablonun ne YAPMADIĞI — boş bırakılamaz.
+   *
+   * Yazılmayan sınırı üye kendi hayal gücüyle dolduruyor: "karın kasları"
+   * programını gören kişi karnın inceleceğini varsayıyor. Alan zorunlu ve
+   * `backend/scripts/programTemplateAudit.cjs` bunu hem testte hem seed
+   * betiğinde denetliyor, yani sınırı yazılmamış bir şablon üretime giremez.
+   */
+  limits: string[];
   /** Kaynakça kimlikleri; metin `program_templates.md`'de. */
   sources: string[];
   /** Önüne gelen ısınma bloğunun şablon kimliği. */
   warmup?: string;
   days: TemplateDay[];
+  /**
+   * Haftada kaç seans — `weeklyFrequency`'nin sayısal hâli.
+   *
+   * Serbest metin ("Haftada 2 gün, ana programın ÜSTÜNE") insana yetiyor ama
+   * hacim hesabına yetmiyor. Yalnızca hipertrofi şablonlarında zorunlu:
+   * haftalık set sayımının çarpanı bu.
+   */
+  sessionsPerWeek?: number;
+  /**
+   * Hipertrofi şablonunun büyütmeyi VAAT ETTİĞİ kaslar (kas haritası
+   * kimlikleri). Denetim haftalık birincil set sayısını bu listeye göre
+   * kontrol ediyor — kolay geçen kasları seçmek kuralı etkisiz bırakır, o
+   * yüzden liste adın vaat ettiğinin tamamı olmak zorunda.
+   */
+  targets?: string[];
   /**
    * Popüler hedefin dürüst karşılığı — "karnım incelsin" diyen üyeyi bu
    * şablona getiren metin. İddia yalnızca kanıtı olan şey kadar: bölgesel

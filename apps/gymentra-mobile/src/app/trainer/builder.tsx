@@ -316,6 +316,15 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     <Text variant="label" tone="sub" numberOfLines={2}>
                       {t.summary}
                     </Text>
+                    {/* İlk sınır listede görünüyor: antrenör şablonu üyeye
+                        anlatan kişi ve şablonun ne YAPMADIĞINI seçmeden önce
+                        bilmesi gerekiyor. Tamamı üyenin "Hedefim" ekranında. */}
+                    {t.limits.length > 0 && (
+                      <Text variant="label" tone="sub" numberOfLines={2}>
+                        Yapmaz: {t.limits[0]}
+                        {t.limits.length > 1 ? ` (+${t.limits.length - 1})` : ''}
+                      </Text>
+                    )}
                   </Pressable>
                 ))
               )}

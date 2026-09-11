@@ -879,3 +879,19 @@ export const exerciseNames = (e: Exercise): string[] =>
 out = "\n".join(L)
 open(OUT, 'w').write(out)
 print("yazıldı:", len(out), "bayt,", len(EXO), "hareket,", len(ARCH), "arketip")
+
+# --- ikinci çıktı: şablon denetçisinin okuduğu kas tablosu ---
+# `programTemplateAudit.cjs` şablonların haftalık set hacmini sayabilmek için
+# "şu satır hangi harekete karşılık geliyor" ve "o hareketin BİRİNCİL kasları
+# ne" bilgisine ihtiyaç duyuyor. İkisi de burada, ALIAS ve CANONICAL
+# tablolarında yaşıyor; denetçi Node tarafında olduğu için tabloları ikinci
+# kez YAZMAK yerine buradan JSON olarak veriliyor. İkinci kopya olsaydı
+# hareket eklendiğinde biri güncellenip diğeri unutulurdu.
+MUSCLES_OUT = os.path.join(HERE, 'exercise_muscles.json')
+open(MUSCLES_OUT, 'w').write(json.dumps({
+    '_': 'ÜRETİLMİŞTİR — elle düzenleme. Kaynak: scripts/build_exercise_library.py',
+    'labels': MUSCLES,
+    'alias': ALIAS,
+    'primary': {e['id']: e['primary'] for e in EXO},
+}, ensure_ascii=False, indent=1) + '\n')
+print("yazıldı:", os.path.basename(MUSCLES_OUT), "—", len(ALIAS), "satır eşlemesi")

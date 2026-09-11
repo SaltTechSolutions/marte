@@ -87,6 +87,23 @@ export default function MemberGoals() {
                   <Text variant="helper" tone="sub">
                     {t.summary}
                   </Text>
+                  {/* Sınırlar GİZLENMİYOR. Bu ekranın işi popüler talebi dürüst
+                      programa bağlamak; programın ne YAPMADIĞINI okumadan üye
+                      eksiği kendi varsayımıyla dolduruyor — zaten o varsayım
+                      yüzünden "karın inceltme" diye arıyor. Alan veride
+                      zorunlu, burada da görünür. */}
+                  {t.limits.length > 0 && (
+                    <View style={{ gap: 4 }}>
+                      <Text variant="label" weight="700">
+                        Bu program ne yapmaz
+                      </Text>
+                      {t.limits.map((l) => (
+                        <Text key={l} variant="helper" tone="sub">
+                          · {l}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
                   {pair && (
                     <Text variant="helper" tone="sub">
                       Birlikte çalışır: <Text weight="700">{pair.title}</Text> — {pair.weeklyFrequency}

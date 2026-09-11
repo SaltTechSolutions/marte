@@ -16,6 +16,7 @@ const template = (): ProgramTemplate => ({
   weeklyFrequency: 'Haftada 3-4 gün',
   equipment: ['mat'],
   summary: '…',
+  limits: ['Bu bir karın inceltme programı değildir.'],
   sources: ['mcgill'],
   warmup: 'warmup-short',
   days: [

@@ -134,9 +134,12 @@ export function programTemplateFromDoc(snap: QueryDocumentSnapshot | DocumentSna
     weeklyFrequency: data.weeklyFrequency ?? '',
     equipment: data.equipment ?? [],
     summary: data.summary ?? '',
+    limits: data.limits ?? [],
     sources: data.sources ?? [],
     ...(data.warmup ? { warmup: data.warmup } : {}),
     days: data.days ?? [],
+    ...(typeof data.sessionsPerWeek === 'number' ? { sessionsPerWeek: data.sessionsPerWeek } : {}),
+    ...(data.targets ? { targets: data.targets } : {}),
     ...(data.goal ? { goal: data.goal } : {}),
   };
 }

@@ -31,6 +31,55 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — iki program modelinden `program_templates` kaldı, dürüstlük şemaya bağlandı
+
+**Karar (kullanıcı).** "Bilimsel paketler" adıyla İKİ ayrı iş vardı ve ikisi
+de `main`'e girmemişti: `program_templates` (PER-18, 19 şablon, Firestore —
+bu dal) ve hazır paket programlar (`programmes.json`, 6 paket —
+`uzak-diz-ters-bukulme` dalı, 81 commit ayrışmış). Aynı işi iki ayrı sözlükle
+yapıyorlardı ve hangisinin kalacağına dair yazılı karar yoktu. **A kaldı;
+B'nin şema zorlaması A'nın sözlüğüne çevrilerek taşındı.**
+
+**Dürüstlük artık iyi niyete değil koda bağlı.** `limits` zorunlu, yanlış
+yönlendiren ifade yasak, kaynak zorunlu, hipertrofi hacmi denetleniyor.
+Kurallar `backend/scripts/programTemplateAudit.cjs`'de ve **hem testte hem
+seed betiğinin içinde** koşuyor — kural yalnızca testte olsaydı betiği elle
+çalıştıran kişi onu atlayabilirdi.
+
+**Kural ilk çalıştırmada iki gerçek eksik buldu**, tıpkı geldiği yerde
+bulduğu gibi: *Kol Hipertrofisi* triceps uzun başına haftada 7 set veriyordu
+(kendi özeti 10–20 diyordu; setler 14 → 20'ye çıkarıldı) ve *Kalça
+Hipertrofisi*nin yan kalça hacmi sıfırdı — katalogda gluteus medius'u birincil
+çalıştıran hareket yok, bu artık `limits`'te yazılı ve iddia edilmiyor.
+
+**Bilerek YAPILMADI — üst sınır.** B'de 40 setlik tavan vardı, taşınmadı:
+bu veride ölçüldü ve yanlış ateşledi (*Karın Kasları* 20 dakikalık blokta
+haftada 51 "absMid seti" sayılıyor, çünkü altı hareketin altısı da o kası
+birincil listeliyor). Sayım yukarı yanlı; alt sınırda bu güvenli tarafta,
+üst sınırda yanlış suçlamaya dönüyor.
+
+**Bilerek YAPILMADI — `evidence`.** B her iddiayı serbest metin gerekçeyle
+eşliyordu. Burada `sources` + 18 künyelik kök kaynakça aynı işi daha iyi
+yapıyor: anahtar çözülüyor mu diye denetlenebiliyor, serbest metin
+denetlenemiyor.
+
+**Bilerek YAPILMADI — B'nin 6 paketi içerik olarak taşınmadı.** Kapsamları
+A'nın 15 programıyla büyük ölçüde örtüşüyor (kol, kalça-bacak, gövde-bel,
+sırt-omuz). Örtüşmeyeni ayrıca değerlendirmek gerekir; kör kopya iki ayrı
+sözlüğü tek depoda yeniden üretirdi.
+
+**Açık.** Seed üretime HÂLÂ çalıştırılmadı — `program_templates` canlıda boş,
+yani antrenör şablon seçicisi ve üyenin "Hedefim" ekranı boş duruyor. Ayrıca
+ısınma ön bloğu yazılıyor ama antrenman ekranında okunmuyor: PER-18'in
+"antrenmana başla önce ısınmayı getirir" sözü kodda karşılıksız.
+
+**Nerede.** `backend/scripts/programTemplateAudit.cjs`,
+`backend/tests/programTemplates.test.ts`, `backend/scripts/exercise_muscles.json`
+(üretilmiş), `backend/scripts/program_templates.seed.json`,
+`apps/gymentra-mobile/src/app/member/goals.tsx`, `docs/SCHEMA.md`,
+`docs/program_templates.md`.
+
+
 ## 2026-09-11 — katman sırası veri oldu, üç çizici teste bağlandı
 
 **Yapıldı.** Aynı gün üç katman hatası arka arkaya çıktı (halter tabağı,
