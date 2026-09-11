@@ -718,6 +718,14 @@ adımları — artık `packages/rig/data/exercises.json`'da; düzeltme
 14 harekette eski Türkçe eş ad (ör. "Ölü böcek") artık hiçbir alanda
 geçmiyor. Ayrıntı `docs/KARAR-DEFTERI.md`, 11 Eylül kaydı.
 
+*Figür okunur hâle getirildi (11 Eylül 2026):* renkler figürün üstünde
+durduğu karttan türetiliyor (eskiden uzak uzuv kartın rengiyle, 1.00:1
+kontrastla çiziliyordu — yani görünmüyordu) ve uzuv dikişleri kapatıldı.
+Yakın/uzak ayrımını dolgu değil kenar çizgisi taşıyor; dört temada da WCAG
+3:1 eşiği geçiliyor ve `figureColors.test.ts` bunu sınıyor.
+**Açık:** siluetler hâlâ elle çizilmiş kaba taslak (3B iş bekliyor);
+uygulamanın çizimi simülatörde çalıştırılarak doğrulanmadı.
+
 **15. ~~UX-7 kalanı~~** — tamamlandı (1 Eylül 2026), on ekran.
 
 ### Kuşak 4 — borç ve temizlik

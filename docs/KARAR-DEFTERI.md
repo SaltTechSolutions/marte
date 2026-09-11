@@ -31,6 +31,53 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — figür kartın üstünde görünür oldu, uzuv dikişleri kapandı
+
+**Yapıldı.** Figürün renkleri artık ÜSTÜNDE DURDUĞU yüzeyden (`surf`, yani
+`Card`) türetiliyor. Eskiden `surf2`/`bg0`'dan türetiliyordu ve karanlık temada
+`skinFar` tam olarak kartın rengine düşüyordu: ölçülen kontrast **1.00:1** —
+uzak uzuv hiç çizilmiyor gibiydi. Türetme `theme/figureColors.ts`'e taşındı ve
+testlendi. Yol boyunca ölü bir dal çıktı: `hexToHsl` parlaklığı 0–1 ölçeğinde
+veriyor, koşul `> 50` yazılmıştı, yani **aydınlık tema dalı hiç çalışmıyordu**.
+Ayrıca uzuvların dikişleri kapatıldı: her parça ayrı konturlanınca uzvun
+ortasından enine bir çizgi geçiyordu, eklem topu da siluetin dışına taşınca
+yumru yapıyordu.
+
+**Karar.** **Yakın/uzak ayrımını DOLGU değil KENAR ÇİZGİSİ taşıyor.** Renk tek
+boyutlu ama kısıt üç tane (yakın↔kart, uzak↔kart, yakın↔uzak); üçünü birden
+dolgu açıklığıyla çözmeye kalkınca yakın uzuv gümüşe kadar açılıyor. Uzak uzuv
+kart renginde İÇİ BOŞ, yakın uzuv dolu, ikisi de görünür hatla. Dört temada da
+her iki hat WCAG 1.4.11'in 3:1 eşiğini geçiyor; `figureColors.test.ts` bunu
+sınıyor, yani kat sayı ya da tema rengi değişirse test düşer.
+
+Uzuvlar **zincir** olarak çiziliyor: altta hat renginde şişirilmiş kopya, üstte
+konturu olmayan dolgu. Zincir sınırı çizim sırasını taşıyor — gövde ile yakın
+kol ayrı zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat isteniyor.
+`--line` sahne eşyasının (sehpa, kablo, makine) ince hattı olarak kaldı;
+figürün hattı `--edge`/`--edgeFar`. Editörün sahne zemini de uygulamanın
+kartıyla aynı renge alındı: poz, ekranda duracağı zeminin üstünde yazılıyor.
+
+**Bilerek yapılmadı.** **Kadraj işi (planın 4. maddesi) İPTAL.** Raporda
+`boundsFor`'un `y1 = max(y1, GROUND + 20)` satırının `leg_press_seated`'te
+kadrajın %26'sını harcadığı yazıyordu; o ölçüm YANLIŞTI — yalnızca iskeletin
+sınırını alıyordu, oysa o boşluğu makine ayakları, kablo kolonu ve zemin
+çizgisi dolduruyor. Prop'lar dahil edilerek tekrar ölçüldü: 40 arketipte en
+büyük alt pay **15 birim (%3)**. Satır işini yapıyor, dokunulmadı.
+
+Eklem topu yarıçaplarını uzuv genişliğinden türetmek de yapılmadı: siluetlerin
+uçtaki yarı genişlikleri ölçüldü (diz 12/15, dirsek 9/10) ve bugünkü sabitler
+(13, 10) zaten doğru aralıkta; asıl kusur yarıçap değil, ayrı konturlamaydı.
+
+**Açık.** (1) Uygulamanın kendi çizimi ÇALIŞTIRILARAK doğrulanmadı —
+simülatör bu oturumda kullanılmadı; doğrulama editörün aynı çizimi üzerinden
+ve yapısal eşlik üzerinden yapıldı. (2) Uzuv siluetleri hâlâ elle çizilmiş
+kaba taslak (`bodyParts.json`); üretim yolu yazılı ama 3B iş bekliyor.
+(3) `carry` salınımında diz düzleşmesi duruyor.
+
+**Nerede.** `apps/gymentra-mobile/src/theme/figureColors.ts` (+ testi),
+`apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`packages/rig/editor/{index.html,editor.js}`.
+
 ## 2026-09-11 — metinler koddan veriye, antrenör adları girildi
 
 **Yapıldı.** Kullanıcıya görünen her metin `build_exercise_library.py`'den

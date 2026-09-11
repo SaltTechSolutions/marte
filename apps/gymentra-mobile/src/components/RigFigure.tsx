@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AccessibilityInfo, View } from 'react-native';
 import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
 
-import { hexToHsl, mix } from '@/theme/deriveColor';
+import { figureColors } from '@/theme/figureColors';
 import { useAppTheme } from '@/theme/ThemeContext';
 import {
   B,
@@ -43,6 +43,52 @@ import rigBodyParts from '@/data/rigBodyParts.json';
 const PARTS = rigBodyParts.parts as Record<string, { len: number; d: string }>;
 
 const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
+
+/** Görünen kenar çizgisi kalınlığı. Editördeki `EDGE_W` ile aynı olmak zorunda. */
+const EDGE_W = 1.6;
+
+/** Zincirin tek bir parçası: ya dönüştürülmüş bir yol ya da bir eklem topu. */
+type Piece = { key: string; d: string; tf?: string } | { key: string; c: Vec; r: number };
+
+/** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
+const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
+  `M ${cx - rx} ${cy} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0 Z`;
+
+/**
+ * Bir uzuv zincirini TEK siluet gibi çizer.
+ *
+ * Uzuvlar kemik başına ayrı yollardan kuruluyor (uyluk + baldır + diz topu).
+ * Her parçayı ayrı ayrı konturlamak uzvun ORTASINDAN geçen enine dikiş
+ * çizgileri bırakıyordu; düz kolda dirsek, düz bacakta diz hizasında bir
+ * çizgi olarak görünüyordu. Eklem topu da dolgu rengindeydi ve siluetin
+ * dışına taştığında yumru yapıyordu.
+ *
+ * İki geçiş: altta hat renginde ŞİŞİRİLMİŞ kopya (kontur `EDGE_W`'nin iki
+ * katı, yani her yandan `EDGE_W` dışarı), üstte konturu olmayan dolgu.
+ * Dışarıda kalan `EDGE_W`'lik şerit zincirin DIŞ hattı oluyor; parçalar
+ * arasındaki bütün ekler dolgunun altında kalıyor.
+ *
+ * Zincir sınırları çizim sırasını da taşıyor: gövde ile yakın kol ayrı
+ * zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat İSTENİYOR.
+ */
+function Chain({ id, pieces, fill, edge }: { id: string; pieces: (Piece | null)[]; fill: string; edge: string }) {
+  const list = pieces.filter((q): q is Piece => q !== null);
+  const draw = (q: Piece, pass: 'alt' | 'ust') => {
+    const k = `${q.key}${pass}`;
+    const paint = pass === 'alt'
+      ? { fill: edge, stroke: edge, strokeWidth: EDGE_W * 2, strokeLinejoin: 'round' as const }
+      : { fill };
+    return 'd' in q
+      ? <Path key={k} d={q.d} transform={q.tf} {...paint} />
+      : <Circle key={k} cx={q.c[0]} cy={q.c[1]} r={q.r} {...paint} />;
+  };
+  return (
+    <G key={id}>
+      <G>{list.map((q) => draw(q, 'alt'))}</G>
+      <G>{list.map((q) => draw(q, 'ust'))}</G>
+    </G>
+  );
+}
 
 /**
  * Eklemli kuklanın çizimi (src/utils/rig.ts çözer, burası boyar).
@@ -98,13 +144,12 @@ export function RigFigure({
     }, [playing, rig]),
   );
 
-  const light = hexToHsl(colors.bg0).l > 50;
-  const skin = mix(colors.surf2, colors.txt, light ? 0.42 : 0.1);
-  const skinFar = mix(colors.surf2, colors.bg0, light ? -0.18 : 0.35);
-  const joint = mix(colors.surf2, colors.txt, light ? 0.32 : 0.16);
+  // Türetme ve gerekçesi `theme/figureColors.ts`'te; oradaki test dört
+  // temada da kontrast eşiğini sınıyor.
+  const { skin, skinFar, edge, edgeFar, joint, floor: floorC, metal } = figureColors(colors);
+  // `line` SAHNE eşyasının (sehpa, basamak, kablo, makine) ince hattı olarak
+  // kalıyor: figürün hattıyla aynı vurguyu alsaydı mobilya figürle yarışırdı.
   const line = colors.line;
-  const metal = mix(colors.bg0, colors.txt, light ? 0.55 : 0.04);
-  const floorC = mix(colors.surf, colors.txt, light ? 0.25 : 0.12);
 
   const { p, phase } = poseAt(rig, t);
   const S = useMemo(() => skeleton(rig, p), [rig, p]);
@@ -125,60 +170,47 @@ export function RigFigure({
   const flip = facingFlip(rig.mode);
   const viewBox = useMemo(() => boundsFor(rig, plane), [rig, plane]);
 
-  const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number, far?: boolean) => (
-    <Path key={key} d={capsule(a, b, wa, wb)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
-  );
+  /** Kapsül parçası — siluet verisi yoksa düşülen çizim. */
+  const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number): Piece => ({ key, d: capsule(a, b, wa, wb) });
   /**
    * Eklem topu.
    *
-   * Parça siluetleri kendi hacmini taşıdığı için eklemler SESSİZ: kontrastlı
-   * bir daire silueti kesiyor ve figürü eklemli bir manken gibi gösteriyordu.
-   * Top hâlâ çiziliyor — iki parça arasındaki boşluğu dolduruyor — ama ten
-   * renginde ve dış çizgisiz.
+   * İki katı parçanın uç uca eklendiği yerdeki kamayı dolduruyor. Yarıçaplar
+   * siluetin o uçtaki yarı genişliğine göre seçili (diz 13 ↔ uyluk ucu 12 /
+   * baldır başı 15, dirsek 10 ↔ üst kol ucu 9 / ön kol başı 10): büyüğü
+   * silueti dışarı taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor.
    */
-  const ball = (key: string, c: Vec, r: number, far?: boolean) => (
-    <Circle key={key} cx={c[0]} cy={c[1]} r={r} fill={far ? skinFar : skin} />
-  );
+  const ball = (key: string, c: Vec, r: number): Piece => ({ key, c, r });
   /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
-  const part = (key: string, name: string, a: Vec, b: Vec, far?: boolean) => {
+  const part = (key: string, name: string, a: Vec, b: Vec): Piece | null => {
     const q = PARTS[name];
-    return q ? (
-      <Path key={key} d={q.d} transform={partTransform(a, b)} fill={far ? skinFar : skin} stroke={line} strokeWidth={1} />
-    ) : null;
+    return q ? { key, d: q.d, tf: partTransform(a, b) } : null;
   };
   /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
-  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, far?: boolean, name?: string) => {
-    if (name && PARTS[name]) return part(key, name, a, b, far);
+  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, name?: string): Piece[] => {
+    const q = name ? part(key, name, a, b) : null;
+    if (q) return [q];
     const m = lerpP(a, b, at);
-    return (
-      <G key={key}>
-        {seg(key + 'p', a, m, wa, wm, far)}
-        {seg(key + 'd', m, b, wm, wb, far)}
-      </G>
-    );
+    return [seg(key + 'p', a, m, wa, wm), seg(key + 'd', m, b, wm, wb)];
   };
-  /** Gövde parçası; yoksa kapsüle düşer. */
-  const trunk = (key: string, name: string, a: Vec, b: Vec, wa: number, wb: number) =>
-    part(key, name, a, b) ?? seg(key, a, b, wa, wb);
   /**
    * El, ön kolun yönünde uzanır: bileği (0,0) kabul edip kemik dönüşümünü
    * kullanıyoruz, böylece elin yönü koldan geliyor — daire bunu söyleyemiyordu.
    */
-  const hand = (key: string, wrist: Vec, elbow: Vec, far?: boolean) => {
+  const hand = (key: string, wrist: Vec, elbow: Vec): Piece => {
     const dx = wrist[0] - elbow[0];
     const dy = wrist[1] - elbow[1];
     const l = Math.hypot(dx, dy) || 1;
-    return (
-      <Path
-        key={key}
-        d={handPath()}
-        transform={partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18])}
-        fill={far ? skinFar : skin}
-        stroke={line}
-        strokeWidth={1}
-      />
-    );
+    return { key, d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
   };
+  /** Yakın taraf zinciri. */
+  const near = (key: string, pieces: (Piece | null)[]) => (
+    <Chain key={key} id={key} pieces={pieces} fill={skin} edge={edge} />
+  );
+  /** Uzak taraf zinciri: dolgu kart rengi, ayrımı hat taşıyor. */
+  const far = (key: string, pieces: (Piece | null)[]) => (
+    <Chain key={key} id={key} pieces={pieces} fill={skinFar} edge={edgeFar} />
+  );
   /**
    * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin
    * kavradığı yön bu. Barbell tabağını küçültmek dambıl yapmıyor; iki ayrı
@@ -218,7 +250,7 @@ export function RigFigure({
 
   const body =
     plane === 'front' ? (
-      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, metal, floorC, accent: colors.p }} />
+      <FrontBody rig={rig} p={p} S={S} colors={{ skin, joint, line, edge, metal, floorC, accent: colors.p }} />
     ) : (
       <>
         <G key="floor">
@@ -450,52 +482,60 @@ export function RigFigure({
             en sona, gövdenin üstüne çiziliyordu; uzak dambıl gövdenin önünde
             belirdiği için yakın el iki ağırlık tutuyormuş gibi görünüyordu. */}
         <G key="far" opacity={0.95}>
-          {farLeg && (
-            <>
-              <Path d={footPath(S.ankleF, footDirOf(rig), pinToe, flip)} fill={skinFar} stroke={line} />
-              {limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, true, 'thigh')}
-              {limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, true, 'shin')}
-              {ball('fk', S.kneeF, 12, true)}
-            </>
-          )}
+          {farLeg &&
+            far('fleg', [
+              { key: 'ffoot', d: footPath(S.ankleF, footDirOf(rig), pinToe, flip) },
+              ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
+              ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
+              ball('fk', S.kneeF, 12),
+            ])}
           {!rig.hideFarArm && (
             <>
-              {limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, true, 'upper')}
-              {limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, true, 'fore')}
-              {ball('fe', S.elbowF, 9, true)}
-              {ball('fw', S.handF, 9, true)}
-              {hand('fh', S.handF, S.elbowF, true)}
+              {far('farm', [
+                ...limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, 'upper'),
+                ...limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, 'fore'),
+                ball('fe', S.elbowF, 9),
+                ball('fw', S.handF, 9),
+                hand('fh', S.handF, S.elbowF),
+              ])}
               {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
             </>
           )}
         </G>
-        <G key="torso">
-          {trunk('waist', 'lumbar', S.pelvis, S.lumbar, 40, 33)}
-          {trunk('rib', 'thorax', S.lumbar, S.thorax, 54, 46)}
-          {trunk('neck', 'neck', S.thorax, S.neck, 21, 19)}
-          {/* Omuz yan görünümde gövdeden HEP 14px uzakta; yarıçapı 20 olan
-              yuvarlak bir deltoid kapağı birleşimi zaten örtüyor. Kama
-              gereksiz ve düz kenarları gövdenin üstünde çentik bırakıyordu. */}
-          <Circle cx={S.sh[0]} cy={S.sh[1]} r={20} fill={skin} stroke={line} strokeWidth={1} />
-        </G>
-        <G key="near">
-          <Path d={footPath(S.ankle, footDirOf(rig), pinToe, flip)} fill={skin} stroke={line} />
-          {limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, false, 'thigh')}
-          {limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, false, 'shin')}
-          {ball('k', S.knee, 13)}
-          {ball('a', S.ankle, 9)}
-          {limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, false, 'upper')}
-          {limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, false, 'fore')}
-          {ball('e', S.elbow, 10)}
-        </G>
-        {hand('h', S.hand, S.elbow)}
+        {/* Gövde tek zincir: bel, göğüs, boyun ve omuz kapağı. Ayrı ayrı
+            konturlanınca aralarındaki ekler gövdenin ortasından geçen iki
+            çizgi olarak görünüyordu.
+            Omuz yan görünümde gövdeden HEP 14px uzakta; yarıçapı 20 olan
+            yuvarlak bir deltoid kapağı birleşimi zaten örtüyor. Kama
+            gereksiz ve düz kenarları gövdenin üstünde çentik bırakıyordu. */}
+        {near('torso', [
+          part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
+          part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
+          part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
+          ball('sh', S.sh, 20),
+        ])}
+        {/* Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği
+            yerde hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor. */}
+        {near('nleg', [
+          { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
+          ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
+          ...limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, 'shin'),
+          ball('k', S.knee, 13),
+          ball('a', S.ankle, 9),
+        ])}
+        {near('narm', [
+          ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
+          ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
+          ball('e', S.elbow, 10),
+          hand('h', S.hand, S.elbow),
+        ])}
         {rig.load === 'dumbbell' && dumbbell('db', S.hand, S.elbow)}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
             koyuyor ama yüzün hangi yöne baktığını söyleyemiyor: `quad`
             (yüzükoyun) ile `bench` (sırt üstü) neredeyse aynı açıyı taşıyor,
             biri yere biri tavana bakmalı. Bkz. `facingFlip`. */}
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
-          <Path d={headProfile()} fill={skin} stroke={line} strokeWidth={1} />
+          <Path d={headProfile()} fill={skin} stroke={edge} strokeWidth={EDGE_W} strokeLinejoin="round" />
         </G>
         {/* Elde tutulan halter KAFADAN SONRA: figürün önünde duruyor, o yüzden
             en üstte. Tabak bilerek saydam — kafanın konumu içinden okunuyor
@@ -534,38 +574,37 @@ function FrontBody({
   rig: RigExercise;
   p: RigPose;
   S: Skeleton;
-  colors: { skin: string; joint: string; line: string; metal: string; floorC: string; accent: string };
+  colors: { skin: string; joint: string; line: string; edge: string; metal: string; floorC: string; accent: string };
 }) {
   const F = frontPoints(rig, p, S);
   const cx = F.cx;
   const trunk = frontTrunk(F);
-  const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number) => (
-    <Path key={key} d={capsule(a, b, wa, wb)} fill={c.skin} stroke={c.line} strokeWidth={1} />
-  );
-  const ball = (key: string, q: Vec, r: number) => (
-    <Circle key={key} cx={q[0]} cy={q[1]} r={r} fill={c.joint} stroke={c.line} strokeWidth={1} />
-  );
-  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number) => {
+  const seg = (key: string, a: Vec, b: Vec, wa: number, wb: number): Piece => ({ key, d: capsule(a, b, wa, wb) });
+  const ball = (key: string, q: Vec, r: number): Piece => ({ key, c: q, r });
+  const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number): Piece[] => {
     const m = lerpP(a, b, at);
-    return (
-      <G key={key}>
-        {seg(key + 'p', a, m, wa, wm)}
-        {seg(key + 'd', m, b, wm, wb)}
-      </G>
-    );
+    return [seg(key + 'p', a, m, wa, wm), seg(key + 'd', m, b, wm, wb)];
   };
+  /** Yandan görünümdeki `Chain` ile aynı sebep: parça ekleri dikiş bırakıyor. */
+  const chain = (key: string, pieces: (Piece | null)[]) => (
+    <Chain key={key} id={key} pieces={pieces} fill={c.skin} edge={c.edge} />
+  );
   const side = (key: string, s: typeof F.L) => (
     <G key={key}>
-      <Rect x={s.ankle[0] - 15} y={GROUND - 13} width={30} height={13} rx={5} fill={c.skin} stroke={c.line} />
-      {limb('t', s.hip, s.knee, 40, 32, 27, 0.42)}
-      {limb('s', s.knee, s.ankle, 27, 29, 15, 0.34)}
-      {ball('k', s.knee, 13)}
-      {ball('a', s.ankle, 9)}
-      {ball('d', s.sh, 17)}
-      {limb('u', s.sh, s.elbow, 24, 21, 17, 0.5)}
-      {limb('f', s.elbow, s.hand, 18, 18, 12, 0.3)}
-      {ball('e', s.elbow, 10)}
-      <Circle cx={s.hand[0]} cy={s.hand[1]} r={10} fill={c.skin} stroke={c.line} />
+      {chain(key + 'leg', [
+        { key: 'foot', d: `M ${s.ankle[0] - 15} ${GROUND - 13} h 30 v 13 h -30 Z` },
+        ...limb('t', s.hip, s.knee, 40, 32, 27, 0.42),
+        ...limb('s', s.knee, s.ankle, 27, 29, 15, 0.34),
+        ball('k', s.knee, 13),
+        ball('a', s.ankle, 9),
+      ])}
+      {chain(key + 'arm', [
+        ball('d', s.sh, 17),
+        ...limb('u', s.sh, s.elbow, 24, 21, 17, 0.5),
+        ...limb('f', s.elbow, s.hand, 18, 18, 12, 0.3),
+        ball('e', s.elbow, 10),
+        ball('w', s.hand, 10),
+      ])}
       {rig.load === 'dumbbell' && (
         <G key="db" transform={`rotate(${(Math.atan2(s.hand[1] - s.elbow[1], s.hand[0] - s.elbow[0]) * 180) / Math.PI + 90} ${s.hand[0]} ${s.hand[1]})`}>
           <Rect x={s.hand[0] - 17} y={s.hand[1] - 4} width={34} height={8} rx={4} fill={c.metal} stroke={c.line} />
@@ -595,14 +634,16 @@ function FrontBody({
       {rig.bar === 'back' && bar('barback')}
       {side('legL', F.L)}
       {side('legR', F.R)}
-      <G key="trunk">
-        <Ellipse cx={cx} cy={F.pelvis[1] + 8} rx={38} ry={25} fill={c.skin} stroke={c.line} />
-        {seg('waist', F.pelvis, F.lumbar, 66, 56)}
-        <Ellipse cx={cx} cy={trunk.cy} rx={trunk.rx} ry={trunk.ry} fill={c.skin} stroke={c.line} />
-        {seg('neck', F.thorax, F.neck, 27, 24)}
-      </G>
+      {/* Gövde de tek zincir: leğen, bel, göğüs ve boyun arasındaki ekler
+          ayrı konturlanınca gövdeyi enine kesen çizgiler bırakıyor. */}
+      {chain('trunk', [
+        { key: 'pelvis', d: ellipsePath(cx, F.pelvis[1] + 8, 38, 25) },
+        seg('waist', F.pelvis, F.lumbar, 66, 56),
+        { key: 'rib', d: ellipsePath(cx, trunk.cy, trunk.rx, trunk.ry) },
+        seg('neck', F.thorax, F.neck, 27, 24),
+      ])}
       <G key="head">
-        <Ellipse cx={F.head[0]} cy={F.head[1] - 3} rx={23} ry={27} fill={c.skin} stroke={c.line} />
+        <Ellipse cx={F.head[0]} cy={F.head[1] - 3} rx={23} ry={27} fill={c.skin} stroke={c.edge} strokeWidth={EDGE_W} />
         <Path
           d={`M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z`}
           fill={c.skin}

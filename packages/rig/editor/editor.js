@@ -18,6 +18,9 @@ import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
 import { groupsOf, labelsOf } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
+/** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
+const ellipsePath = (c, rx, ry) =>
+  `M ${c[0] - rx} ${c[1]} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0 Z`;
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const el = (n, a, kids) => {
   const e = document.createElementNS(NS, n);
@@ -167,18 +170,51 @@ function rebuildNames() {
  * Ana sahne ve önizleme aynı üreticiyi kullanıyor; iki yere ayrı yazmak bu
  * dosyada bir kez denendi ve `draw()` ile `drawPose()` ayrıştı.
  */
-const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
+/** Görünen kenar çizgisi kalınlığı. `RigFigure.tsx`'teki `EDGE_W` ile aynı. */
+const EDGE_W = 1.6;
+
+/**
+ * Bir uzuv zincirini TEK siluet gibi çizer.
+ *
+ * Uzuvlar kemik başına ayrı yollardan kuruluyor (uyluk + baldır + diz topu).
+ * Her parçayı ayrı ayrı konturlamak uzvun ORTASINDAN geçen enine dikiş
+ * çizgileri bırakıyordu; düz kolda dirsek, düz bacakta diz hizasında bir
+ * çizgi olarak görünüyordu. Eklem topu da dolgu rengindeydi ve siluetin
+ * dışına taştığında yumru yapıyordu.
+ *
+ * İki geçiş: altta hat renginde ŞİŞİRİLMİŞ kopya (kontur `EDGE_W`'nin iki
+ * katı, yani her yandan `EDGE_W` dışarı), üstte konturu olmayan dolgu.
+ * Dışarıda kalan şerit zincirin DIŞ hattı oluyor; parçalar arasındaki bütün
+ * ekler dolgunun altında kalıyor.
+ *
+ * Zincir sınırları çizim sırasını taşıyor: gövde ile yakın kol ayrı
+ * zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat İSTENİYOR.
+ *
+ * Aynısı `RigFigure.tsx`'te `Chain` olarak yazılı — çizim iki yerde ayrı
+ * yazılıyor ama görünüm ayrışamaz (bkz. AGENTS.md).
+ */
+const chain = (specs, fill, edge) => {
+  const paint = (q, alt) => {
+    const a = alt
+      ? { fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }
+      : { fill, stroke: null };
+    return q.d != null
+      ? el('path', { d: q.d, transform: q.tf, ...a })
+      : el('circle', { cx: q.c[0], cy: q.c[1], r: q.r, ...a });
+  };
+  const list = specs.filter(Boolean);
+  return [
+    el('g', {}, list.map((q) => paint(q, true))),
+    el('g', {}, list.map((q) => paint(q, false))),
+  ];
+};
+
+/** Zincire girecek uzuv parçaları (çizmez, tarif eder). */
+const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
   const q = useParts && name && PARTS && PARTS[name];
-  if (q) {
-    return [el('path', {
-      d: q.d,
-      transform: partTransform(a, b),
-      fill: far ? css('--skinFar') : css('--skin'),
-      stroke: css('--line'),
-    })];
-  }
+  if (q) return [{ d: q.d, tf: partTransform(a, b) }];
   const m = lerpP(a, b, at);
-  return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)];
+  return [{ d: capsule(a, m, wa, wm) }, { d: capsule(m, b, wm, wb) }];
 };
 
 /**
@@ -205,17 +241,19 @@ const plateAt = (c) => (c ? [
   el('circle', { cx: c[0], cy: c[1], r: 11, fill: css('--joint'), stroke: css('--p'), 'stroke-width': 2 }),
 ] : []);
 
-const mkBall = () => (c, r, far) =>
-  el('circle', {
-    cx: c[0], cy: c[1], r,
-    fill: far ? css('--skinFar') : useParts ? css('--skin') : css('--joint'),
-    stroke: useParts ? null : css('--line'),
-  });
+/**
+ * Eklem topu — iki katı parçanın uç uca eklendiği yerdeki kamayı doldurur.
+ *
+ * Yarıçaplar siluetin o uçtaki yarı genişliğine göre seçili (diz 13 ↔ uyluk
+ * ucu 12 / baldır başı 15, dirsek 10 ↔ üst kol ucu 9 / ön kol başı 10):
+ * büyüğü silueti dışarı taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor.
+ */
+const mkBall = () => (c, r) => ({ c, r });
 
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
-  return q ? el('path', { d: q.d, transform: partTransform(a, b), fill: css('--skin'), stroke: css('--line') }) : null;
+  return q ? { d: q.d, tf: partTransform(a, b) } : null;
 };
 
 
@@ -224,28 +262,42 @@ const trunkPart = (name, a, b) => {
 /** Karşılaştırma hücresi için figür SVG'si. */
 function cmpFigure(e, p, mode) {
   const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
   const S = skeleton(e, p);
-  const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}" fill="${f}" stroke="${line}"/>` : '');
-  const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
-  const limbOf = (n, a, b, w1, w2, w3, at, f) =>
-    mode === 'capsule' ? (() => { const m = lerpP(a, b, at); return cap(a, m, w1, w2, f) + cap(m, b, w2, w3, f); })() : pc(n, a, b, f);
-  const groups = [
-    { d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
-    { d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
-    { d: (mode === 'capsule'
-        ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
-        : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
-      + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
-    { d: `<path d="${footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode))}" fill="${skin}" stroke="${line}"/>`
-        + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
-    { d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
-  ];
-  let g = groups.map((x) => x.d).join('');
+  // `chain`'in metin karşılığı: aynı iki geçiş, aynı gerekçe.
+  const chainStr = (ds, fill, ed) => {
+    const pass = (a) => ds.filter(Boolean).map((d) => `<path d="${d.d}" transform="${d.tf || ''}" ${a}/>`).join('');
+    return pass(`fill="${ed}" stroke="${ed}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"`) + pass(`fill="${fill}"`);
+  };
+  const circ = (c, r) => ({ d: `M ${c[0] - r} ${c[1]} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z` });
+  const pc = (n, a, b) => (PARTS && PARTS[n] ? { d: PARTS[n].d, tf: partTransform(a, b) } : null);
+  const limbOf = (n, a, b, w1, w2, w3, at) =>
+    mode === 'capsule'
+      ? (() => { const m = lerpP(a, b, at); return [{ d: capsule(a, m, w1, w2) }, { d: capsule(m, b, w2, w3) }]; })()
+      : [pc(n, a, b)];
   const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
-  g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
+  let g = '';
+  g += chainStr([...limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42), ...limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34), circ(S.kneeF, 12)], skinFar, edgeFar);
+  g += chainStr([...limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5), ...limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3), circ(S.elbowF, 9)], skinFar, edgeFar);
+  g += chainStr([
+    ...(mode === 'capsule'
+      ? [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) }, { d: capsule(S.thorax, S.neck, 21, 19) }]
+      : [pc('lumbar', S.pelvis, S.lumbar), pc('thorax', S.lumbar, S.thorax), pc('neck', S.thorax, S.neck)]),
+    circ(S.sh, 20),
+  ], skin, edge);
+  g += chainStr([
+    { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+    ...limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42), ...limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34),
+    circ(S.knee, 13), circ(S.ankle, 9),
+  ], skin, edge);
+  g += chainStr([
+    ...limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5), ...limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3),
+    circ(S.elbow, 10),
+    { d: handPath(), tf: partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18]) },
+  ], skin, edge);
   g += mode === 'capsule'
-    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
-    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${line}"/></g>`;
+    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}"/>`
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}" stroke-linejoin="round"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
@@ -503,10 +555,12 @@ function drawPose(svg, e, p) {
   svg.setAttribute('viewBox', boundsFor(e, 'side'));
   svg.innerHTML = '';
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
-  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
   const ball = mkBall();
-  const limb = mkLimb(seg);
+  const limb = mkLimb();
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
+  const near = (specs) => push(chain(specs, skin, edge));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   // Ekipman figürün ARKASINDA: sahne önce kurulur. Konumlar 0. karenin
   // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
@@ -516,25 +570,31 @@ function drawPose(svg, e, p) {
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
   // göstermek.
   if (showFarLeg(e)) {
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'));
-    push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
+    far([...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
+         ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 12)]);
   }
   if (!e.hideFarArm) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'));
-    push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
+    far([...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
+         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9)]);
   }
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
-  push(trunk.length === 3
-    ? [...trunk, el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
-    : [seg(S.pelvis, S.lumbar, 40, 33), seg(S.lumbar, S.thorax, 54, 46), seg(S.thorax, S.neck, 21, 19)]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'));
-  push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'));
-  push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
-  push([ball(S.knee, 13), ball(S.ankle, 9), ball(S.sh, 17), ball(S.elbow, 10)]);
+  near(trunk.length === 3
+    ? [...trunk, ball(S.sh, 20)]
+    : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
+       { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
+  near([
+    { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+    ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
+    ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
+    ball(S.knee, 13), ball(S.ankle, 9),
+  ]);
+  near([
+    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
+    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
+    ball(S.elbow, 10),
+  ]);
   push([el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` },
-    [el('path', { d: headProfile(), fill: skin, stroke: line })])]);
+    [el('path', { d: headProfile(), fill: skin, stroke: edge, 'stroke-width': EDGE_W, 'stroke-linejoin': 'round' })])]);
 
   // Elde tutulan halter kafadan SONRA ve ana sahnenin diskiyle aynı.
   // Burada bir zamanlar perspektif halter vardı — çubuk derinliğe uzanıyor,
@@ -592,11 +652,14 @@ function draw() {
   svg.innerHTML = '';
 
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint');
+  // Figürün hattı `--edge`; `--line` SAHNE eşyasının (sehpa, basamak, kablo,
+  // makine) ince hattı olarak kalıyor. Aynı vurguyu alsalardı mobilya figürle
+  // yarışırdı.
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
   const line = css('--line'), metal = css('--metal'), floor = css('--floor'), surf2 = css('--surf2'), accent = css('--p');
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
-  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = mkBall();
-  const limb = mkLimb(seg);
+  const limb = mkLimb();
   const db = (c, from, far) => {
     const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
     const fill = far ? skinFar : metal;
@@ -609,16 +672,11 @@ function draw() {
   // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
   // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
   // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
-  const hand = (wrist, elbow, far) => {
+  const hand = (wrist, elbow) => {
     const dx = wrist[0] - elbow[0];
     const dy = wrist[1] - elbow[1];
     const l = Math.hypot(dx, dy) || 1;
-    return el('path', {
-      d: handPath(),
-      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
-      fill: far ? skinFar : skin,
-      stroke: line,
-    });
+    return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
   };
   // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
   // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
@@ -641,71 +699,95 @@ function draw() {
       el('rect', { x: cx + 137, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
     ]);
     if (e.bar === 'back') push(bar());
+    const nearF = (specs) => push(chain(specs, skin, edge));
     [F.L, F.R].forEach((s) => {
-      push([el('rect', { x: s.ankle[0] - 15, y: GROUND - 13, width: 30, height: 13, rx: 5, fill: skin, stroke: line })]);
-      push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34));
-      push([ball(s.knee, 13), ball(s.ankle, 9)]);
-      push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3));
-      push([ball(s.elbow, 10), el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
+      nearF([
+        { d: `M ${s.ankle[0] - 15} ${GROUND - 13} h 30 v 13 h -30 Z` },
+        ...limb(s.hip, s.knee, 40, 32, 27, .42), ...limb(s.knee, s.ankle, 27, 29, 15, .34),
+        ball(s.knee, 13), ball(s.ankle, 9),
+      ]);
+      nearF([
+        ...limb(s.sh, s.elbow, 24, 21, 17, .5), ...limb(s.elbow, s.hand, 18, 18, 12, .3),
+        ball(s.elbow, 10), ball(s.hand, 10),
+      ]);
       if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
     });
-    push([
-      el('ellipse', { cx, cy: F.pelvis[1] + 8, rx: 38, ry: 25, fill: skin, stroke: line }),
-      // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
-      // omuz silkerken omuz gövdeden kopamıyor.
-      el('path', { d: frontTorsoPath(F), fill: skin, stroke: line }),
-      seg(F.thorax, F.neck, 27, 24),
-      el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: line }),
+    // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
+    // omuz silkerken omuz gövdeden kopamıyor. Leğen, gövde, boyun ve iki
+    // omuz kapağı tek zincir — ayrı konturlanınca ekleri dikiş bırakıyordu.
+    nearF([
+      { d: ellipsePath([cx, F.pelvis[1] + 8], 38, 25) },
+      { d: frontTorsoPath(F) },
+      { d: capsule(F.thorax, F.neck, 27, 24) },
+      ball(F.L.sh, 16), ball(F.R.sh, 16),
     ]);
-    [F.L, F.R].forEach((s2) => push([ball(s2.sh, 16)]));
+    push([el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: edge, 'stroke-width': EDGE_W })]);
     if (e.bar === 'hands') push(bar());
     return drawHandles(svg, e, S, view);
   }
 
   drawProps(e, S0, S, push);
   const pin = e.prop !== 'box' && p.ankleLift > 0;
+  const near = (specs) => push(chain(specs, skin, edge));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar));
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirOf(e), pin, facingFlip(e.mode)), fill: skinFar, stroke: line })]);
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
-    push([ball(S.kneeF, 12, true)]);
+    far([
+      { d: footPath(S.ankleF, footDirOf(e), pin, facingFlip(e.mode)) },
+      ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
+      ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'),
+      ball(S.kneeF, 12),
+    ]);
   }
   if (!e.hideFarArm) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
-    push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
     // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
     // arkasında kalıyor. Önceden ikisi de en sona, gövdenin üstüne
     // çiziliyordu; uzak dambıl gövdenin önünde belirdiği için yakın el iki
     // ağırlık tutuyormuş gibi görünüyordu.
-    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
+    far([
+      ...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
+      ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'),
+      ball(S.elbowF, 9), ball(S.handF, 9),
+      useParts ? hand(S.handF, S.elbowF) : null,
+    ]);
     if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
-  push([
-    // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
-    // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
-    // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
-    ...(useParts ? [] : [el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` })]),
-    ...[trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax)].filter(Boolean),
-    ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
-    ...(useParts ? [] : [el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` })]),
-    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)].filter(Boolean) : [seg(S.thorax, S.neck, 21, 19)]),
-    // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
-    // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
-    // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
-    // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
-    // ayrı ayrı okunuyor.
-    ...(useParts
-      ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
-      : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
+  // Gövde tek zincir: bel, göğüs, boyun ve omuz kapağı. Ayrı ayrı
+  // konturlanınca aralarındaki ekler gövdeyi enine kesen çizgiler bırakıyor.
+  //
+  // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
+  // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
+  // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
+  //
+  // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
+  // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
+  // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
+  // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
+  // ayrı ayrı okunuyor.
+  near([
+    ...(useParts ? [] : [{ d: ellipsePath(pelvisMid, 25, 21), tf: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }]),
+    trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax),
+    ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
+    ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),
+    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)] : [{ d: capsule(S.thorax, S.neck, 21, 19) }]),
+    ...(useParts ? [ball(S.sh, 20)] : [{ d: shoulderWedge(S.thorax, S.sh, 20) }, ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
-  push([ball(S.knee, 13), ball(S.ankle, 9)]);
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
-  push([ball(S.elbow, 10)]);
-  push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
+  // Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği yerde
+  // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
+  near([
+    { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)) },
+    ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
+    ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
+    ball(S.knee, 13), ball(S.ankle, 9),
+  ]);
+  near([
+    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
+    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
+    ball(S.elbow, 10),
+    useParts ? hand(S.hand, S.elbow) : ball(S.hand, 10),
+  ]);
   if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
