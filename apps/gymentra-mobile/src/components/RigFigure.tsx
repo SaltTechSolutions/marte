@@ -267,6 +267,38 @@ export function RigFigure({
           />
           <Line x1={S0.pelvis[0] - 220} y1={GROUND} x2={S0.pelvis[0] + 280} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
+        {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
+            oturma ve kadraj değişmez, figür kımıldamaz. */}
+        {/* Uzak taraf: uzuvlar, EL ve elin taşıdığı ağırlık — hepsi gövdeden
+            ÖNCE, çünkü hepsi figürün arkasında kalıyor. El ve dambıl önceden
+            en sona, gövdenin üstüne çiziliyordu; uzak dambıl gövdenin önünde
+            belirdiği için yakın el iki ağırlık tutuyormuş gibi görünüyordu. */}
+        <G key="far" opacity={0.95}>
+          {farLeg &&
+            far('fleg', [
+              { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
+              ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
+              ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
+              ball('fk', S.kneeF, 12),
+            ])}
+          {!rig.hideFarArm && (
+            <>
+              {far('farm', [
+                ...limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, 'upper'),
+                ...limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, 'fore'),
+                ball('fe', S.elbowF, 9),
+                ball('fw', S.handF, 9),
+                hand('fh', S.handF, S.elbowF),
+              ])}
+              {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
+            </>
+          )}
+        </G>
+        {/* Sahne eşyası UZAK UZUVLARDAN SONRA: uzak taraf figürün arkasında,
+            eşya da onunla izleyici arasında duruyor. Basamağa çıkmada arka
+            bacak kutunun ARKASINDA kalmalı, Bulgar squat'ta arka ayak
+            sehpanın arkasında. Eskiden eşya en önce çiziliyordu ve uzak
+            bacak onun üstüne biniyordu. */}
         {/* Sahne eşyası TEK grupta: `propShift` bir kere uygulanıyor.
             Eşya konumları iskeletten türetildiği için figür kayınca eşya da
             kayıyor; `propDx/propDy` aradaki bağı gevşetiyor. */}
@@ -481,33 +513,6 @@ export function RigFigure({
               <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
               <Rect x={S0.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
             </G>
-          )}
-        </G>
-        {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
-            oturma ve kadraj değişmez, figür kımıldamaz. */}
-        {/* Uzak taraf: uzuvlar, EL ve elin taşıdığı ağırlık — hepsi gövdeden
-            ÖNCE, çünkü hepsi figürün arkasında kalıyor. El ve dambıl önceden
-            en sona, gövdenin üstüne çiziliyordu; uzak dambıl gövdenin önünde
-            belirdiği için yakın el iki ağırlık tutuyormuş gibi görünüyordu. */}
-        <G key="far" opacity={0.95}>
-          {farLeg &&
-            far('fleg', [
-              { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
-              ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
-              ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
-              ball('fk', S.kneeF, 12),
-            ])}
-          {!rig.hideFarArm && (
-            <>
-              {far('farm', [
-                ...limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, 'upper'),
-                ...limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, 'fore'),
-                ball('fe', S.elbowF, 9),
-                ball('fw', S.handF, 9),
-                hand('fh', S.handF, S.elbowF),
-              ])}
-              {rig.load === 'dumbbell' && dumbbell('dbF', S.handF, S.elbowF, true)}
-            </>
           )}
         </G>
         {/* Gövde tek zincir: bel, göğüs, boyun ve omuz kapağı. Ayrı ayrı

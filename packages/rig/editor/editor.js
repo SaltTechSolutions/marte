@@ -633,9 +633,6 @@ function drawPose(svg, e, p) {
   const near = (specs) => push(chain(specs, skin, edge));
   const far = (specs) => push(chain(specs, skinFar, edgeFar));
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
-  // Ekipman figürün ARKASINDA: sahne önce kurulur. Konumlar 0. karenin
-  // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
-  drawProps(e, skeleton(e, poseAt(e, 0).p), S, push);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
   // çiziyor, ad verilmeyince kapsüle düşüyor. Önizleme bu yüzden uygulamanın
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
@@ -655,6 +652,10 @@ function drawPose(svg, e, p) {
     // arkasında. Uygulamadaki sıranın aynısı.
     if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
+  // Sahne eşyası UZAK UZUVLARDAN SONRA, gövdeden ÖNCE: uzak taraf figürün
+  // arkasında, eşya onunla izleyici arasında. Konumlar 0. karenin
+  // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
+  drawProps(e, skeleton(e, poseAt(e, 0).p), S, push);
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
     ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
@@ -796,7 +797,6 @@ function draw() {
     return drawHandles(svg, e, S, view, p);
   }
 
-  drawProps(e, S0, S, push);
   const pin = e.prop !== 'box' && p.ankleLift > 0;
   const near = (specs) => push(chain(specs, skin, edge));
   const far = (specs) => push(chain(specs, skinFar, edgeFar));
@@ -822,6 +822,11 @@ function draw() {
     ]);
     if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
+  // Sahne eşyası UZAK UZUVLARDAN SONRA: uzak taraf figürün arkasında, eşya da
+  // onunla izleyici arasında duruyor. Basamağa çıkmada arka bacak kutunun
+  // ARKASINDA kalmalı, Bulgar squat'ta arka ayak sehpanın arkasında. Eskiden
+  // eşya en önce çiziliyordu ve uzak bacak onun üstüne biniyordu.
+  drawProps(e, S0, S, push);
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   // Gövde tek zincir: bel, göğüs, boyun ve omuz kapağı. Ayrı ayrı

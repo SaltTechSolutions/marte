@@ -31,6 +31,26 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — sahne eşyası uzak uzuvlardan sonra çiziliyor
+
+**Yapıldı.** Kullanıcı bildirdi: bazı hareketlerde arkada kalan bacak
+alet/sehpa/kutunun ÖNÜNE geçiyor. Sahne eşyası en önce çiziliyordu (zeminden
+hemen sonra), yani katman sırasının en arkasındaydı ve uzak bacak üstüne
+biniyordu. Yeni sıra: zemin → UZAK UZUVLAR → sahne eşyası → gövde → yakın
+bacak → kafa → yakın kol → halter tabağı.
+
+**Karar.** **Katman sırası "yakınlık" sırasıdır** — bu kural aynı gün üçüncü
+kez uygulandı: önce halter tabağı ("yakın tabak en üstte"), sonra yakın kol
+(kafayı örtmeli), şimdi sahne eşyası (uzak uzvu örtmeli). Kural kodda bir
+yerde yazılıydı ama her katman için ayrı ayrı uygulanmamıştı.
+
+**Bilerek yapılmadı.** Eşya ile YAKIN uzuvlar arasına kural konmadı: yakın
+taraf zaten eşyadan sonra çiziliyor, yani basamağa çıkan ayak kutunun üstünde
+görünüyor. Doğru olan bu.
+
+**Nerede.** `packages/rig/editor/editor.js` (`draw`, `drawPose`),
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
 ## 2026-09-11 — yakın kol kafadan sonra çiziliyor
 
 **Yapıldı.** Kullanıcı bildirdi: kol kafanın önünden geçtiği durumlarda arkadan
