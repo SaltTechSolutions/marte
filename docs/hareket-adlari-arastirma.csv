@@ -1,0 +1,46 @@
+﻿id,mevcut_ad,mevcut_alt_ad,onerilen_turkce_ad,yaygin_salon_adi,kaynak_1,kaynak_2,guven,not,hareket_aciklamasi,birincil_kaslar,arketip
+ab-wheel-rollout,Ab wheel rollout,Tekerlekle açılma,,,,,,,"Diz üstünde, tekerlek öne gider: gövde yere paralelleşir, bel çökmez.","absMid, absUpper",rollout
+arm-circles,Kol çevirme,Arm circles,,,,,,,,,arm_circles_front
+back-squat,Back squat,,,,,,,,"Back squat: bar sirtta, eller bari tutuyor. Dirsek ASAGI bakar (bend -1); yukari bakan dirsek squat durusu degil. Eller eskiden bardan 56px otede havada duruyordu ve hareket 'eller arkada tutuluyor' gibi okunuyordu.","quadRF, quadVL, quadVM, gluteMax, erector, adductors",squat
+band-external-rotation,Bant ile dış rotasyon,Band external rotation,,,,,,,,"infra, teres",band_ext_rotation_front
+band-pull-apart,Bant pull-apart,,,,,,,,,"deltPost, trapMid",band_pull_apart_front
+barbell-row,Barbell row,Barbell kürek çekme,,,,,,,"--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.","lat, trapMid, deltPost, biceps",standing_row_hinged
+bench-press,Bench press,Göğüs presi,,,,,,,,"pecSternal, pecClav, deltFront, triLat, triLong",bench_press
+biceps-curl,Biceps curl,Kol bükme,,,,,,,"Dirsek gövdeye sabit, yalnızca ön kol döner.","biceps, brachialis",standing_arm_isolation
+bird-dog,Bird-dog,,,,,,,,Çapraz kol ve bacak uzanır; diğer diz ve el yerde kalır.,"erector, gluteMax",bird_dog
+bulgarian-split-squat,Bulgarian split squat,,,,,,,,,"quadRF, quadVL, gluteMax",bulgarian_split_squat
+calf-raise,Calf raise,Topuk yükseltme,,,,,,,"Topuk kalkisi 38px idi ama ayak bilegi-parmak ucu mesafesi 23px'e izin veriyor; fazlasinda parmak yerden kopuyor ve ayak carpik cizilyordu. 22px'e cekildi (figur boyunun ~%5'i, gercek bir topuk kalkisi kadar).","gastroLat, gastroMed, soleus",calf_raise
+cat-cow,Kedi-deve,Cat-cow,,,,,,,,erector,quadruped_spine
+chest-supported-row,Göğüs destekli kürek,Chest-supported row,,,,,,,"--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.","trapMid, deltPost, lat",standing_row_hinged
+chin-tuck,Çene içeri çekme,Chin tuck,,,,,,,"Yalnızca boyun: çene içeri, gövde kımıldamaz.",sterno,chin_tuck_side
+dead-bug,Ölü böcek,Dead bug,,,,,,,"Sırtüstü masa üstü poz; ÇAPRAZ kol ve bacak uzanır, bel yere yapışık kalır.","absMid, absLower",dead_bug_supine
+deadlift,Deadlift,Ölü kaldırış,,,,,,,,"erector, gluteMax, hamBF, hamST, lat, trapMid, trapUpper",hinge
+face-pull,Yüz çekişi,Face pull,,,,,,,"Kablo göz hizasında; eller yüze doğru çekilir, dirsek yukarı-geri.","deltPost, trapMid",face_pull_standing
+front-hack-squat,Front squat,Ön squat,,,,,,,"Ağırlık göğüste: gövde squat'tan dik, derinlik biraz daha az.","quadRF, quadVL, quadVM",squat_goblet
+glute-bridge,Kalça köprüsü,Glute bridge,,,,,,,"Omuzlar yerde: kalça kalkarken omuz yerde kalır, gövde açısı buna göre açılır.",gluteMax,glute_bridge
+goblet-squat,Goblet squat,,,,,,,,"Ağırlık göğüste: gövde squat'tan dik, derinlik biraz daha az.","quadRF, quadVL, quadVM, gluteMax",squat_goblet
+hanging-knee-raise,Asılı diz çekme,Hanging knee raise,,,,,,,,"absLower, absMid",hanging_knee_raise
+hip-thrust,Hip thrust,Kalça itişi,,,,,,,"Sırt sehpada, ayaklar yerde: kalça yerden yukarı, dizler ~90°'de sabit.",gluteMax,hip_thrust
+incline-press,Incline dumbbell pres,Eğik sehpada dumbbell pres,,,,,,,,"pecClav, deltFront, triLat",incline_press
+lat-pulldown,Lat pulldown,Lat çekişi,,,,,,,Oturarak bar baş üstünden göğse çekilir.,"lat, trapMid",lat_pulldown_seated
+lateral-raise,Lateral raise,Yana açış,,,,,,,,deltFront,lateral_raise_front
+leg-curl,Leg curl,Arka bacak makinesi,,,,,,,Oturarak diz bükülür; topuk koltuğun altına çekilir.,"hamBF, hamST",leg_curl_seated
+leg-extension,Leg extension,Ön bacak makinesi,,,,,,,Oturarak diz açılır; uyluk koltukta sabit kalır.,"quadRF, quadVL, quadVM",leg_extension_seated
+leg-press,Leg press,Bacak presi,,,,,,,Yatık koltukta ayak kızağı iter; kalça ve diz birlikte açılır.,"quadRF, quadVL, quadVM, gluteMax",leg_press_seated
+mcgill-curl-up,McGill curl-up,,,,,,,,"McGill curl-up: bir diz bükük, yalnızca baş ve omuzlar 2-3 cm kalkar. Eller çizimde gövde hizasında yerde: gerçekte belin altındalar ama modelde kalınlık yok, el en alçak temas noktası olunca bütün figürü havaya kaldırıyordu.","absUpper, absMid",curl_up_supine
+pallof-press,Pallof pres,,,,,,,,"Pallof: eller göğüsten öne uzanır, gövde dönmeye direnir (açı sabit).","oblique, absMid",anti_rotation_standing
+plank,Plank,,,,,,,,"--- Gövde / denge ----------------------------------------------------- Yüksek plank: eller ve ayak uçları yerde, gövde tek çizgi.","absMid, absUpper",plank_prone
+pullup,Barfiks,Pull-up,,,,,,,Barda asılı gövde yukarı çekilir. Dizler geriye bükülü ve ayaklar yerden KESİK: düz bacakla asılınca ayak zemine değiyor ve figür barın altında duruyor gibi okunuyordu.,"lat, trapMid",pull_up_hang
+rdl,Romanian deadlift,Romen deadlift,,,,,,,"Romen: diz açısı neredeyse sabit, hareketin tamamı kalçadan. Kollar dünyaya göre dik sarkar — ağırlık bacağın önünden aşağı iner.","hamBF, hamST, gluteMax, erector",hip_hinge_dumbbell
+reverse-fly,Dumbbell reverse fly,Arka omuz açış,,,,,,,"Menteşede, kollar yanlara açılır — yanal düzlem, önden okunur.","deltPost, trapMid",hinged_fly
+reverse-lunge,Reverse lunge,Geriye hamle,,,,,,,"Geri hamle: ön diz ~90°, arka diz yere yaklaşır, arka topuk havada.","quadRF, gluteMax",unilateral_lunge
+seated-cable-row,Oturarak kürek,Seated cable row,,,,,,,"Kablo küreği: alçak sehpada oturulur, bacaklar öne uzanır ve ayaklar plakaya basar. Kablo alçak makaradan yükselir; çeken şey odur.","trapMid, lat, deltPost",seated_row_cable
+shoulder-press,Omuz pres,Shoulder press,,,,,,,"Oturarak omuz presi. 'Omuzda' karesinde el omuzdan 73px uzakta: bar cene hizasinda, dirsek ~121 derece. Eskiden el omzun ustundeydi (26px) ve dirsek 161 dereceye katlaniyordu, yani insanin yapamayacagi bir poz.","deltFront, triLat, triLong",seated_overhead_press
+shrug,Omuz silkme,Shrug,,,,,,,,trapUpper,shrug_front
+side-plank,Side plank,Yan plank,,,,,,,"Yan plank: destek kol yerde, üst kol tavana; bacaklar üst üste (uzak bacak yakınla AYNI açıda, yoksa iki ayrı bacak gibi açılıyor).",oblique,side_plank
+single-arm-row,Tek kol dumbbell row,Tek kol kürek çekme,,,,,,,"--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.","lat, trapMid, biceps",standing_row_hinged
+step-up,Step-up,Basamak çıkma,,,,,,,"Ayak basamakta (ankleLift), diğer bacak yerden kalkıp diz yukarı gelir.","quadRF, gluteMax",step_up
+suitcase-carry,Suitcase carry,Tek el ağırlık taşıma,,,,,,,"Taşıma: gövde dik, yük yanda, adım. Basan bacak dik durur, diğeri önden arkaya salınır ve HER İKİ ucta da ayak yere yakın kalır — havada yürüyen bir figür yerine gerçek bir adım.","oblique, absMid",carry
+triceps-pushdown,Triceps pushdown,Triceps itişi,,,,,,,Dirsek gövdeye sabit; yalnızca ön kol AŞAĞI açılır. Biceps curl'ün tersi. Direnç YUKARIDAN gelir: baş üstü makara olmadan hareket boşluğa itmek gibi okunuyordu.,"triLat, triLong",triceps_pushdown_standing
+walking-lunge,Walking lunge,Yürüyen hamle,,,,,,,"Geri hamle: ön diz ~90°, arka diz yere yaklaşır, arka topuk havada.","quadRF, quadVL, gluteMax",unilateral_lunge
+worlds-greatest-stretch,Lunge + gövde rotasyonu,World's greatest stretch,,,,,,,"Geri hamle: ön diz ~90°, arka diz yere yaklaşır, arka topuk havada.","adductors, oblique",unilateral_lunge
