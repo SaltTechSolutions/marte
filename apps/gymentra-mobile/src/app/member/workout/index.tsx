@@ -51,8 +51,17 @@ export default function WorkoutOverview() {
   const selectedDayId = dayId ?? suggestedDayId(days, lastCompletedDayId(recent));
   const selectedDay = days.find((d) => d.id === selectedDayId) ?? days[0];
 
+  /**
+   * Antrenmana başla — ısınma varsa ÖNCE o gelir (PER-18).
+   *
+   * Isınmalı yolda kayıt burada açılmıyor: ısınma ekranı açıyor. Açsaydı,
+   * ısınmayı görüp vazgeçen üye arkada yarım bir antrenman kaydı bırakırdı.
+   */
   const start = async () => {
     if (!tenantId || !user || !program || !selectedDay || starting) return;
+    if (program.warmup) {
+      return router.push({ pathname: '/member/workout/warmup', params: { dayId: selectedDay.id } });
+    }
     setStarting(true);
     try {
       const logId = await startWorkoutLog(tenantId, user.uid, program, selectedDay);
@@ -109,6 +118,13 @@ export default function WorkoutOverview() {
         <Text variant="helper" tone="sub">
           {selectedDay?.exercises.length ?? 0} egzersiz{firstExercise ? ` · ${firstExercise.name} ile başlar` : ''}
         </Text>
+        {/* Isınmanın geleceğini önceden söylemek: düğmeye basınca beklenmedik
+            bir ekran çıkmasın. */}
+        {program.warmup ? (
+          <Text variant="label" tone="sub">
+            Önce ısınma bloğu gelir.
+          </Text>
+        ) : null}
         <Button
           label={starting ? '…' : 'Antrenmana başla'}
           critical

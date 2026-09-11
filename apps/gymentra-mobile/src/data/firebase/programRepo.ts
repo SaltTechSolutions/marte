@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteField, doc, getDocs, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
@@ -90,6 +90,21 @@ export async function saveProgramDays(
     exercises: days[0]?.exercises ?? [],
     ...(origin?.warmup ? { warmup: origin.warmup } : {}),
     ...(origin?.templateId ? { templateId: origin.templateId } : {}),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Isınma ön bloğunu açar ya da kapatır.
+ *
+ * Kapatmak alanı SİLİYOR (`deleteField`), boş metin yazmıyor: "ısınma yok"
+ * ile "ısınma kimliği boş" aynı şey değil ve okuma tarafı ikisini ayırt
+ * etmek zorunda kalmamalı. Karar PER-18'in kendi cümlesi — ısınma otomatik
+ * gelir, "antrenör kapatabilir".
+ */
+export async function setProgramWarmup(programId: string, warmup: string | null): Promise<void> {
+  await updateDoc(doc(db, 'programs', programId), {
+    warmup: warmup ?? deleteField(),
     updatedAt: serverTimestamp(),
   });
 }

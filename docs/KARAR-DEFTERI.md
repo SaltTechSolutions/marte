@@ -31,6 +31,43 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — ısınma ön bloğu bağlandı (PER-18'in karşılıksız sözü)
+
+**Yapıldı.** PER-18 2 Eylül'de "ısınma her programın otomatik ön bloğudur,
+'Antrenmana başla' önce ısınmayı getirir; antrenör kapatabilir" diye karar
+vermişti. Kodda karşılığı yoktu: `Program.warmup` yazılıyor, **hiçbir ekran
+okumuyordu** — dört ısınma şablonu veride duruyor ve kimse görmüyordu. Artık
+üye "Antrenmana başla" dediğinde ısınma ekranı geliyor; antrenör kurucudaki
+onay kutusuyla kapatabiliyor.
+
+**Isınma KAYDA GİRMİYOR — bilerek.** `workout_logs`'a yazılsaydı "geçen
+sefer" karşılaştırması, hacim ve set sayımı ısınma setleriyle kirlenirdi:
+12 tekrar ısınma köprüsü ile 12 tekrar antrenman köprüsü aynı şey değil.
+Ekran gösteriyor, sayan şey seans ekranı.
+
+**Ayrı ekran, seans ekranına blok değil.** Seans ekranı terli elle ve tek
+egzersize odaklanarak kullanılıyor, tab çubuğu bile gizli; ısınmayı oraya
+koymak o odağı bozardı. Ayrıca **kayıt ancak ısınmadan çıkarken açılıyor**:
+ısınmayı görüp vazgeçen üye arkada yarım bir antrenman kaydı bırakmıyor.
+
+**Isınma KOPYALANMIYOR.** Program yalnızca kimliği taşıyor, içeriği şablondan
+okunuyor — günlerin aksine. Gerekçe: antrenörün üyeye özel düzenlediği şey
+ısınma değil; şablon düzelirse eski programlar da düzelmiş ısınmayı görsün.
+
+**Kapatmak alanı SİLİYOR** (`deleteField`), boş metin yazmıyor: "ısınma yok"
+ile "ısınma kimliği boş" aynı şey değil. Kapalıyken açmak `warmup-general`
+getiriyor — elle yazılmış programın hiç ısınması olmuyordu ve antrenörün dört
+şablon kimliğini ezbere bilmesi beklenemez.
+
+**Açık.** Isınma ekranı ancak seed üretime basıldıktan sonra dolu görünür;
+şablon okunamazsa liste boş kalıyor ama antrenman engellenmiyor.
+
+**Nerede.** `apps/gymentra-mobile/src/app/member/workout/warmup.tsx` (yeni),
+`.../workout/index.tsx`, `.../trainer/builder.tsx`,
+`src/data/firebase/programRepo.ts`, `programTemplateRepo.ts`,
+`src/data/programTemplate.ts`.
+
+
 ## 2026-09-11 — dört arketipte elle düzenleme; glute_bridge'in gövdesi yeniden çözüldü
 
 **Kullanıcının editörde yaptığı düzenlemeler** (benim değil):

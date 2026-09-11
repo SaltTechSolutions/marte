@@ -85,4 +85,12 @@ describe('formatDose', () => {
     // Şablon öncesi yazılmış programlarda `type` yok; onlar tekrarlıdır.
     expect(formatDose({ sets: 3, reps: 10 })).toBe('3×10');
   });
+
+  it('şablon satırında tekrar yoksa "×0" yazmıyor', () => {
+    // `TemplateExercise.reps` opsiyonel: ısınma ekranı şablon satırını
+    // doğrudan biçimliyor ve süresi de tekrarı da olmayan satır "3×undefined"
+    // ya da "3×0" okunmamalı.
+    expect(formatDose({ sets: 3, type: 'time' })).toBe('3 set');
+    expect(formatDose({ sets: 1, type: 'reps' })).toBe('1 set');
+  });
 });

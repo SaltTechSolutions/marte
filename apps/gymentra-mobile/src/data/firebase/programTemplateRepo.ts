@@ -1,4 +1,4 @@
-import { collection, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, query, where } from 'firebase/firestore';
 
 import { db } from '@/services/firebase';
 
@@ -36,4 +36,18 @@ export function watchProgramTemplates(
     cb,
     onError,
   );
+}
+
+/**
+ * Tek şablon — ısınma bloğunu antrenman öncesinde göstermek için.
+ *
+ * `watch` değil `get`: ısınma bir kere okunup ekranda duruyor, canlı
+ * güncellenmesinin bir anlamı yok. Program yalnızca ısınmanın KİMLİĞİNİ
+ * taşıyor (`Program.warmup`), içeriğini değil — şablon düzeltilince eski
+ * programlar da düzelmiş ısınmayı görüyor. Günlerin aksine ısınma
+ * kopyalanmıyor, çünkü antrenörün üyeye özel düzenlediği şey o değil.
+ */
+export async function getProgramTemplate(id: string): Promise<ProgramTemplate | null> {
+  const snap = await getDoc(doc(db, 'program_templates', id));
+  return snap.exists() ? programTemplateFromDoc(snap) : null;
 }

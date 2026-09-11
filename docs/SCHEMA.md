@@ -332,7 +332,7 @@ Bkz. `checkinRepo.ts`'deki `resolveAccess`.
 | `status` | `'draft' \| 'active'` | |
 | `exercises` | ProgramExercise[] | Gömülü; çok günlüde `days[0]`'ın aynası |
 | `days` | ProgramDay[]? | Çok günlü program (PER-17). Yoksa program tek günlük |
-| `warmup` | string? | Isınma bloğunun şablon kimliği (`warmup-general`…) |
+| `warmup` | string? | Isınma bloğunun şablon kimliği (`warmup-general`…); **dolu ise** "Antrenmana başla" önce ısınma ekranını getirir. Antrenör kapatınca alan SİLİNİR (`deleteField`), boş metin yazılmaz |
 | `templateId` | string? | Hangi şablondan kopyalandığı — yalnızca köken, canlı bağ değil |
 | `createdAt` / `updatedAt` | Timestamp | |
 

@@ -9,7 +9,7 @@ import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
-import { newLocalId, saveProgramDays, setProgramStatus, watchProgram } from '@/data/firebase/programRepo';
+import { newLocalId, saveProgramDays, setProgramStatus, setProgramWarmup, watchProgram } from '@/data/firebase/programRepo';
 import { watchProgramTemplates } from '@/data/firebase/programTemplateRepo';
 import { daysFromTemplate, formatDose } from '@/data/programTemplate';
 import { useAuth } from '@/context/AuthContext';
@@ -193,6 +193,27 @@ function ProgramBuilderForm({ program }: { program: Program }) {
           </Text>
         </View>
       </View>
+
+      {/* Isınma ön bloğu. PER-18: ısınma her programın otomatik ön bloğudur ve
+          "antrenör kapatabilir" — kapatma yolu burası. Kapalıyken açmak genel
+          ısınmayı getiriyor: elle yazılmış programın hiç ısınması olmuyordu ve
+          antrenörün dört şablondan birini ezbere bilmesi beklenemez. */}
+      <Pressable
+        onPress={() => setProgramWarmup(program.id, program.warmup ? null : (program.warmup ?? 'warmup-general'))}
+        accessibilityRole="switch"
+        accessibilityState={{ checked: !!program.warmup }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+        <Ionicons
+          name={program.warmup ? 'checkbox-outline' : 'square-outline'}
+          size={18}
+          color={program.warmup ? colors.ok : colors.sub}
+        />
+        <Text variant="label" tone="sub" style={{ flex: 1 }}>
+          {program.warmup
+            ? `Isınma açık: ${templates.find((t) => t.id === program.warmup)?.title ?? program.warmup}`
+            : 'Isınma kapalı — üye antrenmana doğrudan başlar'}
+        </Text>
+      </Pressable>
 
       {/* Gün sekmeleri. Tek günlü programda da görünür: ikinci günü eklemek
           buradan tek dokunuş, ve "program = günler" fikri baştan okunuyor. */}

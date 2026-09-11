@@ -48,7 +48,12 @@ function exerciseFromTemplate(e: TemplateExercise, id: string): ProgramExercise 
  * Tek yerde, çünkü kurucu, üyenin program listesi ve antrenman ekranı aynı
  * satırı üç ayrı yerde biçimliyordu ve süreli hareket üçünde de "×0" çıkıyordu.
  */
-export function formatDose(e: Pick<ProgramExercise, 'sets' | 'reps' | 'type' | 'durationSeconds'>): string {
+export function formatDose(
+  // `reps` OPSİYONEL: şablon satırında süreli hareketin tekrarı yok
+  // (`TemplateExercise.reps?`), kopyalanmış programda ise hep dolu. İki tipi
+  // de aynı biçimlendirici yazsın diye imza gevşek, çıktı korumalı.
+  e: Pick<ProgramExercise, 'sets' | 'type' | 'durationSeconds'> & { reps?: number },
+): string {
   if (e.type === 'time' && e.durationSeconds) return `${e.sets}×${e.durationSeconds} sn`;
-  return `${e.sets}×${e.reps}`;
+  return e.reps === undefined ? `${e.sets} set` : `${e.sets}×${e.reps}`;
 }
