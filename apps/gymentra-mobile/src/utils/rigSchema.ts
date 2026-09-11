@@ -33,7 +33,7 @@ const POSE_KEYS: (keyof RigPose)[] = [
   'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
 ];
 
-const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'footDirFarAdj', 'cableFrom', 'note', 'kf'];
+const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'footDirFarAdj', 'bodyDx', 'bodyDy', 'propDx', 'propDy', 'cableFrom', 'note', 'kf'];
 
 /**
  * Bir tekrarın en kısa süresi (ms). Testler de bunu okuyor: editörün daha
@@ -73,6 +73,12 @@ export function validateArchetypes(data: unknown): string[] {
     if (e.view !== undefined && !VIEWS.includes(e.view as string)) bad(`view "${String(e.view)}" geçersiz`);
     if (e.footDir !== undefined && !num(e.footDir)) bad('footDir sayı olmalı');
     if (e.footDirFarAdj !== undefined && !num(e.footDirFarAdj)) bad('footDirFarAdj sayı olmalı');
+    (['bodyDx', 'bodyDy', 'propDx', 'propDy'] as const).forEach((k) => {
+      if (e[k] !== undefined && !num(e[k])) bad(`${k} sayı olmalı`);
+    });
+    if ((e.propDx !== undefined || e.propDy !== undefined) && (e.prop === undefined || e.prop === null)) {
+      bad('propDx/propDy yalnızca sahne eşyası varken anlamlı');
+    }
     if (e.cableFrom !== undefined && !CABLE_FROM.includes(e.cableFrom as string)) bad(`cableFrom "${String(e.cableFrom)}" geçersiz (${CABLE_FROM.join(', ')})`);
     if (e.cableFrom !== undefined && e.prop !== 'cable') bad('cableFrom yalnızca prop "cable" iken anlamlı');
     if (e.note !== undefined && typeof e.note !== 'string') bad('note metin olmalı');

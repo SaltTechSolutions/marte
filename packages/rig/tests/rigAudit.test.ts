@@ -79,6 +79,26 @@ describe('ROM bantları', () => {
   });
 });
 
+describe('elle kaydırma denetimin dışına çıkamıyor', () => {
+  // `bodyDy` figürü yerden kesebiliyor. Bu daha önce yapısal olarak
+  // imkânsızdı (yere oturtma her karede temas noktasını zemine çekiyordu),
+  // o yüzden kural da yoktu.
+  it('gövdeyi yukarı kaydırmak "figür havada" uyarısı veriyor', () => {
+    const havada = { ...RIG_ARCHETYPES.squat, bodyDy: -40 };
+    const uyari = auditExercise(havada).filter((i) => i.rule === 'temas');
+    expect(uyari.length, 'uyarı bekleniyordu').toBeGreaterThan(0);
+    expect(uyari[0].message).toContain('havada');
+  });
+
+  it('kaydırma yokken aynı arketip temiz', () => {
+    expect(auditExercise(RIG_ARCHETYPES.squat).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+
+  it('basamakta basan ayak kutunun üstünde, uyarı yok', () => {
+    expect(auditExercise(RIG_ARCHETYPES.step_up).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+});
+
 describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   // Eski kural `ex.arm === 'angles'` kapısındaydı ve 30 arketipin 8'inde hiç
   // çalışmıyordu. Kapı kalktı; kaynak da pozdan iskelete taşındı, çünkü ters

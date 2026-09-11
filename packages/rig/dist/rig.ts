@@ -175,6 +175,27 @@ export interface RigExercise {
    * olarak oydu.
    */
   footDirFarAdj?: number;
+  /**
+   * Figürün TAMAMINI kaydırır (dünya birimi). Kadraj, denetim ve iki çizici
+   * aynı iskeleti okuduğu için kaydırma hepsinde birden geçerli.
+   *
+   * Ne için: kip kök noktaları sabit (ayak yerde, kalça koltuk yüksekliğinde)
+   * ve bazı makine hareketlerinde figür sahne eşyasına göre yanlış yerde
+   * kalıyor. Yukarı kaydırmak ayağı yerden kesiyorsa denetim bunu SÖYLER —
+   * kaydırma denetimi susturmuyor, kendisi de denetleniyor.
+   */
+  bodyDx?: number;
+  bodyDy?: number;
+  /**
+   * Sahne eşyasını (sehpa, basamak, kablo, makine) figürden BAĞIMSIZ kaydırır.
+   *
+   * Eşya konumları iskeletten türetiliyor, yani figür kayınca eşya da kayıyor.
+   * Bu alan aradaki bağı gevşetiyor: sehpanın yerini figürü kımıldatmadan
+   * düzeltmek için. Yalnızca çizimi etkiler — iskelet, kadraj ve denetim
+   * eşyayı görmüyor.
+   */
+  propDx?: number;
+  propDy?: number;
   /** `prop: 'cable'` iken makaranın yeri. Yazılmazsa `'front'`. */
   cableFrom?: RigCableFrom;
   /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
@@ -455,9 +476,14 @@ export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
   // değil figür yer değiştirir.
   const contacts = CONTACTS[ex.mode];
   const dy = contacts.length ? GROUND - 8 - Math.max(...contacts.map((k) => (S[k] as Vec)[1])) : 0;
+  // Elle kaydırma en sonda: merkezleme ve yere oturtma kendi işini yapsın,
+  // kullanıcının payı onların ÜSTÜNE binsin. Tersi olsaydı yere oturtma
+  // dikey kaydırmayı her karede geri alırdı.
+  const bx = ex.bodyDx ?? 0;
+  const by = ex.bodyDy ?? 0;
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
     const v = S[k];
-    if (v) (S[k] as Vec) = [v[0] + dx, v[1] + dy];
+    if (v) (S[k] as Vec) = [v[0] + dx + bx, v[1] + dy + by];
   });
   return S;
 }
@@ -1083,6 +1109,13 @@ export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): str
  * Dönen değer profil çizimlerinin yerel x eksenine uygulanacak ölçek:
  * `scale(flip, 1)`. Kemik açıları etkilenmez — onlar zaten dünya uzayında.
  */
+/**
+ * Sahne eşyasının kaydırması — iki çizici de bunu tek bir `translate` olarak
+ * uyguluyor. Ayrı ayrı okunsaydı biri güncellenip öteki unutulurdu.
+ */
+export const propShift = (ex: Pick<RigExercise, 'propDx' | 'propDy'>): string =>
+  `translate(${ex.propDx ?? 0} ${ex.propDy ?? 0})`;
+
 export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);

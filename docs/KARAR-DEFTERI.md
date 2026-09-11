@@ -31,6 +31,37 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — gövde ve sahne eşyası kaydırması
+
+**Yapıldı.** Arketipe dört alan eklendi: `bodyDx/bodyDy` figürün tamamını,
+`propDx/propDy` sahne eşyasını kaydırıyor. Editörde "Yerleşim" paneli (oklar +
+sıfırlama + x/y kutuları). Gövde kaydırması `skeleton()` içinde, merkezleme ve
+yere oturtmanın EN SONUNDA uygulanıyor — tersi olsaydı yere oturtma dikey
+kaydırmayı her karede geri alırdı. Eşya kaydırması yalnızca çizimde, iki
+çizicide de tek `translate` olarak (`propShift`).
+
+**Karar.** **Kaydırma denetimin dışına çıkmıyor.** Gövde kaydırması iskelete
+girdiği için kadraj ve denetim de görüyor. Ama bir boşuk çıktı: ayakta duran
+figürün yerden kesilmesi daha önce YAPISAL OLARAK imkânsızdı (yere oturtma her
+karede temas noktasını zemine çekiyordu), o yüzden bunu denetleyen kural da
+yoktu — `temas` kuralı yalnızca `quad` ve `supine` modlarını kapsıyordu.
+`bodyDy` o güvenceyi delince kural eklendi: `stand` modunda (basamak hariç)
+basan ayak zeminden 10px'ten fazla yukarıdaysa uyarı. Ölçüldü: basamaksız 22
+arketipin hepsinde boşluk −1.9, yani bugünkü veri rahatça geçiyor.
+
+Eşya kaydırması iskelete GİRMİYOR: mobilya figürün mekaniğini değiştirmemeli,
+kadrajı da kaydırmamalı. Şema `propDx/propDy`'yi eşyası olmayan arketipte
+reddediyor.
+
+**Bilerek yapılmadı.** Eşya için sürükleme tutamağı yapılmadı: eşya şekilleri
+türlere göre çok farklı ve tutamağın hangi noktaya oturacağı her biri için
+ayrı karar isterdi. Oklar hem kesin hem keşfedilebilir.
+
+**Nerede.** `packages/rig/src/rig.ts` (`propShift`, `skeleton`),
+`packages/rig/src/rigAudit.ts`, `packages/rig/src/rigSchema.ts`,
+`packages/rig/editor/{index.html,editor.js}`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
 ## 2026-09-11 — uzak ayak ucu tutamağı
 
 **Yapıldı.** Yakın ayağın ucundaki tutamak (`footDir`) DURUYORDU — 40 arketibin

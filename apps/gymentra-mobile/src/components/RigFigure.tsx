@@ -29,6 +29,7 @@ import {
   partTransform,
   pelvisMass,
   poseAt,
+  propShift,
   skeleton,
   solePoints,
 } from '@/utils/rig';
@@ -266,217 +267,222 @@ export function RigFigure({
           />
           <Line x1={S0.pelvis[0] - 220} y1={GROUND} x2={S0.pelvis[0] + 280} y2={GROUND} stroke={floorC} strokeWidth={2} />
         </G>
-        {/* Sehpa gövdenin ekseni boyunca, sırtın hemen altında çizilir: düz
-            bench'te yatay, eğimli bench'te eğimli. Sabit yatay bir sehpa
-            eğimli press'te sırtı boşlukta bırakıyordu. */}
-        {rig.prop === 'bench' && rig.mode === 'bench' && (
-          <G key="bench" transform={`rotate(${benchDeg} ${S0.pelvis[0]} ${S0.pelvis[1]})`}>
-            <Rect x={S0.pelvis[0] - 70} y={S0.pelvis[1] + 24} width={330} height={20} rx={10} fill={colors.surf2} stroke={line} />
-          </G>
-        )}
-        {rig.prop === 'bench' && rig.mode === 'bench' && (
-          <G key="benchlegs">
-            <Rect x={S0.pelvis[0] - 56} y={S0.pelvis[1] + 44} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 44)} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.thorax[0] + 40} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
-          </G>
-        )}
-        {/* Hip thrust: omuzların dayandığı sehpa. Çizilmeyince figürün neye
-            yaslandığı belirsiz kalıyordu. */}
-        {rig.prop === 'hipbench' && (
-          <G key="hipbench">
-            <Rect x={S0.thorax[0] - 96} y={S0.thorax[1] + 26} width={210} height={18} rx={8} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.thorax[0] - 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.thorax[0] + 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
-          </G>
-        )}
-        {/* Bulgar split squat: arka ayağın bastığı sehpa, ayağın altına çizilir. */}
-        {rig.prop === 'bench' && rig.mode !== 'bench' && (
-          <G key="rearbench">
-            <Rect x={S0.ankleF[0] - 70} y={S0.ankleF[1] + 16} width={150} height={16} rx={8} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.ankleF[0] - 56} y={S0.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S0.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
-          </G>
-        )}
-        {/* Makine koltuğu: kalçanın altında yastık, arkasında sırt dayaması.
-            Lat pulldown, oturarak kürek, göğüs presi ve bacak makineleri
-            buna yaslanıyor — çizilmezse figür havada oturuyor görünüyor. */}
-        {(rig.prop === 'seatback' || rig.prop === 'cable' || rig.prop === 'legpad') &&
-          rig.mode === 'seat' &&
-          rig.cableFrom !== 'low' && (
-          <G key="seatback">
-            <Rect x={S0.pelvis[0] - 46} y={S0.pelvis[1] + 22} width={150} height={18} rx={8} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.pelvis[0] - 64} y={S0.pelvis[1] - 96} width={20} height={122} rx={8} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
-          </G>
-        )}
-        {/* Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar
-            öne uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek
-            hareketi göğüs destekli kürek gibi gösteriyordu. */}
-        {rig.prop === 'cable' && rig.mode === 'seat' && rig.cableFrom === 'low' && (() => {
-          // Ayak plakası ayağın TABAN DÜZLEMİNE oturuyor — bacak presi
-          // levhasıyla aynı kural. Dik bir levha ayağı içinden geçiriyordu.
-          const [heelP, toeP] = solePoints(S0.ankle, footDirOf(rig), false, facingFlip(rig.mode));
-          const ux = toeP[0] - heelP[0];
-          const uy = toeP[1] - heelP[1];
-          const uL = Math.hypot(ux, uy) || 1;
-          const a: Vec = [heelP[0] - (ux / uL) * 26, heelP[1] - (uy / uL) * 26];
-          const b: Vec = [toeP[0] + (ux / uL) * 26, toeP[1] + (uy / uL) * 26];
-          return (
-            <G key="lowbench">
-              <Rect x={S0.pelvis[0] - 54} y={S0.pelvis[1] + 22} width={128} height={16} rx={7} fill={colors.surf2} stroke={line} />
-              <Rect x={S0.pelvis[0] - 24} y={S0.pelvis[1] + 38} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 38)} fill={colors.surf2} stroke={line} />
-              <Path d={capsule(a, b, 8, 8)} fill={colors.surf2} stroke={line} />
-              {/* Levhayı zemine bağlayan ayak: yüzey havada durmuyor. */}
-              <Path d={capsule(a, [a[0], GROUND], 7, 7)} fill={colors.surf2} stroke={line} />
+        {/* Sahne eşyası TEK grupta: `propShift` bir kere uygulanıyor.
+            Eşya konumları iskeletten türetildiği için figür kayınca eşya da
+            kayıyor; `propDx/propDy` aradaki bağı gevşetiyor. */}
+        <G key="props" transform={propShift(rig)}>
+          {/* Sehpa gövdenin ekseni boyunca, sırtın hemen altında çizilir: düz
+              bench'te yatay, eğimli bench'te eğimli. Sabit yatay bir sehpa
+              eğimli press'te sırtı boşlukta bırakıyordu. */}
+          {rig.prop === 'bench' && rig.mode === 'bench' && (
+            <G key="bench" transform={`rotate(${benchDeg} ${S0.pelvis[0]} ${S0.pelvis[1]})`}>
+              <Rect x={S0.pelvis[0] - 70} y={S0.pelvis[1] + 24} width={330} height={20} rx={10} fill={colors.surf2} stroke={line} />
             </G>
-          );
-        })()}
-        {/* Kablo istasyonu: makara, kablo ve tutamak. Bu hareketler önce
-            `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER çiziliyordu —
-            direncin nereden geldiği görünmüyordu. Kablo onu söylüyor. */}
-        {rig.prop === 'cable' && (() => {
-          // Makaranın YERİ direncin yönü demek — çizim süsü değil. Göğüs
-          // presine ÖNDEN kablo koymak onu kürek yapıyordu, çünkü kablo eli
-          // öne çekiyordu.
-          const from = rig.cableFrom ?? 'front';
-          const ahead = Math.max(S.hand[0], S0.hand[0]);
-          const anchor: Record<string, Vec> = {
-            // Pulldown'da makaranın ALTINA oturulur, pushdown'da kolonun
-            // ÖNÜNDE durulur: ayakta makarayı tepeye koymak direği figürün
-            // içinden geçiriyordu.
-            high: [rig.mode === 'stand' ? ahead + 90 : S0.hand[0], BAR_Y + 24],
-            front: [ahead + 100, S0.hand[1]],
-            low: [ahead + 110, GROUND - 34],
-            back: [S0.pelvis[0] - 132, S0.sh[1]],
-          };
-          const [px, py] = anchor[from];
-          const postY = from === 'high' ? BAR_Y : py;
-          return (
-            <G key="cable">
-              <Rect x={px - 9} y={postY} width={18} height={Math.max(0, GROUND - postY)} rx={4} fill={colors.surf2} stroke={line} />
-              {from === 'high' && (
-                <Rect
-                  x={Math.min(px, S0.pelvis[0]) - 30}
-                  y={BAR_Y}
-                  width={Math.abs(px - S0.pelvis[0]) + 60}
-                  height={16}
-                  rx={6}
-                  fill={colors.surf2}
-                  stroke={line}
-                />
-              )}
-              <Circle cx={px} cy={py} r={13} fill={metal} stroke={line} />
-              {/* `back` bir KOL, kablo değil: makine göğüs presinde direnci
-                  taşıyan şey kaldıraç kolu, ve gövdenin arkasında kalıyor. */}
-              {from === 'back' ? (
-                <Path d={capsule([px, py], [S.hand[0], S.hand[1]], 11, 9)} fill={colors.surf2} stroke={line} />
-              ) : (
-                <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
-              )}
-              {/* Tutamak UÇTAN görünüyor: çeken çubuk gövdeye dik duruyor,
-                  yandan bakınca kesiti görünür. Kabloya dik uzun bir kapsül
-                  çizmek onu elde tutulan eğik bir sopaya çeviriyordu. */}
-              <Circle cx={S.hand[0]} cy={S.hand[1]} r={14} fill={metal} fillOpacity={0.62} stroke={line} strokeWidth={2} />
-              <Circle cx={S.hand[0]} cy={S.hand[1]} r={6} fill={colors.surf2} stroke={line} />
+          )}
+          {rig.prop === 'bench' && rig.mode === 'bench' && (
+            <G key="benchlegs">
+              <Rect x={S0.pelvis[0] - 56} y={S0.pelvis[1] + 44} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 44)} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.thorax[0] + 40} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
             </G>
-          );
-        })()}
-        {/* Bacak makinesi yastığı: baldır rulosu ve onu koltuğa bağlayan kol.
-            Yastıksız çizimde bacağın hangi yöne KUVVET UYGULADIĞI görünmüyor.
-            Rulo, ayağın gittiği YÖNDE duruyor — direnç harekete karşı koyar,
-            yani ekstansiyonda baldırın önünde, curl'de arkasında. */}
-        {rig.prop === 'legpad' && (() => {
-          const mid = skeleton(rig, poseAt(rig, 0.45).p);
-          const vx0 = mid.ankle[0] - S0.ankle[0];
-          const vy0 = mid.ankle[1] - S0.ankle[1];
-          const vL = Math.hypot(vx0, vy0) || 1;
-          const cx = S.ankle[0] + (vx0 / vL) * 22;
-          const cy = S.ankle[1] + (vy0 / vL) * 22;
-          return (
-            <G key="legpad">
-              <Path d={capsule([cx, cy], [S0.knee[0], S0.knee[1] + 34], 8, 8)} fill={colors.surf2} stroke={line} />
-              <Circle cx={cx} cy={cy} r={21} fill={metal} stroke={line} />
-              <Circle cx={cx} cy={cy} r={8} fill={colors.surf2} stroke={line} />
+          )}
+          {/* Hip thrust: omuzların dayandığı sehpa. Çizilmeyince figürün neye
+              yaslandığı belirsiz kalıyordu. */}
+          {rig.prop === 'hipbench' && (
+            <G key="hipbench">
+              <Rect x={S0.thorax[0] - 96} y={S0.thorax[1] + 26} width={210} height={18} rx={8} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.thorax[0] - 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.thorax[0] + 82} y={S0.thorax[1] + 44} width={16} height={Math.max(0, GROUND - S0.thorax[1] - 44)} fill={colors.surf2} stroke={line} />
             </G>
-          );
-        })()}
-        {/* Bacak presi MAKİNESİ: koltuk + sırt dayaması + zemine inen ayak +
-            itilen platform. Yalnızca platform çizilince figür zeminin 110px
-            üstünde hiçbir şeyin üstünde oturuyordu — `prop` tek değer aldığı
-            için `sled` seçmek `seatback`'i düşürüyor. Bir kızak yalnızca
-            bacak presinde bulunduğuna göre tek prop bütün makineyi çizer. */}
-        {rig.prop === 'sled' && (() => {
-          const dx = S0.thorax[0] - S0.pelvis[0];
-          const dy = S0.thorax[1] - S0.pelvis[1];
-          const L = Math.hypot(dx, dy) || 1;
-          let nx = dy / L;
-          let ny = -dx / L;
-          // Bacaklar önde; sırt dayaması onların ters yönünde.
-          if ((S0.knee[0] - S0.pelvis[0]) * nx + (S0.knee[1] - S0.pelvis[1]) * ny > 0) {
-            nx = -nx;
-            ny = -ny;
-          }
-          const o = 30;
-          const seatA: Vec = [S0.pelvis[0] + nx * o, S0.pelvis[1] + ny * o];
-          const seatB: Vec = [S0.thorax[0] + nx * o + (dx / L) * 26, S0.thorax[1] + ny * o + (dy / L) * 26];
-          const padX = S0.pelvis[0] + nx * 16;
-          const padY = S0.pelvis[1] + ny * 16;
-          return (
-            <G key="sled">
-              <Path d={capsule(seatA, seatB, 22, 19)} fill={colors.surf2} stroke={line} />
-              <Path d={capsule([padX, padY], [padX + 78, padY + 10], 18, 15)} fill={colors.surf2} stroke={line} />
-              <Rect x={padX + 4} y={padY + 14} width={16} height={Math.max(0, GROUND - padY - 14)} fill={colors.surf2} stroke={line} />
-              {/* Ayak platformu SABİT DEĞİL: sehpa ve basamak sahnenin durağan
-                  parçaları ama bacak presinde kızak HAREKET EDEN parça — ayak
-                  ona basılı kalır, ikisi birlikte gider. Sabit çizilince bacak
-                  tekrar boyunca levhanın içinden geçiyordu. Levha itiş eksenine
-                  (diz → ayak bileği) dik: gerçek makinede taban ona düz basar. */}
-              {(() => {
-                // Levha ayağın TABAN DÜZLEMİNE oturuyor (`solePoints`): ayak
-                // bileğinden sabit mesafe ölçmek parmak ucunu levhanın içinde
-                // bırakıyordu. Ray levhayı koltuğun direğine bağlıyor — makine
-                // tek parça, plaka havada asılı değil.
-                const [heelP, toeP] = solePoints(S.ankle, footDirOf(rig), false, flip);
-                const sx = toeP[0] - heelP[0];
-                const sy = toeP[1] - heelP[1];
-                const sL = Math.hypot(sx, sy) || 1;
-                const tx = sx / sL;
-                const ty = sy / sL;
-                const px = -ty * flip;
-                const py = tx * flip;
-                const A: Vec = [heelP[0] - tx * 34 + px * 8, heelP[1] - ty * 34 + py * 8];
-                const B: Vec = [toeP[0] + tx * 34 + px * 8, toeP[1] + ty * 34 + py * 8];
-                const mid: Vec = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
-                return (
-                  <>
-                    <Path d={capsule(mid, [padX + 12, padY + 6], 7, 7)} fill={colors.surf2} stroke={line} />
-                    <Path d={capsule(A, B, 15, 15)} fill={metal} stroke={line} />
-                  </>
-                );
-              })()}
+          )}
+          {/* Bulgar split squat: arka ayağın bastığı sehpa, ayağın altına çizilir. */}
+          {rig.prop === 'bench' && rig.mode !== 'bench' && (
+            <G key="rearbench">
+              <Rect x={S0.ankleF[0] - 70} y={S0.ankleF[1] + 16} width={150} height={16} rx={8} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.ankleF[0] - 56} y={S0.ankleF[1] + 32} width={14} height={Math.max(0, GROUND - S0.ankleF[1] - 32)} fill={colors.surf2} stroke={line} />
             </G>
-          );
-        })()}
-        {/* Step-up: ayağın çıktığı basamak. */}
-        {rig.prop === 'box' && (
-          <Rect
-            key="box"
-            x={S0.ankle[0] - 62}
-            y={S0.ankle[1] + 12}
-            width={150}
-            height={Math.max(0, GROUND - S0.ankle[1] - 12)}
-            rx={6}
-            fill={colors.surf2}
-            stroke={line}
-          />
-        )}
-        {/* Barfiks barı: figür buna asılı, bu yüzden figürden ÖNCE çizilir. */}
-        {rig.prop === 'bar' && (
-          <G key="pullbar">
-            <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={300} height={12} rx={6} fill={metal} stroke={line} />
-            <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
-            <Rect x={S0.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
-          </G>
-        )}
+          )}
+          {/* Makine koltuğu: kalçanın altında yastık, arkasında sırt dayaması.
+              Lat pulldown, oturarak kürek, göğüs presi ve bacak makineleri
+              buna yaslanıyor — çizilmezse figür havada oturuyor görünüyor. */}
+          {(rig.prop === 'seatback' || rig.prop === 'cable' || rig.prop === 'legpad') &&
+            rig.mode === 'seat' &&
+            rig.cableFrom !== 'low' && (
+            <G key="seatback">
+              <Rect x={S0.pelvis[0] - 46} y={S0.pelvis[1] + 22} width={150} height={18} rx={8} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.pelvis[0] - 64} y={S0.pelvis[1] - 96} width={20} height={122} rx={8} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.pelvis[0] - 32} y={S0.pelvis[1] + 40} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 40)} fill={colors.surf2} stroke={line} />
+            </G>
+          )}
+          {/* Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar
+              öne uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek
+              hareketi göğüs destekli kürek gibi gösteriyordu. */}
+          {rig.prop === 'cable' && rig.mode === 'seat' && rig.cableFrom === 'low' && (() => {
+            // Ayak plakası ayağın TABAN DÜZLEMİNE oturuyor — bacak presi
+            // levhasıyla aynı kural. Dik bir levha ayağı içinden geçiriyordu.
+            const [heelP, toeP] = solePoints(S0.ankle, footDirOf(rig), false, facingFlip(rig.mode));
+            const ux = toeP[0] - heelP[0];
+            const uy = toeP[1] - heelP[1];
+            const uL = Math.hypot(ux, uy) || 1;
+            const a: Vec = [heelP[0] - (ux / uL) * 26, heelP[1] - (uy / uL) * 26];
+            const b: Vec = [toeP[0] + (ux / uL) * 26, toeP[1] + (uy / uL) * 26];
+            return (
+              <G key="lowbench">
+                <Rect x={S0.pelvis[0] - 54} y={S0.pelvis[1] + 22} width={128} height={16} rx={7} fill={colors.surf2} stroke={line} />
+                <Rect x={S0.pelvis[0] - 24} y={S0.pelvis[1] + 38} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 38)} fill={colors.surf2} stroke={line} />
+                <Path d={capsule(a, b, 8, 8)} fill={colors.surf2} stroke={line} />
+                {/* Levhayı zemine bağlayan ayak: yüzey havada durmuyor. */}
+                <Path d={capsule(a, [a[0], GROUND], 7, 7)} fill={colors.surf2} stroke={line} />
+              </G>
+            );
+          })()}
+          {/* Kablo istasyonu: makara, kablo ve tutamak. Bu hareketler önce
+              `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER çiziliyordu —
+              direncin nereden geldiği görünmüyordu. Kablo onu söylüyor. */}
+          {rig.prop === 'cable' && (() => {
+            // Makaranın YERİ direncin yönü demek — çizim süsü değil. Göğüs
+            // presine ÖNDEN kablo koymak onu kürek yapıyordu, çünkü kablo eli
+            // öne çekiyordu.
+            const from = rig.cableFrom ?? 'front';
+            const ahead = Math.max(S.hand[0], S0.hand[0]);
+            const anchor: Record<string, Vec> = {
+              // Pulldown'da makaranın ALTINA oturulur, pushdown'da kolonun
+              // ÖNÜNDE durulur: ayakta makarayı tepeye koymak direği figürün
+              // içinden geçiriyordu.
+              high: [rig.mode === 'stand' ? ahead + 90 : S0.hand[0], BAR_Y + 24],
+              front: [ahead + 100, S0.hand[1]],
+              low: [ahead + 110, GROUND - 34],
+              back: [S0.pelvis[0] - 132, S0.sh[1]],
+            };
+            const [px, py] = anchor[from];
+            const postY = from === 'high' ? BAR_Y : py;
+            return (
+              <G key="cable">
+                <Rect x={px - 9} y={postY} width={18} height={Math.max(0, GROUND - postY)} rx={4} fill={colors.surf2} stroke={line} />
+                {from === 'high' && (
+                  <Rect
+                    x={Math.min(px, S0.pelvis[0]) - 30}
+                    y={BAR_Y}
+                    width={Math.abs(px - S0.pelvis[0]) + 60}
+                    height={16}
+                    rx={6}
+                    fill={colors.surf2}
+                    stroke={line}
+                  />
+                )}
+                <Circle cx={px} cy={py} r={13} fill={metal} stroke={line} />
+                {/* `back` bir KOL, kablo değil: makine göğüs presinde direnci
+                    taşıyan şey kaldıraç kolu, ve gövdenin arkasında kalıyor. */}
+                {from === 'back' ? (
+                  <Path d={capsule([px, py], [S.hand[0], S.hand[1]], 11, 9)} fill={colors.surf2} stroke={line} />
+                ) : (
+                  <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
+                )}
+                {/* Tutamak UÇTAN görünüyor: çeken çubuk gövdeye dik duruyor,
+                    yandan bakınca kesiti görünür. Kabloya dik uzun bir kapsül
+                    çizmek onu elde tutulan eğik bir sopaya çeviriyordu. */}
+                <Circle cx={S.hand[0]} cy={S.hand[1]} r={14} fill={metal} fillOpacity={0.62} stroke={line} strokeWidth={2} />
+                <Circle cx={S.hand[0]} cy={S.hand[1]} r={6} fill={colors.surf2} stroke={line} />
+              </G>
+            );
+          })()}
+          {/* Bacak makinesi yastığı: baldır rulosu ve onu koltuğa bağlayan kol.
+              Yastıksız çizimde bacağın hangi yöne KUVVET UYGULADIĞI görünmüyor.
+              Rulo, ayağın gittiği YÖNDE duruyor — direnç harekete karşı koyar,
+              yani ekstansiyonda baldırın önünde, curl'de arkasında. */}
+          {rig.prop === 'legpad' && (() => {
+            const mid = skeleton(rig, poseAt(rig, 0.45).p);
+            const vx0 = mid.ankle[0] - S0.ankle[0];
+            const vy0 = mid.ankle[1] - S0.ankle[1];
+            const vL = Math.hypot(vx0, vy0) || 1;
+            const cx = S.ankle[0] + (vx0 / vL) * 22;
+            const cy = S.ankle[1] + (vy0 / vL) * 22;
+            return (
+              <G key="legpad">
+                <Path d={capsule([cx, cy], [S0.knee[0], S0.knee[1] + 34], 8, 8)} fill={colors.surf2} stroke={line} />
+                <Circle cx={cx} cy={cy} r={21} fill={metal} stroke={line} />
+                <Circle cx={cx} cy={cy} r={8} fill={colors.surf2} stroke={line} />
+              </G>
+            );
+          })()}
+          {/* Bacak presi MAKİNESİ: koltuk + sırt dayaması + zemine inen ayak +
+              itilen platform. Yalnızca platform çizilince figür zeminin 110px
+              üstünde hiçbir şeyin üstünde oturuyordu — `prop` tek değer aldığı
+              için `sled` seçmek `seatback`'i düşürüyor. Bir kızak yalnızca
+              bacak presinde bulunduğuna göre tek prop bütün makineyi çizer. */}
+          {rig.prop === 'sled' && (() => {
+            const dx = S0.thorax[0] - S0.pelvis[0];
+            const dy = S0.thorax[1] - S0.pelvis[1];
+            const L = Math.hypot(dx, dy) || 1;
+            let nx = dy / L;
+            let ny = -dx / L;
+            // Bacaklar önde; sırt dayaması onların ters yönünde.
+            if ((S0.knee[0] - S0.pelvis[0]) * nx + (S0.knee[1] - S0.pelvis[1]) * ny > 0) {
+              nx = -nx;
+              ny = -ny;
+            }
+            const o = 30;
+            const seatA: Vec = [S0.pelvis[0] + nx * o, S0.pelvis[1] + ny * o];
+            const seatB: Vec = [S0.thorax[0] + nx * o + (dx / L) * 26, S0.thorax[1] + ny * o + (dy / L) * 26];
+            const padX = S0.pelvis[0] + nx * 16;
+            const padY = S0.pelvis[1] + ny * 16;
+            return (
+              <G key="sled">
+                <Path d={capsule(seatA, seatB, 22, 19)} fill={colors.surf2} stroke={line} />
+                <Path d={capsule([padX, padY], [padX + 78, padY + 10], 18, 15)} fill={colors.surf2} stroke={line} />
+                <Rect x={padX + 4} y={padY + 14} width={16} height={Math.max(0, GROUND - padY - 14)} fill={colors.surf2} stroke={line} />
+                {/* Ayak platformu SABİT DEĞİL: sehpa ve basamak sahnenin durağan
+                    parçaları ama bacak presinde kızak HAREKET EDEN parça — ayak
+                    ona basılı kalır, ikisi birlikte gider. Sabit çizilince bacak
+                    tekrar boyunca levhanın içinden geçiyordu. Levha itiş eksenine
+                    (diz → ayak bileği) dik: gerçek makinede taban ona düz basar. */}
+                {(() => {
+                  // Levha ayağın TABAN DÜZLEMİNE oturuyor (`solePoints`): ayak
+                  // bileğinden sabit mesafe ölçmek parmak ucunu levhanın içinde
+                  // bırakıyordu. Ray levhayı koltuğun direğine bağlıyor — makine
+                  // tek parça, plaka havada asılı değil.
+                  const [heelP, toeP] = solePoints(S.ankle, footDirOf(rig), false, flip);
+                  const sx = toeP[0] - heelP[0];
+                  const sy = toeP[1] - heelP[1];
+                  const sL = Math.hypot(sx, sy) || 1;
+                  const tx = sx / sL;
+                  const ty = sy / sL;
+                  const px = -ty * flip;
+                  const py = tx * flip;
+                  const A: Vec = [heelP[0] - tx * 34 + px * 8, heelP[1] - ty * 34 + py * 8];
+                  const B: Vec = [toeP[0] + tx * 34 + px * 8, toeP[1] + ty * 34 + py * 8];
+                  const mid: Vec = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+                  return (
+                    <>
+                      <Path d={capsule(mid, [padX + 12, padY + 6], 7, 7)} fill={colors.surf2} stroke={line} />
+                      <Path d={capsule(A, B, 15, 15)} fill={metal} stroke={line} />
+                    </>
+                  );
+                })()}
+              </G>
+            );
+          })()}
+          {/* Step-up: ayağın çıktığı basamak. */}
+          {rig.prop === 'box' && (
+            <Rect
+              key="box"
+              x={S0.ankle[0] - 62}
+              y={S0.ankle[1] + 12}
+              width={150}
+              height={Math.max(0, GROUND - S0.ankle[1] - 12)}
+              rx={6}
+              fill={colors.surf2}
+              stroke={line}
+            />
+          )}
+          {/* Barfiks barı: figür buna asılı, bu yüzden figürden ÖNCE çizilir. */}
+          {rig.prop === 'bar' && (
+            <G key="pullbar">
+              <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={300} height={12} rx={6} fill={metal} stroke={line} />
+              <Rect x={S0.hand[0] - 150} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
+              <Rect x={S0.hand[0] + 138} y={BAR_Y - 6} width={12} height={54} fill={metal} stroke={line} />
+            </G>
+          )}
+        </G>
         {/* Uzak uzuvlar. Gizlemek yalnızca çizimi etkiler — iskelet, yere
             oturma ve kadraj değişmez, figür kımıldamaz. */}
         {/* Uzak taraf: uzuvlar, EL ve elin taşıdığı ağırlık — hepsi gövdeden

@@ -219,6 +219,20 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
     });
   }
 
+  // Ayakta duran figür yerden KESİLMEMELİ.
+  //
+  // Bu daha önce yapısal olarak imkânsızdı: `skeleton` temas noktasını her
+  // karede zemine oturtuyordu. `bodyDy` (elle kaydırma) o güvenceyi deldi —
+  // figürü yukarı çekmek ayağı havada bırakıyor ve hiçbir kural görmüyordu.
+  // Basamak hariç: orada basan ayak zaten kutunun üstünde.
+  //
+  // Ölçüldü: basamaksız 22 arketipin hepsinde boşluk −1.9 (yani ayak zemine
+  // değiyor); eşik 10 olunca bugünkü veri rahatça geçiyor.
+  if (ex.mode === 'stand' && ex.prop !== 'box') {
+    const bosluk = GROUND - footLowestY(S.ankle, footDirOf(ex), p.ankleLift > 0, facingFlip(ex.mode));
+    if (bosluk > 10) add('temas', `basan ayak zeminden ${Math.round(bosluk)}px yukarıda — figür havada`);
+  }
+
   if (ex.mode === 'quad' || ex.mode === 'supine') {
     const lowest = Math.max(S.ankle[1], S.ankleF[1], S.knee[1], S.kneeF[1], S.hand[1], S.handF[1], S.pelvis[1], S.head[1]);
     if (lowest < GROUND - 30) add('temas', 'hiçbir yeri yere değmiyor');

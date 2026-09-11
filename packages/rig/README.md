@@ -121,6 +121,12 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
   karelere birden uygular. Uzak ayağınki mutlak yön değil pay, çünkü o yön
   her karede baldırdan türetiliyor (bkz. `footDirFarOf`). Uzak ayak ucu
   yalnızca uzak bacak çiziliyorsa görünür.
+- **Yerleşim paneli** figürü ve sahne eşyasını ayrı ayrı kaydırır
+  (`bodyDx/bodyDy`, `propDx/propDy`). Ayak ucu tutamakları gibi bu da tüm
+  karelere birden uygular. Eşya konumları iskeletten türetildiği için figür
+  kayınca eşya da kayar; eşya kaydırması aradaki bağı gevşetir. Gövdeyi yukarı
+  çekmek ayağı yerden keserse denetim **söyler** — kaydırma denetimi
+  susturmuyor, kendisi de denetleniyor.
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
 - Denetim uyarısına tıklamak sorunun yaşandığı ana götürür.

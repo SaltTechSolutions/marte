@@ -10,6 +10,7 @@
 
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirFarOf, footDirOf, footPath,
+  propShift,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
@@ -843,7 +844,15 @@ function draw() {
  * Kareler arası değişmeyen şey sahne: konumlar 0. karenin iskeletinden
  * (`S0`) okunuyor, yoksa bar figürle birlikte kayardı.
  */
-function drawProps(e, S0, S, push) {
+/**
+ * Sahne eşyası. Hepsi TEK bir gruba çiziliyor ki `propShift` bir kere
+ * uygulansın: eşya konumları iskeletten türetildiği için figür kayınca eşya da
+ * kayıyor, `propDx/propDy` aradaki bağı gevşetiyor.
+ */
+function drawProps(e, S0, S, pushOut) {
+  const holder = el('g', { transform: propShift(e) });
+  const push = (arr) => arr.forEach((n) => holder.appendChild(n));
+  pushOut([holder]);
   const surf2 = css('--surf2'), metal = css('--metal'), line = css('--line');
     if (e.prop === 'bar') push([
       el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
@@ -1293,8 +1302,69 @@ function renderIssues() {
   whole.forEach((i) => add(`%${(i.t * 100).toFixed(0)}`, i, i.t));
 }
 
+/**
+ * Kaydırma kontrolü — gövde ya da sahne eşyası.
+ *
+ * POZUN değil HAREKETİN ayarı: tek kareyi değil hepsini birden kaydırıyor,
+ * ayak ucu tutamakları gibi. O yüzden zaman çubuğundan bağımsız.
+ */
+function renderNudge(host, e, xKey, yKey, aktif) {
+  host.innerHTML = '';
+  const adim = 4;
+  const oku = (k) => e[k] ?? 0;
+  const yaz = (k, v) => {
+    snapshot();
+    // 0 yazmak alanı SİLİYOR: varsayılanı taşıyan bir arketip veride sıfır
+    // biriktirmesin, diff de sessiz kalsın.
+    if (v === 0) delete e[k]; else e[k] = Math.round(v * 10) / 10;
+    markDirty();
+    renderAll();
+  };
+  const dugme = (label, title, fn, alan) => {
+    const b = el2('button', label);
+    b.title = title;
+    b.disabled = !aktif;
+    if (alan) b.style.gridColumn = alan;
+    b.onclick = fn;
+    host.appendChild(b);
+    return b;
+  };
+  dugme('↖', '', () => {}, null).style.visibility = 'hidden';
+  dugme('↑', 'Yukarı', () => yaz(yKey, oku(yKey) - adim));
+  dugme('↻', 'Sıfırla', () => { snapshot(); delete e[xKey]; delete e[yKey]; markDirty(); renderAll(); });
+  dugme('←', 'Sola', () => yaz(xKey, oku(xKey) - adim));
+  dugme('↓', 'Aşağı', () => yaz(yKey, oku(yKey) + adim));
+  dugme('→', 'Sağa', () => yaz(xKey, oku(xKey) + adim));
+  const val = el2('div', '');
+  val.className = 'val';
+  const mk = (k, etiket) => {
+    const lab = el2('span', etiket);
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.step = '1';
+    inp.value = String(oku(k));
+    inp.disabled = !aktif;
+    inp.onchange = () => yaz(k, Number(inp.value) || 0);
+    val.appendChild(lab);
+    val.appendChild(inp);
+  };
+  mk(xKey, 'x');
+  mk(yKey, 'y');
+  host.appendChild(val);
+}
+
+/** Küçük yardımcı: metinli eleman. */
+const el2 = (tag, text) => {
+  const n = document.createElement(tag);
+  n.textContent = text;
+  return n;
+};
+
 function renderEquipment() {
   const e = ex();
+  renderNudge($('nudgeBody'), e, 'bodyDx', 'bodyDy', true);
+  // Eşya kaydırması yalnızca eşya varken anlamlı; şema da bunu zorluyor.
+  renderNudge($('nudgeProp'), e, 'propDx', 'propDy', !!e.prop);
   const bind = (id, opts, value, apply) => {
     const sel = $(id);
     sel.innerHTML = '';
