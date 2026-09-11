@@ -13,7 +13,7 @@ import {
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
-import { applyPatch, dragHandles, dragJoint } from '/engine/rigEdit.js';
+import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
 import { groupsOf, labelsOf } from '/engine/muscles.js';
 
@@ -751,13 +751,26 @@ function drawProps(e, S0, S, push) {
       // Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar öne
       // uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek hareketi
       // göğüs destekli kürek gibi gösteriyordu.
-      if (e.mode === 'seat' && e.cableFrom === 'low') push([
-        el('rect', { x: S0.pelvis[0] - 54, y: S0.pelvis[1] + 22, width: 128, height: 16, rx: 7, fill: surf2, stroke: line }),
-        el('rect', { x: S0.pelvis[0] - 24, y: S0.pelvis[1] + 38, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 38), fill: surf2, stroke: line }),
-        // Ayak plakası: bacağın ittiği yüzey, ayağın olduğu yerde ve dik.
-        el('path', { d: capsule([S0.ankle[0] + 14, S0.ankle[1] - 40], [S0.ankle[0] + 14, S0.ankle[1] + 40], 9, 9), fill: surf2, stroke: line }),
-      ]);
-      else if (e.mode === 'seat') push(seat());
+      if (e.mode === 'seat' && e.cableFrom === 'low') {
+        push([
+          el('rect', { x: S0.pelvis[0] - 54, y: S0.pelvis[1] + 22, width: 128, height: 16, rx: 7, fill: surf2, stroke: line }),
+          el('rect', { x: S0.pelvis[0] - 24, y: S0.pelvis[1] + 38, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 38), fill: surf2, stroke: line }),
+        ]);
+        // Ayak plakası ayağın TABAN DÜZLEMİNE oturuyor — bacak presi
+        // levhasıyla aynı kural. Dik bir levha çizmek ayağı plakanın içinden
+        // geçiriyordu; basılan yüzeyin açısı ayağın açısıdır.
+        const [heelP, toeP] = solePoints(S0.ankle, footDirOf(e), false, facingFlip(e.mode));
+        const ux = toeP[0] - heelP[0], uy = toeP[1] - heelP[1];
+        const uL = Math.hypot(ux, uy) || 1;
+        // Levha tabandan iki yana taşıyor: ayak ondan KISA, yüzey ondan uzun.
+        const a = [heelP[0] - (ux / uL) * 26, heelP[1] - (uy / uL) * 26];
+        const b = [toeP[0] + (ux / uL) * 26, toeP[1] + (uy / uL) * 26];
+        push([
+          el('path', { d: capsule(a, b, 8, 8), fill: surf2, stroke: line }),
+          // Levhayı zemine bağlayan ayak: yüzey havada durmuyor.
+          el('path', { d: capsule([a[0], a[1]], [a[0], GROUND], 7, 7), fill: surf2, stroke: line }),
+        ]);
+      } else if (e.mode === 'seat') push(seat());
       const from = e.cableFrom || 'front';
       const ahead = Math.max(S.hand[0], S0.hand[0]);
       // Makaranın YERİ direncin yönü demek. Yanlış yer hareketi başka bir
@@ -781,12 +794,15 @@ function drawProps(e, S0, S, push) {
           ? el('path', { d: capsule([px, py], [S.hand[0], S.hand[1]], 11, 9), fill: surf2, stroke: line })
           // Kablo makaradan ELE: figür oynarken uzayıp kısalıyor, çeken şey o.
           : el('line', { x1: px, y1: py, x2: S.hand[0], y2: S.hand[1], stroke: metal, 'stroke-width': 4, 'stroke-linecap': 'round' }),
-        // Tutamak: kabloya dik kısa çubuk. Pulldown'da geniş bar, ötekinde kol tutamağı.
-        (() => {
-          const dx = S.hand[0] - px, dy = S.hand[1] - py, L = Math.hypot(dx, dy) || 1;
-          const w = from === 'high' ? 74 : 26;
-          return el('path', { d: capsule([S.hand[0] + (dy / L) * w, S.hand[1] - (dx / L) * w], [S.hand[0] - (dy / L) * w, S.hand[1] + (dx / L) * w], 8, 8), fill: metal, stroke: line });
-        })(),
+        // Tutamak UÇTAN görünüyor, yandan değil.
+        //
+        // Önce kabloya dik uzun bir kapsül çiziliyordu; çubuk sagittal düzlemde
+        // YATIYOR gibi oluyordu ve elde eğik bir sopa — küreğinde direksiyon —
+        // tutuluyormuş gibi okunuyordu. Oysa çeken şey gövdeye DİK duran bir
+        // çubuk: yandan bakınca kesiti görünür. Halter tabağı zaten aynı
+        // sözleşmeyi kullanıyor, tutamak da ona uyuyor; yalnızca daha küçük.
+        el('circle', { cx: S.hand[0], cy: S.hand[1], r: 14, fill: metal, 'fill-opacity': .62, stroke: line, 'stroke-width': 2 }),
+        el('circle', { cx: S.hand[0], cy: S.hand[1], r: 6, fill: surf2, stroke: line }),
       ]);
     }
 
@@ -922,9 +938,15 @@ function moveDrag(evt) {
   if (!dragging) return;
   const e = ex();
   const S = skeleton(e, fillPose(frame().p));
-  const patch = dragJoint(e, S, dragging, toWorld(evt));
-  if (Object.keys(patch).length === 0) return;
-  frame().p = applyPatch(frame().p, patch);
+  // Ayak ucu POZU değil hareketi değiştiriyor: `footDir` tek bir sayı ve
+  // bütün karelerde geçerli. Modelde ayak bileği açısı yok (TODOS.md).
+  if (dragging === 'toe') {
+    e.footDir = dragFootDir(e, S, toWorld(evt));
+  } else {
+    const patch = dragJoint(e, S, dragging, toWorld(evt));
+    if (Object.keys(patch).length === 0) return;
+    frame().p = applyPatch(frame().p, patch);
+  }
   markDirty();
   syncViewBox();
   draw();

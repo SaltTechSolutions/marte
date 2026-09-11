@@ -901,15 +901,21 @@ export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.
  * `footPath` ile `footLowestY` bu çerçeveyi PAYLAŞIYOR: ayrı yazılsalardı
  * denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
  */
-function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
+/**
+ * Parmak yerde kalsın diye gereken ek dönüş (radyan).
+ *
+ * `footFrame` ile `footDirFromToe` aynı sayıyı kullanmak zorunda: biri ayağı
+ * çiziyor, öteki çizilen parmak ucundan yönü GERİ çözüyor. İki yerde ayrı
+ * hesaplanırsa tutamak ayağın altından kayar.
+ */
+function footExtra(ankle: Vec, pinToe: boolean): number {
+  if (!pinToe) return 0;
   const r = Math.hypot(FOOT.toe, FOOT.sole);
-  let extra = 0;
-  if (pinToe) {
-    // Parmak yerde kalsın diye gereken ek dönüş.
-    const h = Math.min(r, GROUND - ankle[1]);
-    extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
-  }
-  const a = rad(dir) + extra * flip;
+  return Math.asin(Math.min(r, GROUND - ankle[1]) / r) - Math.atan2(FOOT.sole, FOOT.toe);
+}
+
+function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
+  const a = rad(dir) + footExtra(ankle, pinToe) * flip;
   const ux = Math.sin(a);
   const uy = -Math.cos(a);
   const vx = -uy * flip;
@@ -930,6 +936,21 @@ function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: 
 export function solePoints(ankle: Vec, dir: number, pinToe = false, flip = 1): [Vec, Vec] {
   const P = footFrame(ankle, dir, pinToe, flip);
   return [P(FOOT.heel, FOOT.sole), P(FOOT.toe, FOOT.sole)];
+}
+
+/**
+ * Parmak ucu `target`'a çekildiğinde hareketin `footDir` değeri ne olmalı?
+ *
+ * `solePoints(...)[1]`'in tersi. Ayak ucu tutamağı bunu kullanıyor: ayak
+ * bileği açısı modelde yok (TODOS.md), yani ayağın yönü kare başına değil
+ * HAREKET başına bir sayı — tutamak `footDir`'i yazar, pozu değil.
+ */
+export function footDirFromToe(ankle: Vec, target: Vec, pinToe = false, flip = 1): number {
+  // Parmak ucu, u ekseninden `atan2(sole, toe)` kadar sapmış duruyor; ayna ve
+  // parmak sabitlemesi de aynı yöne ekleniyor.
+  const off =
+    (flip * (footExtra(ankle, pinToe) + Math.atan2(FOOT.sole, FOOT.toe)) * 180) / Math.PI;
+  return ((angleOf(ankle, target) - off) % 360 + 360) % 360;
 }
 
 /**

@@ -31,6 +31,39 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — ayak ucu tutamağı, tutamak uçtan görünüyor
+
+**Yapıldı.** Editöre **ayak ucu tutamağı** eklendi: sürüklenince pozu değil
+hareketin `footDir` değerini yazıyor (`footDirFromToe` motorda, `dragFootDir`
+`rigEdit`'te). Kablo tutamağı artık kabloya dik uzun bir kapsül değil, UÇTAN
+görünen bir disk. Kablo küreğinin ayak plakası dik değil, ayağın taban
+düzlemine oturuyor ve zemine bağlanıyor; harekete `footDir: 30` verildi.
+
+**Karar.** **Gövdeye dik duran çubuk yandan UÇTAN görünür.** Tutamağı
+kabloya dik uzun bir kapsül olarak çizmek onu sagittal düzlemde yatırıyordu:
+elde eğik bir sopa, kürekte direksiyon gibi okunuyordu. Halter tabağı zaten
+bu sözleşmeyi kullanıyordu, tutamak da ona uydu.
+
+**Karar.** **Ayak yönü gözle ayarlanır.** Ayak bileği açısı modelde yok ve
+eklenmiyor (TODOS.md'deki gerekçe duruyor); ama `footDir` hareket başına tek
+bir sayı olduğu için tutamakla verilebiliyor. Tutamak tüm kareleri birden
+değiştirir, etiketi bunu söylüyor.
+
+**Bilerek yapılmadı.** `RigPose`'a kare başına ayak bileği açısı eklenmedi —
+geriye uyumsuz, 40 arketibin verisini ve devir sözleşmesini etkiliyor.
+Pulldown ile kürek tutamağı da artık aynı görünüyor: yandan bakınca gerçekten
+aynılar, genişlik farkı sagittal düzlemde görünmez.
+
+**Açık.** Ayak yönleri tek tek gözden geçirilmedi; tutamak artık var, ama
+hangi hareketin ayağı hâlâ yanlış duruyor sayılmadı. Önceki oturumun açık
+maddeleri (uzman onayı, ad tablosu, üretim seed'i) duruyor.
+
+**Nerede.** `packages/rig/src/rig.ts` (`footDirFromToe`, `footExtra`),
+`packages/rig/src/rigEdit.ts`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
+---
+
 ## 2026-09-10 — istasyonlar gerçekçileşti, makine göğüs presi kaldırıldı
 
 **Yapıldı.** Yeni hareketlerin durağan hâlleri tek tek gözden geçirildi.

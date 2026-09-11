@@ -2217,6 +2217,7 @@
   "bar": null,
   "prop": "cable",
   "cableFrom": "low",
+  "footDir": 30,
   "bend": 1,
   "dur": 3200,
   "kf": [

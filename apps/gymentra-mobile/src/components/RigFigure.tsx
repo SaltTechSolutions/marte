@@ -277,18 +277,25 @@ export function RigFigure({
         {/* Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar
             öne uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek
             hareketi göğüs destekli kürek gibi gösteriyordu. */}
-        {rig.prop === 'cable' && rig.mode === 'seat' && rig.cableFrom === 'low' && (
-          <G key="lowbench">
-            <Rect x={S0.pelvis[0] - 54} y={S0.pelvis[1] + 22} width={128} height={16} rx={7} fill={colors.surf2} stroke={line} />
-            <Rect x={S0.pelvis[0] - 24} y={S0.pelvis[1] + 38} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 38)} fill={colors.surf2} stroke={line} />
-            {/* Ayak plakası: bacağın ittiği yüzey, ayağın olduğu yerde ve dik. */}
-            <Path
-              d={capsule([S0.ankle[0] + 14, S0.ankle[1] - 40], [S0.ankle[0] + 14, S0.ankle[1] + 40], 9, 9)}
-              fill={colors.surf2}
-              stroke={line}
-            />
-          </G>
-        )}
+        {rig.prop === 'cable' && rig.mode === 'seat' && rig.cableFrom === 'low' && (() => {
+          // Ayak plakası ayağın TABAN DÜZLEMİNE oturuyor — bacak presi
+          // levhasıyla aynı kural. Dik bir levha ayağı içinden geçiriyordu.
+          const [heelP, toeP] = solePoints(S0.ankle, footDirOf(rig), false, facingFlip(rig.mode));
+          const ux = toeP[0] - heelP[0];
+          const uy = toeP[1] - heelP[1];
+          const uL = Math.hypot(ux, uy) || 1;
+          const a: Vec = [heelP[0] - (ux / uL) * 26, heelP[1] - (uy / uL) * 26];
+          const b: Vec = [toeP[0] + (ux / uL) * 26, toeP[1] + (uy / uL) * 26];
+          return (
+            <G key="lowbench">
+              <Rect x={S0.pelvis[0] - 54} y={S0.pelvis[1] + 22} width={128} height={16} rx={7} fill={colors.surf2} stroke={line} />
+              <Rect x={S0.pelvis[0] - 24} y={S0.pelvis[1] + 38} width={16} height={Math.max(0, GROUND - S0.pelvis[1] - 38)} fill={colors.surf2} stroke={line} />
+              <Path d={capsule(a, b, 8, 8)} fill={colors.surf2} stroke={line} />
+              {/* Levhayı zemine bağlayan ayak: yüzey havada durmuyor. */}
+              <Path d={capsule(a, [a[0], GROUND], 7, 7)} fill={colors.surf2} stroke={line} />
+            </G>
+          );
+        })()}
         {/* Kablo istasyonu: makara, kablo ve tutamak. Bu hareketler önce
             `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER çiziliyordu —
             direncin nereden geldiği görünmüyordu. Kablo onu söylüyor. */}
@@ -306,12 +313,6 @@ export function RigFigure({
           };
           const [px, py] = anchor[from];
           const postY = from === 'high' ? BAR_Y : py;
-          const dx = S.hand[0] - px;
-          const dy = S.hand[1] - py;
-          const L = Math.hypot(dx, dy) || 1;
-          const w = from === 'high' ? 74 : 26;
-          const h1: Vec = [S.hand[0] + (dy / L) * w, S.hand[1] - (dx / L) * w];
-          const h2: Vec = [S.hand[0] - (dy / L) * w, S.hand[1] + (dx / L) * w];
           return (
             <G key="cable">
               <Rect x={px - 9} y={postY} width={18} height={Math.max(0, GROUND - postY)} rx={4} fill={colors.surf2} stroke={line} />
@@ -334,7 +335,11 @@ export function RigFigure({
               ) : (
                 <Line x1={px} y1={py} x2={S.hand[0]} y2={S.hand[1]} stroke={metal} strokeWidth={4} strokeLinecap="round" />
               )}
-              <Path d={capsule(h1, h2, 8, 8)} fill={metal} stroke={line} />
+              {/* Tutamak UÇTAN görünüyor: çeken çubuk gövdeye dik duruyor,
+                  yandan bakınca kesiti görünür. Kabloya dik uzun bir kapsül
+                  çizmek onu elde tutulan eğik bir sopaya çeviriyordu. */}
+              <Circle cx={S.hand[0]} cy={S.hand[1]} r={14} fill={metal} fillOpacity={0.62} stroke={line} strokeWidth={2} />
+              <Circle cx={S.hand[0]} cy={S.hand[1]} r={6} fill={colors.surf2} stroke={line} />
             </G>
           );
         })()}
