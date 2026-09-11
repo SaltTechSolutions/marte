@@ -29,6 +29,11 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   [key('diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { thighA: 180, shinA: 155 } },
   // Uzak bacak da aynı sınıra tabi — görünür olduğu hareketlerde.
   [key('uzak diz', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 350 } },
+  // Uzak diz de ters yöne kırılamaz. Bu bant 11 Eylül 2026'da eklendi ve
+  // eklendiği anda İKİ gerçek arketibi yakaladı (`carry` −30°,
+  // `unilateral_lunge` −26.8°): büyüklük bandı mutlak değer aldığı için ters
+  // bükülme yıllarca görünmedi, figür arkadan sakat görünüyordu.
+  [key('uzak diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 155 } },
   // Ön kol pazuya gömülemez. Ters kinematikli kolda açı POZDA YOK, iskeletten
   // geliyor: el hedefini omzun üstüne koymak dirseği tam katlıyor.
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },

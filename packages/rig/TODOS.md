@@ -127,7 +127,25 @@ parça siluetleri ve kadraj.
 
 ---
 
-## `carry`: salınan bacak orta noktada düzleşiyor
+## ~~`carry`: salınan bacak orta noktada düzleşiyor~~ — ÇÖZÜLDÜ (2026-09-11)
+
+**Asıl sebep düzleşme değil, TERS BÜKÜLMEYDİ.** Uzak diz salınım ortasında
+−30°'ye iniyordu, yani geriye kırılıyordu; ayak zemine girmesi bunun sonucuydu.
+Görünmemesinin sebebi denetimdeki boşluk: uzak diz bandı `Math.abs` alıp
+yalnızca üst sınırı denetliyordu, işaret mutlak değerin içinde kayboluyordu.
+
+Bant eklendi (`uzak diz ters yönde`, `lo: -15`) ve eklendiği anda İKİ arketibi
+yakaladı: `carry` (−30°) ve `unilateral_lunge` (−26.8°, 7 Eylül'deki zemin
+düzeltmesinden kalan). İkisi de düzeltildi. `carry` üç kare yerine beş kare
+taşıyor ve gerçek bir salınım profili izliyor: diz salınım boyunca bükülü
+kalıyor, en çok erken salınımda (62°), topuk teması öncesi açılıyor (12°).
+
+Sonuç: zemin gömülmesi kalmadı, `tests/rig.test.ts`'teki dar istisna kaldırıldı,
+40 arketip denetimden uyarısız geçiyor.
+
+---
+
+## Eski kayıt — `carry` araştırması
 
 **Nasıl bulundu (2026-09-07).** Yeni `zemin` denetimi — ÇİZİLEN ayağın en alt
 noktasını zeminle karşılaştıran kural — dört arketipte gömülme gösterdi. Üçü

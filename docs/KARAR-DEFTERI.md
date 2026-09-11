@@ -31,6 +31,49 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — uzuv siluetleri profilden üretiliyor; ters bükülen diz yakalandı
+
+**Yapıldı.** `data/bodyParts.json` artık elle çizilmiş değil,
+`scripts/build-body-parts.mjs` tarafından ÜRETİLİYOR: her kemik için boyunca
+birkaç istasyonda ön (+X) ve arka (−X) yarı genişlik yazılı, script bunlardan
+kapalı bir Catmull-Rom dış hat kuruyor. Kütlenin nerede olduğu artık
+düzenlenebilir veri — quadriceps karnı, baldır karnı, göğüs kafesinin açılması,
+belin incelmesi hepsi görünüyor. Eski yollar 7–8 komutluk tek daralmaydı.
+
+Gözle bakarken kullanıcı arka bacağın "sakat göründüğünü" söyledi; ölçünce
+**uzak dizin ters yöne büküldüğü** çıktı: `carry` −30°, `unilateral_lunge`
+−26.8°. İkisi de düzeltildi (`carry` 3 → 5 kare, gerçek bir salınım profili;
+`unilateral_lunge`'ın ayakta karesi +10° bükülü). Bunun yan etkisi olarak
+`carry`'nin zemin gömülmesi de kapandı ve **depoda hiç denetim uyarısı
+kalmadı**.
+
+**Karar.** **ROM bandı mutlak değerle yazılırsa işaret kaybolur.** Uzak diz
+bandı `Math.abs(...)` alıp yalnızca `hi: 160` denetliyordu; ters bükülme o
+mutlak değerin içinde yıllarca görünmedi. Yakın dizin `lo: -15` bandı vardı,
+uzak dizinki yoktu. Eklendi ve eklendiği anda iki gerçek arketibi yakaladı.
+`unilateral_lunge`'ın bozuk değerleri 7 Eylül'deki bir zemin düzeltmesinden
+geliyordu: o oturum bükülmeyi 26.8° "bükük" diye okumuştu, oysa −26.8°'ydi.
+
+**Bilerek yapılmadı.** `docs/uzuv-parcalari-nasil-uretilir.md`'deki tam zincir
+(CC0 MakeHuman modeli → Blender ortografik render → uzuvlara bölme →
+`normalize-part.mjs`) ÇALIŞTIRILAMADI: bu makinede ne Blender ne MakeHuman ne
+Inkscape ne potrace kurulu, ve MakeHuman'ın model üretimi zaten arayüz işi.
+Belge ve `normalize-part.mjs` duruyor; o zincir bir gün çalıştırıldığında
+değişen tek şey yine `data/bodyParts.json` olur, script silinir. Kalınlıklar
+uydurulmadı: bugünkü siluetlerin çevresi korundu (Drillis & Contini segment
+oranlarıyla rig'in kemik boylarından türetilen boy ≈ 430 birim, o boyda
+beklenen uyluk yarı-derinliği ≈ 21, bugünkü 18 idi — ölçek zaten doğruydu,
+eksik olan biçimdi).
+
+**Açık.** (1) Siluetler tarama değil, yüzey anatomisine göre kurulmuş stilize
+biçimler; antrenör onayından geçmedi. (2) Omuz/boyun ROM formülü ve ayak
+bileği açısı hâlâ TODOS'ta. (3) Uygulamanın çizimi yine simülatörde
+çalıştırılmadı.
+
+**Nerede.** `packages/rig/scripts/build-body-parts.mjs`,
+`packages/rig/data/{bodyParts,rigArchetypes}.json`,
+`packages/rig/src/rigAudit.ts`, `packages/rig/tests/{rig,rigAudit}.test.ts`.
+
 ## 2026-09-11 — figür kartın üstünde görünür oldu, uzuv dikişleri kapandı
 
 **Yapıldı.** Figürün renkleri artık ÜSTÜNDE DURDUĞU yüzeyden (`surf`, yani

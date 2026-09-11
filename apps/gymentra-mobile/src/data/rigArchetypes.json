@@ -214,8 +214,8 @@
      "neckA": 3,
      "upperA": 182,
      "foreA": 180,
-     "thighF": 197.3,
-     "shinF": 170.5
+     "thighF": 186.4,
+     "shinF": 196.4
     }
    },
    {
@@ -259,8 +259,8 @@
      "neckA": 3,
      "upperA": 182,
      "foreA": 180,
-     "thighF": 197.3,
-     "shinF": 170.5
+     "thighF": 186.4,
+     "shinF": 196.4
     }
    }
   ]
@@ -1848,7 +1848,7 @@
   "dur": 3600,
   "kf": [
    {
-    "t": 0,
+    "t": 0.0,
     "tr": "Adım",
     "p": {
      "shinA": 178,
@@ -1859,7 +1859,22 @@
      "upperA": 180,
      "foreA": 180,
      "thighF": 160,
-     "shinF": 190
+     "shinF": 184
+    }
+   },
+   {
+    "t": 0.25,
+    "tr": "Adım",
+    "p": {
+     "shinA": 178,
+     "thighA": 183,
+     "torso": 3,
+     "thoraxA": 2,
+     "neckA": 2,
+     "upperA": 180,
+     "foreA": 180,
+     "thighF": 180,
+     "shinF": 242
     }
    },
    {
@@ -1874,11 +1889,26 @@
      "upperA": 180,
      "foreA": 180,
      "thighF": 200,
-     "shinF": 170
+     "shinF": 212
     }
    },
    {
-    "t": 1,
+    "t": 0.75,
+    "tr": "Adım",
+    "p": {
+     "shinA": 178,
+     "thighA": 183,
+     "torso": 3,
+     "thoraxA": 2,
+     "neckA": 2,
+     "upperA": 180,
+     "foreA": 180,
+     "thighF": 180,
+     "shinF": 224
+    }
+   },
+   {
+    "t": 1.0,
     "tr": "Adım",
     "p": {
      "shinA": 178,
@@ -1889,7 +1919,7 @@
      "upperA": 180,
      "foreA": 180,
      "thighF": 160,
-     "shinF": 190
+     "shinF": 184
     }
    }
   ]

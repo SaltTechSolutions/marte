@@ -118,6 +118,18 @@ export const ROM_BANDS: RomBand[] = [
     skip: (ex) => !showFarLeg(ex),
   },
   {
+    rule: 'diz',
+    label: 'uzak diz ters yönde',
+    // Yakın dizin ters yön bandı vardı, uzak dizinki YOKTU: yalnızca büyüklük
+    // denetleniyordu, yani ters bükülme mutlak değerin içinde kayboluyordu.
+    // `carry`'nin salınan bacağı tam bu boşluktan geçiyordu — diz orta
+    // noktada −30°'ye iniyor, yani geriye kırılıyordu, ve figür sakat
+    // görünüyordu. Gerekçe ve eşik yakın dizinkiyle birebir aynı.
+    angle: (p) => norm(p.shinF - p.thighF),
+    lo: -15,
+    skip: (ex) => ex.mode !== 'stand' || !showFarLeg(ex),
+  },
+  {
     rule: 'dirsek',
     label: 'dirsek',
     // Poz DEĞİL iskelet. `arm` 'ik' ya da 'floor' iken kareler `upperA`/`foreA`

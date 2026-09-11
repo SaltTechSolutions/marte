@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-11T12:49:22.948Z",
+  "generated": "2026-09-11T14:15:18.068Z",
   "source": {
-    "commit": "6bd15007",
+    "commit": "0b9e7d8c",
     "dirty": true
   },
   "counts": {
@@ -21,8 +21,8 @@
       "to": "src/utils/rig.ts"
     },
     "rigAudit.ts": {
-      "sha256": "8b55e8d403f7423ffe3d8471de7c58bcd0f7f37fc15c754dc39fd1a78b22fd44",
-      "bytes": 13563,
+      "sha256": "3ca3d12e7ec49072d96ce3118e5e0e89978ebcf57050fce630adb8f9af8d1afa",
+      "bytes": 14138,
       "from": "src/rigAudit.ts",
       "what": "denetim kuralları",
       "to": "src/utils/rigAudit.ts"
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "8d15d43ad1b90c7bb36acd5868034faad63c80c49267c94b2b858173c600655d",
-      "bytes": 41809,
+      "sha256": "61441a30a216b1db623f6f1b31c411982a592827fb5d79bd3870ba9be179fc85",
+      "bytes": 42275,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"
@@ -70,8 +70,8 @@
       "to": "src/data/rigAnatomy.json"
     },
     "bodyParts.json": {
-      "sha256": "3b4b976041205e1839fd1a84c3c5cb5a1acd4848ba14a33591a51aa4ae1ecf4c",
-      "bytes": 1944,
+      "sha256": "7e35ff3d7b4c1ed89878c70e259607ecab72114af658e9666a81d8412af44fab",
+      "bytes": 3261,
       "from": "data/bodyParts.json",
       "what": "uzuv siluet parçaları",
       "to": "src/data/rigBodyParts.json"
@@ -84,15 +84,15 @@
       "to": "src/data/rigArchetypes.ts"
     },
     "rig.test.ts": {
-      "sha256": "91f7159bb71ba854a290844fc33b8565b2b83e00a1b5bf3e055aad28e9aec7f7",
-      "bytes": 10389,
+      "sha256": "f85865f41f25a7792ab6081fbd40dadecf350ecf24d90e83219058a99fdfb694",
+      "bytes": 9477,
       "from": "tests/rig.test.ts",
       "what": "motor testleri",
       "to": "src/utils/rig.test.ts"
     },
     "rigAudit.test.ts": {
-      "sha256": "84e08679ccbff9dc83c1490a55bf3c61be3e29e8f5a63168a911fd9ac69243ff",
-      "bytes": 7883,
+      "sha256": "10d43a2e8019ab667457936b44cb76326549bbf3cd6f411eeb4272843648d88f",
+      "bytes": 8314,
       "from": "tests/rigAudit.test.ts",
       "what": "denetim testleri",
       "to": "src/utils/rigAudit.test.ts"

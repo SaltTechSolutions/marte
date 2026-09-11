@@ -723,8 +723,13 @@ durduğu karttan türetiliyor (eskiden uzak uzuv kartın rengiyle, 1.00:1
 kontrastla çiziliyordu — yani görünmüyordu) ve uzuv dikişleri kapatıldı.
 Yakın/uzak ayrımını dolgu değil kenar çizgisi taşıyor; dört temada da WCAG
 3:1 eşiği geçiliyor ve `figureColors.test.ts` bunu sınıyor.
-**Açık:** siluetler hâlâ elle çizilmiş kaba taslak (3B iş bekliyor);
-uygulamanın çizimi simülatörde çalıştırılarak doğrulanmadı.
+*Siluetler ve arka bacak (11 Eylül 2026):* uzuv siluetleri artık elle çizilmiş
+değil, `scripts/build-body-parts.mjs` ile profilden üretiliyor — kas karnının
+nerede olduğu düzenlenebilir veri. Aynı bakışta uzak dizin iki arketipte
+**ters yöne büküldüğü** çıktı (`carry`, `unilateral_lunge`); denetimdeki
+boşluk kapatıldı ve depoda hiç uyarı kalmadı.
+**Açık:** siluetler tarama değil, stilize biçimler (belgedeki 3B zincir bu
+makinede çalıştırılamıyor); uygulamanın çizimi simülatörde doğrulanmadı.
 
 **15. ~~UX-7 kalanı~~** — tamamlandı (1 Eylül 2026), on ekran.
 
