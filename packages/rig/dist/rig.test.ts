@@ -111,8 +111,15 @@ describe('rig hareket denetimi', () => {
   it('tek taraflı hareketler iki bacağı ayrı çalıştırır', () => {
     // Hamle, step-up ve Bulgar split squat'ın tanımı bu: kareler uzak bacağı
     // açıkça yazmazsa iki bacak aynı işi yapar ve hareket çift bacaklı olur.
+    //
+    // Ölçü GERÇEK mesafe, yalnızca dikey fark değil. Eski hâli dikeye bakıyordu
+    // ve hamlede yanlış ateşliyordu: gerçek bir hamlede arka ayağın PARMAĞI
+    // yerde kalır, yani iki ayak bileği neredeyse aynı yükseklikte olur —
+    // ayrışma yatayda, adımın uzunluğunda. Kural yine de amacını koruyor:
+    // uzak bacak yakınının kopyası olsaydı iki bilek arası yalnızca kalça
+    // kaymasi kadar (≈7) olurdu, bugün hamlede 250.
     ['unilateral_lunge', 'step_up', 'bulgarian_split_squat', 'bird_dog'].forEach((key) => {
-      const spread = frames(key).map(({ S }) => Math.abs(S.ankle[1] - S.ankleF[1]));
+      const spread = frames(key).map(({ S }) => Math.hypot(S.ankle[0] - S.ankleF[0], S.ankle[1] - S.ankleF[1]));
       expect(Math.max(...spread), `${key} iki bacak ayrışması`).toBeGreaterThan(40);
     });
   });

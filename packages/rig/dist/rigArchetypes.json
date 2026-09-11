@@ -215,7 +215,7 @@
      "upperA": 182,
      "foreA": 180,
      "thighF": 186.4,
-     "shinF": 196.4
+     "shinF": 191
     }
    },
    {
@@ -230,7 +230,7 @@
      "upperA": 182,
      "foreA": 180,
      "thighF": 212,
-     "shinF": 297
+     "shinF": 264.9
     }
    },
    {
@@ -245,7 +245,7 @@
      "upperA": 182,
      "foreA": 180,
      "thighF": 212,
-     "shinF": 297
+     "shinF": 267.3
     }
    },
    {
@@ -260,7 +260,7 @@
      "upperA": 182,
      "foreA": 180,
      "thighF": 186.4,
-     "shinF": 196.4
+     "shinF": 191
     }
    }
   ]
@@ -286,8 +286,8 @@
      "neckA": 8,
      "upperA": 184,
      "foreA": 182,
-     "thighF": 215,
-     "shinF": 200
+     "thighF": 186.6,
+     "shinF": 195.3
     }
    },
    {
@@ -334,8 +334,8 @@
      "neckA": 8,
      "upperA": 184,
      "foreA": 182,
-     "thighF": 215,
-     "shinF": 200
+     "thighF": 186.6,
+     "shinF": 195.3
     }
    }
   ]
@@ -554,11 +554,12 @@
     "p": {
      "shinA": 170,
      "thighA": 50,
-     "torso": 272,
-     "thoraxA": 270,
+     "torso": 274.8,
+     "thoraxA": 268.6,
      "neckA": 268,
      "upperA": 250,
-     "foreA": 250
+     "foreA": 267.6,
+     "upperF": 251.7
     }
    },
    {
@@ -593,11 +594,12 @@
     "p": {
      "shinA": 170,
      "thighA": 50,
-     "torso": 272,
-     "thoraxA": 270,
+     "torso": 274.8,
+     "thoraxA": 268.6,
      "neckA": 268,
      "upperA": 250,
-     "foreA": 250
+     "foreA": 267.6,
+     "upperF": 251.7
     }
    }
   ]
@@ -794,7 +796,7 @@
   ]
  },
  "seated_overhead_press": {
-  "mode": "stand",
+  "mode": "seat",
   "arm": "ik",
   "bar": "hands",
   "bend": 1,
@@ -804,8 +806,8 @@
     "t": 0,
     "tr": "Omuzda",
     "p": {
-     "shinA": 176,
-     "thighA": 184,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 6,
      "thoraxA": 3,
      "neckA": 8,
@@ -817,8 +819,8 @@
     "t": 0.22,
     "tr": "İtiş",
     "p": {
-     "shinA": 178,
-     "thighA": 183,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 4,
      "thoraxA": 2,
      "neckA": 2,
@@ -830,8 +832,8 @@
     "t": 0.45,
     "tr": "Tepe",
     "p": {
-     "shinA": 178,
-     "thighA": 182,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 2,
      "thoraxA": 1,
      "neckA": -2,
@@ -843,8 +845,8 @@
     "t": 0.58,
     "tr": "Tepe",
     "p": {
-     "shinA": 178,
-     "thighA": 182,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 2,
      "thoraxA": 1,
      "neckA": -2,
@@ -856,8 +858,8 @@
     "t": 0.8,
     "tr": "İniş",
     "p": {
-     "shinA": 178,
-     "thighA": 183,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 4,
      "thoraxA": 2,
      "neckA": 2,
@@ -869,8 +871,8 @@
     "t": 1,
     "tr": "Omuzda",
     "p": {
-     "shinA": 176,
-     "thighA": 184,
+     "shinA": 180,
+     "thighA": 90,
      "torso": 6,
      "thoraxA": 3,
      "neckA": 8,
@@ -879,7 +881,8 @@
     }
    }
   ],
-  "note": "Oturarak omuz presi. 'Omuzda' karesinde el omuzdan 73px uzakta: bar cene hizasinda, dirsek ~121 derece. Eskiden el omzun ustundeydi (26px) ve dirsek 161 dereceye katlaniyordu, yani insanin yapamayacagi bir poz."
+  "note": "Oturarak omuz presi. 'Omuzda' karesinde el omuzdan 73px uzakta: bar cene hizasinda, dirsek ~121 derece. Eskiden el omzun ustundeydi (26px) ve dirsek 161 dereceye katlaniyordu, yani insanin yapamayacagi bir poz.",
+  "prop": "seatback"
  },
  "standing_row_hinged": {
   "note": "--- Çekiş ------------------------------------------------------------- Menteşede kürek: gövde sabit ~65°, hareket yalnızca kollardan.",
@@ -1848,7 +1851,7 @@
   "dur": 3600,
   "kf": [
    {
-    "t": 0.0,
+    "t": 0,
     "tr": "Adım",
     "p": {
      "shinA": 178,
@@ -1908,7 +1911,7 @@
     }
    },
    {
-    "t": 1.0,
+    "t": 1,
     "tr": "Adım",
     "p": {
      "shinA": 178,

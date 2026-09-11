@@ -31,6 +31,43 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — omuz presi oturdu; editör düzenlemeleri kurallarla uzlaştırıldı
+
+**Yapıldı.** `seated_overhead_press` arketibi `mode: 'stand'` ve prop'suzdu:
+adı da katalogdaki adımları da ("Dik veya hafif geriye eğimli sırt desteğine
+otur") oturmayı anlatırken çizim AYAKTA yapıyordu. `mode: 'seat'` + `seatback`,
+uyluk 90 / baldır 180 (öteki oturan arketiplerin değerleri).
+
+Aynı oturumda kullanıcı editörde üç arketibi düzenleyip kaydetti; üç koruma
+kuralı düştü. Kullanıcının yönü korunarak uzlaştırıldı:
+
+- **`unilateral_lunge` — kural düzeltildi, veri değil.** Kullanıcı arka ayağı
+  yere indirmişti; bu ANATOMİK OLARAK DOĞRU (gerçek hamlede arka parmak yerde
+  kalır). "İki bacak ayrışması" kuralı yalnızca DİKEY farkı ölçüyordu ve
+  ayaklar aynı yüksekliğe gelince yanlış ateşledi. Ölçü gerçek mesafeye
+  çevrildi: hamlede 250, uzak bacak kopya olsaydı ≈7 — kural amacını koruyor.
+  Ayrıca `shinF` 188.9 → 191, çünkü 188.9 ayağı zeminin 2.2px altına sokuyordu
+  (kural 2'de kesiyor).
+- **`glute_bridge` — kol değişikliği kaldı, göğüs açısı geri alındı.** `foreA`
+  ve yeni `upperF` duruyor. `torso`/`thoraxA` değişikliği omzu destekten
+  30.4px kaldırıyordu (kural <12) ve bu ikisi doğrudan çelişiyor: kalça
+  köprüsünde omuz yerde durur. Kullanıcının değerine en yakın uyumlu çift
+  arandı, 11.4° uzakta çıktı — yani o göğüs açısı kuralla bağdaşmıyor.
+- **`step_up`** — hiçbir kuralı düşürmüyordu, olduğu gibi bırakıldı.
+
+**Karar.** **Bir kural gerçek bir düzeltmeyi reddediyorsa önce kuralın ÖLÇÜSÜ
+sorgulanır.** Hamlede kırılan şey veri değil, dikey farkı vekil alan testti.
+Ama kuralın amacı (uzak bacak yakınının kopyası olmasın) korunarak değiştirildi,
+gevşetilerek değil.
+
+**Bilerek yapılmadı.** Kullanıcının `glute_bridge` göğüs açısı korunmadı:
+korunabilseydi omuz destekten kalkardı, o da hareketin tanımını bozardı.
+
+**Açık.** Sehpa/gövde kaydırma alanı hâlâ yok — prop'lar iskeletten türetiliyor,
+gövde kipin kök noktasına sabit. Şema ve devir sözleşmesi işi.
+
+**Nerede.** `packages/rig/data/rigArchetypes.json`, `packages/rig/tests/rig.test.ts`.
+
 ## 2026-09-11 — uzak ayak baldırı izliyor
 
 **Yapıldı.** Geri bildirim: arka bacağa bağlı ayak bazı figürlerde iyi,
