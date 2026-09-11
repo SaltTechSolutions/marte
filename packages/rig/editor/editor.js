@@ -9,7 +9,7 @@
  */
 
 import {
-  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirOf, footPath,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirFarOf, footDirOf, footPath,
   frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
@@ -570,7 +570,10 @@ function drawPose(svg, e, p) {
   // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
   // göstermek.
   if (showFarLeg(e)) {
-    far([...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
+    // Uzak AYAK da çiziliyor: uygulama çiziyordu, önizleme çizmiyordu — yani
+    // önizleme uygulamayı değil eksik bir figürü gösteriyordu.
+    far([{ d: footPath(S.ankleF, footDirFarOf(e, p), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+         ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
          ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 12)]);
   }
   if (!e.hideFarArm) {
@@ -733,7 +736,7 @@ function draw() {
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
   if (showFarLeg(e)) {
     far([
-      { d: footPath(S.ankleF, footDirOf(e), pin, facingFlip(e.mode)) },
+      { d: footPath(S.ankleF, footDirFarOf(e, p), pin, facingFlip(e.mode)) },
       ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
       ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'),
       ball(S.kneeF, 12),

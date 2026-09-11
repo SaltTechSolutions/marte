@@ -17,6 +17,7 @@ import {
   boundsFor,
   capsule,
   facingFlip,
+  footDirFarOf,
   footDirOf,
   footPath,
   frontPoints,
@@ -485,7 +486,7 @@ export function RigFigure({
         <G key="far" opacity={0.95}>
           {farLeg &&
             far('fleg', [
-              { key: 'ffoot', d: footPath(S.ankleF, footDirOf(rig), pinToe, flip) },
+              { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
               ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
               ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
               ball('fk', S.kneeF, 12),

@@ -31,6 +31,37 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — uzak ayak baldırı izliyor
+
+**Yapıldı.** Geri bildirim: arka bacağa bağlı ayak bazı figürlerde iyi,
+bazılarında kötü. Sebep sabit bir değerdi — uzak ayak `footDirOf` ile hareket
+başına TEK bir yön alıyordu ve o yön YERE BASAN ayak için doğru (düz zeminde
+ayak yataydır). Uzak baldır savrulunca ayak yerinde kalıyor, bilekten kopmuş
+gibi duruyordu. Ölçüldü (yakın bileğe göre sapma): `bird_dog` 6° ve
+`dead_bug` 6° — fark edilmiyor; `step_up` 28°, `carry` 64°, hamle 107°.
+"Bazısında iyi bazısında kötü" tam olarak bu dağılım.
+
+`footDirFarOf` eklendi: bilek sapmayı yutabildiği kadar yutuyor, artanı ayak
+dönerek karşılıyor. Sapma sonrası hepsi bileğin gerçek aralığında (≤50°), zaten
+iyi olanlar hiç değişmedi. Hamlede arka ayak kendiliğinden parmak ucuna kalktı
+(topuk-parmak yükseklik farkı 1px → 40px).
+
+Ayrıca telefon önizlemesi uzak AYAĞI hiç çizmiyordu, uygulama çiziyordu —
+önizleme uygulamayı değil eksik bir figürü gösteriyordu. Eklendi.
+
+**Karar.** **Yere basan ayağın yönü ile havadaki ayağın yönü aynı kaynaktan
+gelmez.** Sabit yön yalnızca zemine basan ayak için doğrudur; serbest ayak
+baldırını izler, bileğin ROM'u kadar gecikmeyle. Sınırlar AAOS: dorsifleksiyon
+20°, plantarfleksiyon 50°; normal olarak değil SINIR olarak kullanılıyor.
+
+**Bilerek yapılmadı.** Uzak ayağın `pinToe`'su hâlâ YAKIN bacağın
+`ankleLift`'inden geliyor; ayrı bir kaynak istiyor ama bildirilen kusur bu
+değildi. Hamlenin arka ayağı iniş boyunca zeminden 38 birim yükseliyor
+(gerçek hamlede parmak yerde kalır) — poz verisi işi, ayrı.
+
+**Nerede.** `packages/rig/src/rig.ts` (`footDirFarOf`),
+`packages/rig/editor/editor.js`, `apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
 ## 2026-09-11 — kalça gövdeye bağlandı, uzak bacak yerine oturdu (Bridgman)
 
 **Yapıldı.** Kullanıcı figüre bakıp iki şey söyledi: arka bacak vücudun parçası

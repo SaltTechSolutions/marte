@@ -1085,3 +1085,34 @@ export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode =
  */
 export const footDirOf = (ex: Pick<RigExercise, 'mode' | 'footDir'>): number =>
   ex.footDir ?? footDirFor(ex.mode);
+
+/**
+ * Ayak bileğinin baldır sapmasını yutabildiği kadar — derece.
+ *
+ * Klinik aralık: dorsifleksiyon ~20°, plantarfleksiyon ~50° (AAOS). Sayılar
+ * normal değil SINIR olarak kullanılıyor; ötesinde ayak baldırla birlikte
+ * dönmek zorunda, çünkü bileğin gidecek yeri kalmıyor.
+ */
+const ANKLE_DORSI = 20;
+const ANKLE_PLANTAR = 50;
+
+/**
+ * Uzak ayağın yönü.
+ *
+ * `footDirOf` hareket başına TEK bir yön veriyor ve o yön yere BASAN ayak için
+ * doğru: düz zeminde ayak yataydır. Uzak ayak için aynı sabiti kullanmak, uzak
+ * baldır savrulduğunda ayağı bilekten kopmuş gibi bırakıyordu — ölçüldü,
+ * sapma `bird_dog`'da 6° (fark edilmiyor) ama `carry`'de 64°, hamlede 107°.
+ * Bu yüzden bazı figürlerde iyi bazılarında kötü görünüyordu.
+ *
+ * Kural: bilek sapmayı yutabildiği kadar yutuyor, artanı ayak dönerek
+ * karşılıyor. Uzak baldır yakınınkiyle aynı açıdaysa sonuç sabitin kendisi,
+ * yani bugünkü davranış; hamlede arka ayak kendiliğinden parmak ucuna kalkıyor.
+ */
+export function footDirFarOf(ex: Pick<RigExercise, 'mode' | 'footDir'>, p: RigPose): number {
+  const base = footDirOf(ex);
+  let drift = ((p.shinF - p.shinA) % 360 + 360) % 360;
+  if (drift > 180) drift -= 360;
+  const absorbed = Math.max(-ANKLE_DORSI, Math.min(ANKLE_PLANTAR, drift));
+  return base + (drift - absorbed);
+}
