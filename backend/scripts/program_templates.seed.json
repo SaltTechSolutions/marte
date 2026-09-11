@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "generatedAt": "2026-09-02",
+  "version": 2,
+  "generatedAt": "2026-09-10",
   "disclaimer": "Bu şablonlar genel sağlıklı yetişkinler için, yayımlanmış kılavuz ve araştırmalara dayanarak hazırlanmış başlangıç noktalarıdır; tıbbi tavsiye değildir. Atamadan önce salonun sertifikalı antrenörü üyenin sağlık durumuna, geçmişine ve ekipmana göre gözden geçirip uyarlamalıdır. Kalp-damar hastalığı, kontrolsüz tansiyon, gebelik, yakın zamanda ameliyat veya sinir belirtisi olan üyelere hekim onayı olmadan atanmaz.",
   "sources": {
     "ramp": "Jeffreys I. (2007). Warm up revisited – the 'RAMP' method of optimising performance preparation. UKSCA Journal, 6, 12–18.",
@@ -20,7 +20,8 @@
     "willis": "Willis LH et al. (2012). Effects of aerobic and/or resistance training on body mass and fat mass in overweight or obese adults. J Appl Physiol, 113(12), 1831–1837.",
     "wewege": "Wewege M et al. (2017). The effects of HIIT vs. moderate-intensity continuous training on body composition in overweight and obese adults: a systematic review and meta-analysis. Obes Rev, 18(6), 635–646.",
     "parq": "Warburton DER et al. (2011). The Physical Activity Readiness Questionnaire for Everyone (PAR-Q+). Health & Fitness Journal of Canada, 4(2), 3–23.",
-    "behm": "Behm DG et al. (2016). Acute effects of muscle stretching on physical performance, range of motion, and injury incidence in healthy active individuals: a systematic review. Appl Physiol Nutr Metab, 41(1), 1–11. (Isınmada uzun statik germe performansı düşürür; dinamik tercih edilir.)"
+    "behm": "Behm DG et al. (2016). Acute effects of muscle stretching on physical performance, range of motion, and injury incidence in healthy active individuals: a systematic review. Appl Physiol Nutr Metab, 41(1), 1–11. (Isınmada uzun statik germe performansı düşürür; dinamik tercih edilir.)",
+    "pelland2025": "Pelland JC et al. (2026). The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains. Sports Med. (67 çalışma, 2058 kişi: hacim arttıkça kazanç artıyor ama azalan verimle; frekans, hacim eşitlendiğinde hipertrofiyi belirlemiyor.)"
   },
   "templates": [
     {
@@ -34,6 +35,11 @@
         "yok"
       ],
       "summary": "Her antrenmanın önüne gelen 8–10 dakikalık genel ısınma. RAMP: Raise (nabız), Activate (kas aktivasyonu), Mobilise (eklem hareket açıklığı), Potentiate (ana harekete hazırlık). Statik germe yok — antrenman öncesi uzun statik germe performansı düşürür.",
+      "limits": [
+        "Bu bir antrenman değil hazırlıktır — tek başına yapıldığında güç ya da kas gelişimi beklenmez.",
+        "Antrenman öncesi uzun statik germe yok: 30 sn üstü statik germe hemen ardından gelen performansı düşürür (Behm 2016).",
+        "Sakatlık geçmişi olan bölge için özel ısınma içermez; o bölgenin ısınmasını antrenör ekler."
+      ],
       "sources": [
         "ramp",
         "behm",
@@ -137,6 +143,10 @@
         "boş bar"
       ],
       "summary": "Squat / deadlift / leg press günleri için. Genel ısınmanın üstüne kalça, diz ve ayak bileği hareket açıklığı + kalça aktivasyonu.",
+      "limits": [
+        "Genel ısınmanın YERİNE geçmez, üstüne gelir.",
+        "Üst vücut günü için hazırlık içermez."
+      ],
       "sources": [
         "ramp",
         "behm"
@@ -227,6 +237,10 @@
         "boş bar"
       ],
       "summary": "Bench / omuz / sırt günleri için. Omuz kuşağı, torasik omurga ve rotator manşet hazırlığı.",
+      "limits": [
+        "Genel ısınmanın YERİNE geçmez, üstüne gelir.",
+        "Alt vücut günü için hazırlık içermez."
+      ],
       "sources": [
         "ramp",
         "behm"
@@ -316,6 +330,10 @@
         "yok"
       ],
       "summary": "15–20 dakikalık core ve sırt-omuz blokları için. 9 dakikalık genel ısınma bu programların yarısı kadar sürer; burada yalnızca nabız + hedef bölge aktivasyonu.",
+      "limits": [
+        "Yalnızca 15–20 dakikalık core ve sırt-omuz blokları için; ağır squat, deadlift ya da bench gününe yetmez.",
+        "Tam hareket açıklığı çalışması içermez."
+      ],
       "sources": [
         "ramp"
       ],
@@ -388,6 +406,11 @@
         "bar"
       ],
       "summary": "İlk 8–12 haftası için. ACSM başlangıç önerisi: büyük kas gruplarına haftada 2–3 gün, 1–3 set × 8–12 tekrar, çok eklemli hareket öncelikli. Amaç hareket kalıbını öğrenmek ve düzenli gelmek — ağırlık ikinci planda.",
+      "limits": [
+        "Belirli bir bölgeyi büyütmeyi ya da inceltmeyi hedeflemez; amaç hareket kalıbı ve düzen.",
+        "Kilo kaybı vaat etmez — onu kuran şey beslenmedir, bu şablon kas kütlesini korur.",
+        "İlk 8–12 hafta içindir; sonrasında hacim yetersiz kalır."
+      ],
       "sources": [
         "acsm2009",
         "acsm2011",
@@ -501,7 +524,11 @@
       "notes": [
         "İlk 2 hafta ağırlığı 'rahat 12 tekrar yapabildiğin' seviyede tut; hareket kalıbı önce.",
         "Kas ağrısı normaldir, eklem ağrısı değildir — eklem ağrısında o hareketi antrenöre sor."
-      ]
+      ],
+      "goal": {
+        "wants": "Yeni başlıyorum, nereden başlayayım",
+        "because": "İlk 8-12 hafta hareket kalıbını öğrenmek ve düzenli gelmek içindir."
+      }
     },
     {
       "id": "fullbody-intermediate",
@@ -517,6 +544,11 @@
         "kablo"
       ],
       "summary": "En az 6 ay düzenli çalışmış üye için. Haftada kas grubu başına 10+ set (Schoenfeld 2017), her kas grubu haftada 2–3 kez (Schoenfeld 2016). Üç günün her biri farklı ana hareketle başlar; ağır (5), orta (8), hafif-hacim (12) günleri.",
+      "limits": [
+        "En az 6 ay düzenli çalışmış üye içindir; yeni başlayana fazla gelir.",
+        "Yarışma hazırlığı ya da spora özgü bir periyotlama değildir.",
+        "Ağırlık önermez — yükü antrenör üyenin geçmişine göre yazar."
+      ],
       "sources": [
         "acsm2009",
         "schoenfeld2017",
@@ -705,6 +737,10 @@
         "bar"
       ],
       "summary": "Tam vücut başlangıcı 8–12 hafta tamamlamış, haftada 4 gün gelebilen üye için. Her kas grubu haftada 2 kez, günlük hacim tam vücuttan düşük — toparlanma daha kolay.",
+      "limits": [
+        "Haftada 4 gün gelemeyecek üyeye uymaz; 3 güne düşürülürse hacim dağılır.",
+        "Hacim başlangıç için üst sınıra yakın: uyku 7 saatin altındaysa gün başına bir set çıkarılır."
+      ],
       "sources": [
         "acsm2009",
         "schoenfeld2016freq",
@@ -924,6 +960,10 @@
         "kablo"
       ],
       "summary": "Haftanın ilk yarısı güç (4–6 tekrar, uzun dinlenme), ikinci yarısı hipertrofi (8–15 tekrar). Kas grubu başına haftalık 12–18 set. Klasik 'DUP' (günlük dalgalı periyodizasyon) düzeni.",
+      "limits": [
+        "6+ ay düzenli antrenman ve antrenör onaylı squat/deadlift tekniği varsayar.",
+        "Yağ kaybı programı değildir; kalori açığını beslenme kurar."
+      ],
       "sources": [
         "acsm2009",
         "schoenfeld2017",
@@ -1161,6 +1201,11 @@
         "kardiyo aleti"
       ],
       "summary": "Yağ kaybı diyetle başlar; antrenman kas kütlesini korur ve kalori açığına katkı verir. Direnç antrenmanı + aerobik kombinasyonu yalnız birinden üstün (Willis 2012). Anlamlı kilo kaybı için haftalık ≥250 dk orta yoğunluk hedefi (Donnelly 2009) — bu şablon 150 dk ile başlar, yürüyüşle 250'ye çıkarılır.",
+      "limits": [
+        "Bölgesel yağ kaybı yoktur — karın, basen ya da kol yağı hedeflenerek eritilemez (Vispute 2011, Kostek 2007).",
+        "Kilo kaybını antrenman değil beslenme kurar; bu şablon kası korur ve açığa katkı verir.",
+        "Diyet, kalori ya da makro önerisi içermez."
+      ],
       "sources": [
         "donnelly",
         "willis",
@@ -1309,7 +1354,12 @@
         "Karın egzersizi karın yağını yakmaz (Vispute 2011) — mekik sayısını değil kalori açığını artır.",
         "Haftalık kilo hedefi vücut ağırlığının %0,5–1'i; daha hızlısı kas kaybettirir.",
         "Beslenme bu şablonun kapsamı dışında — diyetisyen yönlendirmesi antrenörün işi."
-      ]
+      ],
+      "goal": {
+        "wants": "Kilo vereyim / yağ yakayım",
+        "because": "Antrenman kası korur ve açığa katkı verir; açığı kuran şey beslenmedir.",
+        "pairsWith": "abs-beginner"
+      }
     },
     {
       "id": "fatloss-intermediate",
@@ -1325,6 +1375,11 @@
         "kardiyo aleti"
       ],
       "summary": "En az 6 ay direnç antrenmanı geçmişi olan üye için. HIIT öncesi PAR-Q+ taraması; herhangi bir 'evet' cevabında hekim onayı olmadan HIIT eklenmez, orta yoğunluklu kardiyo verilir. HIIT ile orta yoğunluklu sürekli kardiyo vücut kompozisyonunda benzer sonuç verir, HIIT %40 daha az sürede (Wewege 2017). Direnç hacmi korunur; kalori açığında kası koruyan şey budur.",
+      "limits": [
+        "Bölgesel yağ kaybı yoktur; hedeflenen şey toplam yağ kütlesi.",
+        "HIIT hekim onayı gerektirebilir: PAR-Q+ taramasında tek bir \"evet\" bile HIIT'i durdurur, yerine orta yoğunluklu kardiyo verilir.",
+        "Diyet, kalori ya da makro önerisi içermez."
+      ],
       "sources": [
         "wewege",
         "willis",
@@ -1487,7 +1542,11 @@
         "HIIT ve ağır bacak günü arasına en az 24 saat.",
         "Eklem ağrısı veya baş dönmesinde HIIT'i orta yoğunluklu 30 dk kardiyoya çevir; sonuç aynı, sadece süre uzar.",
         "Kilo kaybı 2 hafta durursa önce beslenmeyi, sonra günlük adımı kontrol et — antrenman hacmini artırmadan."
-      ]
+      ],
+      "goal": {
+        "wants": "Daha hızlı yağ yakayım",
+        "because": "HIIT ile tempolu kardiyo benzer sonuç veriyor, HIIT daha az sürede (Wewege 2017)."
+      }
     },
     {
       "id": "core-beginner",
@@ -1500,6 +1559,12 @@
         "mat"
       ],
       "summary": "Gövde stabilitesi: omurgayı hareket ettirmeden yüke direnmek (anti-ekstansiyon, anti-lateral fleksiyon, anti-rotasyon). McGill'in 'Big 3'ü bel yükünü düşük tutarak dayanıklılık kurar. Bu bir karın 'inceltme' programı DEĞİLDİR — bölgesel yağ kaybı yoktur.",
+      "limits": [
+        "Bu bir karın inceltme programı değildir; bölgesel yağ kaybı diye bir şey yok.",
+        "Karın kasını BÜYÜTMEYİ hedeflemez — hedef dayanıklılık ve stabilite. Büyütme için Karın Kasları şablonu.",
+        "Bel ağrısı tedavisi değildir; ağrısı olan üyeye fizyoterapist ya da hekim onayı olmadan atanmaz.",
+        "Mekik ve düz bacak kaldırma bilerek yok: bel disk yükü yüksek, başlangıçta gereksiz."
+      ],
       "sources": [
         "mcgill",
         "vispute",
@@ -1562,7 +1627,11 @@
       "notes": [
         "Bel ağrısı olan üyeye bu şablon fizyoterapist/hekim onayı olmadan atanmaz.",
         "Mekik ve bacak kaldırma bilinçli olarak yok: bel disk yükü yüksek, başlangıç için gereksiz."
-      ]
+      ],
+      "goal": {
+        "wants": "Belim ağrımasın / gövdem güçlensin",
+        "because": "İddia edilen şey dayanıklılık ve stabilite; bu bir karın inceltme programı değildir."
+      }
     },
     {
       "id": "core-intermediate",
@@ -1578,6 +1647,10 @@
         "mat"
       ],
       "summary": "Başlangıcı bitirmiş üye için: yüklü anti-rotasyon ve anti-ekstansiyon, tek taraflı taşıma. Sporun ve ağır squat/deadlift'in gövde talebi bu.",
+      "limits": [
+        "Karın kasını büyütmeyi hedeflemez; hedef yüklü stabilite.",
+        "Bel ağrısı tedavisi değildir."
+      ],
       "sources": [
         "mcgill",
         "nsca"
@@ -1661,6 +1734,11 @@
         "direnç bandı"
       ],
       "summary": "Boyun-omuz ağrısı olan ofis çalışanlarında haftada 3×20 dk spesifik güç antrenmanı ağrıyı anlamlı azalttı (Andersen 2008); günlük 2 dk bile fayda gösterdi (Andersen 2011). Bu şablon 'postürü düzeltmez' — üst sırt ve omuz kuşağını güçlendirir, bu da masa başında yorulmayı geciktirir. Kanıt olan iddia budur.",
+      "limits": [
+        "Postürü düzeltmez. Kanıtı olan iddia şu: haftada 3×20 dk spesifik güç antrenmanı boyun-omuz ağrısını anlamlı azalttı (Andersen 2008).",
+        "Sinir belirtisi (kola yayılan uyuşma, elde güç kaybı) varsa atanmaz — hekime yönlendirilir.",
+        "Masa ve ekran yerleşimi düzenlemesinin yerine geçmez."
+      ],
       "sources": [
         "andersen2008",
         "andersen2011",
@@ -1741,7 +1819,11 @@
       "notes": [
         "Sinir belirtisi (kola yayılan uyuşma, elde güç kaybı) varsa şablon atanmaz, hekime yönlendirilir.",
         "Masa başında her 30–45 dk'da 2 dk ayağa kalkıp bant pull-apart — Andersen 2011'in bulgusu tam olarak bu."
-      ]
+      ],
+      "goal": {
+        "wants": "Masa başında boynum ve omzum ağrıyor",
+        "because": "Haftada 3×20 dk spesifik güç antrenmanı ağrıyı anlamlı azalttı (Andersen 2008)."
+      }
     },
     {
       "id": "desk-intermediate",
@@ -1757,6 +1839,10 @@
         "bant"
       ],
       "summary": "Başlangıç protokolünü 8 hafta tamamlamış üye için: çekiş hacmi itiş hacminin ~2 katı (üst sırt / göğüs dengesi), torasik hareket açıklığı ve rotator manşet.",
+      "limits": [
+        "Postürü düzeltmez; üst sırt ve omuz kuşağını güçlendirir.",
+        "Bir göğüs günüyle birlikte atanırsa haftalık itiş/çekiş dengesini antrenör kontrol eder."
+      ],
       "sources": [
         "andersen2008",
         "acsm2009",
@@ -1845,6 +1931,607 @@
       "progression": "Çekişlerde 2-for-2. Face pull ve dış rotasyonda ağırlık değil tekrar/tempo (3 sn kontrollü dönüş).",
       "notes": [
         "Bu şablon bir 'göğüs günü'yle birlikte atanıyorsa haftalık itiş/çekiş dengesini antrenör kontrol etsin."
+      ]
+    },
+    {
+      "id": "arms-intermediate",
+      "category": "hypertrophy",
+      "level": "intermediate",
+      "title": "Kol Hipertrofisi",
+      "durationMinutes": 35,
+      "weeklyFrequency": "Haftada 2 gün, ana programın ÜSTÜNE (yerine değil)",
+      "sessionsPerWeek": 2,
+      "targets": [
+        "biceps",
+        "brachialis",
+        "triLat",
+        "triLong"
+      ],
+      "equipment": [
+        "dumbbell",
+        "kablo",
+        "bar",
+        "sehpa"
+      ],
+      "summary": "Kol kalınlığı gerçekten hedeflenebilir: bölgesel yağ kaybının aksine bölgesel kas gelişimi vardır. İki nokta hacmi belirliyor. Bir: triceps üst kolun kütlesinin yaklaşık üçte ikisi, o yüzden hacim triceps ağırlıklı. İki: bileşik çekiş ve itiş kolu çalıştırır ama tek başına yetmez — doğrudan kol seti eklemek gerekir. Haftalık hedef kas grubu başına 10-20 doğrudan set; bu şablon iki günde biceps'e 13, triceps'e 13 doğrudan set veriyor. Ana programının üstüne gelir; onun yerine geçmez.",
+      "limits": [
+        "Kol yağını azaltmaz — bölgesel yağ kaybı yoktur; hedeflenen şey kasın kendisi.",
+        "Tek başına bir program değildir: ana programın ÜSTÜNE gelir, yerine geçmez.",
+        "Ön kol ve kavrama için ayrı çalışma içermez."
+      ],
+      "sources": [
+        "schoenfeld2017",
+        "pelland2025",
+        "schoenfeld2016freq",
+        "acsm2009",
+        "nsca"
+      ],
+      "warmup": "warmup-short",
+      "goal": {
+        "wants": "Kollarım kalınlaşsın",
+        "because": "Bu gerçekten bölgesel olarak hedeflenebilir — kas büyümesi bölge seçer, yağ kaybı seçmez."
+      },
+      "days": [
+        {
+          "name": "Kol A — triceps ağırlıklı",
+          "exercises": [
+            {
+              "name": "Incline dumbbell pres",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Bank 30°. Bileşik hareket önce: kol yorulmadan ağır iş bitsin.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Triceps pushdown",
+              "type": "weight",
+              "sets": 5,
+              "restSeconds": 60,
+              "cue": "Dirsekler gövdeye yapışık ve SABİT. Gövdeni öne yaslayıp ağırlığı itme.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Biceps curl",
+              "type": "weight",
+              "sets": 5,
+              "restSeconds": 60,
+              "cue": "RIR 1-2. Sallanma; omuz değil dirsek çalışır.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Lateral raise",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Kolun kalınlığı omuzdan da okunur — dirsek hafif kırık, omuz hizasına kadar.",
+              "reps": 15,
+              "targetWeightKg": null
+            }
+          ]
+        },
+        {
+          "name": "Kol B — biceps ağırlıklı",
+          "exercises": [
+            {
+              "name": "Lat pulldown",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Bileşik çekiş: biceps'e temel yükü verir.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Biceps curl",
+              "type": "weight",
+              "sets": 5,
+              "restSeconds": 60,
+              "cue": "Son sette RIR 0-1. Tam açıklık: altta kolu tamamen aç.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Tek kol dumbbell row",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 75,
+              "cue": "Her kol 10. Dirsek gövdeye yakın.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Triceps pushdown",
+              "type": "weight",
+              "sets": 5,
+              "restSeconds": 45,
+              "cue": "Hafif ağırlık, tempoyu yavaşlat: 3 sn kontrollü dönüş.",
+              "reps": 15,
+              "targetWeightKg": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glutes-beginner",
+      "category": "hypertrophy",
+      "level": "beginner",
+      "title": "Kalça Hipertrofisi — Başlangıç",
+      "durationMinutes": 40,
+      "weeklyFrequency": "Haftada 2 gün, aralarında en az 48 saat",
+      "sessionsPerWeek": 2,
+      "targets": [
+        "gluteMax"
+      ],
+      "equipment": [
+        "dumbbell",
+        "makine",
+        "kutu",
+        "mat"
+      ],
+      "summary": "Kalça kası (gluteus maximus) üç kalıpla çalışır: kalça menteşesi (hinge), çömelme ve tek bacak. Şablon üçünü de içerir çünkü hiçbiri tek başına kasın tamamını kapsamıyor. Başlangıçta yük değil KALIP önce: kalça köprüsü ve goblet squat hinge'i ve derinliği öğretir. Haftalık 10-14 set.",
+      "limits": [
+        "Basen ya da kalça yağını azaltmaz — hedeflenen şey kas kütlesi.",
+        "Yan kalça (gluteus medius) doğrudan hedeflenmez: hareket kataloğunda o kası BİRİNCİL çalıştıran bir hareket henüz yok, o yüzden şablon yan kalça gelişimi iddia etmiyor.",
+        "Başlangıç seviyesidir; yük değil kalıp önceliklidir."
+      ],
+      "sources": [
+        "acsm2009",
+        "schoenfeld2017",
+        "nsca",
+        "acsm2011"
+      ],
+      "warmup": "warmup-lower",
+      "goal": {
+        "wants": "Kalçam gelişsin",
+        "because": "Bölgesel kas gelişimi kanıtlı; hedeflenen şey kasın kendisi, üstündeki yağ değil."
+      },
+      "days": [
+        {
+          "name": "Kalça A",
+          "exercises": [
+            {
+              "name": "Kalça köprüsü",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Üstte kalçayı 2 sn sık. Beli kavis yapma — iş kalçada.",
+              "reps": 15,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Goblet squat",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Topuk yerde, dizler ayak ucu yönünde.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Romanian deadlift (dumbbell)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Kalçayı geri it, sırt düz. Hamstring gerginliğini hisset.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Step-up (kutu)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 60,
+              "cue": "Her bacak 10. Üstteki bacakla it, alttakiyle sıçrama.",
+              "reps": 10,
+              "targetWeightKg": null
+            }
+          ]
+        },
+        {
+          "name": "Kalça B",
+          "exercises": [
+            {
+              "name": "Leg press",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Ayakları platformda biraz YUKARI al: kalça payı artar.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Reverse lunge (geriye adım) — destekle",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 75,
+              "cue": "Her bacak 10. Denge için bir el makineye tutunabilir.",
+              "reps": 10,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Leg curl",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 60,
+              "cue": "Hamstring kalçanın ortağı; üstte 1 sn sık.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Kalça köprüsü",
+              "type": "reps",
+              "sets": 2,
+              "restSeconds": 45,
+              "cue": "Bitiş seti: yavaş ve sıkarak.",
+              "reps": 20,
+              "targetWeightKg": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "glutes-intermediate",
+      "category": "hypertrophy",
+      "level": "intermediate",
+      "title": "Kalça Hipertrofisi — Orta",
+      "durationMinutes": 50,
+      "weeklyFrequency": "Haftada 2 gün",
+      "sessionsPerWeek": 2,
+      "targets": [
+        "gluteMax"
+      ],
+      "equipment": [
+        "bar",
+        "dumbbell",
+        "makine",
+        "sehpa"
+      ],
+      "summary": "Kalıp öğrenildikten sonra belirleyici olan yüktür. Hip thrust kalçayı en kısa boyunda en çok yüklüyor, Romanian deadlift en uzun boyunda; ikisi birbirinin yerine geçmez. Tek bacak çalışması iki taraf arasındaki farkı kapatır. Haftalık 14-18 set — doz-yanıt eğrisi bu aralıkta hâlâ artan, ama azalan verimli (Pelland 2026).",
+      "limits": [
+        "Basen ya da kalça yağını azaltmaz — hedeflenen şey kas kütlesi.",
+        "Yan kalça (gluteus medius) doğrudan hedeflenmez: kataloğunda o kası birincil çalıştıran hareket yok.",
+        "Ağır hip thrust ve Romanian deadlift teknik onayı ister."
+      ],
+      "sources": [
+        "schoenfeld2017",
+        "pelland2025",
+        "schoenfeld2016rest",
+        "nsca",
+        "acsm2009"
+      ],
+      "warmup": "warmup-lower",
+      "goal": {
+        "wants": "Kalçam gelişsin",
+        "because": "Bölgesel kas gelişimi kanıtlı; yük ve hacim belirleyici."
+      },
+      "days": [
+        {
+          "name": "Kalça A — ağır",
+          "exercises": [
+            {
+              "name": "Hip thrust (bar veya makine)",
+              "type": "weight",
+              "sets": 4,
+              "restSeconds": 150,
+              "cue": "Üstte kalçayı 1 sn sık, çene içeride. RIR 1-2.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Romanian deadlift (bar)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 150,
+              "cue": "Bar bacağa sürtünsün. Bel yuvarlanınca dur.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Bulgarian split squat",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Her bacak 8. Gövdeyi hafif öne eğ: kalça payı artar.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Leg curl",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 75,
+              "cue": "Üstte 1 sn sık.",
+              "reps": 12,
+              "targetWeightKg": null
+            }
+          ]
+        },
+        {
+          "name": "Kalça B — hacim",
+          "exercises": [
+            {
+              "name": "Leg press",
+              "type": "weight",
+              "sets": 4,
+              "restSeconds": 90,
+              "cue": "Ayaklar yukarıda ve omuz genişliğinden geniş.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Walking lunge",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 75,
+              "cue": "Her bacak 12 adım. Uzun adım = daha çok kalça.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Hip thrust (bar veya makine)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Hafif yük, yüksek tekrar; üstte 2 sn sık.",
+              "reps": 15,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Side plank",
+              "type": "time",
+              "sets": 3,
+              "restSeconds": 30,
+              "cue": "Her tarafa 40 sn. Kalça düşmesin — gluteus medius burada.",
+              "durationSeconds": 40,
+              "targetWeightKg": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "abs-beginner",
+      "category": "hypertrophy",
+      "level": "beginner",
+      "title": "Karın Kasları",
+      "durationMinutes": 20,
+      "weeklyFrequency": "Haftada 3 gün; ana antrenmanın SONUNA",
+      "sessionsPerWeek": 3,
+      "targets": [
+        "absUpper",
+        "absMid",
+        "absLower"
+      ],
+      "equipment": [
+        "mat",
+        "kablo/bant",
+        "bar"
+      ],
+      "summary": "Karın kası da her kas gibi çalıştırılınca gelişir; bu şablon onu hedefler. GÖRÜNMESİ ayrı iş: üstündeki yağ tabakası bölgesel olarak eritilemez (Vispute 2011, Kostek 2007) — karın görünürlüğü vücut yağ oranı düşünce gelir, mekik sayısıyla değil. İncelme istiyorsan bu şablonu Yağ Kaybı programıyla birlikte kullan. Core Güçlendirme şablonlarından farkı doz: orası DAYANIKLILIK için uzun tutuşlar ve piramit, burası GELİŞİM için 8-15 tekrar ve artan yük. Mekik ve düz bacak kaldırma yine yok — bel disk yükü gereksiz.",
+      "limits": [
+        "Karnı inceltmez. Kasın görünmesi yağ oranına bağlı ve yağ bölgesel olarak eritilemez (Vispute 2011, Kostek 2007) — incelme için Yağ Kaybı şablonuyla birlikte kullanılır.",
+        "Bel ağrısı programı değildir; stabilite ve dayanıklılık için Core Güçlendirme şablonları.",
+        "Yan karın (oblique) doğrudan hedeflenmez; aldığı hacim bu şablonda düşük."
+      ],
+      "sources": [
+        "mcgill",
+        "vispute",
+        "kostek",
+        "schoenfeld2017",
+        "acsm2009"
+      ],
+      "warmup": "warmup-short",
+      "goal": {
+        "wants": "Karnım incelsin / karın kaslarım çıksın",
+        "because": "Kas bu programla gelişir; incelme kalori açığından gelir — bölgesel yağ eritilemez.",
+        "pairsWith": "fatloss-beginner"
+      },
+      "days": [
+        {
+          "name": "Karın",
+          "exercises": [
+            {
+              "name": "Asılı diz çekme",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 60,
+              "cue": "Sallanma; kontrollü indir. Zorsa dizleri daha az çek.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Ab wheel rollout (dizden)",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 60,
+              "cue": "Bel çökmeden gidebildiğin kadar; kalçayı sık.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "McGill curl-up",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 30,
+              "cue": "Eller belin altında, bir diz bükük. Boyun bükülmez.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Pallof pres",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Her tarafa 12. Gövde dönmesin — anti-rotasyon.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Plank",
+              "type": "time",
+              "sets": 3,
+              "restSeconds": 30,
+              "cue": "Kalça ne yukarı ne aşağı.",
+              "durationSeconds": 40,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Ölü böcek",
+              "type": "reps",
+              "sets": 2,
+              "restSeconds": 30,
+              "cue": "Her tarafa 10. Bel yere yapışık.",
+              "reps": 10,
+              "targetWeightKg": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "backwidth-intermediate",
+      "category": "hypertrophy",
+      "level": "intermediate",
+      "title": "Sırt Genişliği ve Omuz",
+      "durationMinutes": 45,
+      "weeklyFrequency": "Haftada 2 gün",
+      "sessionsPerWeek": 2,
+      "targets": [
+        "lat",
+        "trapMid",
+        "deltPost"
+      ],
+      "equipment": [
+        "kablo",
+        "bar",
+        "dumbbell",
+        "barfiks barı"
+      ],
+      "summary": "Omuzdan omuza genişlik iki şeyden okunur: sırtın kanat kası (latissimus dorsi) ve omzun yan başı. Lat'ı büyüten şey DİKEY çekiş (lat pulldown, barfiks), kalınlığı veren şey yatay çekiş; ikisi ayrı iş, şablon ikisini de içerir. Yan omuz doğrudan set ister — bileşik itiş ön omzu çalıştırır, yanı değil. Haftalık sırt 14-16, yan omuz 12-15 set.",
+      "limits": [
+        "Genişlik kemik omuz yapısını değiştirmez; değişen şey kanat kası ve omuz kütlesi.",
+        "Yan omuz (deltoid orta baş) kas haritasında ayrı bir bölge olarak yok, o yüzden hacmi otomatik denetlenmiyor — lateral raise hacmini antrenör gözle kontrol eder.",
+        "Göğüs ve kol için doğrudan çalışma içermez."
+      ],
+      "sources": [
+        "schoenfeld2017",
+        "pelland2025",
+        "andersen2008",
+        "acsm2009",
+        "nsca"
+      ],
+      "warmup": "warmup-upper",
+      "goal": {
+        "wants": "Sırtım genişlesin / üst gövdem büyüsün",
+        "because": "Genişliği dikey çekiş hacmi belirliyor; yan omuz doğrudan set istiyor."
+      },
+      "days": [
+        {
+          "name": "Genişlik A — dikey ağırlıklı",
+          "exercises": [
+            {
+              "name": "Barfiks",
+              "type": "reps",
+              "sets": 3,
+              "restSeconds": 150,
+              "cue": "Yapabildiğin kadar (RIR 1). Zorsa bant desteği ya da lat pulldown.",
+              "reps": 6,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Lat pulldown (geniş)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Geniş tutuş, barı köprücük kemiğine. Kürek kemiğini ÖNCE indir.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Oturarak kürek (seated row)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Kalınlık burada: dirsek gövdeye yakın, göğsü aç.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Lateral raise",
+              "type": "weight",
+              "sets": 4,
+              "restSeconds": 45,
+              "cue": "Genişliğin ikinci yarısı. Dirsek hafif kırık, sallanma yok.",
+              "reps": 15,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Yüz çekişi",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Omuz sağlığı; dirsekler yukarı-geri, dış rotasyonla bitir.",
+              "reps": 15,
+              "targetWeightKg": null
+            }
+          ]
+        },
+        {
+          "name": "Genişlik B — yatay ağırlıklı",
+          "exercises": [
+            {
+              "name": "Barbell row",
+              "type": "weight",
+              "sets": 4,
+              "restSeconds": 120,
+              "cue": "Gövde ~45°, barı karın altına. RIR 1-2.",
+              "reps": 8,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Lat pulldown (nötr tutuş)",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 90,
+              "cue": "Nötr tutuş lat'ı farklı açıdan yükler.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Chest-supported dumbbell row",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 75,
+              "cue": "Göğüs banka yaslı — bel devre dışı, sadece sırt.",
+              "reps": 12,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Lateral raise",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Bugün biraz daha hafif, tempo yavaş.",
+              "reps": 15,
+              "targetWeightKg": null
+            },
+            {
+              "name": "Dumbbell reverse fly",
+              "type": "weight",
+              "sets": 3,
+              "restSeconds": 45,
+              "cue": "Arka omuz: genişliği arkadan tamamlar.",
+              "reps": 15,
+              "targetWeightKg": null
+            }
+          ]
+        }
       ]
     }
   ]

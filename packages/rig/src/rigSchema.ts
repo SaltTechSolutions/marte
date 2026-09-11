@@ -14,12 +14,15 @@ import { MUSCLES } from './muscles';
  * testlerin reddettiği veriyi diske yazabilirdi — nitekim yazabiliyordu.
  */
 
-const MODES = ['stand', 'quad', 'bench', 'supine', 'hang'];
+const MODES = ['stand', 'quad', 'bench', 'supine', 'hang', 'seat'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
-const PROPS = ['bench', 'box', 'bar', 'hipbench'];
+const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled', 'cable', 'legpad'];
+const CABLE_FROM = ['high', 'front', 'low', 'back'];
 const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
+/** Figürün dikey dayanağı ZEMİN olan kipler — orada dikey kaydırma yok. */
+export const GROUND_RESTING = ['stand', 'quad', 'supine'];
 
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */
 const POSE_KEYS: (keyof RigPose)[] = [
@@ -27,7 +30,7 @@ const POSE_KEYS: (keyof RigPose)[] = [
   'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
 ];
 
-const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'note', 'kf'];
+const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'footDirFarAdj', 'bodyDx', 'bodyDy', 'propDx', 'propDy', 'cableFrom', 'note', 'kf'];
 
 /**
  * Bir tekrarın en kısa süresi (ms). Testler de bunu okuyor: editörün daha
@@ -65,6 +68,24 @@ export function validateArchetypes(data: unknown): string[] {
     if (e.load !== undefined && !LOADS.includes(e.load as string)) bad(`load "${String(e.load)}" geçersiz`);
     if (e.prop !== undefined && e.prop !== null && !PROPS.includes(e.prop as string)) bad(`prop "${String(e.prop)}" geçersiz`);
     if (e.view !== undefined && !VIEWS.includes(e.view as string)) bad(`view "${String(e.view)}" geçersiz`);
+    if (e.footDir !== undefined && !num(e.footDir)) bad('footDir sayı olmalı');
+    if (e.footDirFarAdj !== undefined && !num(e.footDirFarAdj)) bad('footDirFarAdj sayı olmalı');
+    (['bodyDx', 'bodyDy', 'propDx', 'propDy'] as const).forEach((k) => {
+      if (e[k] !== undefined && !num(e[k])) bad(`${k} sayı olmalı`);
+    });
+    // Dikey kaydırma YALNIZCA figürün dikey dayanağı zemin OLMAYAN kiplerde.
+    // `stand`, `quad` ve `supine` figürü yere oturtuyor; orada yukarı çekmek
+    // figürü havada bırakmaktan başka bir şey yapmıyor ve denetim haklı olarak
+    // şikâyet ediyor. Kontrolün buna izin verip sonra uyarması kullanıcıya
+    // düzeltemediği bir hata bırakıyordu; kural en baştan kesiyor.
+    if (e.bodyDy !== undefined && GROUND_RESTING.includes(e.mode as string)) {
+      bad(`bodyDy "${String(e.mode)}" kipinde anlamsız: figür zemine oturuyor, dikey dayanağı zemin`);
+    }
+    if ((e.propDx !== undefined || e.propDy !== undefined) && (e.prop === undefined || e.prop === null)) {
+      bad('propDx/propDy yalnızca sahne eşyası varken anlamlı');
+    }
+    if (e.cableFrom !== undefined && !CABLE_FROM.includes(e.cableFrom as string)) bad(`cableFrom "${String(e.cableFrom)}" geçersiz (${CABLE_FROM.join(', ')})`);
+    if (e.cableFrom !== undefined && e.prop !== 'cable') bad('cableFrom yalnızca prop "cable" iken anlamlı');
     if (e.note !== undefined && typeof e.note !== 'string') bad('note metin olmalı');
     (['hideFarLeg', 'hideFarArm'] as const).forEach((k) => {
       if (e[k] !== undefined && typeof e[k] !== 'boolean') bad(`${k} doğru/yanlış olmalı`);
@@ -122,7 +143,20 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
 /** Kimlikler ASCII slug: URL'de, dosya adında ve anahtar olarak sorun çıkarmaz. */
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const CATALOG_KEYS = ['name', 'archetype'];
+const CATALOG_KEYS = [
+  'name', 'archetype', 'alt',
+  'en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint', 'steps',
+];
+/** Metin alanları: hepsi ZORUNLU, ikisi boş kalabiliyor (aşağıdaki nota bak). */
+const CATALOG_TEXT = ['en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint'];
+/**
+ * Set ve dinlenme ipucunun boş kalması meşru: ısınma hareketlerinde sayı
+ * vermiyoruz, uygulama "Antrenörün belirler" yazıyor. Ötekiler boş kalırsa
+ * ekranda boşluk görünür — o yüzden boş metin de hata.
+ */
+const CATALOG_TEXT_OPTIONAL = ['setsHint', 'restHint'];
+/** Uygulamanın rozet olarak bastığı dört değer; beşincisi ekranda çıplak kalır. */
+const DIFFICULTIES = ['BAŞLANGIÇ', 'ORTA', 'ORTA-İLERİ', 'İLERİ'];
 const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source', 'reviewed'];
 const STATUSES = ['pending', 'authored'];
 
@@ -151,8 +185,40 @@ export function validateExercises(data: unknown, archetypeKeys: string[]): strin
       if (!CATALOG_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
     });
     if (typeof e.name !== 'string' || e.name.trim() === '') bad('name boş olmayan metin olmalı');
+    // `alt`: salonda söylenen ÖTEKİ ad — birincil Türkçeyse İngilizce
+    // karşılığı, birincil yabancıysa Türkçesi. Arama ve gösterim ikisini de
+    // okuyor; karşılığı olmayan harekette yazılmıyor.
+    if (e.alt !== undefined && (typeof e.alt !== 'string' || e.alt.trim() === '')) bad('alt yazıldıysa boş olmayan metin olmalı');
+    if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) bad('alt ile name aynı');
     if (typeof e.archetype !== 'string') bad('archetype metin olmalı');
     else if (!archetypeKeys.includes(e.archetype)) bad(`archetype "${e.archetype}" rigArchetypes.json'da yok`);
+
+    // Kullanıcının okuduğu metinler. 11 Eylül 2026'ya kadar bunlar
+    // `build_exercise_library.py` içinde sabitti ve antrenörden gelen bir
+    // düzeltme ancak Python düzenlenerek girilebiliyordu. Artık veride, yani
+    // editörden girilebiliyor — ve eksikliği burada, kayıt anında yakalanıyor.
+    CATALOG_TEXT.forEach((alan) => {
+      const v = e[alan];
+      if (typeof v !== 'string') return bad(`${alan} metin olmalı`);
+      if (v.trim() === '' && !CATALOG_TEXT_OPTIONAL.includes(alan)) bad(`${alan} boş olmamalı`);
+    });
+    if (typeof e.difficulty === 'string' && !DIFFICULTIES.includes(e.difficulty)) {
+      bad(`difficulty "${e.difficulty}" tanınmıyor — ${DIFFICULTIES.join(' / ')}`);
+    }
+    if (!Array.isArray(e.steps)) bad('steps dizi olmalı');
+    else if (e.steps.length === 0) bad('steps boş — hareketin nasıl yapıldığı yazılmalı');
+    else {
+      e.steps.forEach((adim: unknown, i: number) => {
+        if (!Array.isArray(adim) || adim.length !== 2 || !strList(adim)) {
+          return bad(`steps[${i}] [türkçe, ingilizce] metin çifti olmalı`);
+        }
+        // Tek dile düşmek ekranda görünür bir kayıp: uygulama her adımın
+        // altında İngilizcesini basıyor (`exercise-detail.tsx`).
+        adim.forEach((m, j) => {
+          if (m.trim() === '') bad(`steps[${i}][${j}] boş`);
+        });
+      });
+    }
   });
 
   // Aynı adın iki kimliğe düşmesi, katalogda bir kopyanın kaçtığını gösterir.

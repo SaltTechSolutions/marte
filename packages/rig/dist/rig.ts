@@ -48,6 +48,16 @@ export const CENTER_X = 210;
  * ayaklar zeminin altında kalır.
  */
 export const BAR_Y = 56;
+/**
+ * Oturma yüksekliği: makinede kalçanın durduğu y.
+ *
+ * Baldır boyu kadar (`B.shin` = 100) zeminin üstünde + ayak kalınlığı payı.
+ * Dik oturan ve ayağı yerde olan bir figürde baldır dikey, uyluk yataydır;
+ * kalça o yüzden tam diz hizasında durur. Bacak presi gibi ayağın havada
+ * olduğu hareketlerde de aynı yükseklik kullanılır — orada zemine basan
+ * bir şey yoktur, referans koltuğun kendisidir.
+ */
+export const SEAT_Y = GROUND - 112;
 
 export const rad = (d: number): number => (d * Math.PI) / 180;
 export const D = (d: number): Vec => [Math.sin(rad(d)), -Math.cos(rad(d))];
@@ -95,10 +105,28 @@ export interface RigKeyframe {
   p: Partial<RigPose>;
 }
 
-export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang';
+export type RigMode = 'stand' | 'quad' | 'bench' | 'supine' | 'hang' | 'seat';
 export type RigArm = 'angles' | 'ik' | 'floor';
 export type RigBar = 'back' | 'hands' | 'hips' | null;
-export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | null;
+/**
+ * Sahnedeki ekipman. Her değer bir İSTASYONU tarif ediyor, tek bir parçayı
+ * değil: `prop` tek değer aldığı için "koltuk + kızak" diye bir bileşim
+ * yazılamıyor ve yalnızca kızağı seçmek figürü koltuksuz, havada bırakıyordu.
+ */
+export type RigProp = 'bench' | 'box' | 'bar' | 'hipbench' | 'seatback' | 'sled' | 'cable' | 'legpad' | null;
+
+/**
+ * Direncin GELDİĞİ yer. Kuvvetin yönünü bu belirliyor, çizim süsü değil:
+ * yanlış seçilirse hareket başka bir hareket gibi okunuyor — göğüs presine
+ * önden kablo koymak onu kürek yapıyordu.
+ *
+ * `high`  baş üstü makara — lat pulldown
+ * `front` önde, el hizasında makara — yüz çekişi
+ * `low`   önde, zemine yakın makara — oturarak kürek (kablo yerden yükselir)
+ * `back`  arkada makara ve İTME KOLU — göğüs presi; direnç öne itişe karşı
+ *         koyar, yani arkadan gelir
+ */
+export type RigCableFrom = 'high' | 'front' | 'low' | 'back';
 
 /**
  * Elde taşınan yük. `bar` barın NEREDE olduğunu söyler (sırtta, elde,
@@ -134,6 +162,42 @@ export interface RigExercise {
   /** Hangi düzlemde okunur: yanal düzlemde çalışan hareketler önden anlaşılır. */
   view?: 'side' | 'front';
   prop?: RigProp;
+  /** Ayak yönü, moda göre varsayılanı ezer (bkz. `footDirOf`). */
+  footDir?: number;
+  /**
+   * Uzak ayağın yönüne eklenen düzeltme payı — derece.
+   *
+   * `footDirFarOf` uzak ayağı baldırdan TÜRETİYOR (bilek sapmayı yutar, artanı
+   * ayak döner). Bu doğru varsayılan ama her harekette isabetli olmuyor; bu
+   * alan o türetmenin üstüne binen elle düzeltme. Mutlak bir yön DEĞİL:
+   * mutlak yazılsaydı tek sayı bütün kareler için sabitlenirdi ve uzak baldır
+   * savrulunca ayak yine bilekten kopardı — düzeltmeye çalıştığımız kusur tam
+   * olarak oydu.
+   */
+  footDirFarAdj?: number;
+  /**
+   * Figürün TAMAMINI kaydırır (dünya birimi). Kadraj, denetim ve iki çizici
+   * aynı iskeleti okuduğu için kaydırma hepsinde birden geçerli.
+   *
+   * Ne için: kip kök noktaları sabit (ayak yerde, kalça koltuk yüksekliğinde)
+   * ve bazı makine hareketlerinde figür sahne eşyasına göre yanlış yerde
+   * kalıyor. Yukarı kaydırmak ayağı yerden kesiyorsa denetim bunu SÖYLER —
+   * kaydırma denetimi susturmuyor, kendisi de denetleniyor.
+   */
+  bodyDx?: number;
+  bodyDy?: number;
+  /**
+   * Sahne eşyasını (sehpa, basamak, kablo, makine) figürden BAĞIMSIZ kaydırır.
+   *
+   * Eşya konumları iskeletten türetiliyor, yani figür kayınca eşya da kayıyor.
+   * Bu alan aradaki bağı gevşetiyor: sehpanın yerini figürü kımıldatmadan
+   * düzeltmek için. Yalnızca çizimi etkiler — iskelet, kadraj ve denetim
+   * eşyayı görmüyor.
+   */
+  propDx?: number;
+  propDy?: number;
+  /** `prop: 'cable'` iken makaranın yeri. Yazılmazsa `'front'`. */
+  cableFrom?: RigCableFrom;
   /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
   note?: string;
   kf: RigKeyframe[];
@@ -350,6 +414,9 @@ const CONTACTS: Record<RigMode, (keyof Skeleton)[]> = {
   bench: [],
   supine: ['pelvis', 'thorax', 'head', 'ankle', 'hand'],
   hang: [],
+  // Oturan figürü yere oturtacak bir temas noktası YOK: referans koltuktur,
+  // zemin değil. `bench` ile aynı gerekçe — kalça sabit, dünya sabit.
+  seat: [],
 };
 
 /**
@@ -409,9 +476,14 @@ export function skeleton(ex: RigExercise, p: RigPose): Skeleton {
   // değil figür yer değiştirir.
   const contacts = CONTACTS[ex.mode];
   const dy = contacts.length ? GROUND - 8 - Math.max(...contacts.map((k) => (S[k] as Vec)[1])) : 0;
+  // Elle kaydırma en sonda: merkezleme ve yere oturtma kendi işini yapsın,
+  // kullanıcının payı onların ÜSTÜNE binsin. Tersi olsaydı yere oturtma
+  // dikey kaydırmayı her karede geri alırdı.
+  const bx = ex.bodyDx ?? 0;
+  const by = ex.bodyDy ?? 0;
   (Object.keys(S) as (keyof Skeleton)[]).forEach((k) => {
     const v = S[k];
-    if (v) (S[k] as Vec) = [v[0] + dx, v[1] + dy];
+    if (v) (S[k] as Vec) = [v[0] + dx + bx, v[1] + dy + by];
   });
   return S;
 }
@@ -439,12 +511,27 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
     knee = sub(ankle, D(p.shinA), B.shin);
     pelvis = sub(knee, D(p.thighA), B.thigh);
   } else {
-    pelvis = ex.mode === 'quad' ? [150, GROUND - 119] : [150, 430];
+    pelvis = ex.mode === 'quad' ? [150, GROUND - 119] : ex.mode === 'seat' ? [150, SEAT_Y] : [150, 430];
     knee = add(pelvis, D(p.thighA), B.thigh);
     ankle = add(knee, D(p.shinA), B.shin);
   }
 
-  const hipF: Vec = [pelvis[0] - 18, pelvis[1] + 3];
+  /**
+   * Uzak kalça, resim düzleminde yakınının biraz GERİSİNDE.
+   *
+   * Tam yandan bakışta iki kalça eklemi aynı noktaya düşer; kaydırma, uzak
+   * bacağın yakınının arkasında olduğunu söyleyen bir okunurluk payıdır.
+   * Payın büyüklüğü örtük bir kamera dönüşü demek: leğen genişliği ≈43 birim
+   * olduğuna göre kayma = 43·sin(θ). Eski değer 18'di, yani θ≈25° — depo
+   * 3/4 ve açılı gösterimden BİLEREK vazgeçmişken (TODOS.md) figüre sessizce
+   * 25°'lik bir dönüş giriyordu ve uzak bacak gövdeden kopmuş gibi, neredeyse
+   * leğenin arka kenarından çıkıyor görünüyordu.
+   *
+   * 7 birim ≈ 9°: bakış yandan kalıyor, derinliği kaydırma değil ton ve
+   * örtüşme taşıyor. Ölçüldü: kaymayı küçültmek ne zemin temasını ne de
+   * `farLegDistinct` kararını hiçbir arketipte değiştiriyor.
+   */
+  const hipF: Vec = [pelvis[0] - 7, pelvis[1] + 2];
   const kneeF = add(hipF, D(p.thighF), B.thigh);
   const ankleF = add(kneeF, D(p.shinF), B.shin);
 
@@ -723,6 +810,57 @@ export function frontTorsoPath(F: FrontPoints): string {
 }
 
 /**
+ * Leğen kütlesi — yandan görünüm.
+ *
+ * Bridgman'ın `Constructive Anatomy`'si gövdeyi ÜÇ değişmez kütleyle kuruyor:
+ * baş, göğüs ve leğen. Leğen için "gövdeye kıyasla epeyce kare" diyor ve
+ * büyüklüğünü gerekçelendiriyor: vücudun mekanik ekseni, gövde ve bacak
+ * kaslarının dayanak noktası. Uyluk kemiğinin başı da "uzun bir boyunla
+ * ibiğin en geniş yerinin dışına taşınıyor" — yani uyluk gövdenin orta
+ * çizgisinden değil, geniş bir leğen bloğundan çıkıyor.
+ *
+ * Çizimde bu kütle YOKTU: parça kipinde bilerek atlanmıştı ("hacmi parçaların
+ * kendisi taşıyor"). Bel parçası kalça ekleminde bitiyor, uyluk parçası aynı
+ * noktadan başlıyordu; ikisi tek noktada değiyordu. Kenar çizgisi görünür
+ * olunca bu değme yeri dikişe dönüştü ve kalça gövdeden kopuk göründü.
+ * Bridgman'ın sözü tam bunun karşıtı: kütleler uç uca gelmez, birbirine
+ * GEÇER ("morticed"). Blok kalça ekleminin altına taşıyor ki uyluk onun
+ * üstüne binsin.
+ */
+export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
+  const dx = lumbar[0] - pelvis[0];
+  const dy = lumbar[1] - pelvis[1];
+  const l = Math.hypot(dx, dy) || 1;
+  // Omurga ekseni ve ona dik eksen: blok figürle birlikte eğiliyor.
+  const uy: Vec = [dx / l, dy / l];
+  const ux: Vec = [-uy[1], uy[0]];
+  const cx = pelvis[0] + uy[0] * 8;
+  const cy = pelvis[1] + uy[1] * 8;
+  // Ön/arka AYRI: ibiğin genişlemesi yanaldır, yandan bakışta leğenin önü
+  // belden daha ileri çıkmaz. Simetrik bir blok kalçanın önünde bir çıkıntı
+  // bırakıyordu. Derinlik arkada: gluteal kütle orada.
+  const FRONT = 20;
+  // Kalça, yandan bakışta figürün EN ÇIKIK ARKA noktasıdır — kullanıcının
+  // verdiği anatomi referansında sırt çizgisi düz iner, çıkıntıyı gluteal
+  // kütle yapar. 27'de sırt hattıyla neredeyse aynı hizadaydı.
+  const BACK = 31;
+  const RY = 25;
+  const pts: Vec[] = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    // Köşeleri yumuşatılmış kare: Bridgman leğen için "gövdeye kıyasla epeyce
+    // kare" diyor, ama keskin köşe siluetin içinde çentik gibi görünüyor.
+    const c = Math.cos(a);
+    const s2 = Math.sin(a);
+    const k = 1 / Math.max(Math.abs(c) ** 2.6 + Math.abs(s2) ** 2.6, 1e-6) ** (1 / 2.6);
+    const px = c * (c >= 0 ? FRONT : BACK) * k;
+    const py = s2 * RY * k;
+    pts.push([cx + ux[0] * px + uy[0] * py, cy + ux[1] * px + uy[1] * py]);
+  }
+  return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
+}
+
+/**
  * Yandan görünümde omzu göğüs kafesine bağlayan deltoid kaması.
  *
  * Omuz topu tek başına çizilince gövdeye teğet geçen bir daire gibi duruyordu.
@@ -871,20 +1009,56 @@ export const MAX_ANKLE_LIFT = Math.round(Math.hypot(FOOT.toe, FOOT.sole) - FOOT.
  * `footPath` ile `footLowestY` bu çerçeveyi PAYLAŞIYOR: ayrı yazılsalardı
  * denetim, çizimin bastığı yerden başka bir yeri ölçerdi.
  */
-function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
+/**
+ * Parmak yerde kalsın diye gereken ek dönüş (radyan).
+ *
+ * `footFrame` ile `footDirFromToe` aynı sayıyı kullanmak zorunda: biri ayağı
+ * çiziyor, öteki çizilen parmak ucundan yönü GERİ çözüyor. İki yerde ayrı
+ * hesaplanırsa tutamak ayağın altından kayar.
+ */
+function footExtra(ankle: Vec, pinToe: boolean): number {
+  if (!pinToe) return 0;
   const r = Math.hypot(FOOT.toe, FOOT.sole);
-  let extra = 0;
-  if (pinToe) {
-    // Parmak yerde kalsın diye gereken ek dönüş.
-    const h = Math.min(r, GROUND - ankle[1]);
-    extra = Math.asin(h / r) - Math.atan2(FOOT.sole, FOOT.toe);
-  }
-  const a = rad(dir) + extra * flip;
+  return Math.asin(Math.min(r, GROUND - ankle[1]) / r) - Math.atan2(FOOT.sole, FOOT.toe);
+}
+
+function footFrame(ankle: Vec, dir: number, pinToe: boolean, flip: number): (u: number, v: number) => Vec {
+  const a = rad(dir) + footExtra(ankle, pinToe) * flip;
   const ux = Math.sin(a);
   const uy = -Math.cos(a);
   const vx = -uy * flip;
   const vy = ux * flip;
   return (u, v) => [ankle[0] + ux * u + vx * v, ankle[1] + uy * u + vy * v];
+}
+
+/**
+ * Ayak TABANININ iki ucu — topuk ve parmak, taban düzleminde.
+ *
+ * Ayağın oturduğu yüzeyi çizen kod bunu bilmek zorunda: bacak presi levhası
+ * tabana düz basmalı. Ayak bileğinden sabit bir mesafe ölçmek yetmiyor —
+ * ayak `FOOT.toe` kadar uzanıyor ve levha parmak ucunun içinden geçiyordu.
+ *
+ * Geometri MOTORDA, çizicide değil: aynı hesabı iki ayrı çizim katmanına
+ * yazmak, `capsule` ve `footPath` için zaten reddedilmiş bir desen.
+ */
+export function solePoints(ankle: Vec, dir: number, pinToe = false, flip = 1): [Vec, Vec] {
+  const P = footFrame(ankle, dir, pinToe, flip);
+  return [P(FOOT.heel, FOOT.sole), P(FOOT.toe, FOOT.sole)];
+}
+
+/**
+ * Parmak ucu `target`'a çekildiğinde hareketin `footDir` değeri ne olmalı?
+ *
+ * `solePoints(...)[1]`'in tersi. Ayak ucu tutamağı bunu kullanıyor: ayak
+ * bileği açısı modelde yok (TODOS.md), yani ayağın yönü kare başına değil
+ * HAREKET başına bir sayı — tutamak `footDir`'i yazar, pozu değil.
+ */
+export function footDirFromToe(ankle: Vec, target: Vec, pinToe = false, flip = 1): number {
+  // Parmak ucu, u ekseninden `atan2(sole, toe)` kadar sapmış duruyor; ayna ve
+  // parmak sabitlemesi de aynı yöne ekleniyor.
+  const off =
+    (flip * (footExtra(ankle, pinToe) + Math.atan2(FOOT.sole, FOOT.toe)) * 180) / Math.PI;
+  return ((angleOf(ankle, target) - off) % 360 + 360) % 360;
 }
 
 /**
@@ -938,6 +1112,154 @@ export function footPath(ankle: Vec, dir: number, pinToe = false, flip = 1): str
  * Dönen değer profil çizimlerinin yerel x eksenine uygulanacak ölçek:
  * `scale(flip, 1)`. Kemik açıları etkilenmez — onlar zaten dünya uzayında.
  */
+/**
+ * Sahne eşyasının kaydırması — iki çizici de bunu tek bir `translate` olarak
+ * uyguluyor. Ayrı ayrı okunsaydı biri güncellenip öteki unutulurdu.
+ */
+export const propShift = (ex: Pick<RigExercise, 'propDx' | 'propDy'>): string =>
+  `translate(${ex.propDx ?? 0} ${ex.propDy ?? 0})`;
+
 export const facingFlip = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? -1 : 1);
 
 export const footDirFor = (mode: RigMode): number => (mode === 'bench' || mode === 'supine' ? 268 : mode === 'quad' ? 250 : 92);
+
+/**
+ * Bu hareketin ayak yönü.
+ *
+ * Varsayılan MODA bağlı: ayakta duran figürün ayağı öne-aşağı bakar. Makine
+ * hareketlerinde bu yetmiyor — bacak presinde taban platforma basar, yani
+ * ayak makinenin açısında durur, ayakta durur gibi değil.
+ *
+ * `footDir` bunun harekete özel geçersiz kılması. Modele ayak bileği AÇISI
+ * eklemiyor: o kare başına değişen bir şey ve `RigPose`'u büyütür
+ * (TODOS.md'de kayıtlı). Bu yalnızca hareket boyunca sabit bir yön —
+ * makinenin eğimi tekrar boyunca değişmiyor.
+ */
+export const footDirOf = (ex: Pick<RigExercise, 'mode' | 'footDir'>): number =>
+  ex.footDir ?? footDirFor(ex.mode);
+
+/**
+ * Ayak bileğinin baldır sapmasını yutabildiği kadar — derece.
+ *
+ * Klinik aralık: dorsifleksiyon ~20°, plantarfleksiyon ~50° (AAOS). Sayılar
+ * normal değil SINIR olarak kullanılıyor; ötesinde ayak baldırla birlikte
+ * dönmek zorunda, çünkü bileğin gidecek yeri kalmıyor.
+ */
+const ANKLE_DORSI = 20;
+const ANKLE_PLANTAR = 50;
+
+/**
+ * Uzak ayağın yönü.
+ *
+ * `footDirOf` hareket başına TEK bir yön veriyor ve o yön yere BASAN ayak için
+ * doğru: düz zeminde ayak yataydır. Uzak ayak için aynı sabiti kullanmak, uzak
+ * baldır savrulduğunda ayağı bilekten kopmuş gibi bırakıyordu — ölçüldü,
+ * sapma `bird_dog`'da 6° (fark edilmiyor) ama `carry`'de 64°, hamlede 107°.
+ * Bu yüzden bazı figürlerde iyi bazılarında kötü görünüyordu.
+ *
+ * Kural: bilek sapmayı yutabildiği kadar yutuyor, artanı ayak dönerek
+ * karşılıyor. Uzak baldır yakınınkiyle aynı açıdaysa sonuç sabitin kendisi,
+ * yani bugünkü davranış; hamlede arka ayak kendiliğinden parmak ucuna kalkıyor.
+ */
+export function footDirFarOf(ex: Pick<RigExercise, 'mode' | 'footDir' | 'footDirFarAdj'>, p: RigPose): number {
+  const base = footDirOf(ex);
+  let drift = ((p.shinF - p.shinA) % 360 + 360) % 360;
+  if (drift > 180) drift -= 360;
+  const absorbed = Math.max(-ANKLE_DORSI, Math.min(ANKLE_PLANTAR, drift));
+  return base + (drift - absorbed) + (ex.footDirFarAdj ?? 0);
+}
+
+/**
+ * Uzak parmak ucu `target`'a çekildiğinde `footDirFarAdj` ne olmalı?
+ *
+ * Yakın ayağın `dragFootDir`'iyle aynı fikir, tek farkı sonucun MUTLAK yön
+ * değil türetmenin üstündeki PAY olması: kullanıcı ayağı istediği yöne çeker,
+ * pay o karede aradaki farkı yakalar ve öteki karelerde de aynı payla durur.
+ */
+export function dragFootDirFar(ex: RigExercise, S: Skeleton, p: RigPose, target: Vec): number {
+  const istenen = angleOf(S.ankleF, target) - 90 * facingFlip(ex.mode);
+  const suanki = footDirFarOf(ex, p);
+  let d = ((istenen - suanki + (ex.footDirFarAdj ?? 0)) % 360 + 360) % 360;
+  if (d > 180) d -= 360;
+  return Math.round(d * 10) / 10;
+}
+
+/* ------------------------------------------------------------------ *
+ * Katman sırası — çizimin TEK ortak sözleşmesi
+ * ------------------------------------------------------------------ */
+
+/**
+ * Figür arkadan öne hangi sırayla çizilir.
+ *
+ * ## Neden burada
+ *
+ * Çizim iki yerde ayrı yazılıyor (editörün tarayıcı SVG'si, uygulamanın
+ * `react-native-svg`'si) ve editörün içinde de iki kere: ana sahne ile telefon
+ * önizlemesi. Üç ayrı gövde, üç ayrı sıra. 11 Eylül 2026'da üç katman hatası
+ * arka arkaya çıktı ve ÜÇÜNÜ DE kullanıcı gözle buldu:
+ *
+ * 1. Halter tabağı gövdenin arkasına çiziliyordu — back squat'ta tabak
+ *    izleyiciye en yakın şeydir.
+ * 2. Yakın kol kafadan önce çiziliyordu — kol kafanın önünden geçen altı
+ *    harekette kafa kolun üstüne biniyordu.
+ * 3. Sahne eşyası en önce çiziliyordu — basamağa çıkmada arka bacak kutunun
+ *    önüne geçiyordu.
+ *
+ * Üçü de aynı kuralın ihlali: **katman sırası yakınlık sırasıdır.** Kural
+ * yorumlarda yazılıydı ama hiçbir yerde VERİ değildi, o yüzden hiçbir test
+ * onu kontrol edemiyordu. Burası o veri. `tests/layerOrder.test.ts` (rig) ve
+ * `RigFigure.layers.test.ts` (uygulama) üç çizim gövdesinin kaynağındaki
+ * `KATMAN` işaretlerini okuyup bu diziyle karşılaştırıyor.
+ *
+ * ## Bunun neyi OLMADIĞI
+ *
+ * Çizim kodu bu diziyi ÇALIŞMA ANINDA okumuyor; okusaydı üç renderer tek
+ * döngüye inerdi ve sözleşme kendiliğinden sağlanırdı. O büyük bir yeniden
+ * yazım ve `react-native-svg` ile tarayıcı SVG'sinin ilkelleri farklı.
+ * Burada seçilen şey daha ucuzu: sıra veri olarak burada, uyum testle
+ * kanıtlanıyor. Ayrışma imkânsız değil, ama sessiz de değil.
+ */
+export const SIDE_LAYERS = [
+  'floor',
+  'fleg',
+  'farm',
+  'dbfar',
+  'props',
+  'torso',
+  'nleg',
+  'head',
+  'narm',
+  'db',
+  'plate',
+] as const;
+
+/** Önden görünüm. `side` iki bacağın (bacak + kol + ağırlık) tek birimi. */
+export const FRONT_LAYERS = ['floor', 'barback', 'side', 'trunk', 'head', 'barhands'] as const;
+
+export type SideLayer = (typeof SIDE_LAYERS)[number];
+export type FrontLayer = (typeof FRONT_LAYERS)[number];
+
+/**
+ * Her katman NEDEN orada.
+ *
+ * Testin sıraya değil GEREKÇEYE bakan yarısı bunu kullanıyor: diziyi
+ * yeniden sıralamak yetmiyor, buradaki kuralı da bozmak gerekiyor. Kayıtsız
+ * bir katman eklemek testi düşürüyor.
+ */
+export const LAYER_WHY: Record<SideLayer | FrontLayer, string> = {
+  floor: 'zemin ve gölge her şeyin altında',
+  fleg: 'uzak bacak figürün arkasında',
+  farm: 'uzak kol figürün arkasında',
+  dbfar: 'uzak elin ağırlığı uzak kolla birlikte, gövdeden önce',
+  props: 'sahne eşyası uzak taraf ile izleyici arasında: arka bacak sehpanın ARKASINDA kalır',
+  torso: 'gövde figürün ana kütlesi, uzak taraftan sonra',
+  nleg: 'yakın bacak gövdenin önünden geçiyor',
+  head: 'kafa gövdeyle birlikte, yakın koldan önce',
+  narm: 'yakın kol izleyici ile kafa arasında: kafayı ÖRTER',
+  db: 'yakın elin ağırlığı o elden sonra',
+  plate: 'yakın haltere tabak izleyiciye en yakın şey; nerede tutulursa tutulsun en üstte',
+  barback: 'sırttaki bar önden görünümde figürün ARKASINDA',
+  side: 'iki taraf (bacak + kol + ağırlık) gövdeden önce',
+  trunk: 'gövde iki taraftan sonra',
+  barhands: 'elde tutulan bar önden görünümde figürün ÖNÜNDE',
+};

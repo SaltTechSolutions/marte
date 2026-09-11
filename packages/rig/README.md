@@ -6,7 +6,8 @@ Hareket figürünün motoru, kare editörü ve mekanik denetimi. Kendi başına
 ```bash
 npm install
 npm run editor      # http://127.0.0.1:8123 — hareketleri düzenle
-npm test            # mekanik denetim + şema + ROM bantları (48 test)
+npm run review      # editörü tek bir HTML'e paketler (dist/review.html)
+npm test            # mekanik denetim + şema + ROM bantları
 npm run export      # uygulamaya devredilecek dosyaları dist/ altına üretir
 ```
 
@@ -115,15 +116,42 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 
 - Eklemi tut ve sürükle. Kemik boyu sabit: eklem hedefe bakan yöne döner.
   Kalçayı sürüklemek iki kemiği birden çözer (çömelme derinliği).
+- **Ayak ucu tutamakları POZUN değil HAREKETİN ayarı**: yakın ayak ucu
+  `footDir`'i, uzak ayak ucu `footDirFarAdj`'ı yazıyor ve ikisi de TÜM
+  karelere birden uygular. Uzak ayağınki mutlak yön değil pay, çünkü o yön
+  her karede baldırdan türetiliyor (bkz. `footDirFarOf`). Uzak ayak ucu
+  yalnızca uzak bacak çiziliyorsa görünür.
+- **Yerleşim paneli** figürü ve sahne eşyasını ayrı ayrı kaydırır
+  (`bodyDx/bodyDy`, `propDx/propDy`). Ayak ucu tutamakları gibi bu da tüm
+  karelere birden uygular. Eşya konumları iskeletten türetildiği için figür
+  kayınca eşya da kayar; eşya kaydırması aradaki bağı gevşetir. Gövdeyi yukarı
+  çekmek ayağı yerden keserse denetim **söyler** — kaydırma denetimi
+  susturmuyor, kendisi de denetleniyor.
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
-- Gölge komşu karelerin izini çizer.
 - Denetim uyarısına tıklamak sorunun yaşandığı ana götürür.
 - `⌘Z` / `⇧⌘Z` / `⌘S`, boşluk oynatır, ok tuşları seçili kaydırıcıyı 1° (Shift
   ile 5°) oynatır. **Diske dön** kaydedilmemiş her şeyi atar.
 
 Kaydet doğrudan `data/rigArchetypes.json` üstüne yazar; değişiklik git
 diff'inde görünür.
+
+### Uzaktan inceleme
+
+`npm run review` editörü **tek bir HTML dosyasına** paketler
+(`dist/review.html`): motor derlenir, `editor/editor.js` esbuild ile
+paketlenir, sunucunun servis ettiği beş JSON sayfaya gömülür ve `fetch`'in
+üstüne bir vekil konur. `editor/editor.js` ve `editor/index.html` HİÇ
+DEĞİŞMEZ — sayfa neyi gösteriyorsa editörün gösterdiği odur.
+
+Ne işe yarar: editör yalnızca 127.0.0.1'i dinliyor. Pozları onaylayacak kişi
+başka bir makinedeyse ekran görüntüsü yetmiyor — geçiş hataları ara karelerde
+yaşıyor ve kaydırılamayan bir tabaka onları gizliyor. Paketlenen sayfa
+herhangi bir yere konabilir ve zaman çubuğu çalışır.
+
+**Kaydetmez.** Sunucu yok, `PUT /data` gidecek bir yer yok; kaydet ve diske
+dön düğmeleri gizlenir. Sürükleme açık kalır — "bu açı 46 değil 52 olmalı"
+demenin yolu açıyı deneyip panelden okumaktır.
 
 ## Denetim kuralları tek yerde
 
@@ -138,6 +166,23 @@ kalça ve gövde. Sayılar "normal aralık" değil **anatomik imkânsızlık** e
 derin çömelme klinik normalleri zaten aşar, onları sınır yapmak doğru
 hareketleri hata sayardı. Omuz, boyun ve ayak bileği tabloda yok; gerekçeleri
 `TODOS.md`'de.
+
+### Katman sırası
+
+Figürün arkadan öne çizim sırası `rig.ts`'de veri: `SIDE_LAYERS` ve
+`FRONT_LAYERS`, her katmanın gerekçesiyle (`LAYER_WHY`). Çizim kodu bunu
+çalışma anında okumuyor — üç ayrı çizim gövdesi var (editörün ana sahnesi,
+telefon önizlemesi, uygulamanın `RigFigure.tsx`'i) ve ikisi farklı SVG
+lehçesi. Bunun yerine her katmanın başında bir `KATMAN` işareti duruyor ve
+iki test (`tests/layerOrder.test.ts` burada, `RigFigure.layers.test.ts`
+uygulamada) bu işaretlerin kaynaktaki sırasını diziyle karşılaştırıyor.
+
+Neden: 11 Eylül 2026'da üç katman hatası arka arkaya çıktı — halter tabağı
+gövdenin arkasında, yakın kol kafanın arkasında, sahne eşyası uzak bacağın
+önünde — ve üçünü de kullanıcı gözle buldu. Üçü de aynı kuralın ihlaliydi
+(**katman sırası yakınlık sırasıdır**) ama kural yalnızca yorumlarda
+yazılıydı. Test sıranın yanında KURALI da denetliyor: diziyi yeniden
+sıralamak yetmiyor, gerekçeyi de bozmak gerekiyor.
 
 Verinin ŞEKLİ ayrı bir soru: `src/rigSchema.ts` yüklenirken ve editör
 kaydederken çalışır. Bilinmeyen bir `mode`, sıfırdan başlamayan bir kare

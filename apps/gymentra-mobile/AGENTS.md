@@ -17,16 +17,17 @@ Ezberden Expo/React Native API'si yazma. SDK 57 birçok API'yi değiştirdi.
 
 ## 1. Referans dosyaları — ne zaman okunmalı
 
-Token verimliliği için bu dosyalar **her oturumda değil, yalnızca ilgili iş
-yapılırken** okunur:
+Karar defteri **her oturumda** okunur; gerisi token verimliliği için
+**yalnızca ilgili iş yapılırken**:
 
 | Dosya | Ne zaman oku |
 |---|---|
-| `../SCHEMA.md` | Veritabanı şeması, koleksiyon ilişkisi, güvenlik kuralı, yeni sorgu veya index işi yaparken. **Veri katmanına dokunan her değişiklikten önce zorunlu.** |
-| `../plan.md` | İyileştirme/hata giderme işine başlarken; bir madde tamamlanınca güncellemek için |
-| `../designplan.md` | UI/UX tasarım işi yaparken |
+| `../../docs/KARAR-DEFTERI.md` | **Her oturumun başında en üstteki üç kayıt** — önceki oturumların kararları ve bilerek yapılmayanlar orada. Oturum sonunda kod değiştiyse kayıt eklenir. |
+| `../../docs/SCHEMA.md` | Veritabanı şeması, koleksiyon ilişkisi, güvenlik kuralı, yeni sorgu veya index işi yaparken. **Veri katmanına dokunan her değişiklikten önce zorunlu.** |
+| `../../docs/plan.md` | İyileştirme/hata giderme işine başlarken; bir madde tamamlanınca güncellemek için |
+| `../../docs/designplan.md` | UI/UX tasarım işi yaparken |
 
-**Şema değiştiyse `SCHEMA.md` aynı commit içinde güncellenir.** Kod ile
+**Şema değiştiyse `docs/SCHEMA.md` aynı commit içinde güncellenir.** Kod ile
 şema dosyası çelişirse kod doğrudur; dosya hemen düzeltilir.
 
 ---
@@ -264,41 +265,35 @@ elle Firestore'a yazmak yerine seed script'ine ekle — yoksa bir sonraki
   demeden önce çalıştığını gör.
 - Geri alınamaz işlemler (production deploy, veri silme, dış servise gönderim)
   öncesinde onay al.
-- Tamamlanan `plan.md` maddelerini işaretle ve altına nasıl çözüldüğünü yaz.
+- Tamamlanan `docs/plan.md` maddelerini işaretle ve altına nasıl çözüldüğünü yaz.
+- Kod değiştiren oturumun sonunda `docs/KARAR-DEFTERI.md`'ye kayıt ekle:
+  ne karara bağlandı, ne bilerek yapılmadı, ne açık kaldı.
 
 ## Kukla editörü (hareket çizimleri)
 
-Hareket figürlerinin açı kareleri `src/data/rigArchetypes.json` içinde ve
-**editörü var**:
+**Editör bu depoda DEĞİL.** Hareket figürünün motoru, kare editörü ve
+mekanik denetimi `packages/rig` içinde yaşıyor:
 
 ```
-npm run rig      # http://127.0.0.1:8123
+cd ../../packages/rig
+npm run editor      # http://127.0.0.1:8123 — hareketleri düzenle, Kaydet
+npm run review      # editörü tek HTML'e paketler (uzaktan inceleme için)
+npm run export -- --to ../../apps/gymentra-mobile
 ```
 
-Hareketi seç, kareyi seç, figürün eklemini sürükle, ekipmanı (kök nokta, bar,
-yük, sahne, düzlem) değiştir, Kaydet. Kaydet doğrudan `rigArchetypes.json`
-üstüne yazar — değişiklik git diff'te görünür.
+Buradaki `src/data/rigArchetypes.json`, `rigExercises.json`, `rigMuscles.json`
+ve `src/utils/rig*.ts` dosyalarının hepsi **ÜRETİLMİŞTİR**; başlarındaki
+"elle düzenleme" satırı ciddidir. Devir TEK YÖNLÜDÜR: burada düzelttiğin bir
+açı bir sonraki `export`ta geri gelir. Poz değişecekse `packages/rig`'te
+değişir, sonra devredilir.
 
-Kullanım notları:
-- **Zaman çubuğu** kareler ARASINI da gösterir. Geçiş hataları orada yaşar
-  (kolun uzun yoldan dönüp yerin içinden geçmesi böyle bulundu). Ara karede
-  düzenleme kapalıdır: o poz hiçbir kareye ait değildir.
-- **Gölge** komşu karelerin izini çizer; çömelmenin dibini yazarken tepesini
-  görmenin tek yolu.
-- **Denetim uyarısına tıklamak** sorunun yaşandığı ana götürür.
-- `⌘Z` geri alır, `⇧⌘Z` ileri alır, `⌘S` kaydeder, boşluk oynatır. Ok tuşları
-  seçili kaydırıcıyı 1° (Shift ile 5°) oynatır.
-- **Diske dön** kaydedilmemiş her şeyi atıp dosyadaki hâle döner.
-- **Uzak bacak / uzak kol** anahtarları yandan görünümde ikinci uzvu gizler.
-  İki tarafı aynı işi yapan hareketlerde (squat, deadlift) uzak bacak derinlik
-  yerine gürültü ekleyebiliyor. Gizleme yalnızca çizimi etkiler: iskelet, yere
-  oturma ve kadraj değişmez, yani figür kımıldamaz.
+> 10 Eylül 2026'da bu bölüm `npm run rig` diye bir komutu tarif ediyordu:
+> `tools/rig-editor/` altında canonical editörün eski bir kopyası vardı ve
+> ÜRETİLMİŞ `rigArchetypes.json`'a yazıyordu — yani tek yön sözleşmesini
+> kıran şeyi belge tavsiye ediyordu. Kopya da komut da silindi.
 
-İki kural:
-
-- **Motor kopyalanmaz.** Editör `src/utils/rig.ts`, `rigEdit.ts` ve
-  `rigAudit.ts` dosyalarını `tsc` ile derleyip çalıştırır; yani uygulamanın
-  çalıştırdığı kodun aynısı. Ayrı bir çizim kopyası yazmak, uygulamada bozuk
-  olanın editörde düzgün görünmesine yol açar — bu iki kez oldu.
-- **Denetim kuralları tek yerde.** `rigAudit.ts` hem testlerde hem editörde
-  çalışır. Editörde kırmızı görünen bir şey testte de düşer.
+Editörün kullanımı, kısayolları ve iki değişmez kuralı (motor kopyalanmaz,
+denetim kuralları tek yerde) `packages/rig/README.md`'de. Uygulama tarafında
+bilinmesi gereken tek şey `RigFigure.tsx`: çizim iki yerde ayrı yazılıyor —
+burada `react-native-svg`, editörde tarayıcı SVG'si — ve **görünüm
+ayrışamaz**. Birinde yapılan çizim düzeltmesi diğerine de yazılır.

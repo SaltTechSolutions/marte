@@ -12,6 +12,7 @@ import {
   TrainerAvailability,
   Payment,
   Program,
+  ProgramTemplate,
   Promotion,
   PtSession,
   Tenant,
@@ -107,8 +108,39 @@ export function programFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): 
     status: data.status,
     exercises: data.exercises ?? [],
     ...(data.days ? { days: data.days } : {}),
+    ...(data.warmup ? { warmup: data.warmup } : {}),
+    ...(data.templateId ? { templateId: data.templateId } : {}),
     createdAt: toDate(data.createdAt) ?? new Date(),
     updatedAt: toDate(data.updatedAt) ?? new Date(),
+  };
+}
+
+/**
+ * Şablonun okunması (PER-18).
+ *
+ * `tenantId` burada BİLEREK `?? null`: global şablonlar alanı hiç yazmıyor
+ * ya da null yazıyor, ve okuma tarafının ikisini ayırt etmesi gerekmiyor —
+ * "salonu yok" tek bir şey demek.
+ */
+export function programTemplateFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): ProgramTemplate {
+  const data = snap.data()!;
+  return {
+    id: snap.id,
+    tenantId: data.tenantId ?? null,
+    category: data.category ?? '',
+    level: data.level ?? 'all',
+    title: data.title ?? snap.id,
+    durationMinutes: data.durationMinutes ?? 0,
+    weeklyFrequency: data.weeklyFrequency ?? '',
+    equipment: data.equipment ?? [],
+    summary: data.summary ?? '',
+    limits: data.limits ?? [],
+    sources: data.sources ?? [],
+    ...(data.warmup ? { warmup: data.warmup } : {}),
+    days: data.days ?? [],
+    ...(typeof data.sessionsPerWeek === 'number' ? { sessionsPerWeek: data.sessionsPerWeek } : {}),
+    ...(data.targets ? { targets: data.targets } : {}),
+    ...(data.goal ? { goal: data.goal } : {}),
   };
 }
 

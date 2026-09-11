@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
-import { B, MAX_ANKLE_LIFT, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
+import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
 import { auditExercise, auditLoop, auditSegments } from '../src/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -21,6 +21,26 @@ describe('rig kinematics', () => {
     const far = ik([0, 0], [0, 900], B.upper, B.fore, 1);
     expect(len([0, 0], far.elbow)).toBeCloseTo(B.upper, 6);
     expect(len(far.elbow, far.hand)).toBeCloseTo(B.fore, 6);
+  });
+
+  // Makine hareketleri (bacak presi, lat pulldown, oturarak kürek…) modelde
+  // yoktu, çünkü "makinede oturuyor" diye bir kök nokta yoktu. `seat` onu
+  // ekliyor: kalça koltuk yüksekliğinde SABİT durur ve zemine oturtulmaz —
+  // bacak presinde ayak zaten havadadır, oraya çekilseydi figür kayardı.
+  it('oturan modda kalça koltuk yüksekliğinde sabit kalır', () => {
+    const ex = {
+      mode: 'seat' as const, arm: 'angles' as const, bar: null,
+      bend: 0, dur: 3000,
+      kf: [
+        { t: 0, tr: 'başla', p: { thighA: 90, shinA: 180, torso: 0 } },
+        { t: 1, tr: 'bitir', p: { thighA: 90, shinA: 120, torso: 0 } },
+      ],
+    };
+    for (let i = 0; i <= 4; i++) {
+      const { p } = poseAt(ex, i / 4);
+      // Kadraj kaydırması yatayda; dikeyde kalça oynamamalı.
+      expect(skeleton(ex, p).pelvis[1], `@${i / 4}`).toBeCloseTo(SEAT_Y, 6);
+    }
   });
 
   it('viewBox tekrar boyunca sabit', () => {
@@ -64,26 +84,9 @@ describe('rig kinematics', () => {
 describe('rig hareket denetimi', () => {
   // Kurallar rigAudit.ts'te: aynı kurallar editörde de canlı çalışıyor, yani
   // burada geçen bir arketip editörde de temiz görünüyor.
-  /**
-   * Bilinen ve KAYITLI tek istisna.
-   *
-   * `carry`'nin uzak bacağı salınım ortasında düzleşiyor (t≈0.35'te diz
-   * neredeyse düz) ve ayak zemine 5.1px giriyor. Nokta yaması işe yaramıyor:
-   * t=0.35/0.65'e kare eklemek en kötüyü 5.1 → 4.9'a indiriyor, çünkü çukur
-   * geniş bir plato. İki açıyı birlikte kaydırmak da ±16° içinde çözüm
-   * vermiyor. Doğru düzeltme salınım boyunca diz bükülme profilini yeniden
-   * yazmak — yürüyüş kurgusu işi, TODOS.md'de kayıtlı.
-   *
-   * İstisna DAR: yalnızca bu arketibin uzak ayak zemin uyarısı. `carry`'de
-   * çıkacak başka her uyarı, ve diğer 29 arketipte çıkacak her uyarı, testi
-   * kırar.
-   */
-  const KAYITLI = (key: string, i: { rule: string; message: string }) =>
-    key === 'carry' && i.rule === 'zemin' && i.message.startsWith('uzak ayak zeminin');
-
   it('her arketip mekanik denetimden geçer', () => {
     entries.forEach(([key, ex]) => {
-      const issues = auditExercise(ex).filter((i) => !KAYITLI(key, i));
+      const issues = auditExercise(ex);
       expect(issues.map((i) => `@${i.t.toFixed(2)} ${i.rule}: ${i.message}`), key).toEqual([]);
     });
   });
@@ -103,8 +106,15 @@ describe('rig hareket denetimi', () => {
   it('tek taraflı hareketler iki bacağı ayrı çalıştırır', () => {
     // Hamle, step-up ve Bulgar split squat'ın tanımı bu: kareler uzak bacağı
     // açıkça yazmazsa iki bacak aynı işi yapar ve hareket çift bacaklı olur.
+    //
+    // Ölçü GERÇEK mesafe, yalnızca dikey fark değil. Eski hâli dikeye bakıyordu
+    // ve hamlede yanlış ateşliyordu: gerçek bir hamlede arka ayağın PARMAĞI
+    // yerde kalır, yani iki ayak bileği neredeyse aynı yükseklikte olur —
+    // ayrışma yatayda, adımın uzunluğunda. Kural yine de amacını koruyor:
+    // uzak bacak yakınının kopyası olsaydı iki bilek arası yalnızca kalça
+    // kaymasi kadar (≈7) olurdu, bugün hamlede 250.
     ['unilateral_lunge', 'step_up', 'bulgarian_split_squat', 'bird_dog'].forEach((key) => {
-      const spread = frames(key).map(({ S }) => Math.abs(S.ankle[1] - S.ankleF[1]));
+      const spread = frames(key).map(({ S }) => Math.hypot(S.ankle[0] - S.ankleF[0], S.ankle[1] - S.ankleF[1]));
       expect(Math.max(...spread), `${key} iki bacak ayrışması`).toBeGreaterThan(40);
     });
   });
@@ -137,7 +147,11 @@ describe('rig hareket denetimi', () => {
   it('uzak bacak yalnızca kendi hareketi varsa görünür', () => {
     // Kural: ikinci bacak birincinin kopyasıysa çizimde bilgi taşımıyor.
     const gorunur = entries.filter(([, ex]) => showFarLeg(ex)).map(([k]) => k);
-    expect(gorunur.sort()).toEqual(['bird_dog', 'bulgarian_split_squat', 'carry', 'step_up', 'unilateral_lunge']);
+    // Sırtüstü ikisi de çapraz çalışıyor: ölü böcekte uzak bacak uzanırken
+    // yakın bacak masa üstünde kalır, McGill curl-up'ta bir diz bükük diğeri düz.
+    expect(gorunur.sort()).toEqual([
+      'bird_dog', 'bulgarian_split_squat', 'carry', 'curl_up_supine', 'dead_bug_supine', 'step_up', 'unilateral_lunge',
+    ]);
     // Yan plank'ta bacaklar bilerek üst üste: ayrı hareket değil, gizli.
     expect(showFarLeg(RIG_ARCHETYPES.side_plank)).toBe(false);
     expect(showFarLeg(RIG_ARCHETYPES.squat)).toBe(false);

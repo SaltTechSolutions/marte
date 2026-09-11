@@ -95,46 +95,57 @@ karar oraya ait.
 
 ---
 
-## Poz modeline derinlik ekseni ekle (3/4 açılı figür)
+## ~~Poz modeline derinlik ekseni ekle (3/4 açılı figür)~~ — VAZGEÇİLDİ
 
-**Ne:** `RigPose`'a bir yatay düzlem (derinlik) ekseni eklemek, `skeleton()`'ın
-izdüşümü hesaplaması ve figürün gerçek 3/4 açıyla çizilebilmesi.
+**Karar (2026-09-10): 3/4 ve açılı gösterimden tamamen vazgeçildi.** Ne
+editörde ne uygulamada açılı figür olmayacak. Bu kayıt ertelenen iş değil
+artık; **reddedilen yön** olarak duruyor ki aynı fikir yeniden keşfedilip
+denenmesin.
 
-**Neden:** Onaylanan mockup B'deki açılı figür motorla üretilemiyor. README'nin
-yazdığı sınır bu: bağımsız bir 3B model yok, gövde rotasyonu poz olarak temsil
-edilemiyor. 2B yan görünümü döndürmek ya da eğmek 3/4 vermiyor — uzuvlar
-kısalmadığı için yamuk bir yan görünüm çıkıyor, derinlik oluşmuyor.
+Kaldırılanlar (`editor/editor.js`): derinlik izdüşümü (`skel3`, `proj`),
+`cmpFigure`'ın `depth` kipi, Karşılaştır ekranındaki "Derinlik denemesi"
+hücresi ve **mobil önizlemedeki perspektif halter**. Sonuncusu bu yönün son
+kalıntısıydı: çubuk derinliğe uzanıyor, uçlardaki tabaklar elips çiziliyordu.
+Uygulama onu hiç çizmiyordu, yani önizleme uygulamayı değil olmayan bir şeyi
+gösteriyordu.
 
-**Bağlam:** `/plan-design-review` 2026-09-06'da B varyantı onaylandı; oradaki
-derinlik hissinin iki kaynağı vardı. Biri **perspektif barbell** (çubuk
-derinliğe uzanıyor, uçlardaki tabaklar elips) ve o yapıldı — mobil önizlemede
-çizim konvansiyonu olarak duruyor. Diğeri figürün kendi açısıydı ve o bu kayda
-kaldı. Kullanıcı bunu bilerek erteledi (2026-09-06).
-
-**UCUZ KESTİRME DENENDİ VE YETMEDİ (2026-09-06).** Uzak uzuvların 2B'deki
-sahte kaydırmasını gerçek bir Z'ye çevirip kamerayı döndürmek denendi; ucuza
-3/4 vereceği sanılmıştı. Ölçüm (standing_row_hinged, 0° → 26°): uyluk
+**Neden vazgeçildi — ölçüm burada kalsın.** Uzak uzuvların 2B'deki sahte
+kaydırmasını gerçek bir Z'ye çevirip kamerayı döndürmek denendi (2026-09-06);
+ucuza 3/4 vereceği sanılmıştı. Ölçüm (`standing_row_hinged`, 0° → 26°): uyluk
 105.0 → 102.4, baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Şekil neredeyse
-hiç değişmiyor. Sebep: poz sagittal düzlemde yazıldığı için bir taraftaki
-bütün eklemler AYNI derinlikte, ve aynı derinlikteki noktaları döndürmek
-onları göreli olarak değiştirmiyor — olan tek şey %10 yatay sıkışma. Deney
-editörün "Karşılaştır" ekranında kanıt olarak duruyor. Bu işin ucuz yolu
-YOK: eklem başına enine düzlem açısı gerekiyor.
+hiç değişmiyor.
 
-**Artı:** Hareketin okunurluğu artar; yan görünümde üst üste binen uzuvlar
-ayrışır. Önden görünümün bugünkü şematik izdüşümü de gerçek bir çözüme kavuşur.
-**Eksi:** En pahalı ve en yayılan değişiklik. Devir sözleşmesini kırar,
-30 arketibin kare verisi etkilenir, `rigAudit`'in ROM bantları yeni eksene de
-bakmak zorunda kalır ve uygulamanın `RigFigure.tsx`'i de yeniden yazılır.
+Sebep yapısal: poz sagittal düzlemde yazıldığı için bir taraftaki bütün
+eklemler AYNI derinlikte, ve aynı derinlikteki noktaları döndürmek onları
+göreli olarak değiştirmiyor — olan tek şey %10 yatay sıkışma. Gerçek 3/4
+eklem BAŞINA enine düzlem açısı ister: yeni poz alanları, 3B denetim,
+uygulamada yeni izdüşüm, 41 arketibin kare verisi ve devir sözleşmesi.
+**Ucuz yolu yok, pahalı yolu da istenmiyor.**
 
-**Bağlı:** Ayak bileği açısı kaydıyla aynı kök sorunda buluşuyor — modelin
-anatomik ifade gücü. İkisi birlikte planlanmalı; ayrı ayrı yapmak `RigPose`'u
-iki kez kırar. Devir sözleşmesinin sürümlenmesi (manifest, 2026-09-06) bu
-değişikliği güvenli kılan ön koşul.
+Figürün okunurluğu bundan sonra 2B içinde çözülür: uzak uzuv gizleme,
+parça siluetleri ve kadraj.
 
 ---
 
-## `carry`: salınan bacak orta noktada düzleşiyor
+## ~~`carry`: salınan bacak orta noktada düzleşiyor~~ — ÇÖZÜLDÜ (2026-09-11)
+
+**Asıl sebep düzleşme değil, TERS BÜKÜLMEYDİ.** Uzak diz salınım ortasında
+−30°'ye iniyordu, yani geriye kırılıyordu; ayak zemine girmesi bunun sonucuydu.
+Görünmemesinin sebebi denetimdeki boşluk: uzak diz bandı `Math.abs` alıp
+yalnızca üst sınırı denetliyordu, işaret mutlak değerin içinde kayboluyordu.
+
+Bant eklendi (`uzak diz ters yönde`, `lo: -15`) ve eklendiği anda İKİ arketibi
+yakaladı: `carry` (−30°) ve `unilateral_lunge` (−26.8°, 7 Eylül'deki zemin
+düzeltmesinden kalan). İkisi de düzeltildi. `carry` üç kare yerine beş kare
+taşıyor ve gerçek bir salınım profili izliyor: diz salınım boyunca bükülü
+kalıyor, en çok erken salınımda (62°), topuk teması öncesi açılıyor (12°).
+
+Sonuç: zemin gömülmesi kalmadı, `tests/rig.test.ts`'teki dar istisna kaldırıldı,
+40 arketip denetimden uyarısız geçiyor.
+
+---
+
+## Eski kayıt — `carry` araştırması
 
 **Nasıl bulundu (2026-09-07).** Yeni `zemin` denetimi — ÇİZİLEN ayağın en alt
 noktasını zeminle karşılaştıran kural — dört arketipte gömülme gösterdi. Üçü

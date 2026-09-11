@@ -1,4 +1,7 @@
-import { B, RigExercise, RigPose, Skeleton, Vec, angleOf, ik } from './rig';
+import {
+  B, RigExercise, RigPose, Skeleton, Vec, angleOf, facingFlip, footDirFarOf, footDirFromToe, footDirOf, ik,
+  showFarLeg, solePoints,
+} from './rig';
 
 /**
  * Figür üstünde sürükleyerek poz verme.
@@ -23,7 +26,9 @@ export type DragJoint =
   | 'kneeF'
   | 'ankleF'
   | 'elbowF'
-  | 'handF';
+  | 'handF'
+  | 'toe'
+  | 'toeF';
 
 export interface DragHandle {
   joint: DragJoint;
@@ -33,8 +38,13 @@ export interface DragHandle {
   far: boolean;
 }
 
-/** Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir. */
-export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
+/**
+ * Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir.
+ *
+ * `p` uzak ayak ucu için gerekiyor: onun yönü sabit değil, o karenin baldır
+ * açısından türetiliyor.
+ */
+export function dragHandles(ex: RigExercise, S: Skeleton, p: RigPose): DragHandle[] {
   const near: [DragJoint, Vec, string][] = [
     ['knee', S.knee, 'Diz'],
     ['ankle', S.ankle, 'Ayak bileği'],
@@ -70,7 +80,23 @@ export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
   // Asılı figürde el barda sabit, kalça zincirin ucu.
   const armsFiltered = ex.mode === 'hang' ? arms.filter(([j]) => j !== 'hand') : arms;
 
+  // Ayak ucu: pozun değil HAREKETİN tutamağı (`footDir`). Ayak yönü tek
+  // sayıyla veriliyordu ve gözle ayarlanamıyordu — makine hareketlerinde ayak
+  // tabanı platforma basmadığı için pozlar saçma duruyordu.
+  const toe: [DragJoint, Vec, string][] = [
+    ['toe', solePoints(S.ankle, footDirOf(ex), false, facingFlip(ex.mode))[1], 'Ayak ucu (tüm kareler)'],
+  ];
+  // Uzak ayak ucu: yönü `footDirFarOf` baldırdan türetiyor, bu tutamak o
+  // türetmenin üstüne binen PAYI yazıyor (`footDirFarAdj`). Yakın ayaktaki
+  // gibi mutlak bir yön yazsaydı tek sayı bütün kareler için sabitlenir ve
+  // uzak baldır savrulunca ayak yine bilekten koparadı.
+  const toeF: [DragJoint, Vec, string][] = showFarLeg(ex)
+    ? [['toeF', solePoints(S.ankleF, footDirFarOf(ex, p), false, facingFlip(ex.mode))[1], 'Uzak ayak ucu (tüm kareler)']]
+    : [];
+
   return [
+    ...toe.map(([joint, at, label]) => ({ joint, at, label, far: false })),
+    ...toeF.map(([joint, at, label]) => ({ joint, at, label, far: true })),
     ...nearFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...armsFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...far.map(([joint, at, label]) => ({ joint, at, label, far: true })),
@@ -94,6 +120,11 @@ export function dragJoint(ex: RigExercise, S: Skeleton, joint: DragJoint, target
       return stand
         ? { shinA: angleOf(target, S.ankle), thighA: angleOf(S.pelvis, target) }
         : { thighA: angleOf(S.pelvis, target), shinA: angleOf(target, S.ankle) };
+
+    // Ayak ucu poza DOKUNMUYOR: `footDir` hareket düzeyinde bir sayı, kare
+    // başına değil. Editör bunu `dragFootDir` ile ayrı yazıyor.
+    case 'toe':
+      return {};
 
     case 'ankle':
       // Ayakta ayak sabit; diğer modlarda baldırın ucu.
@@ -160,4 +191,9 @@ export function applyPatch(frame: Partial<RigPose>, patch: Partial<RigPose>): Pa
     next[k] = k === 'hx' || k === 'hy' || k === 'hxF' || k === 'shLift' || k === 'ankleLift' ? Math.round(v) : tidyAngle(v);
   });
   return next;
+}
+
+/** Ayak ucu tutamağının yeni `footDir` değeri — tam dereceye yuvarlanmış. */
+export function dragFootDir(ex: RigExercise, S: Skeleton, target: Vec): number {
+  return Math.round(footDirFromToe(S.ankle, target, false, facingFlip(ex.mode)));
 }

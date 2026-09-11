@@ -330,19 +330,26 @@ Bkz. `checkinRepo.ts`'deki `resolveAccess`.
 | `memberName` | string | Denormalize |
 | `name` | string | |
 | `status` | `'draft' \| 'active'` | |
-| `exercises` | ProgramExercise[] | Gömülü: `{ id, name, sets, reps, targetWeightKg }` |
+| `exercises` | ProgramExercise[] | Gömülü; çok günlüde `days[0]`'ın aynası |
+| `days` | ProgramDay[]? | Çok günlü program (PER-17). Yoksa program tek günlük |
+| `warmup` | string? | Isınma bloğunun şablon kimliği (`warmup-general`…); **dolu ise** "Antrenmana başla" önce ısınma ekranını getirir. Antrenör kapatınca alan SİLİNİR (`deleteField`), boş metin yazılmaz |
+| `templateId` | string? | Hangi şablondan kopyalandığı — yalnızca köken, canlı bağ değil |
 | `createdAt` / `updatedAt` | Timestamp | |
 
-**Hareket kütüphanesi bağı (PER-19).** Antrenör `trainer/builder`'daki
-seçiciden bir hareket eklediğinde `name` alanına kütüphanenin Türkçe adı
-yazılır (ör. `Goblet squat`). Anlatım ekranı bu **isimden** çözülür
-(`exerciseByName`), ayrı bir `exerciseId` alanı **yoktur**.
+**ProgramExercise** — `{ id, name, sets, reps, targetWeightKg }` artı hepsi
+opsiyonel olan: `libraryId`, `type` (`'weight' | 'reps' | 'time'`),
+`durationSeconds`, `restSeconds`, `cue`. Opsiyonellik zorunlu: alanlar
+gerekli yapılsaydı yazılmış her program ve onları aynalayan her
+`workout_logs` belgesi geçersiz olurdu.
 
-⚠️ **Bunun bedeli:** antrenör ismi elle düzenlerse bağ kopar ve üye o
-hareketin anlatımını kaybeder — sessizce, hata vermeden. Kalıcı çözüm
-`ProgramExercise.exerciseId` alanı eklemek; PER-17'nin model değişikliğiyle
-birlikte yapılmalı (plan.md Kuşak 3). O zamana kadar `exerciseByName` önce
-tam eşleşme, sonra gevşek "içeriyor" eşleşmesi deniyor.
+**Hareket kütüphanesi bağı (PER-19).** Antrenör seçiciden bir hareket
+eklediğinde `libraryId` yazılır; anlatım ekranı önce bunu okur.
+`libraryId` taşımayan ESKİ programlarda bağ hâlâ **isimden** çözülüyor
+(`exerciseByName`: önce tam, sonra gevşek "içeriyor" eşleşmesi, ve
+hareketin bilinen her adı üzerinden — Türkçe, karşılığı ve İngilizcesi).
+
+⚠️ **Eski programlarda bedeli sürüyor:** antrenör ismi elle düzenlerse bağ
+kopar ve üye o hareketin anlatımını kaybeder, sessizce.
 
 **Kurallar:** okuma = programın üyesi veya kiracı personeli. Yazma = kiracı
 personeli; `tenantId` ve `memberId` değişmez.
@@ -350,6 +357,54 @@ personeli; `tenantId` ve `memberId` değişmez.
 **İş kuralı:** üye başına aynı anda en fazla bir `draft` + bir `active`
 program beklenir (`findOrCreateDraftProgram` bunu varsayar) — ancak kurallarla
 zorlanmıyor.
+
+---
+
+### `program_templates` — hazır program şablonları (PER-18)
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` | string \| null | **null = GLOBAL** şablon; dolu = o salonun kendi şablonu |
+| `category` / `level` / `title` | string | `level`: `beginner \| intermediate \| all` |
+| `durationMinutes` | number | |
+| `weeklyFrequency` | string | Serbest metin: "3 gün (A-B-A)" |
+| `equipment` | string[] | |
+| `summary` | string | Şablonun gerekçesi; kanıt burada anlatılıyor |
+| `limits` | string[] | **Boş olamaz** — şablonun ne YAPMADIĞI |
+| `sources` | string[] | Kaynakça kimlikleri; metin `sourceCitations`'ta |
+| `warmup` | string? | Önüne gelen ısınma bloğunun kimliği |
+| `days` | TemplateDay[] | `{ name, exercises: TemplateExercise[] }` |
+| `sessionsPerWeek` | number? | `weeklyFrequency`'nin sayısal hâli; **hipertrofide zorunlu** |
+| `targets` | string[]? | Büyütmeyi vaat ettiği kaslar; **hipertrofide zorunlu** |
+| `goal` | TemplateGoal? | `{ wants, because, pairsWith? }` — hedef keşif katmanı |
+| `isActive` / `sourceVersion` / `disclaimer` / `updatedAt` | | Seed betiği yazıyor |
+
+**TemplateExercise** — `{ name, type, sets, reps?, durationSeconds?,
+restSeconds, cue, targetWeightKg }`. `targetWeightKg` her zaman `null`:
+şablon "kaç kilo" söylemez, "kaç tekrar, kaç dinlenme, nasıl ilerle" söyler.
+
+**Şablon ATANMAZ, KOPYALANIR.** `daysFromTemplate()` şablonu `ProgramDay[]`e
+çevirir ve programa yazar; sonrasında canlı bağ yoktur. Olsaydı kanıt
+güncellendiğinde antrenörün üstünde çalıştığı programın altından veri
+çekilirdi. `templateId` yalnızca kökeni kaydeder.
+
+**Dürüstlük denetimi veri şartıdır.** `backend/scripts/programTemplateAudit.cjs`
+dört kural koşuyor ve `seed_program_templates.cjs` denetimden geçmeyen hiçbir
+şeyi yazmıyor (dry-run'da da çalışır): `limits` boş olamaz; yanlış yönlendiren
+ifade — bölgesel yağ kaybı, inceltme, detoks, "garanti" — yalnızca İNKÂR eden
+cümlede geçebilir; her `sources` anahtarı kök kaynakçada bulunmak zorunda;
+`category: 'hypertrophy'` olan şablon `targets`'taki her kasa haftada en az 10
+birincil set vermek zorunda (sayım `sessionsPerWeek` ile `exercise_muscles.json`
+üstünden). Aynı kurallar `backend/tests/programTemplates.test.ts`'de de koşuyor.
+
+**Kurallar:** okuma = imzalı her kullanıcı (üye de hedef keşfinde başlığı ve
+özeti görüyor; şablonda kişisel veri yok). Yazma = **yalnızca salonun kendi
+şablonlarına**, o salonun personeli. GLOBAL şablonlara istemciden yazma izni
+YOKTUR — onları yalnızca `seed_program_templates.cjs` (admin SDK, kuralları
+atlar) yazar; aksi hâlde kanıta dayalı ortak içeriği herhangi bir salon
+ezebilirdi. `tenantId` güncellemede değişemez.
+
+**Index gerekmiyor:** sorgu tek alanda
+`where('tenantId', 'in', [null, tenantId])`; sıralama istemcide.
 
 ---
 

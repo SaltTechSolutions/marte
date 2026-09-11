@@ -25,6 +25,7 @@ const fs = require('fs');
 const path = require('path');
 const { cert, initializeApp } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { auditTemplates } = require('./programTemplateAudit.cjs');
 
 const SERVICE_ACCOUNT_PATH = path.resolve(__dirname, '../secrets/serviceAccount.json');
 const SEED_PATH = path.resolve(__dirname, 'program_templates.seed.json');
@@ -33,6 +34,21 @@ const apply = process.argv.includes('--apply');
 
 async function main() {
   const seed = JSON.parse(fs.readFileSync(SEED_PATH, 'utf8'));
+
+  // Bilimsel dürüstlük denetimi YAZMADAN ÖNCE ve dry-run'da da çalışıyor.
+  // Aynı kurallar `tests/programTemplates.test.ts`'de de koşuyor; ikilik
+  // bilerek — kural yalnızca testte olsaydı bu betiği elle çalıştıran kişi
+  // onu atlayabilirdi. Global şablonlara istemciden yazma izni yok, yani
+  // buradan geçen metin üyenin gördüğü tek metin.
+  const sorunlar = auditTemplates(seed);
+  if (sorunlar.length) {
+    console.error(`Denetim ${sorunlar.length} sorun buldu — HİÇBİR ŞEY yazılmadı:`);
+    sorunlar.forEach((x) => console.error('  -', x));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`Denetim temiz: ${seed.templates.length} şablon.`);
+
   initializeApp({ credential: cert(JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'))) });
   const db = getFirestore();
 

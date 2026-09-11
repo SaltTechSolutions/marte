@@ -77,6 +77,13 @@ describe('rigSchema — geçerli veri', () => {
     expect(validateArchetypes(ok())).toEqual([]);
   });
 
+  // Şema motorla aynı anda büyümezse editör yeni modu kaydedemez: kayıt yolu
+  // `validateBundle`'dan geçiyor ve geçerli bir arketibi geçersiz sayardı.
+  it('makine hareketleri için oturan mod ve koltuk/kızak destekleri geçerli', () => {
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'seatback' }))).toEqual([]);
+    expect(errs((d) => Object.assign(d.x, { mode: 'seat', prop: 'sled' }))).toEqual([]);
+  });
+
   it('isteğe bağlı alanlar yazılınca da geçiyor', () => {
     expect(
       errs((d) => {
@@ -227,9 +234,20 @@ type Muscles = Record<string, Record<string, unknown>>;
 
 const ARCH_KEYS = Object.keys(rawArchetypes);
 
+/** Kullanıcının okuduğu metinler — kimlik ve arketip dışında katalogda ne varsa. */
+const metin = (en: string) => ({
+  en,
+  difficulty: 'ORTA',
+  equipTr: 'Yok',
+  equipEn: 'None',
+  setsHint: '3×10',
+  restHint: '60-90 sn',
+  steps: [['Dik dur.', 'Stand tall.']],
+});
+
 const catalog = (): Catalog => ({
-  'back-squat': { name: 'Back squat', archetype: 'squat' },
-  plank: { name: 'Plank', archetype: 'plank_prone' },
+  'back-squat': { name: 'Back squat', archetype: 'squat', ...metin('Barbell back squat') },
+  plank: { name: 'Plank', archetype: 'plank_prone', ...metin('Plank') },
 });
 const musclesOf = (c: Catalog): Muscles =>
   Object.fromEntries(Object.keys(c).map((k) => [k, { status: 'pending', primary: [], secondary: [] }]));
@@ -277,6 +295,52 @@ describe('muscles.ts — uygulamanın kas bölgeleri', () => {
   });
 });
 
+describe('rigSchema — kaydırma alanları', () => {
+  // Dikey kaydırma, figürün dikey dayanağı zemin OLMAYAN kiplerde anlamlı.
+  // Ayakta/dört ayak/sırtüstü figür yere oturuyor; orada yukarı çekmek onu
+  // havada bırakmaktan başka bir şey yapmıyor ve kullanıcıya elle
+  // düzeltemediği bir hata bırakıyordu — kural en baştan kesiyor.
+  it('zemine basan kipte dikey kaydırma reddediliyor', () => {
+    (['stand', 'quad', 'supine'] as const).forEach((mode) => {
+      const e = errs((d) => {
+        d.x.mode = mode;
+        d.x.bodyDy = -28;
+      });
+      expect(e.join(' '), mode).toContain('bodyDy');
+    });
+  });
+
+  it('sehpa, koltuk ve asılı kipte dikey kaydırma serbest', () => {
+    (['bench', 'seat', 'hang'] as const).forEach((mode) => {
+      const e = errs((d) => {
+        d.x.mode = mode;
+        d.x.bodyDy = -28;
+      });
+      expect(e.filter((x) => x.includes('bodyDy')), mode).toEqual([]);
+    });
+  });
+
+  it('yatay kaydırma zemine basan kipte de serbest', () => {
+    expect(errs((d) => (d.x.bodyDx = 40))).toEqual([]);
+  });
+
+  it('eşyası olmayan harekette eşya kaydırması reddediliyor', () => {
+    expect(errs((d) => (d.x.propDx = 10)).join(' ')).toContain('propDx/propDy');
+  });
+
+  it('eşya varken eşya kaydırması serbest', () => {
+    expect(errs((d) => {
+      d.x.prop = 'bench';
+      d.x.propDx = 10;
+      d.x.propDy = -6;
+    })).toEqual([]);
+  });
+
+  it('kaydırma alanları sayı olmalı', () => {
+    expect(errs((d) => (d.x.bodyDx = 'sol')).join(' ')).toContain('bodyDx sayı olmalı');
+  });
+});
+
 describe('validateExercises — hareket kataloğu', () => {
   it('gerçek katalog geçiyor', () => {
     expect(validateExercises(rawExercises, ARCH_KEYS)).toEqual([]);
@@ -293,7 +357,18 @@ describe('validateExercises — hareket kataloğu', () => {
     ['name boş', (c) => (c.plank.name = '   '), 'name'],
     ['archetype metin değil', (c) => (c.plank.archetype = 7), 'archetype'],
     ['archetype arketiplerde yok', (c) => (c.plank.archetype = 'yok_boyle'), "rigArchetypes.json'da yok"],
-    ['aynı ad iki kimlikte', (c) => (c['plank-2'] = { name: 'Plank', archetype: 'plank_prone' }), 'birden fazla kimlikte'],
+    ['aynı ad iki kimlikte', (c) => (c['plank-2'] = { name: 'Plank', archetype: 'plank_prone', ...metin('Plank') }), 'birden fazla kimlikte'],
+    // Metin alanları: 11 Eylül 2026'da Python'dan veriye taşındı. Eksikliği
+    // kayıt anında yakalanmazsa hareket uygulamada anlatımsız çıkıyor.
+    ['en yok', (c) => delete c.plank.en, 'en metin olmalı'],
+    ['equipTr boş', (c) => (c.plank.equipTr = '  '), 'equipTr boş olmamalı'],
+    ['equipEn yok', (c) => delete c.plank.equipEn, 'equipEn metin olmalı'],
+    ['difficulty tanınmıyor', (c) => (c.plank.difficulty = 'KOLAY'), 'tanınmıyor'],
+    ['steps yok', (c) => delete c.plank.steps, 'steps dizi olmalı'],
+    ['steps boş dizi', (c) => (c.plank.steps = []), 'steps boş'],
+    ['adım tek dilli', (c) => (c.plank.steps = [['Dik dur.']]), 'metin çifti olmalı'],
+    ['adımın İngilizcesi boş', (c) => (c.plank.steps = [['Dik dur.', '  ']]), 'steps[0][1] boş'],
+    ['bilinmeyen metin alanı', (c) => (c.plank.note = 'iç not'), 'bilinmeyen alan'],
   ];
   cases.forEach(([name, mutate, needle]) => {
     it(`${name} reddediliyor`, () => {
@@ -301,6 +376,16 @@ describe('validateExercises — hareket kataloğu', () => {
       expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
       expect(e.join(' ')).toContain(needle);
     });
+  });
+
+  // Isınma hareketlerinde set/dinlenme sayısı YOK; uygulama "Antrenörün
+  // belirler" yazıyor. Boş metni hata saymak 6 hareketi kaydedilemez yapardı.
+  it('set ve dinlenme ipucu boş kalabiliyor, ama alan duruyor', () => {
+    expect(catErrs((c) => {
+      c.plank.setsHint = '';
+      c.plank.restHint = '';
+    })).toEqual([]);
+    expect(catErrs((c) => delete c.plank.setsHint).join(' ')).toContain('setsHint metin olmalı');
   });
 
   it('nesne olmayan kök ve boş katalog reddediliyor', () => {
@@ -393,11 +478,11 @@ describe('validateBundle — devir paketi', () => {
     });
   });
 
-  it('34 hareket, 30 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
-    expect(Object.keys(rawExercises)).toHaveLength(34);
-    expect(Object.keys(rawArchetypes)).toHaveLength(30);
+  it('45 hareket, 40 arketip — arketip birden çok harekete hizmet edebiliyor', () => {
+    expect(Object.keys(rawExercises)).toHaveLength(45);
+    expect(Object.keys(rawArchetypes)).toHaveLength(40);
     const used = new Set(Object.values(rawExercises as Record<string, { archetype: string }>).map((e) => e.archetype));
-    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(30);
+    expect(used.size, 'her arketip en az bir harekete bağlı olmalı').toBe(40);
   });
 });
 

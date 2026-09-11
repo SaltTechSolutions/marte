@@ -29,13 +29,19 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   [key('diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { thighA: 180, shinA: 155 } },
   // Uzak bacak da aynı sınıra tabi — görünür olduğu hareketlerde.
   [key('uzak diz', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 350 } },
+  // Uzak diz de ters yöne kırılamaz. Bu bant 11 Eylül 2026'da eklendi ve
+  // eklendiği anda İKİ gerçek arketibi yakaladı (`carry` −30°,
+  // `unilateral_lunge` −26.8°): büyüklük bandı mutlak değer aldığı için ters
+  // bükülme yıllarca görünmedi, figür arkadan sakat görünüyordu.
+  [key('uzak diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 155 } },
   // Ön kol pazuya gömülemez. Ters kinematikli kolda açı POZDA YOK, iskeletten
   // geliyor: el hedefini omzun üstüne koymak dirseği tam katlıyor.
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },
   // Kalça öne bu kadar bükülemez.
   [key('kalça', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 20 } },
-  // Kalça geriye bu kadar açılamaz.
-  [key('kalça', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
+  // Kalça geriye bu kadar açılamaz — işaret yalnızca AYAKTA anlamlı olduğu
+  // için prob da ayakta duran bir arketipte.
+  [key('kalça geriye açılma', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
   // Gövde öne bu kadar katlanamaz.
   [key('gövde', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thoraxA: 100 } },
   // Gövde geriye bu kadar açılamaz.
@@ -78,6 +84,26 @@ describe('ROM bantları', () => {
   });
 });
 
+describe('elle kaydırma denetimin dışına çıkamıyor', () => {
+  // `bodyDy` figürü yerden kesebiliyor. Bu daha önce yapısal olarak
+  // imkânsızdı (yere oturtma her karede temas noktasını zemine çekiyordu),
+  // o yüzden kural da yoktu.
+  it('gövdeyi yukarı kaydırmak "figür havada" uyarısı veriyor', () => {
+    const havada = { ...RIG_ARCHETYPES.squat, bodyDy: -40 };
+    const uyari = auditExercise(havada).filter((i) => i.rule === 'temas');
+    expect(uyari.length, 'uyarı bekleniyordu').toBeGreaterThan(0);
+    expect(uyari[0].message).toContain('havada');
+  });
+
+  it('kaydırma yokken aynı arketip temiz', () => {
+    expect(auditExercise(RIG_ARCHETYPES.squat).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+
+  it('basamakta basan ayak kutunun üstünde, uyarı yok', () => {
+    expect(auditExercise(RIG_ARCHETYPES.step_up).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+});
+
 describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   // Eski kural `ex.arm === 'angles'` kapısındaydı ve 30 arketipin 8'inde hiç
   // çalışmıyordu. Kapı kalktı; kaynak da pozdan iskelete taşındı, çünkü ters
@@ -88,9 +114,9 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   const floor = Object.entries(RIG_ARCHETYPES).filter(([, ex]) => ex.arm === 'floor');
 
   it('bandın hiçbir hareket için atlaması yok', () => {
-    // T2'nin doğrudan iddiası: kapı yok, band 30/30 harekette değerlendiriliyor.
+    // T2'nin doğrudan iddiası: kapı yok, band her arketipte değerlendiriliyor.
     expect(dirsek.skip, 'dirsek bandında skip olmamalı').toBeUndefined();
-    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(8);
+    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(11);
   });
 
   ik.forEach(([k, ex]) => {

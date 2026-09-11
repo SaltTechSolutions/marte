@@ -9,10 +9,13 @@ SaltTechSolutions'ın Gymentra ürün monorepo'su. 2026-09-07'de beş ayrı depo
 | `apps/gymentra-site` | Statik site: gizlilik, koşullar, hesap silme | SaltTechSolutions/gymentra-site |
 | `backend` | Firebase arka ucu: Cloud Functions, Firestore/Storage kuralları, bakım scriptleri | SaltTechSolutions/marte06 (web arayüzü kaldırıldı) |
 | `packages/rig` | Antrenman simülatörü: figür motoru, denetim kuralları, kas verisi | Tarki1151/antrenman-simulatoru |
-| `docs` | Plan, şema, mağaza notları | — |
+| `docs` | Karar defteri, plan, şema, mağaza notları | — |
 | `assets/logo` | Logolar | — |
 
 Eski depolar GitHub'da arşivli; geçmişleri burada.
+
+Ajanla çalışıyorsan kök `CLAUDE.md` ile başla; oturum kararları
+`docs/KARAR-DEFTERI.md`'de tutuluyor.
 
 Her uygulama şimdilik kendi `node_modules`'ünü taşıyor; ortak workspace ayrı iş.
 `packages/rig` → `apps/gymentra-mobile` devri hâlâ `npm run export -- --to ../../apps/gymentra-mobile`

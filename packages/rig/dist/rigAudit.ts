@@ -7,7 +7,7 @@ import {
   B,
   MAX_ANKLE_LIFT,
   facingFlip,
-  footDirFor,
+  footDirOf,
   footLowestY,
   FrontSide,
   GROUND,
@@ -90,7 +90,7 @@ interface RomBand {
  * Omuz, boyun ve ayak bileği burada YOK. Omuz ve boyun türetmesi yatık pozlarda
  * klinik açıyla aynı referans eksenini kullanmıyor (`hip_thrust` omuzda −150°
  * okunuyor ve bunun sarmalama hatası mı gerçek sorun mu olduğu belirsiz); ayak
- * bileği ise modelde hiç yok, ayak yönü `footDirFor(mode)` sabiti. Üçü de
+ * bileği ise modelde hiç yok, ayak yönü hareket başına sabit (`footDirOf`). Üçü de
  * TODOS.md'de kayıtlı.
  */
 export const ROM_BANDS: RomBand[] = [
@@ -118,6 +118,18 @@ export const ROM_BANDS: RomBand[] = [
     skip: (ex) => !showFarLeg(ex),
   },
   {
+    rule: 'diz',
+    label: 'uzak diz ters yönde',
+    // Yakın dizin ters yön bandı vardı, uzak dizinki YOKTU: yalnızca büyüklük
+    // denetleniyordu, yani ters bükülme mutlak değerin içinde kayboluyordu.
+    // `carry`'nin salınan bacağı tam bu boşluktan geçiyordu — diz orta
+    // noktada −30°'ye iniyor, yani geriye kırılıyordu, ve figür sakat
+    // görünüyordu. Gerekçe ve eşik yakın dizinkiyle birebir aynı.
+    angle: (p) => norm(p.shinF - p.thighF),
+    lo: -15,
+    skip: (ex) => ex.mode !== 'stand' || !showFarLeg(ex),
+  },
+  {
     rule: 'dirsek',
     label: 'dirsek',
     // Poz DEĞİL iskelet. `arm` 'ik' ya da 'floor' iken kareler `upperA`/`foreA`
@@ -132,9 +144,21 @@ export const ROM_BANDS: RomBand[] = [
     rule: 'kalça',
     label: 'kalça',
     // 0 = uyluk gövdenin uzantısı, pozitif = öne bükülme, negatif = geriye açılma.
+    // Büyüklük her modda anlamlı: 150°'den fazla bükülen kalça yok.
+    angle: (p) => Math.abs(norm(180 - (p.thighA - p.torso))),
+    hi: 150,
+  },
+  {
+    rule: 'kalça',
+    label: 'kalça geriye açılma',
+    // İşaret, dizde olduğu gibi, yalnızca AYAKTA anlamlı. Sırtüstü yatan bir
+    // figürde gövde yönü tersine döndüğü için aynı formül masa üstü poza
+    // (kalça 90° bükülü, ölü böceğin başlangıcı) −90° diyor ve normal bir
+    // hareketi imkânsız sayıyordu. Diz bandı bu ayrımı zaten yapıyor;
+    // gerekçe birebir aynı.
     angle: (p) => norm(180 - (p.thighA - p.torso)),
     lo: -35,
-    hi: 150,
+    skip: (ex) => ex.mode !== 'stand',
   },
   {
     rule: 'gövde',
@@ -190,7 +214,7 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
   // Ölçüldü: `bench_press` ve `incline_press` ayağı 6.4px gömüyordu; diğer 28
   // arketip temizdi. Tolerans 2px, yuvarlama payı.
   {
-    const dir = footDirFor(ex.mode);
+    const dir = footDirOf(ex);
     const flip = facingFlip(ex.mode);
     const pin = ex.prop !== 'box' && p.ankleLift > 0;
     const feet: [string, Vec][] = [['ayak', S.ankle], ...(showFarLeg(ex) ? ([['uzak ayak', S.ankleF]] as [string, Vec][]) : [])];
@@ -198,6 +222,20 @@ export function auditFrame(ex: RigExercise, p: RigPose, t = 0): RigIssue[] {
       const pen = footLowestY(ankle, dir, pin, flip) - GROUND;
       if (pen > 2) add('zemin', `${ad} zeminin ${Math.round(pen)}px altına giriyor`);
     });
+  }
+
+  // Ayakta duran figür yerden KESİLMEMELİ.
+  //
+  // Bu daha önce yapısal olarak imkânsızdı: `skeleton` temas noktasını her
+  // karede zemine oturtuyordu. `bodyDy` (elle kaydırma) o güvenceyi deldi —
+  // figürü yukarı çekmek ayağı havada bırakıyor ve hiçbir kural görmüyordu.
+  // Basamak hariç: orada basan ayak zaten kutunun üstünde.
+  //
+  // Ölçüldü: basamaksız 22 arketipin hepsinde boşluk −1.9 (yani ayak zemine
+  // değiyor); eşik 10 olunca bugünkü veri rahatça geçiyor.
+  if (ex.mode === 'stand' && ex.prop !== 'box') {
+    const bosluk = GROUND - footLowestY(S.ankle, footDirOf(ex), p.ankleLift > 0, facingFlip(ex.mode));
+    if (bosluk > 10) add('temas', `basan ayak zeminden ${Math.round(bosluk)}px yukarıda — figür havada`);
   }
 
   if (ex.mode === 'quad' || ex.mode === 'supine') {

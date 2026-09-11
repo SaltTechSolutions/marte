@@ -51,8 +51,17 @@ export default function WorkoutOverview() {
   const selectedDayId = dayId ?? suggestedDayId(days, lastCompletedDayId(recent));
   const selectedDay = days.find((d) => d.id === selectedDayId) ?? days[0];
 
+  /**
+   * Antrenmana başla — ısınma varsa ÖNCE o gelir (PER-18).
+   *
+   * Isınmalı yolda kayıt burada açılmıyor: ısınma ekranı açıyor. Açsaydı,
+   * ısınmayı görüp vazgeçen üye arkada yarım bir antrenman kaydı bırakırdı.
+   */
   const start = async () => {
     if (!tenantId || !user || !program || !selectedDay || starting) return;
+    if (program.warmup) {
+      return router.push({ pathname: '/member/workout/warmup', params: { dayId: selectedDay.id } });
+    }
     setStarting(true);
     try {
       const logId = await startWorkoutLog(tenantId, user.uid, program, selectedDay);
@@ -74,6 +83,14 @@ export default function WorkoutOverview() {
         <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
           Antrenörün senin için bir program hazırladığında burada göreceksin.
         </Text>
+        {/* Beklerken boş ekran yerine bir şey öğrenmesi mümkün: ne istediğini
+            kendi diliyle seçsin, ne çalışması gerektiğini ve nedenini görsün.
+            Atama yine antrenörde — bu ekran program vermiyor, anlatıyor. */}
+        <Pressable onPress={() => router.push('/member/goals')} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text variant="helper" weight="700" style={{ color: colors.p, textAlign: 'center' }}>
+            Bu arada: ne istediğine bak
+          </Text>
+        </Pressable>
       </View>
     );
   }
@@ -101,6 +118,13 @@ export default function WorkoutOverview() {
         <Text variant="helper" tone="sub">
           {selectedDay?.exercises.length ?? 0} egzersiz{firstExercise ? ` · ${firstExercise.name} ile başlar` : ''}
         </Text>
+        {/* Isınmanın geleceğini önceden söylemek: düğmeye basınca beklenmedik
+            bir ekran çıkmasın. */}
+        {program.warmup ? (
+          <Text variant="label" tone="sub">
+            Önce ısınma bloğu gelir.
+          </Text>
+        ) : null}
         <Button
           label={starting ? '…' : 'Antrenmana başla'}
           critical

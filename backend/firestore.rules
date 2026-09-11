@@ -583,6 +583,27 @@ service cloud.firestore {
       allow delete: if isTenantStaff(resource.data.tenantId);
     }
 
+    // Hazır program şablonları (PER-18).
+    //
+    // İki tür belge aynı koleksiyonda. GLOBAL şablonlar (tenantId == null)
+    // yayımlanmış kılavuzlara dayanır ve yalnızca seed betiğiyle yazılır —
+    // admin SDK kuralları atladığı için burada onlara yazma izni VERİLMİYOR;
+    // istemciden global şablon yazılamaz. Salonun kendi şablonları aynı
+    // koleksiyonda ama tenantId dolu ve o salonun personeline ait.
+    //
+    // Okuma imzalı herkese açık: üye de hedef keşfinde şablon başlığını ve
+    // özetini görüyor. Şablonda kişisel veri yok.
+    match /program_templates/{templateId} {
+      allow read: if isSignedIn();
+      allow create: if request.resource.data.tenantId is string &&
+        isTenantStaff(request.resource.data.tenantId);
+      allow update: if resource.data.tenantId is string &&
+        isTenantStaff(resource.data.tenantId) &&
+        request.resource.data.tenantId == resource.data.tenantId;
+      allow delete: if resource.data.tenantId is string &&
+        isTenantStaff(resource.data.tenantId);
+    }
+
     // A member's own record of actually doing a program. Self-service like
     // check-in's QR flow reasoning doesn't apply here — starting/logging a
     // workout is something only the member themself does, live, mid-session.
