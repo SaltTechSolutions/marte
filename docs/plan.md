@@ -4404,7 +4404,18 @@ zaten PKG-12'nin içindeydi, yeni madde açılmadı.
 | [ ] PER-15 | Üyeden yenileme talebi | 3 | Z-7 |
 | [ ] PER-16 | Duyuru / toplu bildirim (+ promosyonun üyeye görünmesi) | 3 | H-10 |
 | [ ] PER-17 | WORKOUT: çok günlü program + "geçen sefer" | 3 | B-1, B-3 |
-| [ ] PER-18 | Hazır program şablonları (ortak kütüphane + ısınma ön bloğu) — PER-17 ile tek iş | 3 | kullanıcı isteği |
+| [x] PER-18 | Hazır program şablonları (ortak kütüphane + ısınma ön bloğu) — PER-17 ile tek iş | 3 | kullanıcı isteği |
+
+> **PER-18 kapandı — 11 Eylül 2026.** 19 global şablon üretime yazıldı
+> (`seed_program_templates.cjs --apply`; doğrulandı: 19 belge, sınırı
+> yazılmamış 0, hedef katmanında 10 şablon, dört ısınma bloğu). Isınma ön
+> bloğu bağlandı: "Antrenmana başla" önce ısınma ekranını getiriyor,
+> antrenör kurucudan kapatabiliyor, ısınma kayda girmiyor. Şablon metni
+> artık denetimden geçiyor — `limits` zorunlu, yanlış yönlendiren ifade
+> yasak, kaynak zorunlu, hipertrofi hacmi ölçülüyor
+> (`backend/scripts/programTemplateAudit.cjs`, hem testte hem seed yolunda).
+> **Açık kalan:** gerçek antrenör onayı alınmadı — özellikle ekipman
+> listesi (`docs/hareket-adlari-onay.md` tablosu bekliyor).
 | [x] PER-19 | Hareket görselleştirici — 46 hareket, kas haritası + poz kareleri, göz atılabilir liste, personel sorun bildirimi (2 Eylül 2026: kod + kurallar deploy edildi; poz kareleri antrenör onayı bekliyor, atama bağı PER-17'de `exerciseId`'ye taşınacak) | 3 | Claude Design + kullanıcı isteği |
 
 Kuyruğa yazılanlar (P2/P3) "KALAN İŞLER → Kuyruk" altında; ayrı madde

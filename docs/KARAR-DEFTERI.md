@@ -31,6 +31,27 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — 19 program şablonu üretime yazıldı (PER-18 kapandı)
+
+**Yapıldı, kullanıcı onayıyla.** `seed_program_templates.cjs --apply`
+çalıştırıldı; `program_templates` koleksiyonu boştan 19 global belgeye geçti.
+Dürüstlük denetimi yazmadan önce koştu ve temiz çıktı.
+
+**Doğrulandı, varsayılmadı.** Yazımdan sonra üretim tekrar okundu: 19 belge,
+sınırı yazılmamış 0, hedef katmanında görünen 10 şablon, dört ısınma bloğu
+(8/7/7/5 hareket), `abs-beginner` üstünde `limits` 3 madde, `targets`
+absUpper/absMid/absLower, `sessionsPerWeek` 3, beş künye tam metniyle.
+Betiğin ikinci dry-run'ı "19 güncelleme, 0 yeni" diyor — yani hepsi yerinde.
+
+**Açık — gerçek antrenör onayı alınmadı.** Belgenin kendi önerisi bu,
+özellikle ekipman için: Tarabya'da trap bar, ab wheel, chest-supported row
+makinesi var mı bilinmiyor. Onay tablosu `docs/hareket-adlari-onay.md`'de
+hazır. Şablonlar `isActive: true` ile yayında; onay sonrası düzeltme aynı
+betikle üstüne yazılır (idempotent, belge kimliği = şablon kimliği).
+
+**Nerede.** Firestore `program_templates` (üretim), `docs/plan.md` PER-18.
+
+
 ## 2026-09-11 — ısınma ön bloğu bağlandı (PER-18'in karşılıksız sözü)
 
 **Yapıldı.** PER-18 2 Eylül'de "ısınma her programın otomatik ön bloğudur,
