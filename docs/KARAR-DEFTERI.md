@@ -31,6 +31,32 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — önizleme dambılı ve elleri çizmiyordu
+
+**Yapıldı.** Telefon önizlemesi halter tabağını çiziyordu ama DAMBILI hiç
+çizmiyordu — dokuz arketip dambıllı, dokuzunda da ağırlık görünmüyordu. Aynı
+yerde ELLER de eksikti. Sebep kapsamdı: `dumbbellAt` ve `handAt` yardımcıları
+`draw()` içine gömülüydü, `drawPose` (önizleme) onlara erişemiyordu. İkisi de
+modül seviyesine çıkarıldı ve önizleme uygulamadaki sırayla çiziyor: uzak
+ağırlık uzak kolun ardında (gövdeden önce), yakın ağırlık yakın kolun ardında
+(baştan önce). Karşılaştırma ekranına da eklendi.
+
+**Karar.** **Çizim yardımcısı tek bir çizim yolunun içine gömülmez.** Üç yol
+var (ana sahne, telefon önizlemesi, karşılaştırma) ve bir yardımcı birinin
+kapsamında yaşarsa ötekiler onu sessizce atlıyor. Denetlenebilir hâle geldi:
+üç yolun çizdiği ilkel sayıları artık karşılaştırılabiliyor.
+
+**Bilerek yapılmadı.** Üç yolun aynı şeyi çizdiğini doğrulayan otomatik bir
+test yazılmadı: üçü ayrı ayrı DOM/metin üretiyor ve ortak bir "çizim listesi"
+soyutlaması yok. Onu kurmak çizim mimarisini değiştirmek demek; bu turda
+sayım elle karşılaştırıldı.
+
+**Açık.** `drawPose` gövde parçalarını `trunkPart` ile, uygulama `part()` ile
+çiziyor — aynı sonucu veriyorlar ama adlar ayrı; ileride biri değişirse öteki
+sessiz kalır.
+
+**Nerede.** `packages/rig/editor/editor.js` (`dumbbellAt`, `handAt`).
+
 ## 2026-09-11 — dikey kaydırma zemine basan kiplerde kapatıldı
 
 **Yapıldı.** Yeni kaydırma kontrolü kullanıcının elinde hemen kırıldı: `squat`

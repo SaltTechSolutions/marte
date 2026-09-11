@@ -237,6 +237,43 @@ const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
  * Dış disk saydam: 50px yarıçapla kafanın önüne geldiğinde onu tamamen
  * örterdi. Kenar çizgisi tam opak kalıyor ki sınırı belirsizleşmesin.
  */
+/**
+ * El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı kemik dönüşümünü
+ * kullanıyoruz, böylece elin yönü koldan geliyor — daire bunu söyleyemiyordu.
+ *
+ * MODÜL seviyesinde, `dumbbellAt` ile aynı gerekçe: iki çizim yolu da
+ * çağırıyor. `draw()` içine gömülüyken telefon önizlemesi elleri hiç
+ * çizmiyordu.
+ */
+const handAt = (wrist, elbow) => {
+  const dx = wrist[0] - elbow[0];
+  const dy = wrist[1] - elbow[1];
+  const l = Math.hypot(dx, dy) || 1;
+  return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
+};
+
+/**
+ * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin kavradığı
+ * yön bu. Barbell tabağını küçültmek dambıl yapmıyor; iki ayrı ağırlık olduğu
+ * görünmeli.
+ *
+ * MODÜL seviyesinde, çünkü iki çizim yolu da çağırıyor: ana sahne ve telefon
+ * önizlemesi. `draw()` içine gömülüyken önizleme ona erişemiyordu ve dokuz
+ * dambıllı arketipte ağırlık hiç çizilmiyordu — önizleme uygulamayı değil
+ * eksik bir figürü gösteriyordu.
+ */
+const dumbbellAt = (c, from, far) => {
+  const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
+  const fill = far ? css('--skinFar') : css('--metal');
+  const line = css('--line');
+  const accent = css('--p');
+  return [el('g', { transform: `rotate(${deg} ${c[0]} ${c[1]})` }, [
+    el('rect', { x: c[0] - 17, y: c[1] - 4, width: 34, height: 8, rx: 4, fill, stroke: line }),
+    el('rect', { x: c[0] - 25, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
+    el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
+  ])];
+};
+
 const plateAt = (c) => (c ? [
   el('circle', { cx: c[0], cy: c[1], r: 50, fill: css('--metal'), 'fill-opacity': .62, stroke: css('--p'), 'stroke-width': 2 }),
   el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: css('--line'), opacity: .8 }),
@@ -297,6 +334,17 @@ function cmpFigure(e, p, mode) {
     circ(S.elbow, 10),
     { d: handPath(), tf: partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18]) },
   ], skin, edge);
+  // Dambıl da çiziliyor: karşılaştırma ekranı çizim seçeneklerini yan yana
+  // koyuyor ve ağırlığı olmayan bir figür ana sahnedekiyle aynı şey değil.
+  if (e.load === 'dumbbell') {
+    [[S.handF, S.elbowF, skinFar], [S.hand, S.elbow, css('--metal')]].forEach(([c, from, fill]) => {
+      const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
+      g += `<g transform="rotate(${deg} ${c[0]} ${c[1]})">`
+        + `<rect x="${c[0] - 17}" y="${c[1] - 4}" width="34" height="8" rx="4" fill="${fill}" stroke="${line}"/>`
+        + `<rect x="${c[0] - 25}" y="${c[1] - 13}" width="13" height="26" rx="4" fill="${fill}" stroke="${css('--p')}"/>`
+        + `<rect x="${c[0] + 12}" y="${c[1] - 13}" width="13" height="26" rx="4" fill="${fill}" stroke="${css('--p')}"/></g>`;
+    });
+  }
   g += mode === 'capsule'
     ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}"/>`
     : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)"><path d="${headProfile()}" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}" stroke-linejoin="round"/></g>`;
@@ -580,7 +628,11 @@ function drawPose(svg, e, p) {
   }
   if (!e.hideFarArm) {
     far([...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
-         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9)]);
+         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9),
+         handAt(S.handF, S.elbowF)]);
+    // Uzak ağırlık uzak kolun ardında, gövdeden ÖNCE: ikisi de figürün
+    // arkasında. Uygulamadaki sıranın aynısı.
+    if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
@@ -597,7 +649,9 @@ function drawPose(svg, e, p) {
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
     ball(S.elbow, 10),
+    handAt(S.hand, S.elbow),
   ]);
+  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
   push([el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` },
     [el('path', { d: headProfile(), fill: skin, stroke: edge, 'stroke-width': EDGE_W, 'stroke-linejoin': 'round' })])]);
 
@@ -665,24 +719,6 @@ function draw() {
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
   const ball = mkBall();
   const limb = mkLimb();
-  const db = (c, from, far) => {
-    const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
-    const fill = far ? skinFar : metal;
-    return [el('g', { transform: `rotate(${deg} ${c[0]} ${c[1]})` }, [
-      el('rect', { x: c[0] - 17, y: c[1] - 4, width: 34, height: 8, rx: 4, fill, stroke: line }),
-      el('rect', { x: c[0] - 25, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
-      el('rect', { x: c[0] + 12, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
-    ])];
-  };
-  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
-  // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
-  // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
-  const hand = (wrist, elbow) => {
-    const dx = wrist[0] - elbow[0];
-    const dy = wrist[1] - elbow[1];
-    const l = Math.hypot(dx, dy) || 1;
-    return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
-  };
   // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
   // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
   // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
@@ -715,7 +751,7 @@ function draw() {
         ...limb(s.sh, s.elbow, 24, 21, 17, .5), ...limb(s.elbow, s.hand, 18, 18, 12, .3),
         ball(s.elbow, 10), ball(s.hand, 10),
       ]);
-      if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
+      if (e.load === 'dumbbell') push(dumbbellAt(s.hand, s.elbow, false));
     });
     // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
     // omuz silkerken omuz gövdeden kopamıyor. Leğen, gövde, boyun ve iki
@@ -753,9 +789,9 @@ function draw() {
       ...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
       ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'),
       ball(S.elbowF, 9), ball(S.handF, 9),
-      useParts ? hand(S.handF, S.elbowF) : null,
+      useParts ? handAt(S.handF, S.elbowF) : null,
     ]);
-    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
+    if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
@@ -795,9 +831,9 @@ function draw() {
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
     ball(S.elbow, 10),
-    useParts ? hand(S.hand, S.elbow) : ball(S.hand, 10),
+    useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
   ]);
-  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
+  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
