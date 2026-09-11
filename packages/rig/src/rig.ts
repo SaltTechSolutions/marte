@@ -159,6 +159,17 @@ export interface RigExercise {
   prop?: RigProp;
   /** Ayak yönü, moda göre varsayılanı ezer (bkz. `footDirOf`). */
   footDir?: number;
+  /**
+   * Uzak ayağın yönüne eklenen düzeltme payı — derece.
+   *
+   * `footDirFarOf` uzak ayağı baldırdan TÜRETİYOR (bilek sapmayı yutar, artanı
+   * ayak döner). Bu doğru varsayılan ama her harekette isabetli olmuyor; bu
+   * alan o türetmenin üstüne binen elle düzeltme. Mutlak bir yön DEĞİL:
+   * mutlak yazılsaydı tek sayı bütün kareler için sabitlenirdi ve uzak baldır
+   * savrulunca ayak yine bilekten kopardı — düzeltmeye çalıştığımız kusur tam
+   * olarak oydu.
+   */
+  footDirFarAdj?: number;
   /** `prop: 'cable'` iken makaranın yeri. Yazılmazsa `'front'`. */
   cableFrom?: RigCableFrom;
   /** Kareleri yazan kişinin notu — hareketin ne anlatması gerektiği. Çizimi etkilemez. */
@@ -1109,10 +1120,25 @@ const ANKLE_PLANTAR = 50;
  * karşılıyor. Uzak baldır yakınınkiyle aynı açıdaysa sonuç sabitin kendisi,
  * yani bugünkü davranış; hamlede arka ayak kendiliğinden parmak ucuna kalkıyor.
  */
-export function footDirFarOf(ex: Pick<RigExercise, 'mode' | 'footDir'>, p: RigPose): number {
+export function footDirFarOf(ex: Pick<RigExercise, 'mode' | 'footDir' | 'footDirFarAdj'>, p: RigPose): number {
   const base = footDirOf(ex);
   let drift = ((p.shinF - p.shinA) % 360 + 360) % 360;
   if (drift > 180) drift -= 360;
   const absorbed = Math.max(-ANKLE_DORSI, Math.min(ANKLE_PLANTAR, drift));
-  return base + (drift - absorbed);
+  return base + (drift - absorbed) + (ex.footDirFarAdj ?? 0);
+}
+
+/**
+ * Uzak parmak ucu `target`'a çekildiğinde `footDirFarAdj` ne olmalı?
+ *
+ * Yakın ayağın `dragFootDir`'iyle aynı fikir, tek farkı sonucun MUTLAK yön
+ * değil türetmenin üstündeki PAY olması: kullanıcı ayağı istediği yöne çeker,
+ * pay o karede aradaki farkı yakalar ve öteki karelerde de aynı payla durur.
+ */
+export function dragFootDirFar(ex: RigExercise, S: Skeleton, p: RigPose, target: Vec): number {
+  const istenen = angleOf(S.ankleF, target) - 90 * facingFlip(ex.mode);
+  const suanki = footDirFarOf(ex, p);
+  let d = ((istenen - suanki + (ex.footDirFarAdj ?? 0)) % 360 + 360) % 360;
+  if (d > 180) d -= 360;
+  return Math.round(d * 10) / 10;
 }

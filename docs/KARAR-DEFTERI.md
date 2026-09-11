@@ -31,6 +31,31 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — uzak ayak ucu tutamağı
+
+**Yapıldı.** Yakın ayağın ucundaki tutamak (`footDir`) DURUYORDU — 40 arketibin
+hepsinde çiziliyor ve çalışıyor, hiç kaldırılmamış. Eksik olan uzak ayağınkiydi:
+aynı gün eklenen `footDirFarOf` uzak ayağın yönünü baldırdan TÜRETİYOR ve elle
+düzeltilemiyordu. `toeF` tutamağı eklendi.
+
+**Karar.** **Uzak ayak ucu MUTLAK yön değil PAY yazıyor** (`footDirFarAdj`).
+Yakın ayaktaki gibi mutlak yazsaydı tek sayı bütün kareler için sabitlenirdi ve
+uzak baldır savrulunca ayak yine bilekten kopardı — düzeltmeye çalıştığımız
+kusur tam olarak oydu. Pay, türetmenin üstüne biniyor: varsayılan davranış
+korunuyor, elle düzeltme onun üstünde yaşıyor.
+
+Tutamak yalnızca uzak bacak çiziliyorken görünüyor; gizli bir bacağın ayağını
+ayarlamak hiçbir şeyi değiştirmez, ölü tutamak olurdu. `rigEdit.test.ts` bunu
+sınıyor.
+
+**Bilerek yapılmadı.** `dragHandles` imzası poz alacak şekilde genişletildi
+(uzak ayak ucunun yeri kareye bağlı). Alternatif, tutamağı editörde ayrı
+hesaplamaktı; o zaman tutamak listesi iki yerde yaşardı.
+
+**Nerede.** `packages/rig/src/rig.ts` (`footDirFarAdj`, `dragFootDirFar`),
+`packages/rig/src/rigEdit.ts`, `packages/rig/src/rigSchema.ts`,
+`packages/rig/editor/editor.js`, `packages/rig/README.md`.
+
 ## 2026-09-11 — omuz presi oturdu; editör düzenlemeleri kurallarla uzlaştırıldı
 
 **Yapıldı.** `seated_overhead_press` arketibi `mode: 'stand'` ve prop'suzdu:

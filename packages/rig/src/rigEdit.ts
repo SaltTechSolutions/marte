@@ -1,5 +1,6 @@
 import {
-  B, RigExercise, RigPose, Skeleton, Vec, angleOf, facingFlip, footDirFromToe, footDirOf, ik, solePoints,
+  B, RigExercise, RigPose, Skeleton, Vec, angleOf, facingFlip, footDirFarOf, footDirFromToe, footDirOf, ik,
+  showFarLeg, solePoints,
 } from './rig';
 
 /**
@@ -26,7 +27,8 @@ export type DragJoint =
   | 'ankleF'
   | 'elbowF'
   | 'handF'
-  | 'toe';
+  | 'toe'
+  | 'toeF';
 
 export interface DragHandle {
   joint: DragJoint;
@@ -36,8 +38,13 @@ export interface DragHandle {
   far: boolean;
 }
 
-/** Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir. */
-export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
+/**
+ * Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir.
+ *
+ * `p` uzak ayak ucu için gerekiyor: onun yönü sabit değil, o karenin baldır
+ * açısından türetiliyor.
+ */
+export function dragHandles(ex: RigExercise, S: Skeleton, p: RigPose): DragHandle[] {
   const near: [DragJoint, Vec, string][] = [
     ['knee', S.knee, 'Diz'],
     ['ankle', S.ankle, 'Ayak bileği'],
@@ -79,9 +86,17 @@ export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
   const toe: [DragJoint, Vec, string][] = [
     ['toe', solePoints(S.ankle, footDirOf(ex), false, facingFlip(ex.mode))[1], 'Ayak ucu (tüm kareler)'],
   ];
+  // Uzak ayak ucu: yönü `footDirFarOf` baldırdan türetiyor, bu tutamak o
+  // türetmenin üstüne binen PAYI yazıyor (`footDirFarAdj`). Yakın ayaktaki
+  // gibi mutlak bir yön yazsaydı tek sayı bütün kareler için sabitlenir ve
+  // uzak baldır savrulunca ayak yine bilekten koparadı.
+  const toeF: [DragJoint, Vec, string][] = showFarLeg(ex)
+    ? [['toeF', solePoints(S.ankleF, footDirFarOf(ex, p), false, facingFlip(ex.mode))[1], 'Uzak ayak ucu (tüm kareler)']]
+    : [];
 
   return [
     ...toe.map(([joint, at, label]) => ({ joint, at, label, far: false })),
+    ...toeF.map(([joint, at, label]) => ({ joint, at, label, far: true })),
     ...nearFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...armsFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...far.map(([joint, at, label]) => ({ joint, at, label, far: true })),

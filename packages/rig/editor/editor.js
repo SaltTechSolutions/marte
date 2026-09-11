@@ -14,6 +14,7 @@ import {
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
 import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
+import { dragFootDirFar } from '/engine/rig.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
 import { groupsOf, labelsOf } from '/engine/muscles.js';
 
@@ -726,7 +727,7 @@ function draw() {
     ]);
     push([el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: edge, 'stroke-width': EDGE_W })]);
     if (e.bar === 'hands') push(bar());
-    return drawHandles(svg, e, S, view);
+    return drawHandles(svg, e, S, view, p);
   }
 
   drawProps(e, S0, S, push);
@@ -828,7 +829,7 @@ function draw() {
   // tutulsun, YAKIN TABAK en üstte ve saydam.
   if (e.bar) push(plate(S.bar));
 
-  drawHandles(svg, e, S, view);
+  drawHandles(svg, e, S, view, p);
 }
 
 /**
@@ -1013,14 +1014,14 @@ function drawProps(e, S0, S, push) {
 }
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */
-function drawHandles(svg, e, S, view) {
+function drawHandles(svg, e, S, view, p) {
   if (!editable() || view === 'front') return;
   const accent = css('--p');
   const hiddenJoints = new Set([
-    ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF']),
+    ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF', 'toeF']),
     ...(e.hideFarArm ? ['elbowF', 'handF'] : []),
   ]);
-  dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
+  dragHandles(e, S, p).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
     const g = el('g', { class: 'handle', 'data-joint': h.joint });
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 15, fill: 'transparent' }));
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 7, fill: 'none', stroke: accent, 'stroke-width': 2, opacity: h.far ? .5 : 1 }));
@@ -1068,6 +1069,13 @@ function moveDrag(evt) {
   const S = skeleton(e, fillPose(frame().p));
   // Ayak ucu POZU değil hareketi değiştiriyor: `footDir` tek bir sayı ve
   // bütün karelerde geçerli. Modelde ayak bileği açısı yok (TODOS.md).
+  if (dragging === 'toeF') {
+    // Uzak ayak: mutlak yön değil, türetmenin üstündeki PAY yazılıyor.
+    e.footDirFarAdj = dragFootDirFar(e, S, fillPose(frame().p), toWorld(evt));
+    markDirty();
+    renderAll();
+    return;
+  }
   if (dragging === 'toe') {
     e.footDir = dragFootDir(e, S, toWorld(evt));
   } else {

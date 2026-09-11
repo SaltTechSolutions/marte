@@ -116,6 +116,11 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 
 - Eklemi tut ve sürükle. Kemik boyu sabit: eklem hedefe bakan yöne döner.
   Kalçayı sürüklemek iki kemiği birden çözer (çömelme derinliği).
+- **Ayak ucu tutamakları POZUN değil HAREKETİN ayarı**: yakın ayak ucu
+  `footDir`'i, uzak ayak ucu `footDirFarAdj`'ı yazıyor ve ikisi de TÜM
+  karelere birden uygular. Uzak ayağınki mutlak yön değil pay, çünkü o yön
+  her karede baldırdan türetiliyor (bkz. `footDirFarOf`). Uzak ayak ucu
+  yalnızca uzak bacak çiziliyorsa görünür.
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
 - Denetim uyarısına tıklamak sorunun yaşandığı ana götürür.
