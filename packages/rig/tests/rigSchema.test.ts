@@ -229,9 +229,20 @@ type Muscles = Record<string, Record<string, unknown>>;
 
 const ARCH_KEYS = Object.keys(rawArchetypes);
 
+/** Kullanıcının okuduğu metinler — kimlik ve arketip dışında katalogda ne varsa. */
+const metin = (en: string) => ({
+  en,
+  difficulty: 'ORTA',
+  equipTr: 'Yok',
+  equipEn: 'None',
+  setsHint: '3×10',
+  restHint: '60-90 sn',
+  steps: [['Dik dur.', 'Stand tall.']],
+});
+
 const catalog = (): Catalog => ({
-  'back-squat': { name: 'Back squat', archetype: 'squat' },
-  plank: { name: 'Plank', archetype: 'plank_prone' },
+  'back-squat': { name: 'Back squat', archetype: 'squat', ...metin('Barbell back squat') },
+  plank: { name: 'Plank', archetype: 'plank_prone', ...metin('Plank') },
 });
 const musclesOf = (c: Catalog): Muscles =>
   Object.fromEntries(Object.keys(c).map((k) => [k, { status: 'pending', primary: [], secondary: [] }]));
@@ -295,7 +306,18 @@ describe('validateExercises — hareket kataloğu', () => {
     ['name boş', (c) => (c.plank.name = '   '), 'name'],
     ['archetype metin değil', (c) => (c.plank.archetype = 7), 'archetype'],
     ['archetype arketiplerde yok', (c) => (c.plank.archetype = 'yok_boyle'), "rigArchetypes.json'da yok"],
-    ['aynı ad iki kimlikte', (c) => (c['plank-2'] = { name: 'Plank', archetype: 'plank_prone' }), 'birden fazla kimlikte'],
+    ['aynı ad iki kimlikte', (c) => (c['plank-2'] = { name: 'Plank', archetype: 'plank_prone', ...metin('Plank') }), 'birden fazla kimlikte'],
+    // Metin alanları: 11 Eylül 2026'da Python'dan veriye taşındı. Eksikliği
+    // kayıt anında yakalanmazsa hareket uygulamada anlatımsız çıkıyor.
+    ['en yok', (c) => delete c.plank.en, 'en metin olmalı'],
+    ['equipTr boş', (c) => (c.plank.equipTr = '  '), 'equipTr boş olmamalı'],
+    ['equipEn yok', (c) => delete c.plank.equipEn, 'equipEn metin olmalı'],
+    ['difficulty tanınmıyor', (c) => (c.plank.difficulty = 'KOLAY'), 'tanınmıyor'],
+    ['steps yok', (c) => delete c.plank.steps, 'steps dizi olmalı'],
+    ['steps boş dizi', (c) => (c.plank.steps = []), 'steps boş'],
+    ['adım tek dilli', (c) => (c.plank.steps = [['Dik dur.']]), 'metin çifti olmalı'],
+    ['adımın İngilizcesi boş', (c) => (c.plank.steps = [['Dik dur.', '  ']]), 'steps[0][1] boş'],
+    ['bilinmeyen metin alanı', (c) => (c.plank.note = 'iç not'), 'bilinmeyen alan'],
   ];
   cases.forEach(([name, mutate, needle]) => {
     it(`${name} reddediliyor`, () => {
@@ -303,6 +325,16 @@ describe('validateExercises — hareket kataloğu', () => {
       expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
       expect(e.join(' ')).toContain(needle);
     });
+  });
+
+  // Isınma hareketlerinde set/dinlenme sayısı YOK; uygulama "Antrenörün
+  // belirler" yazıyor. Boş metni hata saymak 6 hareketi kaydedilemez yapardı.
+  it('set ve dinlenme ipucu boş kalabiliyor, ama alan duruyor', () => {
+    expect(catErrs((c) => {
+      c.plank.setsHint = '';
+      c.plank.restHint = '';
+    })).toEqual([]);
+    expect(catErrs((c) => delete c.plank.setsHint).join(' ')).toContain('setsHint metin olmalı');
   });
 
   it('nesne olmayan kök ve boş katalog reddediliyor', () => {

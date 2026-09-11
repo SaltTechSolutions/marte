@@ -31,6 +31,44 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — metinler koddan veriye, antrenör adları girildi
+
+**Yapıldı.** Kullanıcıya görünen her metin `build_exercise_library.py`'den
+`packages/rig/data/exercises.json`'a taşındı: `en`, `difficulty`, `equipTr`,
+`equipEn`, `setsHint`, `restHint`, `steps`. Taşıma elle değil, üreticinin
+kendi `EXO` listesini okuyan tek seferlik bir scriptle yapıldı; kanıtı
+üretilen `exerciseLibrary.ts`'in taşımadan sonra BİREBİR aynı çıkması
+(59777 bayt). Üretici bu alanları artık veriden okuyor ve eksik alanda
+duruyor. Editöre metin paneli eklendi ("Metin" düğmesi), `PUT /exercises`
+yolu `exercises.json`'ı yazıyor. Ardından antrenörden gelen tablo
+(`docs/hareket-adlari-arastirma.csv`) uygulandı: 45 Türkçe ad tarif edici
+hâle geldi ve 186 adımlık yeni anlatım girildi.
+
+**Karar.** **Metin veride yaşıyor; düzeltme editörden girilir, Python
+düzenlenmez.** Alan sırası kayıtta sabitleniyor (`orderCatalog`) ki tarayıcı
+yeni alanı sona eklediğinde diff okunmaz olmasın. Adım anlatımlarının
+İngilizcesi bu oturumda ÇEVİRİ ile yazıldı — antrenör onayından geçmedi.
+`squat` yazımı bağlandı (tabloda "squad" geçiyordu).
+
+**Bilerek yapılmadı.** CSV'nin Türkçe anlatımını alıp bugünkü İngilizceyi
+olduğu gibi korumak denenmedi: 45 hareketin 45'inde madde sayısı tutmuyor ve
+içerik örtüşmüyordu, konumsal eşleme her adımın altına başka bir şey söyleyen
+bir İngilizce satır basardı. Adımları tek dile düşürmek de reddedildi —
+`exercise-detail.tsx` her adımın altında İngilizcesini gösteriyor.
+`primary`/`secondary` kasların `rigMuscles.json` ile çiftlenmesine
+dokunulmadı: bu oturumun işi metindi.
+
+**Açık.** (1) Adımların İngilizcesi ve 45 Türkçe adın tamamı antrenör
+onayından geçmedi. (2) 14 harekette eski Türkçe eş ad artık hiçbir alanda
+geçmiyor (ör. "Ölü böcek", "Yüz çekişi"); salon adı yalnızca İngilizce
+alanda duruyor, arama o addan bulmuyor. (3) `exerciseByName`'in gevşek
+eşlemesi adlar tarif ediciye dönünce kırılmıştı; iki yönlü hâle getirildi,
+ama tek kelimelik girişlerde kasıtlı olarak kapalı.
+
+**Nerede.** `packages/rig/data/exercises.json`,
+`backend/scripts/build_exercise_library.py`, `packages/rig/scripts/editor.mjs`,
+`packages/rig/editor/{index.html,editor.js}`, `packages/rig/src/rigSchema.ts`.
+
 ## 2026-09-11 — pushdown kablosu, tek tabak kuralı, metinler için devir notu
 
 **Yapıldı.** Triceps pushdown'a kablo istasyonu verildi (`prop: null`

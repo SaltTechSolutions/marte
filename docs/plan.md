@@ -708,6 +708,16 @@ gerçek antrenör onayı beklenmedi;* antrenör personası incelemesi yapıldı,
 "Antrenör personası incelemesi" bölümü. Gerçek antrenör onayı ekipman
 listesi ve Türkçe hareket adları için hâlâ önerilir.
 
+*Metinler koddan veriye alındı (11 Eylül 2026):* hareketin gördüğü her metin
+— iki ad, İngilizce ad, ekipman, zorluk, set/dinlenme ipucu ve nasıl yapılır
+adımları — artık `packages/rig/data/exercises.json`'da; düzeltme
+`npm run editor` içindeki **Metin** panelinden giriliyor,
+`build_exercise_library.py` düzenlenmiyor. Aynı gün antrenör tablosundaki
+45 Türkçe ad ve 186 adımlık yeni anlatım uygulandı.
+**Açık:** adımların İngilizcesi çeviridir, antrenör onayından geçmedi;
+14 harekette eski Türkçe eş ad (ör. "Ölü böcek") artık hiçbir alanda
+geçmiyor. Ayrıntı `docs/KARAR-DEFTERI.md`, 11 Eylül kaydı.
+
 **15. ~~UX-7 kalanı~~** — tamamlandı (1 Eylül 2026), on ekran.
 
 ### Kuşak 4 — borç ve temizlik

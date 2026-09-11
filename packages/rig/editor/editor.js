@@ -69,6 +69,12 @@ let playT = 0;
 let scrubT = null;
 let dragging = null;
 let dirty = false;
+/** Metinler AYRI dosyaya gidiyor; ayrı kirli bayrağı taşıyorlar. */
+let textsDirty = false;
+/** Metin panelinde seçili hareketin kimliği (arketip değil — hareket). */
+let txtId = null;
+let txtOn = false;
+let txtFilter = '';
 let filter = '';
 /** Mobil önizleme: hangi cihaz ve açık mı. */
 let phoneOn = true;
@@ -111,18 +117,42 @@ const goToTime = (t) => {
   if (near >= 0) { kfIndex = near; scrubT = null; } else { scrubT = t; }
 };
 
-const snapshot = () => {
-  undoStack.push(JSON.stringify(DATA));
+// Poz ve metin TEK yığında: kullanıcı ⌘Z'yi "az önce ne yaptıysam onu geri al"
+// diye biliyor, hangi dosyaya yazdığını değil. İki ayrı yığın, metni düzeltip
+// sonra eklem sürükleyen birinde yanlış hamleyi geri alırdı.
+const takeSnapshot = () => JSON.stringify({ DATA, CATALOG });
+
+const snapshot = (json = takeSnapshot()) => {
+  undoStack.push(json);
   if (undoStack.length > 60) undoStack.shift();
   redoStack.length = 0;
 };
 
 const restore = (json) => {
-  DATA = JSON.parse(json);
+  const snap = JSON.parse(json);
+  DATA = snap.DATA;
+  CATALOG = snap.CATALOG;
+  rebuildNames();
   if (!DATA[key]) key = Object.keys(DATA)[0];
+  if (!CATALOG[txtId]) txtId = null;
   kfIndex = Math.min(kfIndex, ex().kf.length - 1);
   renderAll();
+  // Panel açıksa geri alınan metin EKRANDA da dönmeli: `renderAll` sahneyi
+  // çiziyor, metin panelini değil.
+  if (txtOn) renderTexts();
 };
+
+/**
+ * Katalog kimlik başına (`walking-lunge` → ad + arketip); sol liste ise arketip
+ * başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
+ * (unilateral_lunge üç hareket) ters çeviriyoruz.
+ */
+function rebuildNames() {
+  NAMES = {};
+  for (const e of Object.values(CATALOG)) {
+    (NAMES[e.archetype] ||= []).push(e.name);
+  }
+}
 
 // --- çizim ---------------------------------------------------------------
 
@@ -983,6 +1013,13 @@ window.addEventListener('mouseup', endDrag);
 
 // --- paneller ------------------------------------------------------------
 
+function markTextsDirty() {
+  textsDirty = true;
+  $('savedMsg').textContent = 'kaydedilmedi';
+  $('savedMsg').style.color = css('--warn');
+  syncHistoryButtons();
+}
+
 function markDirty() {
   dirty = true;
   $('savedMsg').textContent = 'kaydedilmedi';
@@ -1303,6 +1340,242 @@ $('kfTime').onchange = () => {
 $('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
 $('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
 
+// --- metin paneli --------------------------------------------------------
+//
+// Kullanıcının okuduğu her metin — iki ad, İngilizce ad, ekipman, zorluk,
+// set/dinlenme ipucu ve nasıl yapılır adımları — 11 Eylül 2026'ya kadar
+// `backend/scripts/build_exercise_library.py` içinde SABİTTİ: antrenörden
+// gelen bir düzeltme ancak Python düzenlenerek girilebiliyordu. Artık
+// `data/exercises.json`'da ve burada düzenleniyor.
+//
+// Çizim notu (`note`) bilerek YOK: o iç not, uygulamaya gitmiyor.
+
+const ZORLUKLAR = ['BAŞLANGIÇ', 'ORTA', 'ORTA-İLERİ', 'İLERİ'];
+
+/** Panelde düzenlenen alanlar; sıra ekranda göründüğü sıra. */
+const TXT_FIELDS = [
+  { k: 'name', label: 'Türkçe ad', not: 'Listede ve başlıkta görünen ad.' },
+  { k: 'alt', label: 'Alt ad', ops: true,
+    not: 'Salonda söylenen ÖTEKİ ad. Karşılığı yoksa boş bırak — kimsenin söylemediği bir ad yoktan kötüdür.' },
+  { k: 'en', label: 'İngilizce ad', not: 'Alt ad boşsa uygulamada onun yerine bu görünüyor.' },
+  { k: 'difficulty', label: 'Zorluk', secim: ZORLUKLAR },
+  { k: 'equipTr', label: 'Ekipman (TR)' },
+  { k: 'equipEn', label: 'Ekipman (EN)' },
+  { k: 'setsHint', label: 'Set ipucu', ops: true, not: 'Boş bırakılırsa uygulama "Antrenörün belirler" yazıyor.' },
+  { k: 'restHint', label: 'Dinlenme ipucu', ops: true },
+];
+
+const entry = () => CATALOG[txtId];
+
+/** Kayıtta sunucunun reddedeceği şeyi kullanıcı ÖNCE burada görsün. */
+function txtProblem(e) {
+  if (!e) return null;
+  for (const f of TXT_FIELDS) {
+    const v = e[f.k];
+    if (f.ops) continue;
+    if (typeof v !== 'string' || v.trim() === '') return `${f.label} boş`;
+  }
+  if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) return 'Alt ad ile Türkçe ad aynı';
+  if (!ZORLUKLAR.includes(e.difficulty)) return `Zorluk "${e.difficulty}" tanınmıyor`;
+  if (!Array.isArray(e.steps) || e.steps.length === 0) return 'Adım yok';
+  const bos = e.steps.findIndex((a) => !a[0] || !a[0].trim() || !a[1] || !a[1].trim());
+  if (bos >= 0) return `${bos + 1}. adımın bir dili boş`;
+  return null;
+}
+
+function renderTxtList() {
+  const host = $('txtList');
+  host.innerHTML = '';
+  Object.keys(CATALOG).forEach((id) => {
+    const e = CATALOG[id];
+    const hay = `${e.name} ${e.alt || ''} ${e.en || ''} ${id}`.toLowerCase();
+    if (txtFilter && !hay.includes(txtFilter)) return;
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', String(id === txtId));
+    const sorun = txtProblem(e);
+    b.innerHTML =
+      (sorun ? '<span class="edited">!</span>' : '') +
+      `<b>${esc(e.name)}</b><small>${esc(id)}</small>`;
+    if (sorun) b.title = sorun;
+    b.onclick = () => { txtId = id; renderTexts(); };
+    host.appendChild(b);
+  });
+  if (!host.children.length) host.innerHTML = '<p class="hint">Eşleşen hareket yok.</p>';
+}
+
+const esc = (v) =>
+  String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function renderTxtForm() {
+  const host = $('txtForm');
+  const e = entry();
+  if (!e) {
+    host.innerHTML = '<p class="empty">Soldan bir hareket seç.</p>';
+    return;
+  }
+  host.innerHTML = '';
+
+  const grp = (baslik, ic) => {
+    const d = document.createElement('div');
+    d.className = 'grp';
+    d.innerHTML = `<h3>${baslik}</h3>${ic}`;
+    host.appendChild(d);
+    return d;
+  };
+
+  // --- adlar ve sınıflama ---
+  const fieldHtml = (f) => {
+    const v = e[f.k] ?? '';
+    const giris = f.secim
+      ? `<select data-fld="${f.k}">${f.secim.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+      : `<input type="text" data-fld="${f.k}" value="${esc(v)}">`;
+    return `<div class="fld"><label>${f.label}</label>${giris}${f.not ? `<p class="note">${f.not}</p>` : ''}</div>`;
+  };
+  grp('Adlar', TXT_FIELDS.slice(0, 3).map(fieldHtml).join(''));
+  grp('Sınıflama', TXT_FIELDS.slice(3).map(fieldHtml).join(''));
+
+  // --- adımlar ---
+  const steps = Array.isArray(e.steps) ? e.steps : (e.steps = []);
+  const adimlar = grp(
+    'Nasıl yapılır',
+    steps.map((a, i) => `
+      <div class="step">
+        <span class="no">${i + 1}.</span>
+        <div class="pair">
+          <textarea rows="2" data-step="${i}" data-lang="0" placeholder="Türkçe">${esc(a[0])}</textarea>
+          <textarea rows="2" data-step="${i}" data-lang="1" placeholder="English">${esc(a[1])}</textarea>
+        </div>
+        <div class="ops">
+          <button data-move="${i}" data-dir="-1" title="Yukarı"${i === 0 ? ' disabled' : ''}>↑</button>
+          <button data-move="${i}" data-dir="1" title="Aşağı"${i === steps.length - 1 ? ' disabled' : ''}>↓</button>
+          <button data-del="${i}" title="Adımı sil">✕</button>
+        </div>
+      </div>`).join('') +
+    // Adımlar TR+EN kalıyor: uygulama her adımın altında İngilizcesini
+    // basıyor (`exercise-detail.tsx`), tek dile düşmek ekranda görünür bir
+    // kayıp olurdu.
+    (steps.length ? '' : '<p class="empty">Adım yok — hareketin nasıl yapıldığı yazılmalı.</p>') +
+    '<p class="note" style="grid-column:1">Her adım iki dilli: uygulama Türkçesinin altında İngilizcesini gösteriyor.</p>' +
+    '<button id="addStep">+ Adım ekle</button>',
+  );
+
+  // --- bağlama ---
+  host.querySelectorAll('[data-fld]').forEach((el) => {
+    el.oninput = () => {
+      beginTextEdit();
+      const f = el.dataset.fld;
+      const v = el.value;
+      // `alt` YAZILDIYSA boş olamaz: boşaltmak "karşılığı yok" demek, o da
+      // alanın hiç bulunmaması demek.
+      if (f === 'alt' && v.trim() === '') delete e.alt;
+      else e[f] = v;
+      afterTextEdit(f === 'name');
+    };
+  });
+  host.querySelectorAll('[data-step]').forEach((el) => {
+    el.oninput = () => {
+      beginTextEdit();
+      steps[Number(el.dataset.step)][Number(el.dataset.lang)] = el.value;
+      afterTextEdit(false);
+    };
+  });
+  host.querySelectorAll('[data-move]').forEach((el) => {
+    el.onclick = () => {
+      commitTextEdit();
+      snapshot();
+      const i = Number(el.dataset.move);
+      const j = i + Number(el.dataset.dir);
+      [steps[i], steps[j]] = [steps[j], steps[i]];
+      markTextsDirty();
+      renderTexts();
+    };
+  });
+  host.querySelectorAll('[data-del]').forEach((el) => {
+    el.onclick = () => {
+      commitTextEdit();
+      snapshot();
+      steps.splice(Number(el.dataset.del), 1);
+      markTextsDirty();
+      renderTexts();
+    };
+  });
+  adimlar.querySelector('#addStep').onclick = () => {
+    commitTextEdit();
+    snapshot();
+    steps.push(['', '']);
+    markTextsDirty();
+    renderTexts();
+    const son = host.querySelector(`[data-step="${steps.length - 1}"]`);
+    if (son) son.focus();
+  };
+}
+
+/**
+ * Tuş başına geri alma kaydı almıyoruz: her harf bir yığın girdisi olurdu ve
+ * ⌘Z bir kelimeyi geri almak için otuz kez basılırdı. Kayıt alana GİRİLDİĞİNDE
+ * alınıp, değer gerçekten değiştiyse yığına düşüyor — kaydı `change` anında
+ * almak yazılmış hâli saklardı ve ⌘Z hiçbir şeyi geri almazdı.
+ */
+/** Alana ilk dokunuşta, veriyi DEĞİŞTİRMEDEN önce alınan kayıt. */
+let txtBefore = null;
+const beginTextEdit = () => { if (txtBefore === null) txtBefore = takeSnapshot(); };
+/** Bekleyen kaydı yığına indirir; bekleyen yoksa hiçbir şey yapmaz. */
+const commitTextEdit = () => {
+  if (txtBefore === null) return;
+  snapshot(txtBefore);
+  txtBefore = null;
+  syncHistoryButtons();
+};
+
+function afterTextEdit(adDegisti) {
+  markTextsDirty();
+  renderTxtList();
+  if (adDegisti) {
+    rebuildNames();
+    renderExList();
+    renderPhone();
+  }
+}
+
+function renderTexts() {
+  renderTxtList();
+  renderTxtForm();
+}
+
+$('texts').onclick = () => {
+  // Panel açılırken sahnedeki arketibi kullanan ilk harekete düşüyor: iki
+  // seçim birbirinden kopuk kalırsa kullanıcı aradığı hareketi elle bulur.
+  if (!txtId || CATALOG[txtId].archetype !== key) {
+    txtId = Object.keys(CATALOG).find((id) => CATALOG[id].archetype === key) || Object.keys(CATALOG)[0] || null;
+  }
+  txtOn = true;
+  $('txt').classList.add('on');
+  renderTexts();
+};
+
+const closeTxt = () => {
+  // Alandan çıkılmadan kapatılırsa `change` düşmüyor; bekleyen kaydı burada
+  // indiriyoruz ki yazılan metin geri alınabilir kalsın.
+  commitTextEdit();
+  txtOn = false;
+  $('txt').classList.remove('on');
+};
+$('txtClose').onclick = closeTxt;
+$('txtSearch').oninput = () => { txtFilter = $('txtSearch').value.trim().toLowerCase(); renderTxtList(); };
+// Metin alanında Esc yazmayı kesmesin diye panel kapanışı #cmp ile aynı
+// kuralda: yalnızca panel açıkken ve odak bir girdide değilken.
+window.addEventListener('keydown', (evt) => {
+  if (evt.key === 'Escape' && txtOn && !/^(INPUT|TEXTAREA|SELECT)$/.test(evt.target.tagName)) closeTxt();
+});
+const isField = (el) => /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+// Kayıt ODAKA değil, İLK DEĞİŞİKLİĞE bağlı. Odak olaylarına bağlamak
+// kırılgandı: odak `focusin` doğurmadan da alana düşebiliyor (pencere arkada
+// olduğunda `el.focus()` böyle davranıyor), o zaman kayıt hiç alınmıyor ve
+// kullanıcı metin düzeltmesini geri alamıyordu — sessizce.
+$('txt').addEventListener('change', (evt) => {
+  if (isField(evt.target)) commitTextEdit();
+}, true);
+
 $('compare').onclick = () => {
   cmpOn = true;
   $('cmp').classList.add('on');
@@ -1319,30 +1592,47 @@ $('parts').onclick = () => {
   draw();
 };
 
+// Karşı yığına giden kayıt da POZ + METİN: yalnızca pozu saklamak, ileri
+// alındığında kataloğu tanımsız bırakırdı.
+//
+// Geri alınan hamlenin hangi dosyaya ait olduğunu bilmiyoruz, o yüzden ikisi de
+// kirli işaretleniyor. Değişmemiş dosya kaydedildiğinde birebir aynı baytlarla
+// yazılıyor — git'te görünmüyor, yani fazladan kayıt zararsız.
 $('undo').onclick = () => {
   if (!undoStack.length) return;
-  redoStack.push(JSON.stringify(DATA));
+  redoStack.push(takeSnapshot());
   restore(undoStack.pop());
   markDirty();
+  markTextsDirty();
 };
 
 $('redo').onclick = () => {
   if (!redoStack.length) return;
-  undoStack.push(JSON.stringify(DATA));
+  undoStack.push(takeSnapshot());
   restore(redoStack.pop());
   markDirty();
+  markTextsDirty();
 };
 
 $('revert').onclick = async () => {
-  if (dirty && !confirm('Kaydedilmemiş değişiklikler atılacak. Diskteki hâline dönülsün mü?')) return;
+  if ((dirty || textsDirty) && !confirm('Kaydedilmemiş değişiklikler atılacak. Diskteki hâline dönülsün mü?')) return;
   snapshot();
-  DATA = await (await fetch('/data')).json();
+  // Metinler de diskten geri geliyor: yalnızca pozları tazelemek, panelde
+  // yazılmış ama atılmış bir metni ekranda bırakırdı.
+  [DATA, CATALOG] = await Promise.all([
+    fetch('/data').then((r) => r.json()),
+    fetch('/exercises').then((r) => r.json()),
+  ]);
+  rebuildNames();
   if (!DATA[key]) key = Object.keys(DATA)[0];
+  if (!CATALOG[txtId]) txtId = null;
   kfIndex = 0;
   dirty = false;
+  textsDirty = false;
   $('savedMsg').textContent = 'diskten yüklendi';
   $('savedMsg').style.color = css('--sub');
   renderAll();
+  if (txtOn) renderTexts();
 };
 
 $('scrub').oninput = () => {
@@ -1364,21 +1654,55 @@ $('play').onclick = () => {
   renderAll();
 };
 
+const put = async (path, payload) => {
+  const res = await fetch(path, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload, null, 2),
+  });
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error);
+  return out;
+};
+
+/**
+ * İki dosya, iki kayıt: pozlar `rigArchetypes.json`'a, metinler
+ * `exercises.json`'a. Biri kuralı geçmezse ÖTEKİ yazılıyor ve kirli bayrağı
+ * yalnızca tutan tarafta siliniyor — ikisini birden geri çevirmek, kabul
+ * edilebilir yarıyı da kullanıcının elinden alırdı.
+ */
 $('save').onclick = async () => {
+  // Alandan çıkmadan ⌘S'e basılabiliyor: bekleyen metin kaydı önce yığına.
+  commitTextEdit();
   $('save').disabled = true;
-  try {
-    const res = await fetch('/data', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(DATA, null, 2) });
-    const out = await res.json();
-    if (!out.ok) throw new Error(out.error);
-    dirty = false;
-    $('savedMsg').textContent = `kaydedildi (${out.count} arketip)`;
-    $('savedMsg').style.color = css('--p');
-  } catch (e) {
-    $('savedMsg').textContent = 'kaydedilemedi: ' + e.message;
-    $('savedMsg').style.color = css('--danger');
-  } finally {
-    $('save').disabled = false;
+  const yazildi = [];
+  const hata = [];
+  if (dirty) {
+    try {
+      const out = await put('/data', DATA);
+      dirty = false;
+      yazildi.push(`${out.count} arketip`);
+    } catch (e) {
+      hata.push('pozlar: ' + e.message);
+    }
   }
+  if (textsDirty) {
+    try {
+      const out = await put('/exercises', CATALOG);
+      textsDirty = false;
+      yazildi.push(`${out.count} hareket metni`);
+    } catch (e) {
+      hata.push('metinler: ' + e.message);
+    }
+  }
+  if (hata.length) {
+    $('savedMsg').textContent = 'kaydedilemedi — ' + hata.join(' · ');
+    $('savedMsg').style.color = css('--danger');
+  } else {
+    $('savedMsg').textContent = yazildi.length ? `kaydedildi (${yazildi.join(', ')})` : 'değişiklik yok';
+    $('savedMsg').style.color = yazildi.length ? css('--p') : css('--sub');
+  }
+  $('save').disabled = false;
 };
 
 // Kısayollar: kaydetme ve geri alma, elin fareden kalkmadan.
@@ -1461,7 +1785,7 @@ function tick(now) {
 const boot = async () => {
   const [data, names, muscles, anatomy, parts] = await Promise.all([
     fetch('/data').then((r) => r.json()),
-    fetch('/names').then((r) => r.json()).catch(() => ({})),
+    fetch('/exercises').then((r) => r.json()).catch(() => ({})),
     fetch('/muscles').then((r) => r.json()).catch(() => ({})),
     fetch('/anatomy').then((r) => r.json()).catch(() => null),
     fetch('/parts').then((r) => r.json()).catch(() => null),
@@ -1470,14 +1794,8 @@ const boot = async () => {
   ANATOMY = anatomy && anatomy.front ? anatomy : null;
   PARTS = parts && parts.parts ? parts.parts : null;
   DATA = data;
-  // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
-  // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
-  // (unilateral_lunge üç hareket) ters çeviriyoruz.
   CATALOG = names;
-  NAMES = {};
-  for (const e of Object.values(names)) {
-    (NAMES[e.archetype] ||= []).push(e.name);
-  }
+  rebuildNames();
   key = Object.keys(DATA)[0];
   renderAll();
   requestAnimationFrame(tick);

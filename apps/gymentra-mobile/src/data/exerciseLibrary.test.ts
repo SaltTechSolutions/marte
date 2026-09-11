@@ -112,7 +112,9 @@ describe('exercise library', () => {
 
   it('exerciseNames carries every name the movement answers to', () => {
     const legPress = exerciseById('leg-press')!;
-    expect(exerciseNames(legPress)).toEqual(['Leg press', 'Bacak presi', 'Leg press']);
+    // Türkçe adlar 11 Eylül 2026'da antrenör düzeltmesiyle tarif edici hâle
+    // geldi ("Leg press" → "Makinede bacak itiş"); salon adı `trAlt`/`en`'de.
+    expect(exerciseNames(legPress)).toEqual(['Makinede bacak itiş', 'Bacak presi', 'Leg press']);
     // Karşılığı olmayan hareket uydurma bir ad taşımıyor.
     expect(exerciseById('plank')!.trAlt).toBeUndefined();
     expect(exerciseNames(exerciseById('plank')!)).toHaveLength(2);

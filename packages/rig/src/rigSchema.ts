@@ -126,7 +126,20 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
 /** Kimlikler ASCII slug: URL'de, dosya adında ve anahtar olarak sorun çıkarmaz. */
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const CATALOG_KEYS = ['name', 'archetype', 'alt'];
+const CATALOG_KEYS = [
+  'name', 'archetype', 'alt',
+  'en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint', 'steps',
+];
+/** Metin alanları: hepsi ZORUNLU, ikisi boş kalabiliyor (aşağıdaki nota bak). */
+const CATALOG_TEXT = ['en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint'];
+/**
+ * Set ve dinlenme ipucunun boş kalması meşru: ısınma hareketlerinde sayı
+ * vermiyoruz, uygulama "Antrenörün belirler" yazıyor. Ötekiler boş kalırsa
+ * ekranda boşluk görünür — o yüzden boş metin de hata.
+ */
+const CATALOG_TEXT_OPTIONAL = ['setsHint', 'restHint'];
+/** Uygulamanın rozet olarak bastığı dört değer; beşincisi ekranda çıplak kalır. */
+const DIFFICULTIES = ['BAŞLANGIÇ', 'ORTA', 'ORTA-İLERİ', 'İLERİ'];
 const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source', 'reviewed'];
 const STATUSES = ['pending', 'authored'];
 
@@ -162,6 +175,33 @@ export function validateExercises(data: unknown, archetypeKeys: string[]): strin
     if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) bad('alt ile name aynı');
     if (typeof e.archetype !== 'string') bad('archetype metin olmalı');
     else if (!archetypeKeys.includes(e.archetype)) bad(`archetype "${e.archetype}" rigArchetypes.json'da yok`);
+
+    // Kullanıcının okuduğu metinler. 11 Eylül 2026'ya kadar bunlar
+    // `build_exercise_library.py` içinde sabitti ve antrenörden gelen bir
+    // düzeltme ancak Python düzenlenerek girilebiliyordu. Artık veride, yani
+    // editörden girilebiliyor — ve eksikliği burada, kayıt anında yakalanıyor.
+    CATALOG_TEXT.forEach((alan) => {
+      const v = e[alan];
+      if (typeof v !== 'string') return bad(`${alan} metin olmalı`);
+      if (v.trim() === '' && !CATALOG_TEXT_OPTIONAL.includes(alan)) bad(`${alan} boş olmamalı`);
+    });
+    if (typeof e.difficulty === 'string' && !DIFFICULTIES.includes(e.difficulty)) {
+      bad(`difficulty "${e.difficulty}" tanınmıyor — ${DIFFICULTIES.join(' / ')}`);
+    }
+    if (!Array.isArray(e.steps)) bad('steps dizi olmalı');
+    else if (e.steps.length === 0) bad('steps boş — hareketin nasıl yapıldığı yazılmalı');
+    else {
+      e.steps.forEach((adim: unknown, i: number) => {
+        if (!Array.isArray(adim) || adim.length !== 2 || !strList(adim)) {
+          return bad(`steps[${i}] [türkçe, ingilizce] metin çifti olmalı`);
+        }
+        // Tek dile düşmek ekranda görünür bir kayıp: uygulama her adımın
+        // altında İngilizcesini basıyor (`exercise-detail.tsx`).
+        adim.forEach((m, j) => {
+          if (m.trim() === '') bad(`steps[${i}][${j}] boş`);
+        });
+      });
+    }
   });
 
   // Aynı adın iki kimliğe düşmesi, katalogda bir kopyanın kaçtığını gösterir.

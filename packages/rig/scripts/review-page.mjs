@@ -70,7 +70,7 @@ const ordered = Object.fromEntries([
 ]);
 const DATA = {
   '/data': ordered,
-  '/names': readJson('data/exercises.json'),
+  '/exercises': readJson('data/exercises.json'),
   '/muscles': readJson('data/rigMuscles.json'),
   '/anatomy': readJson('data/anatomy.json'),
   '/parts': readJson('data/bodyParts.json'),
@@ -95,6 +95,12 @@ ${styles}
     color:#06281F; background:var(--p); border-radius:999px; padding:1px 6px;
   }
   #save, #revert { display:none; }
+  /* Metin paneli burada OKUNUR ama yazılamaz: kaydedecek sunucu yok.
+     Alanları gizlemek metni de gizlerdi — inceleyen kişinin göreceği şey o. */
+  #txt .txtForm input, #txt .txtForm select, #txt .txtForm textarea {
+    pointer-events:none; opacity:.75;
+  }
+  #txt .step .ops, #txt #addStep { display:none; }
   /* Dar ekran: üç sütun tek sütuna iner, yükseklik içeriğe bırakılır. */
   @media (max-width: 760px) {
     body { overflow:auto; }

@@ -13,21 +13,25 @@
  *    motorun elle yazılmış bir kopyasını taşıyordu ve iki kez ayrıştı:
  *    ayak düzeltmesi orada eksik kaldı, dambıl yardımcısı sayfayı dondurdu.
  *
- * 2. **Doğruluk kaynağı depodaki JSON.** Kaydet, `src/data/rigArchetypes.json`
- *    dosyasının üstüne yazıyor — git diff'te görünür, test edilebilir, geri
+ * 2. **Doğruluk kaynağı depodaki JSON.** Kaydet İKİ dosyanın üstüne yazıyor:
+ *    pozlar `data/rigArchetypes.json`'a, kullanıcının okuduğu metinler
+ *    `data/exercises.json`'a — git diff'te görünür, test edilebilir, geri
  *    alınabilir. Tarayıcı deposunda biriken, kimsenin göremediği bir kopya yok.
+ *    Metinler 11 Eylül 2026'ya kadar `build_exercise_library.py` içinde sabitti
+ *    ve antrenörden gelen bir düzeltme ancak Python düzenlenerek girilebiliyordu.
  *
  * Yalnızca 127.0.0.1'i dinler ve depo dışına hiçbir şey yazmaz.
  */
 
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { buildEngine, OUT, ROOT } from './engine-build.mjs';
 import { loadSchema } from './schema.mjs';
 
 const DATA = join(ROOT, 'data/rigArchetypes.json');
+const CATALOG = join(ROOT, 'data/exercises.json');
 const PORT = Number(process.env.RIG_PORT || 8123);
 
 const TYPES = {
@@ -43,14 +47,69 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
 
 buildEngine();
 const schema = loadSchema(OUT);
-/** Devir paketinin tamamı: kareler, hareket kataloğu ve kas verisi. */
-const readBundle = (archetypes) => ({
-  archetypes,
-  exercises: JSON.parse(readFileSync(join(ROOT, 'data/exercises.json'), 'utf8')),
-  muscles: JSON.parse(readFileSync(join(ROOT, 'data/rigMuscles.json'), 'utf8')),
-  anatomy: JSON.parse(readFileSync(join(ROOT, 'data/anatomy.json'), 'utf8')),
-  bodyParts: JSON.parse(readFileSync(join(ROOT, 'data/bodyParts.json'), 'utf8')),
+const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
+
+/**
+ * Devir paketinin tamamı: kareler, hareket kataloğu ve kas verisi.
+ *
+ * Gelen kayıt hangi dosyayaysa O parça `over` ile değişiyor, kalanı diskten
+ * okunuyor: kurallar parçalar ARASINDA da geçerli (bir hareketin arketibi
+ * rigArchetypes.json'da yoksa hata), tek parçayı tek başına doğrulamak o
+ * kuralları atlardı.
+ */
+const readBundle = (over = {}) => ({
+  archetypes: over.archetypes ?? readJson(DATA),
+  exercises: over.exercises ?? readJson(CATALOG),
+  muscles: readJson(join(ROOT, 'data/rigMuscles.json')),
+  anatomy: readJson(join(ROOT, 'data/anatomy.json')),
+  bodyParts: readJson(join(ROOT, 'data/bodyParts.json')),
 });
+
+/**
+ * Katalogda alan sırası: ekranda göründüğü sıra, dosyada da o sıra.
+ *
+ * Tarayıcı yeni bir alanı (`alt` yazılmamış bir harekete yazıldığında) nesnenin
+ * SONUNA ekliyor. Sırayı kayıtta sabitlemeyince aynı veri, hangi alanın ne
+ * zaman doldurulduğuna göre farklı sırayla yazılıyor ve diff okunmaz oluyor.
+ */
+const CATALOG_ORDER = ['name', 'alt', 'en', 'archetype', 'difficulty',
+  'equipTr', 'equipEn', 'setsHint', 'restHint', 'steps'];
+
+const orderCatalog = (cat) => Object.fromEntries(
+  Object.entries(cat).map(([id, e]) => [
+    id,
+    Object.fromEntries([
+      ...CATALOG_ORDER.filter((k) => k in e).map((k) => [k, e[k]]),
+      // Sırada olmayan bir alan şemadan geçmez; yine de düşürmüyoruz ki
+      // hata mesajı "bilinmeyen alan" desin, alan sessizce kaybolmasın.
+      ...Object.entries(e).filter(([k]) => !CATALOG_ORDER.includes(k)),
+    ]),
+  ]),
+);
+
+/** Kaydın ortak gövdesi: doğrula, sonra yaz. Biri geçmezse hiçbiri yazılmıyor. */
+const acceptPut = (req, res, { file, key: bundleKey, birim, say, duzelt }) => {
+  let body = '';
+  req.on('data', (c) => (body += c));
+  req.on('end', () => {
+    try {
+      const parsed = duzelt ? duzelt(JSON.parse(body)) : JSON.parse(body);
+      // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
+      // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
+      // okuduğu yerde.
+      const errs = schema.validateBundle(readBundle({ [bundleKey]: parsed }));
+      if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
+      const count = Object.keys(parsed).length;
+      // Depodaki iki JSON da tek boşlukla girintili; editörün iki boşlukla
+      // yazması her kaydı dosyanın tamamını değiştiren bir diff yapardı.
+      writeFileSync(file, JSON.stringify(parsed, null, 1) + '\n');
+      console.log(`✓ kaydedildi: ${count} ${birim} → data/${say}`);
+      send(res, 200, JSON.stringify({ ok: true, count }), TYPES['.json']);
+    } catch (e) {
+      send(res, 400, JSON.stringify({ ok: false, error: String(e.message || e) }), TYPES['.json']);
+    }
+  });
+};
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
@@ -75,16 +134,19 @@ const server = createServer((req, res) => {
     }
     return send(res, 404, 'yok');
   }
-  if (req.method === 'GET' && url.pathname === '/names') {
-    // Hareket kataloğu: kimlik → görünen ad + arketip. Arketip anahtarları
-    // (`hip_hinge_dumbbell`) insanın kafasındaki isim değil; listede Türkçe
-    // adları gösteriyoruz. Bir arketip birden çok harekete hizmet edebiliyor.
-    try {
-      const lib = readFileSync(join(ROOT, 'data/exercises.json'), 'utf8');
-      return send(res, 200, lib, TYPES['.json']);
-    } catch {
-      return send(res, 200, '{}', TYPES['.json']);
-    }
+  if (req.method === 'GET' && url.pathname === '/exercises') {
+    // Hareket kataloğu: kimlik → iki ad, arketip ve kullanıcının okuduğu
+    // metinlerin tamamı. Arketip anahtarları (`hip_hinge_dumbbell`) insanın
+    // kafasındaki isim değil; listede Türkçe adları gösteriyoruz. Bir arketip
+    // birden çok harekete hizmet edebiliyor.
+    return send(res, 200, readFileSync(CATALOG), TYPES['.json']);
+  }
+  if (req.method === 'PUT' && url.pathname === '/exercises') {
+    // Metin panelinin kaydı. Pozlardan AYRI yol: iki dosya, iki kayıt — biri
+    // kuralı geçmezse öteki yazılmış olsun, kullanıcı hangisinin tutmadığını
+    // görsün.
+    acceptPut(req, res, { file: CATALOG, key: 'exercises', birim: 'hareket', say: 'exercises.json', duzelt: orderCatalog });
+    return;
   }
   if (req.method === 'GET' && url.pathname === '/muscles') {
     // Hareket başına birincil/ikincil kaslar. Önizleme çipi ve metin listesi
@@ -113,24 +175,7 @@ const server = createServer((req, res) => {
     return send(res, 200, readFileSync(DATA), TYPES['.json']);
   }
   if (req.method === 'PUT' && url.pathname === '/data') {
-    let body = '';
-    req.on('data', (c) => (body += c));
-    req.on('end', () => {
-      try {
-        const parsed = JSON.parse(body);
-        // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
-        // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
-        // okuduğu yerde.
-        const errs = schema.validateBundle(readBundle(parsed));
-        if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
-        const count = Object.keys(parsed).length;
-        writeFileSync(DATA, JSON.stringify(parsed, null, 2) + '\n');
-        console.log(`✓ kaydedildi: ${count} arketip → data/rigArchetypes.json`);
-        send(res, 200, JSON.stringify({ ok: true, count }), TYPES['.json']);
-      } catch (e) {
-        send(res, 400, JSON.stringify({ ok: false, error: String(e.message || e) }), TYPES['.json']);
-      }
-    });
+    acceptPut(req, res, { file: DATA, key: 'archetypes', birim: 'arketip', say: 'rigArchetypes.json' });
     return;
   }
   send(res, 404, 'yok');
@@ -147,6 +192,6 @@ server.on('error', (err) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log(`\nKukla editörü hazır:  http://127.0.0.1:${PORT}\n`);
-  console.log('Kaydet dediğinde data/rigArchetypes.json üstüne yazılır.');
+  console.log('Kaydet dediğinde data/rigArchetypes.json ve data/exercises.json üstüne yazılır.');
   console.log('Kapatmak için Ctrl+C.\n');
 });
