@@ -2339,10 +2339,12 @@
   ]
  },
  "triceps_pushdown_standing": {
-  "note": "Dirsek gövdeye sabit; yalnızca ön kol AŞAĞI açılır. Biceps curl'ün tersi.",
+  "note": "Dirsek gövdeye sabit; yalnızca ön kol AŞAĞI açılır. Biceps curl'ün tersi. Direnç YUKARIDAN gelir: baş üstü makara olmadan hareket boşluğa itmek gibi okunuyordu.",
   "mode": "stand",
   "arm": "angles",
   "bar": null,
+  "prop": "cable",
+  "cableFrom": "high",
   "bend": 1,
   "dur": 3000,
   "kf": [

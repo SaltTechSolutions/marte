@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-09-11T10:58:35.682Z",
+  "generated": "2026-09-11T11:28:58.559Z",
   "source": {
-    "commit": "b316d28c",
+    "commit": "b65b4f8f",
     "dirty": true
   },
   "counts": {
@@ -42,8 +42,8 @@
       "to": "src/utils/muscles.ts"
     },
     "rigArchetypes.json": {
-      "sha256": "51ce6392c31f66f35d11db737bbb8d2afa75ecc54bcb5a1abbf934bf07258d44",
-      "bytes": 41673,
+      "sha256": "dc2be390dcfd7639f34a2a422dde3e58a726e18f4a4b5552f3694e0c28091de3",
+      "bytes": 41808,
       "from": "data/rigArchetypes.json",
       "what": "kare verisi",
       "to": "src/data/rigArchetypes.json"

@@ -306,7 +306,10 @@ export function RigFigure({
           const from = rig.cableFrom ?? 'front';
           const ahead = Math.max(S.hand[0], S0.hand[0]);
           const anchor: Record<string, Vec> = {
-            high: [S0.hand[0], BAR_Y + 24],
+            // Pulldown'da makaranın ALTINA oturulur, pushdown'da kolonun
+            // ÖNÜNDE durulur: ayakta makarayı tepeye koymak direği figürün
+            // içinden geçiriyordu.
+            high: [rig.mode === 'stand' ? ahead + 90 : S0.hand[0], BAR_Y + 24],
             front: [ahead + 100, S0.hand[1]],
             low: [ahead + 110, GROUND - 34],
             back: [S0.pelvis[0] - 132, S0.sh[1]],
@@ -466,10 +469,6 @@ export function RigFigure({
             </>
           )}
         </G>
-        {/* Sırtta VE kalçada taşınan bar gövdeden önce: ikisi de figürün
-            arkasından geçiyor. `hips` daha önce hiç çizilmiyordu — `hip_thrust`
-            halteri olmadan görünüyordu. */}
-        {(rig.bar === 'back' || rig.bar === 'hips') && plate(S.bar)}
         <G key="torso">
           {trunk('waist', 'lumbar', S.pelvis, S.lumbar, 40, 33)}
           {trunk('rib', 'thorax', S.lumbar, S.thorax, 54, 46)}
@@ -503,8 +502,13 @@ export function RigFigure({
             (bkz. `plate`). Önden görünüm barı zaten en üste çiziyordu; yandan
             görünüm çizmiyordu ve aynı hareket iki görünümde ters katmanlanıyordu.
             Ölçüldü: `seated_overhead_press` t=0.80'de tabak kafa merkezinin
-            24px içinde, `face_pull_standing` 4px, `lat_pulldown_seated` 2px. */}
-        {rig.bar === 'hands' && plate(S.bar)}
+            24px içinde, `face_pull_standing` 4px, `lat_pulldown_seated` 2px.
+
+            Sırt ve kalça halteri de aynı sıraya girdi: gövdenin ARKASINA
+            çiziliyorlardı, oysa yakın taraftaki tabak izleyiciye en yakın
+            şeydir — back squat'ta figürün önünde durur. Kural tek: halter
+            nerede tutulursa tutulsun, YAKIN TABAK en üstte ve saydam. */}
+        {rig.bar && plate(S.bar)}
       </>
     );
 

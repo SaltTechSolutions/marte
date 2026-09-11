@@ -510,7 +510,9 @@ function drawPose(svg, e, p) {
   // Burada bir zamanlar perspektif halter vardı — çubuk derinliğe uzanıyor,
   // uçlardaki tabaklar elips. Terk edilen 3/4 yönünün son kalıntısıydı ve
   // uygulama onu hiç çizmiyordu, yani önizleme yalan söylüyordu.
-  if (e.bar === 'hands') push(plateAt(S.bar));
+  // Sırt ve kalça halteri de dahil: önizleme back squat'ta HİÇ tabak
+  // çizmiyordu, uygulama çiziyordu.
+  if (e.bar) push(plateAt(S.bar));
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
@@ -648,7 +650,6 @@ function draw() {
     push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
     if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
   }
-  if (e.bar === 'back' || e.bar === 'hips') push(plate(S.bar));
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
   push([
@@ -701,7 +702,12 @@ function draw() {
   // Ölçüldü (41 arketip × 41 kare): tabak kafa merkezinin içine giren üç
   // hareket var — `seated_overhead_press` 24px, `face_pull_standing` 4px,
   // `lat_pulldown_seated` 2px. İlki bu turdan önce de vardı.
-  if (e.bar === 'hands') push(plate(S.bar));
+  //
+  // Sırt ve kalça halteri de aynı sıraya girdi. Onlar gövdenin ARKASINA
+  // çiziliyordu, oysa yakın taraftaki tabak izleyiciye en yakın şeydir:
+  // back squat'ta figürün önünde durur. Kural tek: halter nerede tutulursa
+  // tutulsun, YAKIN TABAK en üstte ve saydam.
+  if (e.bar) push(plate(S.bar));
 
   drawHandles(svg, e, S, view);
 }
@@ -777,7 +783,10 @@ function drawProps(e, S0, S, push) {
       // hareket gibi gösteriyor: göğüs presine ÖNDEN kablo koymak onu kürek
       // yapıyordu, çünkü kablo eli öne çekiyordu.
       const anchor = {
-        high:  [S0.hand[0], BAR_Y + 24],                    // baş üstü makara
+        // Pulldown'da makaranın ALTINA oturulur, pushdown'da kolonun ÖNÜNDE
+        // durulur: ayakta makarayı tepeye koymak direği figürün içinden
+        // geçiriyordu.
+        high:  [e.mode === 'stand' ? ahead + 90 : S0.hand[0], BAR_Y + 24],
         front: [ahead + 100, S0.hand[1]],                   // önde, el hizası
         low:   [ahead + 110, GROUND - 34],                  // önde, zemine yakın
         back:  [S0.pelvis[0] - 132, S0.sh[1]],              // arkada, omuz hizası
