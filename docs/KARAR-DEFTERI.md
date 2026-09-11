@@ -31,6 +31,39 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — pushdown kablosu, tek tabak kuralı, metinler için devir notu
+
+**Yapıldı.** Triceps pushdown'a kablo istasyonu verildi (`prop: null`
+taşıyordu, yani boşluğa itiyordu) ve ayakta duran figürde makara kolonu ÖNE
+alındı — "tepede" kuralı direği gövdenin içinden geçiriyordu. Halter tabağı
+artık tek kuralla çiziliyor: nerede tutulursa tutulsun yakın tabak en üstte
+ve saydam; sırt/kalça halteri gövdenin arkasındaydı ve telefon önizlemesi
+back squat ile hip thrust'ta hiç tabak çizmiyordu. 45 hareket için
+`docs/hareket-adlari-arastirma.csv` üretildi.
+
+**Karar.** **Kullanıcıya görünen metin veride yaşar, kodda değil.** Bugün
+`steps`, ekipman, zorluk ve set/dinlenme ipuçları
+`backend/scripts/build_exercise_library.py` içinde sabit; antrenörün
+düzeltmesi Python düzenlemeden girilemiyor. Taşıma planı
+`docs/metin-duzenleme-plani.md`'de, kapsam kullanıcı tarafından seçildi
+(ad + alt ad + adımlar + ekipman/zorluk/ipucu; adımlar TR+EN kalıyor).
+
+**Bilerek yapılmadı.** Çizim notu (`note`) düzenlenebilir alan yapılmadı:
+iç not, uygulamaya gitmiyor. Yayındaki editöre Artifact veritabanıyla kayıt
+yolu AÇILMADI — kullanıcı yerelde devam etmeyi seçti, orada `npm run editor`
+zaten depoya yazıyor. Adlar için web araması yapılmadı; tablo boş sütunlarla
+verildi, çünkü kaynaksız ad üretmek bugünkü sorunun kendisi.
+
+**Açık.** Metin taşıma işinin tamamı (plan dosyasındaki 5 adım). Ayak
+yönleri tek tek gözden geçirilmedi. Önceki oturumların açıkları duruyor.
+
+**Nerede.** `docs/metin-duzenleme-plani.md`,
+`docs/hareket-adlari-arastirma.csv`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`packages/rig/data/rigArchetypes.json`.
+
+---
+
 ## 2026-09-11 — ayak ucu tutamağı, tutamak uçtan görünüyor
 
 **Yapıldı.** Editöre **ayak ucu tutamağı** eklendi: sürüklenince pozu değil
