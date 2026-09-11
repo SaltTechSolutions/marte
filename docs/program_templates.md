@@ -1,6 +1,6 @@
 # GymEntra — Hazır Program Şablonları (PER-18)
 
-**Tarih:** 2 Eylül 2026 · **Makine tarafından okunan hâli:** `marte06/scripts/program_templates.seed.json` · **Seed:** `marte06/scripts/seed_program_templates.cjs`
+**Tarih:** 10 Eylül 2026 (v2) · **Makine tarafından okunan hâli:** `backend/scripts/program_templates.seed.json` · **Seed:** `backend/scripts/seed_program_templates.cjs`
 
 > **Sorumluluk notu.** Bu şablonlar genel sağlıklı yetişkinler için, yayımlanmış kılavuz ve araştırmalara dayanarak hazırlanmış başlangıç noktalarıdır; tıbbi tavsiye değildir. Atamadan önce salonun sertifikalı antrenörü üyenin sağlık durumuna, geçmişine ve ekipmana göre gözden geçirip uyarlamalıdır. Kalp-damar hastalığı, kontrolsüz tansiyon, gebelik, yakın zamanda ameliyat veya sinir belirtisi olan üyelere hekim onayı olmadan atanmaz.
 
@@ -28,6 +28,56 @@
   | Core | plank · ölü böcek · Pallof pres · side plank · bird-dog |
 
 - **İsimlendirme dürüst:** "karın inceltme" yok (bölgesel yağ kaybı için kanıt yok — Vispute 2011, Kostek 2007), "postür düzeltme" yok (kanıt karışık). Bunların yerine *core güçlendirme* ve *sırt-omuz güçlendirme* var; iddia sadece kanıtı olan şey.
+- **Hedef katmanı (v2, 10 Eylül 2026).** Popüler talebi isim değil `goal` alanı karşılıyor: üye "karnım incelsin" der, uygulama onu dürüst adlı programa götürür ve nedenini tek cümleyle söyler. Kural şu: **bölgesel YAĞ KAYBI yoktur, bölgesel KAS GELİŞİMİ vardır.** Bu yüzden *Kol Hipertrofisi*, *Kalça Hipertrofisi* ve *Sırt Genişliği* bölgesel hedef olarak dürüstçe adlandırılabilir; *Karın Kasları* da kası hedefler ama görünürlüğün yağ oranına bağlı olduğunu açıkça söyler ve Yağ Kaybı şablonuna bağlar.
+
+## Dürüstlük denetimi koda bağlandı (11 Eylül 2026)
+
+Yukarıdaki "isimlendirme dürüst" ilkesi 10 Eylül'e kadar yalnızca bu belgede
+yazılıydı — yani iyi niyete bağlıydı. 11 Eylül'de dört kural
+`backend/scripts/programTemplateAudit.cjs`'e taşındı ve hem
+`backend/tests/programTemplates.test.ts`'de hem seed betiğinin içinde
+çalışıyor: denetimden geçmeyen bir şablon üretime YAZILAMIYOR.
+
+1. **`limits` boş olamaz.** Her şablon ne YAPMADIĞINI da yazıyor. Yazılmayan
+   sınırı üye kendi varsayımıyla dolduruyor — zaten o varsayım yüzünden
+   "karın inceltme" diye arıyor. Metin üyenin "Hedefim" ekranında tam,
+   antrenörün şablon seçicisinde ilk madde olarak görünüyor.
+2. **Yanlış yönlendiren ifade yasak** — bölgesel yağ kaybı, inceltme,
+   selülit, detoks, "garanti/mucize/kesinlikle". Kural cümle düzeyinde: aynı
+   ifade İNKÂR edilirken serbest, çünkü ürünün dürüstlüğü tam olarak o
+   cümlelerde yaşıyor ("bölgesel yağ eritilemez"). `goal.wants` tamamen muaf
+   — orası üyenin kendi dili.
+3. **Kaynak zorunlu** ve gösterilen anahtar kök kaynakçada bulunmak zorunda.
+4. **Hipertrofi hacmi.** `category: 'hypertrophy'` olan şablon `targets`'ta
+   yazdığı her kasa haftada en az **10 birincil set** vermek zorunda
+   (Schoenfeld 2016). Sayım veriden: `sessionsPerWeek` × set sayısı, kasın
+   BİRİNCİL olduğu hareketlerde (`backend/scripts/exercise_muscles.json`,
+   `build_exercise_library.py` üretiyor).
+
+**Kural ilk çalıştırmada iki gerçek eksik buldu:**
+
+- *Kol Hipertrofisi* triceps uzun başına ve brachialis'e haftada 7 set
+  veriyordu, oysa şablonun kendi özeti "kas grubu başına 10–20 doğrudan set"
+  diyordu. Biceps curl ve triceps pushdown setleri 4/3'ten 5/5'e çıkarıldı;
+  doğrudan kol hacmi 14 → 20 set. Özetteki "biceps'e 14, triceps'e 17"
+  cümlesi de düzeltildi — o sayılar bileşik hareketleri de sayıyordu.
+- *Kalça Hipertrofisi*nin **yan kalça (gluteus medius) hacmi sıfır**. Hareket
+  kataloğunda o kası birincil çalıştıran hiçbir hareket yok. Şablon yan kalça
+  gelişimi iddia etmiyor; bu artık `limits`'te açıkça yazılı ve `targets`
+  yalnızca `gluteMax`.
+
+**Üst sınır bilerek konmadı.** Kuralların geldiği yerde (öbür program
+modelinin `validateProgrammes`'i) 40 setlik bir tavan da vardı. Bu veride
+ölçüldü ve YANLIŞ ateşledi: *Karın Kasları* 20 dakikalık tek blok, altı
+hareket, günde 17 set — ve altısı da kas haritasında "Karın (orta)"yı
+birincil sayıyor, sayım haftada 51 çıkarıyor. Bu sayı hacmi değil haritanın
+örtüşmesini ölçüyor. Alt sınırda bu yanlılık güvenli tarafta, üst sınırda
+değil; ilk gerçek veride yanlış ateşleyen kuralı taşımak taşımamaktan kötü.
+
+**`evidence` alanı taşınmadı.** Öbür model her iddiayı serbest metin bir
+gerekçeyle eşliyordu; burada aynı işi `sources` + kök kaynakça daha iyi
+yapıyor, çünkü 18 künyelik ortak listeye çözülen anahtarlar serbest metinden
+denetlenebilir.
 
 ## Antrenör personası incelemesi (2 Eylül 2026)
 
@@ -74,6 +124,14 @@ NSCA-CPT) gözüyle incelendi. Yapılan değişiklikler ve reddedilenler:
 (Tarabya'da trap bar, ab wheel, chest-supported row makinesi var mı?) ve
 Türkçe hareket adlarının salonda kullanılan karşılıkları için.
 
+> **10 Eylül 2026 — ad kaydı açıldı.** Türkçe karşılıklar yazıldı ve
+> `docs/hareket-adlari-onay.md`'de üç sütunlu bir tablo olarak antrenör
+> onayına hazır duruyor. Aynı turda şablonların 20 satırı ilk kez gerçek
+> bir harekete bağlandı: leg press, lat pulldown, oturarak kürek, yüz
+> çekişi, ölü böcek ve McGill curl-up dahil — bunlar figür motorunda
+> çizilemedikleri için kütüphaneden düşürülmüştü, `seat` ve `supine` kök
+> noktaları gelince geri döndüler.
+
 ## Şablon listesi
 
 | ID | Başlık | Seviye | Gün/hafta | Süre |
@@ -92,6 +150,11 @@ Türkçe hareket adlarının salonda kullanılan karşılıkları için.
 | `core-intermediate` | Core Güçlendirme Orta — yüklü anti-rotasyon | intermediate | Haftada 3 gün | 20 dk |
 | `desk-beginner` | Sırt ve Omuz Güçlendirme — Masa Başı Çalışanlar, Başlangıç | beginner | Haftada 3 gün × 20 dk (Andersen 2008 protokolü) | 20 dk |
 | `desk-intermediate` | Sırt ve Omuz Güçlendirme — Orta, tam üst sırt | intermediate | Haftada 3 gün | 35 dk |
+| `arms-intermediate` | Kol Hipertrofisi | intermediate | Haftada 2 gün, ana programın ÜSTÜNE (yerine değil) | 35 dk |
+| `glutes-beginner` | Kalça Hipertrofisi — Başlangıç | beginner | Haftada 2 gün, aralarında en az 48 saat | 40 dk |
+| `glutes-intermediate` | Kalça Hipertrofisi — Orta | intermediate | Haftada 2 gün | 50 dk |
+| `abs-beginner` | Karın Kasları | beginner | Haftada 3 gün; ana antrenmanın SONUNA | 20 dk |
+| `backwidth-intermediate` | Sırt Genişliği ve Omuz | intermediate | Haftada 2 gün | 45 dk |
 
 ---
 
@@ -594,6 +657,151 @@ Başlangıç protokolünü 8 hafta tamamlamış üye için: çekiş hacmi itiş 
 
 ---
 
+## Kol Hipertrofisi
+
+`arms-intermediate` · seviye **intermediate** · Haftada 2 gün, ana programın ÜSTÜNE (yerine değil) · ~35 dk · ekipman: dumbbell, kablo, bar, sehpa · ısınma: `warmup-short`
+
+Kol kalınlığı gerçekten hedeflenebilir: bölgesel yağ kaybının aksine bölgesel kas gelişimi vardır. İki nokta hacmi belirliyor. Bir: triceps üst kolun kütlesinin yaklaşık üçte ikisi, o yüzden hacim triceps ağırlıklı. İki: bileşik çekiş ve itiş kolu çalıştırır ama tek başına yetmez — doğrudan kol seti eklemek gerekir. Haftalık hedef kas grubu başına 10-20 doğrudan set; bu şablon iki günde biceps'e 14, triceps'e 17 set veriyor. Ana programının üstüne gelir; onun yerine geçmez.
+
+**Hedef karşılığı.** Üye "Kollarım kalınlaşsın" dediğinde buraya gelir. Söylenen tek cümle: *Bu gerçekten bölgesel olarak hedeflenebilir — kas büyümesi bölge seçer, yağ kaybı seçmez.*
+
+### Kol A — triceps ağırlıklı
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Incline dumbbell pres | 3×10 | 90 sn | Bank 30°. Bileşik hareket önce: kol yorulmadan ağır iş bitsin. |
+| Triceps pushdown | 4×12 | 60 sn | Dirsekler gövdeye yapışık ve SABİT. Gövdeni öne yaslayıp ağırlığı itme. |
+| Biceps curl | 3×10 | 60 sn | RIR 1-2. Sallanma; omuz değil dirsek çalışır. |
+| Lateral raise | 3×15 | 45 sn | Kolun kalınlığı omuzdan da okunur — dirsek hafif kırık, omuz hizasına kadar. |
+
+### Kol B — biceps ağırlıklı
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Lat pulldown | 3×10 | 90 sn | Bileşik çekiş: biceps'e temel yükü verir. |
+| Biceps curl | 4×12 | 60 sn | Son sette RIR 0-1. Tam açıklık: altta kolu tamamen aç. |
+| Tek kol dumbbell row | 3×10 | 75 sn | Her kol 10. Dirsek gövdeye yakın. |
+| Triceps pushdown | 3×15 | 45 sn | Hafif ağırlık, tempoyu yavaşlat: 3 sn kontrollü dönüş. |
+
+**Kaynaklar:** Schoenfeld BJ, Ogborn D, Krieger JW (2017).; Pelland JC et al.; Schoenfeld BJ, Ogborn D, Krieger JW (2016).; ACSM (2009).; Haff GG, Triplett NT (eds.
+
+---
+
+## Kalça Hipertrofisi — Başlangıç
+
+`glutes-beginner` · seviye **beginner** · Haftada 2 gün, aralarında en az 48 saat · ~40 dk · ekipman: dumbbell, makine, kutu, mat · ısınma: `warmup-lower`
+
+Kalça kası (gluteus maximus) üç kalıpla çalışır: kalça menteşesi (hinge), çömelme ve tek bacak. Şablon üçünü de içerir çünkü hiçbiri tek başına kasın tamamını kapsamıyor. Başlangıçta yük değil KALIP önce: kalça köprüsü ve goblet squat hinge'i ve derinliği öğretir. Haftalık 10-14 set.
+
+**Hedef karşılığı.** Üye "Kalçam gelişsin" dediğinde buraya gelir. Söylenen tek cümle: *Bölgesel kas gelişimi kanıtlı; hedeflenen şey kasın kendisi, üstündeki yağ değil.*
+
+### Kalça A
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Kalça köprüsü | 3×15 | 45 sn | Üstte kalçayı 2 sn sık. Beli kavis yapma — iş kalçada. |
+| Goblet squat | 3×10 | 90 sn | Topuk yerde, dizler ayak ucu yönünde. |
+| Romanian deadlift (dumbbell) | 3×10 | 90 sn | Kalçayı geri it, sırt düz. Hamstring gerginliğini hisset. |
+| Step-up (kutu) | 3×10 | 60 sn | Her bacak 10. Üstteki bacakla it, alttakiyle sıçrama. |
+
+### Kalça B
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Leg press | 3×12 | 90 sn | Ayakları platformda biraz YUKARI al: kalça payı artar. |
+| Reverse lunge (geriye adım) — destekle | 3×10 | 75 sn | Her bacak 10. Denge için bir el makineye tutunabilir. |
+| Leg curl | 3×12 | 60 sn | Hamstring kalçanın ortağı; üstte 1 sn sık. |
+| Kalça köprüsü | 2×20 | 45 sn | Bitiş seti: yavaş ve sıkarak. |
+
+**Kaynaklar:** ACSM (2009).; Schoenfeld BJ, Ogborn D, Krieger JW (2017).; Haff GG, Triplett NT (eds.; Garber CE et al.
+
+---
+
+## Kalça Hipertrofisi — Orta
+
+`glutes-intermediate` · seviye **intermediate** · Haftada 2 gün · ~50 dk · ekipman: bar, dumbbell, makine, sehpa · ısınma: `warmup-lower`
+
+Kalıp öğrenildikten sonra belirleyici olan yüktür. Hip thrust kalçayı en kısa boyunda en çok yüklüyor, Romanian deadlift en uzun boyunda; ikisi birbirinin yerine geçmez. Tek bacak çalışması iki taraf arasındaki farkı kapatır. Haftalık 14-18 set — doz-yanıt eğrisi bu aralıkta hâlâ artan, ama azalan verimli (Pelland 2026).
+
+**Hedef karşılığı.** Üye "Kalçam gelişsin" dediğinde buraya gelir. Söylenen tek cümle: *Bölgesel kas gelişimi kanıtlı; yük ve hacim belirleyici.*
+
+### Kalça A — ağır
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Hip thrust (bar veya makine) | 4×8 | 150 sn | Üstte kalçayı 1 sn sık, çene içeride. RIR 1-2. |
+| Romanian deadlift (bar) | 3×8 | 150 sn | Bar bacağa sürtünsün. Bel yuvarlanınca dur. |
+| Bulgarian split squat | 3×8 | 90 sn | Her bacak 8. Gövdeyi hafif öne eğ: kalça payı artar. |
+| Leg curl | 3×12 | 75 sn | Üstte 1 sn sık. |
+
+### Kalça B — hacim
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Leg press | 4×12 | 90 sn | Ayaklar yukarıda ve omuz genişliğinden geniş. |
+| Walking lunge | 3×12 | 75 sn | Her bacak 12 adım. Uzun adım = daha çok kalça. |
+| Hip thrust (bar veya makine) | 3×15 | 90 sn | Hafif yük, yüksek tekrar; üstte 2 sn sık. |
+| Side plank | 3×40 sn | 30 sn | Her tarafa 40 sn. Kalça düşmesin — gluteus medius burada. |
+
+**Kaynaklar:** Schoenfeld BJ, Ogborn D, Krieger JW (2017).; Pelland JC et al.; Schoenfeld BJ et al.; Haff GG, Triplett NT (eds.; ACSM (2009).
+
+---
+
+## Karın Kasları
+
+`abs-beginner` · seviye **beginner** · Haftada 3 gün; ana antrenmanın SONUNA · ~20 dk · ekipman: mat, kablo/bant, bar · ısınma: `warmup-short`
+
+Karın kası da her kas gibi çalıştırılınca gelişir; bu şablon onu hedefler. GÖRÜNMESİ ayrı iş: üstündeki yağ tabakası bölgesel olarak eritilemez (Vispute 2011, Kostek 2007) — karın görünürlüğü vücut yağ oranı düşünce gelir, mekik sayısıyla değil. İncelme istiyorsan bu şablonu Yağ Kaybı programıyla birlikte kullan. Core Güçlendirme şablonlarından farkı doz: orası DAYANIKLILIK için uzun tutuşlar ve piramit, burası GELİŞİM için 8-15 tekrar ve artan yük. Mekik ve düz bacak kaldırma yine yok — bel disk yükü gereksiz.
+
+**Hedef karşılığı.** Üye "Karnım incelsin / karın kaslarım çıksın" dediğinde buraya gelir. Söylenen tek cümle: *Kas bu programla gelişir; incelme kalori açığından gelir — bölgesel yağ eritilemez.* Birlikte önerilen: `fatloss-beginner`.
+
+### Karın
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Asılı diz çekme | 3×12 | 60 sn | Sallanma; kontrollü indir. Zorsa dizleri daha az çek. |
+| Ab wheel rollout (dizden) | 3×8 | 60 sn | Bel çökmeden gidebildiğin kadar; kalçayı sık. |
+| McGill curl-up | 3×8 | 30 sn | Eller belin altında, bir diz bükük. Boyun bükülmez. |
+| Pallof pres | 3×12 | 45 sn | Her tarafa 12. Gövde dönmesin — anti-rotasyon. |
+| Plank | 3×40 sn | 30 sn | Kalça ne yukarı ne aşağı. |
+| Ölü böcek | 2×10 | 30 sn | Her tarafa 10. Bel yere yapışık. |
+
+**Kaynaklar:** McGill SM (2010).; Vispute SS et al.; Kostek MA et al.; Schoenfeld BJ, Ogborn D, Krieger JW (2017).; ACSM (2009).
+
+---
+
+## Sırt Genişliği ve Omuz
+
+`backwidth-intermediate` · seviye **intermediate** · Haftada 2 gün · ~45 dk · ekipman: kablo, bar, dumbbell, barfiks barı · ısınma: `warmup-upper`
+
+Omuzdan omuza genişlik iki şeyden okunur: sırtın kanat kası (latissimus dorsi) ve omzun yan başı. Lat'ı büyüten şey DİKEY çekiş (lat pulldown, barfiks), kalınlığı veren şey yatay çekiş; ikisi ayrı iş, şablon ikisini de içerir. Yan omuz doğrudan set ister — bileşik itiş ön omzu çalıştırır, yanı değil. Haftalık sırt 14-16, yan omuz 12-15 set.
+
+**Hedef karşılığı.** Üye "Sırtım genişlesin / üst gövdem büyüsün" dediğinde buraya gelir. Söylenen tek cümle: *Genişliği dikey çekiş hacmi belirliyor; yan omuz doğrudan set istiyor.*
+
+### Genişlik A — dikey ağırlıklı
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Barfiks | 3×6 | 150 sn | Yapabildiğin kadar (RIR 1). Zorsa bant desteği ya da lat pulldown. |
+| Lat pulldown (geniş) | 3×12 | 90 sn | Geniş tutuş, barı köprücük kemiğine. Kürek kemiğini ÖNCE indir. |
+| Oturarak kürek (seated row) | 3×12 | 90 sn | Kalınlık burada: dirsek gövdeye yakın, göğsü aç. |
+| Lateral raise | 4×15 | 45 sn | Genişliğin ikinci yarısı. Dirsek hafif kırık, sallanma yok. |
+| Yüz çekişi | 3×15 | 45 sn | Omuz sağlığı; dirsekler yukarı-geri, dış rotasyonla bitir. |
+
+### Genişlik B — yatay ağırlıklı
+
+| Egzersiz | Doz | Dinlenme | İpucu |
+|---|---|---|---|
+| Barbell row | 4×8 | 120 sn | Gövde ~45°, barı karın altına. RIR 1-2. |
+| Lat pulldown (nötr tutuş) | 3×12 | 90 sn | Nötr tutuş lat'ı farklı açıdan yükler. |
+| Chest-supported dumbbell row | 3×12 | 75 sn | Göğüs banka yaslı — bel devre dışı, sadece sırt. |
+| Lateral raise | 3×15 | 45 sn | Bugün biraz daha hafif, tempo yavaş. |
+| Dumbbell reverse fly | 3×15 | 45 sn | Arka omuz: genişliği arkadan tamamlar. |
+
+**Kaynaklar:** Schoenfeld BJ, Ogborn D, Krieger JW (2017).; Pelland JC et al.; Andersen LL et al.; ACSM (2009).; Haff GG, Triplett NT (eds.
+
+---
+
 ## Kaynakça
 
 - **ramp** — Jeffreys I. (2007). Warm up revisited – the 'RAMP' method of optimising performance preparation. UKSCA Journal, 6, 12–18.
@@ -613,4 +821,5 @@ Başlangıç protokolünü 8 hafta tamamlamış üye için: çekiş hacmi itiş 
 - **willis** — Willis LH et al. (2012). Effects of aerobic and/or resistance training on body mass and fat mass in overweight or obese adults. J Appl Physiol, 113(12), 1831–1837.
 - **wewege** — Wewege M et al. (2017). The effects of HIIT vs. moderate-intensity continuous training on body composition in overweight and obese adults: a systematic review and meta-analysis. Obes Rev, 18(6), 635–646.
 - **parq** — Warburton DER et al. (2011). The Physical Activity Readiness Questionnaire for Everyone (PAR-Q+). Health & Fitness Journal of Canada, 4(2), 3–23.
+- **pelland2025** — Pelland JC et al. (2026). The Resistance Training Dose Response: Meta-Regressions Exploring the Effects of Weekly Volume and Frequency on Muscle Hypertrophy and Strength Gains. Sports Med. (67 çalışma, 2058 kişi: hacim arttıkça kazanç artıyor ama azalan verimle; frekans, hacim eşitlendiğinde hipertrofiyi belirlemiyor.)
 - **behm** — Behm DG et al. (2016). Acute effects of muscle stretching on physical performance, range of motion, and injury incidence in healthy active individuals: a systematic review. Appl Physiol Nutr Metab, 41(1), 1–11. (Isınmada uzun statik germe performansı düşürür; dinamik tercih edilir.)

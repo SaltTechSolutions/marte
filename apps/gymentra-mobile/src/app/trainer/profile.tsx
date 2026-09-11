@@ -16,7 +16,6 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { useAuth } from '@/context/AuthContext';
-import { PROGRAMME_IDS } from '@/data/programmes';
 import { EXERCISES } from '@/data/exerciseLibrary';
 import { reportError } from '@/data/errors';
 import { isStaff, tenantIdIf } from '@/data/membership';
@@ -247,30 +246,6 @@ export default function TrainerProfile() {
         </View>
       </Pressable>
 
-      <Pressable onPress={() => router.push('/programmes')}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 10,
-            backgroundColor: colors.surf,
-            borderWidth: 1,
-            borderColor: colors.line,
-            borderRadius: radius.md,
-            padding: 13,
-          }}>
-          <Ionicons name="library-outline" size={18} color={colors.txt} />
-          <View style={{ flex: 1 }}>
-            <Text variant="helper" weight="700">
-              Hazır programlar
-            </Text>
-            <Text variant="label" tone="sub">
-              {PROGRAMME_IDS.length} başlangıç yapısı — sınırlarıyla birlikte
-            </Text>
-          </View>
-          <Text tone="sub">›</Text>
-        </View>
-      </Pressable>
 
       {/* --- Coaching load --- */}
       <StatCard

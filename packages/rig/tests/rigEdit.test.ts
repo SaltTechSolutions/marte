@@ -46,7 +46,7 @@ describe('rigEdit — sürükleyerek poz verme', () => {
 
   it('ayakta basan ayak sürüklenemez', () => {
     expect(dragJoint(squat, skeleton(squat, poseAt(squat, 0).p), 'ankle', [0, 0])).toEqual({});
-    expect(dragHandles(squat, skeleton(squat, poseAt(squat, 0).p)).map((h) => h.joint)).not.toContain('ankle');
+    expect(dragHandles(squat, skeleton(squat, poseAt(squat, 0).p), poseAt(squat, 0).p).map((h) => h.joint)).not.toContain('ankle');
   });
 
   it('gövde kendi kemiğini döndürür, bel kımıldamaz', () => {
@@ -83,10 +83,20 @@ describe('rigEdit — sürükleyerek poz verme', () => {
     expect(patch.thighA).toBeUndefined();
   });
 
+  // Uzak ayak ucu tutamağı yalnızca uzak bacak çiziliyorsa var: gizli bir
+  // bacağın ayağını ayarlamak hiçbir şeyi değiştirmez, ölü tutamak olurdu.
+  it('uzak ayak ucu tutamağı yalnızca uzak bacak görünürken çıkıyor', () => {
+    const lunge = RIG_ARCHETYPES.unilateral_lunge;
+    const pL = poseAt(lunge, 0.45).p;
+    expect(dragHandles(lunge, skeleton(lunge, pL), pL).map((h) => h.joint)).toContain('toeF');
+    const pS = poseAt(squat, 0).p;
+    expect(dragHandles(squat, skeleton(squat, pS), pS).map((h) => h.joint)).not.toContain('toeF');
+  });
+
   it('asılı figürde el sürüklenemez, kalça gövdeyi döndürür', () => {
     const hang = RIG_ARCHETYPES.hanging_knee_raise;
     const S = skeleton(hang, poseAt(hang, 0).p);
-    expect(dragHandles(hang, S).map((h) => h.joint)).not.toContain('hand');
+    expect(dragHandles(hang, S, poseAt(hang, 0).p).map((h) => h.joint)).not.toContain('hand');
     expect(dragJoint(hang, S, 'pelvis', [S.pelvis[0] + 30, S.pelvis[1]]).torso).toBeDefined();
   });
 });
@@ -103,32 +113,5 @@ describe('applyPatch', () => {
 
   it('dokunulmayan alanları korur', () => {
     expect(applyPatch({ shinA: 178, torso: 5 }, { torso: 40 })).toEqual({ shinA: 178, torso: 40 });
-  });
-});
-
-import { frontPoints as fp3, fillPose as fill3, poseAt as pa3, skeleton as sk3 } from '../src/rig';
-import { RIG_ARCHETYPES as A3 } from '../src/archetypes';
-import { dragFront, frontDragHandles } from '../src/rigEdit';
-
-describe('önden sürükleme', () => {
-  it('dirseği kendi yerine çekmek pozu değiştirmez, yana çekmek düzlemi açar', () => {
-    const ex = A3.lateral_raise_front;
-    const p = fill3({ ...pa3(ex, 0).p, upperA: 150, armAz: 40 });
-    const S = sk3(ex, p);
-    const F = fp3(ex, p, S);
-    // Kendi yerine
-    const same = dragFront(ex, p, S, F, 'elbow', F.L.elbow);
-    expect(Math.abs((same.upperA ?? 0) - 150)).toBeLessThan(1);
-    expect(Math.abs((same.armAz ?? 0) - 40)).toBeLessThan(2);
-    // Tam yana, omuz hizası: yükselme 90, düzlem 90
-    const out = dragFront(ex, p, S, F, 'elbow', [F.L.sh[0] - 78, F.L.sh[1]]);
-    expect(Math.abs((out.upperA ?? 0) - 90)).toBeLessThan(1);
-    expect(Math.abs((out.armAz ?? 0) - 90)).toBeLessThan(2);
-  });
-  it('tutamaklar iki tarafın dirsek ve elinde', () => {
-    const ex = A3.lateral_raise_front;
-    const p = pa3(ex, 0.5).p;
-    const F = fp3(ex, p, sk3(ex, p));
-    expect(frontDragHandles(ex, F).map((h) => h.joint)).toEqual(['elbow', 'hand', 'elbowF', 'handF']);
   });
 });

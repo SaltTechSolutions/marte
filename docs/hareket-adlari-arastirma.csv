@@ -1,0 +1,187 @@
+id;mevcut_ad;mevcut_alt_ad;onerilen_turkce_ad;yaygin_salon_adi;kaynak_1;kaynak_2;guven;not;hareket_aciklamasi;birincil_kaslar;arketip;nasil_yapilir
+ab-wheel-rollout;Ab wheel rollout;Tekerlekle açılma;Diz üstünde karın tekerleğiyle öne uzanma;;;;;;"Dizler yerdeyken tekerlek öne yuvarlanır; karın kasları belin aşırı çukurlaşmasına karşı gövdeyi dengeler. Yere paralel olma zorunluluğu yoktur; mesafe gövde kontrolüne göre belirlenir.";absMid, absUpper;rollout;"• Dizlerinin altına minder koy; tekerleği iki elinle omuzlarının altında tut.
+• Karnını ve kalçanı hafifçe sık; kaburgalarını öne açmadan tekerleği yavaşça ileri yuvarla.
+• Belin çukurlaşmadan ve omuzlarında ağrı oluşmadan kontrol edebildiğin noktada dur; başlangıçta kısa mesafe kullan.
+• Gövdeni kontrollü biçimde geri getir; kalçanı birden geriye kaçırma ve nefesini uzun süre tutma."
+arm-circles;Kol çevirme;Arm circles;Kollarla daire çizme;;;;;;"Ayakta, kollarla küçükten büyüğe kontrollü daireler çizilen omuz hareketliliği egzersizidir. Hareket omuzlardan gelir; gövdeyle savrulma yapılmaz.";;arm_circles_front;"• Ayaklarını kalça genişliğinde aç; dik dur ve kollarını rahat bir yükseklikte yanlara uzat.
+• Omuzlarını zorlamadan küçük daireler çiz; dirseklerini hafif yumuşak tut.
+• Ağrısız aralıkta daireleri yavaşça büyüt; belini geriye yaylandırma.
+• Yönü değiştirerek tekrarla; sıkışma veya ağrı hissedersen daireyi küçült ya da dur."
+back-squat;Back squat;;Halter sırtta squad;;;;;;"Halter üst sırtta desteklenirken kalça ve dizler birlikte bükülüp açılır. Ön bacak ve kalça kasları çalışır; sırtın doğal eğrileri ve ayak tabanı dengesi korunur. Dirsek konumu tutuşa ve bar yerleşimine bağlıdır.";quadRF, quadVL, quadVM, gluteMax, erector, adductors;squat;"• Güvenlik kolları ayarlı bir squad istasyonu kullan; barı boyun omurlarına değil üst sırt kaslarına yerleştir ve iki elle kavra.
+• Barı askıdan alıp kısa adımlarla yerleş; ayaklarını rahat bir genişlikte aç ve karnını sık.
+• Dizlerini ayak parmaklarınla aynı yönde tutarak kalça ve dizlerinden çömel; topuklarını yerde tut.
+• Dengeni ve bel konumunu koruyabildiğin derinlikten tüm tabanınla iterek kalk; kontrolü kaybettiğin ağırlığı kullanma.
+• Tam dik durduktan sonra askıya yaklaş ve barın iki tarafta da yerine oturduğunu kontrol et."
+band-external-rotation;Bant ile dış rotasyon;Band external rotation;Lastikle omuzu dışa döndürme;;;;;;"Dirsek gövde yanında bükülü tutulurken ön kol dışa açılır. Hareket omuz eklemindeki dışa dönüştür; gövde dönmeden omuzun dış döndürücü kasları çalışır.";infra, teres;band_ext_rotation_front;"• Sağlam bir dirsek yüksekliği bağlantısına lastiği sabitle; bağlantı noktası çalışan kolunun karşı tarafında kalsın.
+• Dirseğini yaklaşık dik açıyla büküp yanına al; gerekirse dirsekle gövde arasına küçük havlu koy.
+• Bileğini düz ve dirseğini yerinde tutarak elini karından dış yana doğru aç; gövdeni döndürme.
+• Omuzu zorlamayan aralıkta durup yavaşça geri dön; hafif direnç kullan ve iki tarafı çalıştır."
+band-pull-apart;Bant pull-apart;;Lastikle kolları iki yana açma;;;;;;Göğüs önünde tutulan lastik, kollar iki yana açılarak gerilir. Arka omuz ve kürek kemiklerini birbirine yaklaştıran üst sırt kasları çalışır.;deltPost, trapMid;band_pull_apart_front;"• Lastiğin sağlamlığını kontrol et; iki elinle göğüs önünde, dirseklerin hafif bükülü olacak şekilde tut.
+• Karnını sık ve boynunu rahat bırak; ellerini iki yana açarak lastiği göğsüne yaklaştır.
+• Kürek kemiklerinin kontrollü biçimde yaklaşmasına izin ver; omuzlarını kulaklarına kaldırma ve belini geriye atma.
+• Lastiğin seni aniden çekmesine izin vermeden başlangıca dön; omuzda ağrı varsa aralığı veya direnci azalt."
+barbell-row;Barbell row;Barbell kürek çekme;Öne eğilerek halterle kürek çekiş;;;;;;"Kalçadan öne eğilmiş duruşta halter alt kaburga veya üst karın yönüne çekilir. Gövde sabit kalırken dirsekler ve kürek kemikleri hareket eder; herkese uyan sabit bir gövde açısı yoktur.";lat, trapMid, deltPost, biceps;standing_row_hinged;"• Halteri omuz genişliğine yakın üstten tutuşla kavra; dizlerini hafif bük ve kalçanı geriye göndererek eğil.
+• Belinin doğal konumunu koru, karnını sık ve barı kollarının altında serbestçe tut.
+• Barı alt kaburgalarına doğru çek; dirseklerini geriye götürürken gövdeni kaldırıp savurma.
+• Kollarını kontrollü uzat; kürek kemiklerinin doğal hareketine izin verirken bel konumunu koru."
+bench-press;Bench press;Göğüs presi;Düz sehpada halterle göğüs itiş;;;;;;"Düz sehpada sırtüstü yatarken halter göğse doğru indirilip yukarı itilir. Göğüs, arka kol ve ön omuz kasları çalışır; omuzların ve kalçanın sehpa desteği korunur.";pecSternal, pecClav, deltFront, triLat, triLong;bench_press;"• Güvenlik desteklerini ayarla veya yardımcı kullan; ayaklarını yere bas, kalçanı ve üst sırtını sehpaya yerleştir.
+• Barı başparmakların etrafına kapanacak şekilde kavra; bileklerini ön kolların üzerinde dengeli tut.
+• Barı kontrollü biçimde orta-alt göğse yaklaştır; dirseklerini omuz hizasında tamamen yana açma ve barı göğüsten sektirme.
+• Ayakların sabitken barı yukarı it; kalçanı kaldırma, omuz ağrısı oluşturan derinliğe inme.
+• Set sonunda barı askının iki tarafına güvenle yerleştir."
+biceps-curl;Biceps curl;Kol bükme;Ağırlıkla ön kol bükme;;;;;;"Üst kollar gövde yanında büyük ölçüde sabitken dirsekler bükülerek ağırlık kaldırılır. Ön kol yalnızca kendi ekseninde dönmez; temel hareket dirseğin bükülüp açılmasıdır.";biceps, brachialis;standing_arm_isolation;"• Dambılları yanlarında, avuçların öne bakacak şekilde tut; ayaklarını rahatça aç.
+• Üst kollarını gövde yanında tutarak dirseklerini bük ve ağırlıkları omuzlarına doğru kaldır.
+• Bileklerini düz tut; belinden hız alma ve dirseklerini belirgin biçimde öne kaçırma.
+• Dirseklerini kontrollü açarak başlangıca dön; ağırlıkları aşağı bırakma."
+bird-dog;Bird-dog;;Dört ayak üzerinde çapraz kol ve bacak uzatma;;;;;;Eller ve dizler üzerinde karşı kol ve bacak uzatılırken gövde sabit tutulur. Amaç uzuvları çok yükseğe kaldırmak değil, bel ve leğen kemiği kontrolünü korumaktır.;erector, gluteMax;bird_dog;"• Ellerini omuzlarının, dizlerini kalçalarının altına yerleştir; boynunu sırtınla aynı çizgide tut.
+• Karnını hafifçe sık; bir kolunu öne, karşı bacağını geriye doğru uzat.
+• Kalçanı yana çevirmeden ve belini çukurlaştırmadan, en fazla gövde hizasına kadar uzan.
+• Kısa süre dengede kalıp elini ve dizini yavaşça yere getir; taraf değiştir ve normal nefes al."
+bulgarian-split-squat;Bulgarian split squat;;Arka ayak yükseltide tek bacak ağırlıklı squad;;;;;;"Arka ayak alçak ve sabit bir yükseltide desteklenirken ön bacak ağırlıklı çömelip kalkılır. Ön bacağın ön uyluk ve kalça kasları çalışır; arka bacak dengeye yardımcı olur.";quadRF, quadVL, gluteMax;bulgarian_split_squat;"• Arkanda kaymayan, çok yüksek olmayan bir sehpa seç; arka ayağının üstünü üzerine yerleştir.
+• Ön ayağını yeterince ileri al; ayaklarını ip üzerinde gibi aynı çizgiye değil kalça genişliğine yakın yerleştir.
+• Ön dizini ayak yönünde bükerek aşağı in; ön tabanın yerde kalsın ve arkadaki kalçayı zorlayacak kadar derine gitme.
+• Öndeki ayağınla yeri iterek kalk; dengede zorlanırsan sabit bir yerden destek al ve sonra taraf değiştir."
+calf-raise;Calf raise;Topuk yükseltme;Ayakta topuk yükseltme;;;;;;"Ayakların ön kısmı yere basarken topuklar kaldırılıp indirilir. Baldır kasları çalışır; ayak bilekleri içe veya dışa devrilmeden hareket edilir.";gastroLat, gastroMed, soleus;calf_raise;"• Ayaklarını kalça genişliğinde aç; denge için sabit bir yüzeye hafifçe tutun.
+• Dizlerini zorla kilitlemeden, ayaklarının ön kısmına basarak topuklarını yavaşça yükselt.
+• Ayak bileklerini yana yatırmadan kısa süre tepede dur; parmak uçlarında zıplama.
+• Topuklarını kontrollü indir; başlangıçta düz zemini kullan ve rahat hareket aralığında kal."
+cat-cow;Kedi-deve;Cat-cow;Dört ayak üzerinde sırtı yuvarlama ve açma;;;;;;"Dört ayak duruşunda omurga yavaşça yuvarlanır ve ardından rahatça açılır. Bu bir hareketlilik egzersizidir; bel ve boyun son sınıra zorlanmaz.";erector;quadruped_spine;"• Ellerini omuzlarının, dizlerini kalçalarının altına yerleştir.
+• Nefes verirken sırtını yavaşça tavana doğru yuvarla; başının doğal olarak aşağı gelmesine izin ver.
+• Nefes alırken göğsünü öne açıp leğen kemiğini hafifçe öne döndür; belini ve boynunu aşırı çukurlaştırma.
+• İki yön arasında yumuşak geçiş yap; ağrısız aralıkta hareket et ve uç pozisyonları zorlama."
+chest-supported-row;Göğüs destekli kürek;Chest-supported row;Göğüs destekli dambılla kürek çekiş;;;;;;"Göğüs eğimli sehpaya dayanırken dambıllar gövdeye çekilir. Destek gövdenin savrulmasını sınırlar; hareket serbest duruşta öne eğilerek yapılan kürek çekişten farklıdır.";trapMid, deltPost, lat;standing_row_hinged;"• Eğimli ve sabit bir sehpaya göğsünü dayayıp ayaklarını yere bas; başını sırtınla aynı çizgide tut.
+• Dambılları omuzlarının altında tut; göğsünün sehpayla temasını koru.
+• Dirseklerini geriye götürerek ağırlıkları alt kaburga yanlarına çek; omuzlarını kulaklarına yükseltme.
+• Kollarını kontrollü uzat; göğsünü sehpadan kaldırarak veya belini yaylandırarak hız alma."
+chin-tuck;Çene içeri çekme;Chin tuck;Çeneyi geriye çekme;;;;;;"Baş öne-aşağı eğilmeden yatay olarak hafifçe geriye alınır. Boyun kontrolünü çalıştıran küçük bir harekettir; başı kuvvetle bastırmak veya gövdeyi geriye yatırmak gerekmez.";sterno;chin_tuck_side;"• Otururken veya ayakta gövdeni dik tut; gözlerin karşıya baksın.
+• Çeneni aşağı düşürmeden başını hafifçe geriye kaydır; küçük bir gıdı oluşturduğunu düşün.
+• Omuzlarını ve çeneni gevşek tutarak birkaç saniye bekle; nefes almayı sürdür.
+• Başlangıca dön; boyun ağrısı, baş dönmesi veya kola yayılan belirti oluşursa dur."
+dead-bug;Ölü böcek;Dead bug;Sırtüstü çapraz kol ve bacak uzatma;;;;;;"Sırtüstü yatışta karşı kol ve bacak uzatılırken belin yerden belirgin biçimde yaylanması önlenir. Karın kasları gövdeyi dengeler; uzanma mesafesi bel kontrolüne göre kısaltılabilir.";absMid, absLower;dead_bug_supine;"• Sırtüstü yat; kollarını tavana uzat, kalça ve dizlerini yaklaşık dik açıya getir.
+• Nefes verip karnını hafifçe sık; belini rahatça zemine yaklaştır, zorla bastırma.
+• Bir kolunu başının arkasına, karşı bacağını ileri doğru yavaşça uzat; belin yaylanmaya başlamadan dur.
+• Başlangıca dönüp taraf değiştir; zorlanırsan bacağını daha az uzat veya yalnızca topuğunu yere dokundur."
+deadlift;Deadlift;Ölü kaldırış;Halteri yerden kaldırma;;;;;;"Yerdeki halter kalça ve dizlerin birlikte açılmasıyla kaldırılır. Kalça, arka bacak ve sırtı sabit tutan kaslar çalışır; bar vücuda yakın ilerler ve tepede geriye yaslanılmaz.";erector, gluteMax, hamBF, hamST, lat, trapMid, trapUpper;hinge;"• Ayaklarını kalça genişliğinde, barı ayak ortanın üzerinde konumlandır; kalçanı geriye gönderip dizlerini bükerek barı bacaklarının dışından kavra.
+• Karnını sık, sırtının doğal eğrilerini koru ve barı kaval kemiğine yakın tut; kolların düz kalsın.
+• Yeri ayaklarınla iterek ayağa kalk; kalça ve omuzların uyumlu yükselsin, barı aniden çekiştirme.
+• Dik durduğunda kalçanı aşırı öne itme; barı bacaklarına yakın tutarak önce kalçadan eğil, ardından dizlerini büküp yere bırak.
+• Yere uzanırken bel konumunu koruyamıyorsan yükü güvenli bir yükseltiye al ve daha hafif ağırlık kullan."
+face-pull;Yüz çekişi;Face pull;Halatla yüze çekiş;;;;;;"Yüksek makaraya bağlı halat yüze doğru çekilirken eller başın iki yanına ayrılır. Arka omuz ve üst sırt çalışır; baş öne uzatılmaz ve belden geriye yatılmaz.";deltPost, trapMid;face_pull_standing;"• Halatı yüz hizasında veya biraz üzerinde makaraya tak; iki ucunu tutup kablo gerilene kadar geri adım at.
+• Dengeli dur ve karnını sık; halatı burun-alın hizasına doğru çek.
+• Ellerini başının iki yanına ayırırken dirseklerini rahatça yana ve geriye götür; omuzlarını zorlayacak kadar yükseltme.
+• Kollarını yavaşça uzat; hafif ağırlıkla çalış ve halatı yüzüne çarptırma."
+front-hack-squat;Front squat;Ön squat;Halter önde squad;;;;;;"Mevcut Front squat adı esas alınmıştır: halter omuzların ön kısmında desteklenirken çömelip kalkılır. Gövde görece dik tutulur; derinlik denge ve hareketliliğe göre seçilir. Kaydın kimliği ve animasyon türü bu adla tutarlı değildir.";quadRF, quadVL, quadVM;squat_goblet;"• Güvenlik destekli istasyonda hafif halteri ön omuzlarına yerleştir; barın yükünü yalnızca bileklerinde taşıma.
+• Dirseklerini öne ve rahatça yukarı yönelt; barın omuz desteğini koruyarak askıdan çık.
+• Ayak tabanların yerdeyken kalça ve dizlerini birlikte bük; dizlerin ayaklarınla aynı yönde ilerlesin.
+• Bar öne yuvarlanmadan ve bel kontrolün bozulmadan inebildiğin noktadan ayağa kalk; bitirince barı güvenle askıya koy.
+• Bu adımlar halter önde squad içindir; kızaklı squad makinesi veya göğüste tek ağırlık tutulan squadyle aynı değildir."
+glute-bridge;Kalça köprüsü;Glute bridge;Yerde kalça köprüsü;;;;;;"Omuzlar ve ayaklar yerdeyken kalça kaldırılır. Kalça kaslarıyla omuz-kalça-diz hattı oluşturulur; yükseklik kazanmak için bel aşırı çukurlaştırılmaz.";gluteMax;glute_bridge;"• Sırtüstü yat, dizlerini bük ve ayaklarını kalça genişliğinde yere bas; kolların yanında kalsın.
+• Karnını hafifçe sık ve ayak tabanlarınla yeri iterek kalçanı yükselt.
+• Omuzların yerde kalırken kalçanı dizlerinle gövdenin aynı çizgiye geldiği kadar kaldır; boynuna yük bindirme.
+• Kalça kaslarını kısa süre sıkıp yavaşça yere dön; belini yaylandırma."
+goblet-squat;Goblet squat;;Göğüste tek ağırlıkla squad;;;;;;"Bir dambıl veya kulplu ağırlık göğüs önünde iki elle tutulurken çömelip kalkılır. Ön bacak ve kalça kasları çalışır; hareketin mutlaka sığ yapılması gerekmez.";quadRF, quadVL, quadVM, gluteMax;squat_goblet;"• Ağırlığı göğsüne yakın iki elle güvenle tut; ayaklarını rahat çömelebileceğin genişlikte aç.
+• Karnını sık; kalça ve dizlerini birlikte bükerek aralarına doğru çömel.
+• Topuklarını yerde, dizlerini ayak yönünde tut; sırt ve denge kontrolünün korunduğu derinlikte dur.
+• Tüm tabanınla yeri itip kalk; ağırlığı gövdenden uzaklaştırma ve dipte zıplama."
+hanging-knee-raise;Asılı diz çekme;Hanging knee raise;Barda asılı dizleri karna çekme;;;;;;"Barda asılıyken dizler gövdeye çekilir; karın kasları leğen kemiğinin kontrollü toparlanmasına katkı verirken kalça bükücüler de çalışır. Sallanarak hız alınmaz.";absLower, absMid;hanging_knee_raise;"• Sağlam bir barı güvenli tutuşla kavra; gerekirse basamak kullan ve ayaklarını yerden kes.
+• Omuzlarını kontrol altında tut, karnını sık ve sallanmayı durdur.
+• Dizlerini bükerek karnına doğru kaldır; rahatça yapabiliyorsan leğen kemiğini hafifçe gövdene doğru yuvarla.
+• Bacaklarını yavaşça indir; tutuşun veya omuz kontrolün bozulursa seti bitir ve basamağa güvenle in."
+hip-thrust;Hip thrust;Kalça itişi;Sırt destekli kalça yükseltme;;;;;;"Üst sırt sabit bir sehpaya dayanırken ayaklardan destek alınarak kalça yükseltilir. Diz açısı hareket boyunca sabit değildir; tepede kaval kemiklerinin yaklaşık dik olması uygun bir başlangıç ayarıdır.";gluteMax;hip_thrust;"• Kaymayan sehpaya üst sırtını, kürek kemiklerinin alt kenarı civarından daya; ayaklarını yere bas.
+• Ağırlık kullanıyorsan kalça kıvrımına koruyucu pedle yerleştir ve ellerinle dengede tut; boynuna yük verme.
+• Karnını sıkıp ayaklarınla yeri iterek kalçanı kaldır; tepede gövde ve uyluklar yaklaşık aynı çizgide olsun.
+• Belini aşırı açmadan kalça kaslarını sık; kalçanı kontrollü indir ve ayaklarının kaymasına izin verme."
+incline-press;Incline dumbbell pres;Eğik sehpada dumbbell pres;Eğimli sehpada dambılla göğüs itiş;;;;;;"Yukarı eğimli sehpada dambıllar göğüs yanlarından yukarı itilir. Göğsün üst bölümü, ön omuz ve arka kol kasları çalışır; eğim arttıkça omuz katkısı artabilir.";pecClav, deltFront, triLat;incline_press;"• Sehpayı yaklaşık 15–30 derece eğime ayarla; ayaklarını yere, kalçanı ve üst sırtını sehpaya yerleştir.
+• Dambılları göğüs yanlarında dengeli tut; bileklerin ön kollarının üzerinde, dirseklerin gövdene rahat bir açıda olsun.
+• Ağırlıkları kontrollü biçimde yukarı it; tepede birbirine çarpma ve belini aşırı yaylandırma.
+• Omuzlarının rahat ettiği derinliğe yavaşça indir; set sonunda dambılları güvenle bırakabileceğin ağırlık seç."
+lat-pulldown;Lat pulldown;Lat çekişi;Üst makaradan göğse çekiş;;;;;;"Oturarak üst makaraya bağlı bar göğsün üst kısmına doğru çekilir. Geniş sırt kasları ve dirsek bükücüler çalışır; bar ense arkasına indirilmez.";lat, trapMid;lat_pulldown_seated;"• Uyluk desteğini ayarla ve ayaklarını yere bas; barı omuz genişliğinden biraz geniş, rahat bir tutuşla kavra.
+• Gövdeni hafif geriye eğip bu açıyı koru; boynunu öne uzatma.
+• Dirseklerini aşağı götürerek barı üst göğsüne yaklaştır; belden savrulma veya barı zorla göğse bastırma.
+• Kollarını ve omuzlarını kontrollü biçimde yukarı bırak; ağırlık yığınını çarptırma."
+lateral-raise;Lateral raise;Yana açış;Dambılla yana omuz açış;;;;;;"Dambıllar dirsekler hafif bükülü kalacak şekilde yanlara ve az miktarda öne kaldırılır. Başlıca omuzun orta bölümü çalışır; hareket öne kaldırış değildir.";deltFront;lateral_raise_front;"• Hafif dambılları yanında tut; ayaklarını dengeli aç ve gövdeni dik tut.
+• Dirseklerini hafif bükerek kollarını yanlara, gövdenin biraz önünden kaldır.
+• Omuz hizasına kadar veya daha düşük ağrısız aralıkta ilerle; ellerini su döker gibi içe çevirme.
+• Savurmadan yavaşça indir; omuzlarını aşırı silkme ve belinden hız alma."
+leg-curl;Leg curl;Arka bacak makinesi;Oturarak makinede diz bükme;;;;;;Oturarak yapılan sürümde uyluklar sabit tutulur, dizler bükülerek alt bacaklar koltuğun altına çekilir. Arka uyluk kasları çalışır.;hamBF, hamST;leg_curl_seated;"• Koltuğu diz eklemin makinenin dönme ekseniyle hizalanacak şekilde ayarla; sırtını dayanağa yerleştir.
+• Uyluk pedini sabitle; alt pedi Aşil tendonuna değil ayak bileğinin biraz üstündeki alt bacak bölümüne yerleştir.
+• Tutacakları kavra ve topuklarını aşağı-geriye çekerek dizlerini bük; kalçanı koltuktan kaldırma.
+• Dizlerini kontrollü aç; ağırlıkları çarptırma ve dizde ağrı oluşturan aralığa girme."
+leg-extension;Leg extension;Ön bacak makinesi;Oturarak makinede diz açma;;;;;;"Uyluklar koltukta sabitken dizler açılarak alt bacaklar öne-yukarı kaldırılır. Ön uyluk kasları çalışır; hareket hızla savrularak yapılmaz.";quadRF, quadVL, quadVM;leg_extension_seated;"• Sırt desteğini ve koltuğu ayarla; dizin makinenin dönme ekseniyle hizalansın.
+• Alt pedi ayaklarının üzerine değil ayak bileklerinin biraz üzerindeki kaval bölgesine yerleştir; tutacakları kavra.
+• Kalçanı ve uyluklarını koltukta tutarak dizlerini rahatça düzleştir; eklemi sertçe kilitleme.
+• Ağırlığı yavaşça indir; ağrı hissedersen yükü veya hareket aralığını azalt."
+leg-press;Leg press;Bacak presi;Makinede bacak itiş;;;;;;"Sırt destekli oturuşta platform kalça ve dizler açılarak itilir. Ön bacak ve kalça kasları çalışır; iniş derinliği kalçanın ve belin destekten ayrılmadığı aralıkla sınırlanır.";quadRF, quadVL, quadVM, gluteMax;leg_press_seated;"• Koltuğu ve güvenlik durdurucularını ayarla; ayaklarını platforma yaklaşık omuz genişliğinde yerleştir.
+• Platformu kontrollü itip kilidi makinenin talimatına göre aç; dizlerini sertçe kilitleme.
+• Dizlerini ayak yönünde bükerek platformu indir; topukların basılı, kalçan ve belin destekli kalsın.
+• Kalçan yuvarlanıp sehpadan ayrılmadan dur ve tüm tabanınla it; dizlerini ellerinle bastırma.
+• Bitirirken güvenlik kilidinin devreye girdiğinden emin ol; sonra platformdaki yükü bırak."
+mcgill-curl-up;McGill curl-up;;McGill kısa gövde kaldırma;;;;;;"Bir diz bükülü, diğeri uzatılmışken belin doğal boşluğu ellerle desteklenir. Baş ve omuzlar birlikte hafifçe kaldırılır; bel düzleştirilmez ve boyun öne bükülmez.";absUpper, absMid;curl_up_supine;"• Sırtüstü yat; bir dizini büküp ayağını yere bas, diğer bacağını uzat.
+• Ellerini belinin doğal boşluğuna koy; karnını hafifçe sık ve çeneni öne uzatma.
+• Başını ve omuzlarını tek parça gibi yerden az miktarda kaldır; belindeki eğriyi koru.
+• Normal nefes alarak kısa süre tut, sonra yavaşça indir ve dinlen; bükülü bacağı değiştir.
+• Boynunu çekiştirme veya hareketi tam mekiğe dönüştürme; ağrı oluşursa dur."
+pallof-press;Pallof pres;;Dönmeye direnerek öne itiş;;;;;;Yandan gelen lastik veya kablo direncine karşı eller göğüsten öne uzatılır. Gövde ve leğen kemiği dönmeden karın kasları dengeyi korur.;oblique, absMid;anti_rotation_standing;"• Lastiği göğüs hizasında sağlam bir noktaya sabitle veya kabloyu bu yüksekliğe ayarla; bağlantıya yan dön.
+• Tutacağı iki elinle göğsünde tut; ayaklarını rahatça açıp hafif direnç oluşana kadar uzaklaş.
+• Karnını sık ve ellerini göğsünün önüne uzat; omuzlarının ve kalçanın bağlantıya dönmesine izin verme.
+• Kısa süre bekleyip ellerini göğsüne getir; normal nefes al, ardından diğer yöne dönerek tekrarla."
+plank;Plank;;Eller üzerinde düz gövde duruşu;;;;;;Kaynak açıklamadaki yüksek sürüm esas alınmıştır: eller ve ayak uçları yerdeyken baştan topuğa uzanan gövde hattı korunur. Karın kasları belin çökmesine karşı çalışır.;absMid, absUpper;plank_prone;"• Ellerini omuzlarının altına koy ve bacaklarını geriye uzat; ayak uçlarından destek al.
+• Yeri ellerinle it; karnını ve kalçanı hafifçe sıkarak başını gövdenle aynı çizgide tut.
+• Belini çökertmeden veya kalçanı aşırı kaldırmadan normal nefes alarak duruşu koru.
+• Duruş bozulmadan dizlerini yere indir; zorlanırsan başlangıçta diz destekli uygula."
+pullup;Barfiks;Pull-up;Üstten tutuşla barfiks;;;;;;"Avuçlar karşıya bakarken asılı gövde bara doğru çekilir. Geniş sırt ve dirsek bükücü kaslar çalışır; bacaklar düz veya bükülü olabilir, yeter ki ayaklar yerden kesilsin ve sallanma olmasın.";lat, trapMid;pull_up_hang;"• Sağlam barı omuz genişliğinden biraz geniş, rahat üstten tutuşla kavra; gerekirse basamakla yerleş.
+• Ayaklarını yerden kes ve omuzlarını kontrollü tut; karnını sıkarak sallanmayı azalt.
+• Dirseklerini aşağı-geriye çekerek gövdeni yükselt; çeneni öne uzatarak bara yetişmeye çalışma.
+• Kollarını kontrollü uzatarak in; kendini aşağı bırakma, gerekirse destekli barfiks makinesi kullan."
+rdl;Romanian deadlift;Romen deadlift;Dambılla Romen kaldırışı;;;;;;"Ayakta başlayan harekette kalça geriye giderken dambıllar bacaklara yakın indirilir. Dizler hafif bükülü ve yaklaşık aynı açıda kalır; arka uyluk ve kalça kasları çalışır. Ağırlığın yere değmesi gerekmez.";hamBF, hamST, gluteMax, erector;hip_hinge_dumbbell;"• Dambılları uyluklarının önünde tut; ayaklarını kalça genişliğinde aç ve dizlerini hafif bük.
+• Karnını sık, kalçanı geriye gönder ve sırtının doğal konumunu koruyarak öne eğil.
+• Dambılları bacaklarına yakın indir; arka bacağında gerilme hissedip bel konumunu koruyabildiğin yerde dur.
+• Ayaklarınla yeri itip kalçanı öne getirerek dikleş; tepede geriye yaslanma ve hareketi squadye dönüştürme."
+reverse-fly;Dumbbell reverse fly;Arka omuz açış;Öne eğilerek dambılla arka omuz açış;;;;;;"Kalçadan öne eğilmiş duruşta kollar iki yana açılır. Arka omuz ve üst sırt kasları çalışır; dirsek açısı büyük ölçüde sabit kalır ve gövde savrulmaz.";deltPost, trapMid;hinged_fly;"• Hafif dambılları tut; dizlerini az bük ve kalçadan eğilerek sırtını rahat, sabit bir konuma getir.
+• Kollarını aşağı sarkıt; dirseklerini hafif bük ve boynunu sırtınla aynı çizgide tut.
+• Kollarını iki yana aç; ağırlıkları omuz kontrolünü koruduğun yüksekliğe kadar kaldır.
+• Yavaşça indir; gövdeni yukarı kaldırarak hız alma veya omuzlarını aşırı geriye zorlama."
+reverse-lunge;Reverse lunge;Geriye hamle;Geriye adımlı hamle;;;;;;"Bir ayak geriye alınır, iki diz bükülerek alçalınır ve öndeki bacakla başlangıca dönülür. Ön uyluk ve kalça kasları çalışır; arka topuk havada kalır.";quadRF, gluteMax;unilateral_lunge;"• Ayaklarını kalça genişliğinde aç; dik ve dengeli dur.
+• Bir ayağınla kontrollü biçimde geriye adım at; öndeki ayağının tüm tabanı yerde kalsın.
+• İki dizini büküp arka dizini zemine yaklaştır; ön dizini ayak yönünde tut ve yere çarpma.
+• Öndeki ayağınla yeri iterek gerideki ayağını başlangıca getir; taraf değiştir, gerekirse sabit destek kullan."
+seated-cable-row;Oturarak kürek;Seated cable row;Oturarak kablolu kürek çekiş;;;;;;"Ayaklar destek plakasında, dizler hafif bükülüyken alçak makaraya bağlı tutacak gövdeye çekilir. Sırt ve dirsek bükücü kaslar çalışır; belden ileri-geri sallanılmaz.";trapMid, lat, deltPost;seated_row_cable;"• Ayaklarını desteklere bas, dizlerini hafif bük ve tutacağı kavra; sırtının doğal eğrilerini koru.
+• Gövdeni dik ve sabit tutarak dirseklerini geriye götür; tutacağı üst karın bölgesine çek.
+• Omuzlarını kulaklarından uzak tut; kürek kemiklerinin kontrollü biçimde birbirine yaklaşmasına izin ver.
+• Kollarını yavaşça uzat; omuzların doğal olarak öne gelebilir ancak belini yuvarlayıp ağırlığa uzanma."
+shoulder-press;Omuz pres;Shoulder press;Oturarak baş üstüne omuz itiş;;;;;;"Oturarak omuz hizasındaki ağırlık baş üstüne itilir. Ön ve orta omuz ile arka kol kasları çalışır; kaburgalar öne açılıp bel aşırı yaylandırılmaz. Aşağıdaki uygulama dambıllı sürümdür.";deltFront, triLat, triLong;seated_overhead_press;"• Dik veya hafif geriye eğimli sırt desteğine otur; ayaklarını yere bas ve dambılları omuz hizasına getir.
+• Bileklerini ön kolların üzerinde tut; dirseklerin gövdenin biraz önünde ve rahat bir açıklıkta olsun.
+• Karnını sıkıp ağırlıkları baş üstüne it; başını öne uzatma ve belinden geriye yatma.
+• Omuzlarının ağrısız aralığında kontrollü indir; başlangıç ve bitişte ağırlıkları güvenle taşıyabileceğin yük seç."
+shrug;Omuz silkme;Shrug;Ağırlıkla omuz yükseltme;;;;;;"Kollar yanlarda ağırlık tutarken omuzlar yukarı kaldırılıp indirilir. Üst trapez kasları çalışır; omuzları daire çizdirerek döndürmek gerekmez.";trapUpper;shrug_front;"• Dambılları yanında tut ve ayaklarını dengeli aç; başını dik, kollarını uzun tut.
+• Dirseklerini bükmeden omuzlarını yavaşça kulaklarına doğru yükselt.
+• Boynunu öne uzatmadan kısa süre dur; omuzlarını öne-arkaya yuvarlama.
+• Ağırlıkları savurmadan omuzlarını yavaşça indir; tutuşunu veya boyun konumunu bozan yük kullanma."
+side-plank;Side plank;Yan plank;Ön kol üzerinde yan gövde duruşu;;;;;;"Yan yatıştan ön kol ve ayak desteğiyle kalça kaldırılır. Yan karın kasları ve omuz çevresi gövdeyi dengeler; üst kolun tavana uzatılması zorunlu değildir.";oblique;side_plank;"• Yan yat; dirseğini omzunun altına koy ve ön kolunu yere yerleştir.
+• Bacaklarını uzat; ayaklarını üst üste veya denge için hafif şaşırtmalı yerleştir.
+• Yeri ön kolunla itip kalçanı kaldır; baş, gövde ve bacaklarını aynı çizgide tut, göğsünü yere döndürme.
+• Nefes alarak kısa süre koru, sonra kontrollü in ve taraf değiştir; zorlanırsan dizler bükülü destekli sürümü kullan."
+single-arm-row;Tek kol dumbbell row;Tek kol kürek çekme;Destekli tek kolla dambıl kürek çekiş;;;;;;Bir el sabit bir desteğe dayanırken diğer eldeki dambıl kalçaya doğru çekilir. Gövde ve leğen kemiği dönmeden sırt ve dirsek bükücü kaslar çalışır.;lat, trapMid, biceps;standing_row_hinged;"• Bir elini sağlam sehpaya koy; ayaklarını dengeli açıp kalçadan öne eğil ve diğer elinde dambılı tut.
+• Karnını sık; başını ve sırtını aynı çizgide, omuzlarını yere dönük tut.
+• Dirseğini kalçana doğru geriye götürerek dambılı gövdenin yanına çek; gövdeni yana çevirme.
+• Kolu yavaşça uzat; omzu aşağı sarkıtarak zorlamadan kontrollü tekrarla ve taraf değiştir."
+step-up;Step-up;Basamak çıkma;Basamağa çıkma;;;;;;"Bir ayak sabit bir yükseltiye yerleştirilir ve o bacağın gücüyle yukarı çıkılır. Ön uyluk ve kalça kasları çalışır; serbest dizin ayrıca yukarı çekilmesi isteğe bağlı bir varyasyondur.";quadRF, gluteMax;step_up;"• Kaymayan ve dengeni koruyabileceğin yükseklikte bir basamak seç; bir ayağının tamamını üzerine koy.
+• Gövdeni hafif öne alıp basamaktaki ayağınla it; yerdeki bacakla sıçrayarak hız alma.
+• Basamaktaki kalça ve dizini açarak yüksel; dizin içe çökmesin ve dengeyi koru.
+• Aynı bacakla inişi kontrol ederek diğer ayağını yavaşça yere koy; tekrarlardan sonra taraf değiştir."
+suitcase-carry;Suitcase carry;Tek el ağırlık taşıma;Tek elde ağırlıkla yürüme;;;;;;"Ağırlık tek elde gövdenin yanında taşınırken dik yürünür. Gövde kasları yana eğilmeye ve dönmeye direnç gösterir; tutuş da çalışır.";oblique, absMid;carry;"• Yolunu boşalt; bir dambılı diz ve kalçalarını bükerek güvenle kaldırıp yanında tut.
+• Başını dik, omuzlarını doğal hizada tut; karnını sık ve ağırlığın ters yönüne yatma.
+• Kısa, kontrollü adımlarla yürü; ağırlığı sallama ve nefesini tutma.
+• Gövden yana eğilmeye başlamadan dur; ağırlığı kontrollü bırak ve diğer elle tekrarla."
+triceps-pushdown;Triceps pushdown;Triceps itişi;Üst makarada arka kol aşağı itiş;;;;;;"Üst kollar gövde yanında sabit tutulurken dirsekler açılarak kablo tutacağı aşağı itilir. Arka kol kasları çalışır; direnç üst makaradan gelir.";triLat, triLong;triceps_pushdown_standing;"• Üst makaraya halat veya kısa bar tak; ayaklarını dengeli açıp tutacağı kavra.
+• Dirseklerini gövdenin yanında bükülü tut; karnını sık ve bileklerini düz konumlandır.
+• Üst kollarını oynatmadan dirseklerini açarak tutacağı aşağı it; eklemi sertçe kilitleme.
+• Dirseklerini kontrollü büküp başlangıca dön; omuzlardan bastırma veya tüm vücut ağırlığınla yüklenme."
+walking-lunge;Walking lunge;Yürüyen hamle;Yürüyerek öne hamle;;;;;;"Öne adım atılıp hamle duruşuna alçalınır; arka bacak öne taşınarak ilerlemeye devam edilir. Geriye hamleden farklı olarak tekrarlar ileri yönde yer değiştirir.";quadRF, quadVL, gluteMax;unilateral_lunge;"• Önünde yeterli boş alan bırak ve ayaklarını kalça genişliğinde aç.
+• Bir ayağınla ileri adım atıp iki dizini bükerek alçal; öndeki tabanın yere bassın ve dizin ayak yönünde kalsın.
+• Arka dizini yere çarptırmadan dur; ön ayağınla itip yükselirken arka bacağını öne getir.
+• Diğer bacakla yeni bir öne hamle yap; denge için adımlar arasında ayaklarını yan yana getirerek kısa duraklayabilirsin."
+worlds-greatest-stretch;Lunge + gövde rotasyonu;World's greatest stretch;Derin hamlede gövde döndürerek esneme;;;;;;"Derin hamle duruşunda ön ayağın yanına el konur ve göğüs ön bacak tarafına döndürülür. Kalça çevresi ve göğüs omurgası hareketliliğini birleştirir; yalnızca geriye hamle değildir.";adductors, oblique;unilateral_lunge;"• Bir ayağını öne alıp derin hamleye yerleş; arka dizini rahatlık için minder üzerine indirebilirsin.
+• Öndeki ayağının karşı tarafındaki elini yere veya bir yükseltiye koy; ön ayağın tüm tabanı destekli kalsın.
+• Ön bacak tarafındaki kolunu yukarı açarken göğsünü o tarafa döndür; kalçanı mümkün olduğunca sabit tut ve beli zorla burma.
+• Kolunu kontrollü indir; ağrısız aralıkta tekrarlayıp taraf değiştir, dirseği yere değdirmek veya kolu tam dikleştirmek için zorlama."

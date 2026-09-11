@@ -1,0 +1,352 @@
+{
+ "_": "ÜRETİLMİŞTİR — elle düzenleme. Kaynak: scripts/build_exercise_library.py",
+ "labels": {
+  "sterno": "Boyun ön",
+  "trapFront": "Trapez (üst-ön)",
+  "deltFront": "Ön omuz",
+  "pecClav": "Göğüs (üst)",
+  "pecSternal": "Göğüs (orta-alt)",
+  "serratus": "Serratus",
+  "biceps": "Biceps",
+  "brachialis": "Brachialis",
+  "forearmFlex": "Ön kol bükücüler",
+  "absUpper": "Karın (üst)",
+  "absMid": "Karın (orta)",
+  "absLower": "Karın (alt)",
+  "oblique": "Yan karın",
+  "quadRF": "Ön bacak (orta)",
+  "quadVL": "Ön bacak (dış)",
+  "quadVM": "Ön bacak (iç)",
+  "adductors": "İç bacak",
+  "sartorius": "Sartorius",
+  "tibialis": "Ön incik",
+  "peroneus": "Dış incik",
+  "trapUpper": "Trapez (üst)",
+  "trapMid": "Trapez (orta)",
+  "trapLower": "Trapez (alt)",
+  "deltPost": "Arka omuz",
+  "infra": "Infraspinatus",
+  "teres": "Teres major",
+  "lat": "Kanat kası (lat)",
+  "erector": "Bel dikleştirici",
+  "triLat": "Triceps (yan baş)",
+  "triLong": "Triceps (uzun baş)",
+  "forearmExt": "Ön kol açıcılar",
+  "gluteMax": "Kalça",
+  "gluteMed": "Yan kalça",
+  "hamBF": "Arka bacak (dış)",
+  "hamST": "Arka bacak (iç)",
+  "addMagnus": "İç bacak (arka)",
+  "gastroLat": "Baldır (dış baş)",
+  "gastroMed": "Baldır (iç baş)",
+  "soleus": "Soleus"
+ },
+ "alias": {
+  "Kol çevirme (öne / arkaya)": "arm-circles",
+  "Kol çevirme + kedi-deve": "arm-circles",
+  "Kol çevirme + omuz silkme": "arm-circles",
+  "Kedi-deve (cat-cow)": "cat-cow",
+  "Bant pull-apart": "band-pull-apart",
+  "Bant pull-apart (veya boş elle kürek kemiği sıkma)": "band-pull-apart",
+  "Bant ile dış rotasyon": "band-external-rotation",
+  "Bant dış rotasyon": "band-external-rotation",
+  "Bant ile omuz dış rotasyon (yoksa boş elle)": "band-external-rotation",
+  "Kablo dış rotasyon": "band-external-rotation",
+  "Çene içeri çekme (chin tuck)": "chin-tuck",
+  "Lunge + gövde rotasyonu (world's greatest stretch)": "worlds-greatest-stretch",
+  "Ayak bileği duvar mobilizasyonu": null,
+  "Bacak sallama (öne-arkaya, yana)": null,
+  "Torasik açılma (yan yatarak kitap açma)": null,
+  "Torasik açılma (foam roller üstünde)": null,
+  "Scapular şınav / duvarda scapular kaydırma": null,
+  "Dead hang (barda asılma)": "pullup",
+  "Yerinde hafif koşu / ip atlama": null,
+  "Yerinde yürüyüş / hafif zıplama": null,
+  "Bisiklet / kürek / yürüyüş bandı": null,
+  "Kürek / kol ergometresi / ip atlama": null,
+  "Bitiş: bisiklet / kürek": null,
+  "Bitiş: yürüyüş bandı eğimli": null,
+  "Isınma: hafif kardiyo": null,
+  "Soğuma: hafif kardiyo": null,
+  "Tempolu kardiyo (bisiklet / eliptik / yürüyüş bandı / dışarıda tempolu yürüyüş)": null,
+  "Aralık: 30 sn sert / 90 sn hafif (bisiklet, kürek veya koşu bandı)": null,
+  "Devre: goblet squat → şınav → dumbbell row → kettlebell swing → mountain climber": null,
+  "Dumbbell devre: curl → lateral raise → pushdown": null,
+  "Ana hareketin hafif ilk seti": null,
+  "Günün ilk hareketi — boş bar / hafif": null,
+  "Vücut ağırlığıyla squat": "goblet-squat",
+  "Yan yatarak bacak kaldırma / bantlı yan adım": null,
+  "Goblet squat": "goblet-squat",
+  "Goblet squat (hafif dumbbell)": "goblet-squat",
+  "Goblet squat veya leg press": "goblet-squat",
+  "Back squat": "back-squat",
+  "Hack squat veya front squat": "front-hack-squat",
+  "Leg press": "leg-press",
+  "Romanian deadlift": "rdl",
+  "Romanian deadlift (bar)": "rdl",
+  "Romanian deadlift (dumbbell)": "rdl",
+  "Kettlebell deadlift (1–4. hafta) → Romanian deadlift (5. haftadan)": "rdl",
+  "Deadlift (trap bar tercih) ": "deadlift",
+  "Hip thrust (bar veya makine)": "hip-thrust",
+  "Kalça köprüsü": "glute-bridge",
+  "Kalça köprüsü (glute bridge)": "glute-bridge",
+  "Kalça köprüsü / hip thrust": "hip-thrust",
+  "Bulgarian split squat": "bulgarian-split-squat",
+  "Walking lunge": "walking-lunge",
+  "Reverse lunge (geriye adım) — destekle": "reverse-lunge",
+  "Step-up (kutu)": "step-up",
+  "Leg extension": "leg-extension",
+  "Leg curl": "leg-curl",
+  "Calf raise": "calf-raise",
+  "Bench press": "bench-press",
+  "Bench press (bar veya dumbbell)": "bench-press",
+  "Incline dumbbell pres": "incline-press",
+  "Göğüs pres (makine veya dumbbell)": "bench-press",
+  "Göğüs pres (makine)": "bench-press",
+  "Dumbbell omuz pres": "shoulder-press",
+  "Dumbbell omuz pres (oturarak)": "shoulder-press",
+  "Omuz pres (makine veya dumbbell)": "shoulder-press",
+  "Overhead press (bar)": "shoulder-press",
+  "Barbell row": "barbell-row",
+  "Barbell / kablo row": "barbell-row",
+  "Tek kol dumbbell row": "single-arm-row",
+  "Chest-supported dumbbell row": "chest-supported-row",
+  "Kablo kürek (chest-supported row)": "chest-supported-row",
+  "Oturarak kürek": "seated-cable-row",
+  "Oturarak kürek (seated row)": "seated-cable-row",
+  "Lat pulldown": "lat-pulldown",
+  "Lat pulldown (geniş)": "lat-pulldown",
+  "Lat pulldown (nötr tutuş)": "lat-pulldown",
+  "Lat pulldown veya barfiks": "lat-pulldown",
+  "Weighted barfiks veya ağır lat pulldown": "pullup",
+  "Barfiks": "pullup",
+  "Yüz çekişi": "face-pull",
+  "Yüz çekişi (face pull)": "face-pull",
+  "Dumbbell reverse fly": "reverse-fly",
+  "Dumbbell reverse fly (öne eğik)": "reverse-fly",
+  "Omuz silkme (shrug)": "shrug",
+  "Lateral raise": "lateral-raise",
+  "Biceps curl": "biceps-curl",
+  "Triceps pushdown": "triceps-pushdown",
+  "Biceps curl + triceps pushdown (süperset)": "biceps-curl",
+  "Hammer curl + overhead triceps (süperset)": "biceps-curl",
+  "Plank": "plank",
+  "Plank (dizden veya ayaktan)": "plank",
+  "Side bridge (dizden)": "side-plank",
+  "Side plank": "side-plank",
+  "Side plank (ayaktan) + üst bacak kaldırma": "side-plank",
+  "Ölü böcek": "dead-bug",
+  "Ölü böcek (dead bug)": "dead-bug",
+  "Bird-dog": "bird-dog",
+  "Bird-dog (dirsek-diz temaslı)": "bird-dog",
+  "McGill curl-up": "mcgill-curl-up",
+  "Pallof pres": "pallof-press",
+  "Ab wheel rollout (dizden)": "ab-wheel-rollout",
+  "Asılı bacak kaldırma": "hanging-knee-raise",
+  "Asılı bacak kaldırma / diz çekme": "hanging-knee-raise",
+  "Asılı diz çekme": "hanging-knee-raise",
+  "Suitcase carry (tek el kettlebell)": "suitcase-carry"
+ },
+ "primary": {
+  "arm-circles": [],
+  "cat-cow": [
+   "erector"
+  ],
+  "band-pull-apart": [
+   "deltPost",
+   "trapMid"
+  ],
+  "band-external-rotation": [
+   "infra",
+   "teres"
+  ],
+  "chin-tuck": [
+   "sterno"
+  ],
+  "worlds-greatest-stretch": [
+   "adductors",
+   "oblique"
+  ],
+  "goblet-squat": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax"
+  ],
+  "back-squat": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax",
+   "erector",
+   "adductors"
+  ],
+  "front-hack-squat": [
+   "quadRF",
+   "quadVL",
+   "quadVM"
+  ],
+  "rdl": [
+   "hamBF",
+   "hamST",
+   "gluteMax",
+   "erector"
+  ],
+  "deadlift": [
+   "erector",
+   "gluteMax",
+   "hamBF",
+   "hamST",
+   "lat",
+   "trapMid",
+   "trapUpper"
+  ],
+  "hip-thrust": [
+   "gluteMax"
+  ],
+  "bulgarian-split-squat": [
+   "quadRF",
+   "quadVL",
+   "gluteMax"
+  ],
+  "walking-lunge": [
+   "quadRF",
+   "quadVL",
+   "gluteMax"
+  ],
+  "reverse-lunge": [
+   "quadRF",
+   "gluteMax"
+  ],
+  "step-up": [
+   "quadRF",
+   "gluteMax"
+  ],
+  "calf-raise": [
+   "gastroLat",
+   "gastroMed",
+   "soleus"
+  ],
+  "bench-press": [
+   "pecSternal",
+   "pecClav",
+   "deltFront",
+   "triLat",
+   "triLong"
+  ],
+  "incline-press": [
+   "pecClav",
+   "deltFront",
+   "triLat"
+  ],
+  "shoulder-press": [
+   "deltFront",
+   "triLat",
+   "triLong"
+  ],
+  "barbell-row": [
+   "lat",
+   "trapMid",
+   "deltPost",
+   "biceps"
+  ],
+  "single-arm-row": [
+   "lat",
+   "trapMid",
+   "biceps"
+  ],
+  "reverse-fly": [
+   "deltPost",
+   "trapMid"
+  ],
+  "lateral-raise": [
+   "deltFront"
+  ],
+  "biceps-curl": [
+   "biceps",
+   "brachialis"
+  ],
+  "shrug": [
+   "trapUpper"
+  ],
+  "plank": [
+   "absMid",
+   "absUpper"
+  ],
+  "side-plank": [
+   "oblique"
+  ],
+  "bird-dog": [
+   "erector",
+   "gluteMax"
+  ],
+  "pallof-press": [
+   "oblique",
+   "absMid"
+  ],
+  "ab-wheel-rollout": [
+   "absMid",
+   "absUpper"
+  ],
+  "hanging-knee-raise": [
+   "absLower",
+   "absMid"
+  ],
+  "suitcase-carry": [
+   "oblique",
+   "absMid"
+  ],
+  "glute-bridge": [
+   "gluteMax"
+  ],
+  "leg-press": [
+   "quadRF",
+   "quadVL",
+   "quadVM",
+   "gluteMax"
+  ],
+  "leg-extension": [
+   "quadRF",
+   "quadVL",
+   "quadVM"
+  ],
+  "leg-curl": [
+   "hamBF",
+   "hamST"
+  ],
+  "lat-pulldown": [
+   "lat",
+   "trapMid"
+  ],
+  "seated-cable-row": [
+   "trapMid",
+   "lat",
+   "deltPost"
+  ],
+  "chest-supported-row": [
+   "trapMid",
+   "deltPost",
+   "lat"
+  ],
+  "pullup": [
+   "lat",
+   "trapMid"
+  ],
+  "triceps-pushdown": [
+   "triLat",
+   "triLong"
+  ],
+  "face-pull": [
+   "deltPost",
+   "trapMid"
+  ],
+  "dead-bug": [
+   "absMid",
+   "absLower"
+  ],
+  "mcgill-curl-up": [
+   "absUpper",
+   "absMid"
+  ]
+ }
+}

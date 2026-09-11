@@ -19,22 +19,23 @@ import { MUSCLES } from '@/utils/muscles';
  * testlerin reddettiği veriyi diske yazabilirdi — nitekim yazabiliyordu.
  */
 
-const MODES = ['stand', 'quad', 'bench', 'supine', 'hang'];
+const MODES = ['stand', 'quad', 'bench', 'supine', 'hang', 'seat'];
 const ARMS = ['angles', 'ik', 'floor'];
 const BARS = ['back', 'hands', 'hips'];
-const PROPS = ['bench', 'box', 'bar', 'hipbench'];
-const LOADS = ['barbell', 'dumbbell', 'band'];
+const PROPS = ['bench', 'box', 'bar', 'hipbench', 'seatback', 'sled', 'cable', 'legpad'];
+const CABLE_FROM = ['high', 'front', 'low', 'back'];
+const LOADS = ['barbell', 'dumbbell'];
 const VIEWS = ['side', 'front'];
+/** Figürün dikey dayanağı ZEMİN olan kipler — orada dikey kaydırma yok. */
+export const GROUND_RESTING = ['stand', 'quad', 'supine'];
 
 /** `fillPose` bu alanları tanıyor; gerisi sessizce yok sayılırdı. */
 const POSE_KEYS: (keyof RigPose)[] = [
   'shinA', 'thighA', 'torso', 'thoraxA', 'neckA', 'upperA', 'foreA',
-  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'armAz', 'armAzF', 'foreAz', 'foreAzF', 'shLift', 'toe', 'toeF', 'ankleLift',
-  // Ayak bileği eklem açısı, taraf başına. Bkz. `RigPose.ankle`.
-  'ankle', 'ankleF',
+  'hx', 'hy', 'thighF', 'shinF', 'upperF', 'foreF', 'hxF', 'shLift', 'ankleLift',
 ];
 
-const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'note', 'kf'];
+const EXERCISE_KEYS = ['mode', 'arm', 'bar', 'bend', 'dur', 'load', 'hideFarLeg', 'hideFarArm', 'view', 'prop', 'footDir', 'footDirFarAdj', 'bodyDx', 'bodyDy', 'propDx', 'propDy', 'cableFrom', 'note', 'kf'];
 
 /**
  * Bir tekrarın en kısa süresi (ms). Testler de bunu okuyor: editörün daha
@@ -72,6 +73,24 @@ export function validateArchetypes(data: unknown): string[] {
     if (e.load !== undefined && !LOADS.includes(e.load as string)) bad(`load "${String(e.load)}" geçersiz`);
     if (e.prop !== undefined && e.prop !== null && !PROPS.includes(e.prop as string)) bad(`prop "${String(e.prop)}" geçersiz`);
     if (e.view !== undefined && !VIEWS.includes(e.view as string)) bad(`view "${String(e.view)}" geçersiz`);
+    if (e.footDir !== undefined && !num(e.footDir)) bad('footDir sayı olmalı');
+    if (e.footDirFarAdj !== undefined && !num(e.footDirFarAdj)) bad('footDirFarAdj sayı olmalı');
+    (['bodyDx', 'bodyDy', 'propDx', 'propDy'] as const).forEach((k) => {
+      if (e[k] !== undefined && !num(e[k])) bad(`${k} sayı olmalı`);
+    });
+    // Dikey kaydırma YALNIZCA figürün dikey dayanağı zemin OLMAYAN kiplerde.
+    // `stand`, `quad` ve `supine` figürü yere oturtuyor; orada yukarı çekmek
+    // figürü havada bırakmaktan başka bir şey yapmıyor ve denetim haklı olarak
+    // şikâyet ediyor. Kontrolün buna izin verip sonra uyarması kullanıcıya
+    // düzeltemediği bir hata bırakıyordu; kural en baştan kesiyor.
+    if (e.bodyDy !== undefined && GROUND_RESTING.includes(e.mode as string)) {
+      bad(`bodyDy "${String(e.mode)}" kipinde anlamsız: figür zemine oturuyor, dikey dayanağı zemin`);
+    }
+    if ((e.propDx !== undefined || e.propDy !== undefined) && (e.prop === undefined || e.prop === null)) {
+      bad('propDx/propDy yalnızca sahne eşyası varken anlamlı');
+    }
+    if (e.cableFrom !== undefined && !CABLE_FROM.includes(e.cableFrom as string)) bad(`cableFrom "${String(e.cableFrom)}" geçersiz (${CABLE_FROM.join(', ')})`);
+    if (e.cableFrom !== undefined && e.prop !== 'cable') bad('cableFrom yalnızca prop "cable" iken anlamlı');
     if (e.note !== undefined && typeof e.note !== 'string') bad('note metin olmalı');
     (['hideFarLeg', 'hideFarArm'] as const).forEach((k) => {
       if (e[k] !== undefined && typeof e[k] !== 'boolean') bad(`${k} doğru/yanlış olmalı`);
@@ -84,7 +103,6 @@ export function validateArchetypes(data: unknown): string[] {
       if (!isObj(k)) return bad(`kf[${i}] nesne değil`);
       if (!num(k.t) || k.t < 0 || k.t > 1) bad(`kf[${i}].t ${String(k.t)} geçersiz (0..1)`);
       if (typeof k.tr !== 'string') bad(`kf[${i}].tr metin olmalı`);
-      if ('plantF' in k && typeof k.plantF !== 'boolean') bad(`kf[${i}].plantF doğru/yanlış olmalı`);
       if (!isObj(k.p)) return bad(`kf[${i}].p nesne değil`);
       Object.entries(k.p).forEach(([f, v]) => {
         if (!POSE_KEYS.includes(f as keyof RigPose)) bad(`kf[${i}].p bilinmeyen alan "${f}"`);
@@ -130,7 +148,20 @@ export function assertArchetypes(data: unknown): Record<string, RigExercise> {
 /** Kimlikler ASCII slug: URL'de, dosya adında ve anahtar olarak sorun çıkarmaz. */
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
-const CATALOG_KEYS = ['name', 'archetype'];
+const CATALOG_KEYS = [
+  'name', 'archetype', 'alt',
+  'en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint', 'steps',
+];
+/** Metin alanları: hepsi ZORUNLU, ikisi boş kalabiliyor (aşağıdaki nota bak). */
+const CATALOG_TEXT = ['en', 'difficulty', 'equipTr', 'equipEn', 'setsHint', 'restHint'];
+/**
+ * Set ve dinlenme ipucunun boş kalması meşru: ısınma hareketlerinde sayı
+ * vermiyoruz, uygulama "Antrenörün belirler" yazıyor. Ötekiler boş kalırsa
+ * ekranda boşluk görünür — o yüzden boş metin de hata.
+ */
+const CATALOG_TEXT_OPTIONAL = ['setsHint', 'restHint'];
+/** Uygulamanın rozet olarak bastığı dört değer; beşincisi ekranda çıplak kalır. */
+const DIFFICULTIES = ['BAŞLANGIÇ', 'ORTA', 'ORTA-İLERİ', 'İLERİ'];
 const MUSCLE_KEYS = ['status', 'primary', 'secondary', 'source', 'reviewed'];
 const STATUSES = ['pending', 'authored'];
 
@@ -159,8 +190,40 @@ export function validateExercises(data: unknown, archetypeKeys: string[]): strin
       if (!CATALOG_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
     });
     if (typeof e.name !== 'string' || e.name.trim() === '') bad('name boş olmayan metin olmalı');
+    // `alt`: salonda söylenen ÖTEKİ ad — birincil Türkçeyse İngilizce
+    // karşılığı, birincil yabancıysa Türkçesi. Arama ve gösterim ikisini de
+    // okuyor; karşılığı olmayan harekette yazılmıyor.
+    if (e.alt !== undefined && (typeof e.alt !== 'string' || e.alt.trim() === '')) bad('alt yazıldıysa boş olmayan metin olmalı');
+    if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) bad('alt ile name aynı');
     if (typeof e.archetype !== 'string') bad('archetype metin olmalı');
     else if (!archetypeKeys.includes(e.archetype)) bad(`archetype "${e.archetype}" rigArchetypes.json'da yok`);
+
+    // Kullanıcının okuduğu metinler. 11 Eylül 2026'ya kadar bunlar
+    // `build_exercise_library.py` içinde sabitti ve antrenörden gelen bir
+    // düzeltme ancak Python düzenlenerek girilebiliyordu. Artık veride, yani
+    // editörden girilebiliyor — ve eksikliği burada, kayıt anında yakalanıyor.
+    CATALOG_TEXT.forEach((alan) => {
+      const v = e[alan];
+      if (typeof v !== 'string') return bad(`${alan} metin olmalı`);
+      if (v.trim() === '' && !CATALOG_TEXT_OPTIONAL.includes(alan)) bad(`${alan} boş olmamalı`);
+    });
+    if (typeof e.difficulty === 'string' && !DIFFICULTIES.includes(e.difficulty)) {
+      bad(`difficulty "${e.difficulty}" tanınmıyor — ${DIFFICULTIES.join(' / ')}`);
+    }
+    if (!Array.isArray(e.steps)) bad('steps dizi olmalı');
+    else if (e.steps.length === 0) bad('steps boş — hareketin nasıl yapıldığı yazılmalı');
+    else {
+      e.steps.forEach((adim: unknown, i: number) => {
+        if (!Array.isArray(adim) || adim.length !== 2 || !strList(adim)) {
+          return bad(`steps[${i}] [türkçe, ingilizce] metin çifti olmalı`);
+        }
+        // Tek dile düşmek ekranda görünür bir kayıp: uygulama her adımın
+        // altında İngilizcesini basıyor (`exercise-detail.tsx`).
+        adim.forEach((m, j) => {
+          if (m.trim() === '') bad(`steps[${i}][${j}] boş`);
+        });
+      });
+    }
   });
 
   // Aynı adın iki kimliğe düşmesi, katalogda bir kopyanın kaçtığını gösterir.
@@ -247,7 +310,6 @@ export function validateBundle(b: {
   muscles: unknown;
   anatomy?: unknown;
   bodyParts?: unknown;
-  programmes?: unknown;
 }): string[] {
   const errs = validateArchetypes(b.archetypes);
   const archetypeKeys = isObj(b.archetypes) ? Object.keys(b.archetypes) : [];
@@ -256,7 +318,6 @@ export function validateBundle(b: {
   errs.push(...validateMuscles(b.muscles, exerciseKeys));
   if (b.anatomy !== undefined) errs.push(...validateAnatomy(b.anatomy));
   if (b.bodyParts !== undefined) errs.push(...validateBodyParts(b.bodyParts, B));
-  if (b.programmes !== undefined) errs.push(...validateProgrammes(b.programmes, exerciseKeys, b.muscles));
   return errs;
 }
 
@@ -312,8 +373,9 @@ export function validateAnatomy(data: unknown): string[] {
  * uzun çizilir ve eklemde boşluk açılır — sessiz bir kusur, çünkü figür yine
  * de çizilir.
  *
- * Parçalar MakeHuman CC0 mesh'inden üretiliyor (`npm run parts:mesh`); yan
- * (`parts`) ve ön (`front`) set aynı kurala tabi.
+ * Bu dosya bugün elle çizilmiş kaba bir taslak. Gerçek anatomik parçalar (CC0
+ * bir 3B modelden seçilen açıyla render edilip uzuvlara bölünerek) aynı
+ * biçimde buraya girecek; denetim ikisini de aynı kurala tabi tutuyor.
  */
 export function validateBodyParts(data: unknown, bones: Record<string, number>): string[] {
   const errs: string[] = [];
@@ -335,302 +397,5 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
     else if (q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]} — eklemde boşluk açılır`);
   });
 
-  // Önden set: `scripts/mesh-silhouette.mjs --az 90` üretiyor. İsteğe bağlı —
-  // yoksa önden görünüm kapsülle çizilir. Varsa YAN SETLE AYNI parçaları
-  // taşımak zorunda: eksik bir parça figürü çizilmez yapmıyor, o uzvu kapsülle
-  // bırakıp ötekileri siluetle çiziyor — yani sessizce karışık bir figür.
-  const fr = data.front;
-  if (fr !== undefined) {
-    if (!isObj(fr)) errs.push('uzuv parçaları: front nesne değil');
-    else {
-      const fp = fr.parts;
-      if (!isObj(fp)) errs.push('front: parts nesnesi yok');
-      else {
-        const yan = Object.keys(parts).sort().join(',');
-        const on = Object.keys(fp).sort().join(',');
-        if (yan !== on) errs.push(`front: parça kümesi yan setle aynı olmalı (yan: ${yan} · ön: ${on})`);
-        Object.keys(fp).forEach((name) => {
-          const bad = (msg: string) => errs.push(`ön parça "${name}": ${msg}`);
-          const q = fp[name];
-          if (!isObj(q)) return bad('nesne değil');
-          Object.keys(q).forEach((k) => { if (k !== 'len' && k !== 'd') bad(`bilinmeyen alan "${k}"`); });
-          if (typeof q.d !== 'string' || q.d.trim() === '') bad('d boş');
-          if (!num(q.len)) return bad('len sayı olmalı');
-          if (name in bones && q.len !== bones[name]) bad(`len ${q.len}, kemik boyu ${bones[name]}`);
-        });
-      }
-    }
-  }
   return errs;
-}
-
-/* --- hazır paket programlar ---------------------------------------------- */
-
-const GOALS = ['guc', 'hipertrofi', 'dayaniklilik', 'hareketlilik'];
-const LEVELS = ['baslangic', 'orta', 'ileri'];
-const PROGRAMME_KEYS = [
-  'name', 'goal', 'level', 'weeks', 'sessionsPerWeek', 'minutes', 'equipment',
-  'targets', 'promise', 'limits', 'progression', 'evidence', 'days', 'reviewed',
-];
-const DAY_KEYS = ['id', 'name', 'warmup', 'exercises'];
-const SET_KEYS = ['id', 'sets', 'reps', 'restSec', 'note'];
-
-/** "8", "6-10", "30 sn", "40 m" — sayı, aralık, süre ya da mesafe. */
-const REPS = /^(\d{1,3}(-\d{1,3})?|\d{1,3} (sn|dk|m))$/;
-
-/**
- * Kullanıcıyı yanlış yönlendiren ifadeler — vaatlerde ve sınırlarda YASAK.
- *
- * Bunlar üslup tercihi değil: her biri fizyolojide karşılığı olmayan ya da
- * kanıtın söylediğinden fazlasını söyleyen bir iddia. En önemlisi BÖLGESEL
- * YAĞ KAYBI: bir bölgeyi çalıştırmak o bölgenin yağını azaltmıyor, ama
- * "karın eritme programı" satmanın en kolay yolu tam olarak bunu ima etmek.
- * Yasağı koda bağlamak, iyi niyete bağlamaktan güvenli — metni yazan kişi
- * altı ay sonra başkası olacak.
- *
- * Sınır metinlerinde bu ifadeler İNKÂR EDİLİRKEN geçebilir ("bölgesel yağ
- * kaybı diye bir şey yok"), o yüzden kural yalnızca `promise` ve `name`
- * alanlarına bakıyor; `limits` zaten sınırı anlatmak için var.
- */
-const BANNED: { re: RegExp; label: string }[] = [
-  // Düz alt dizge YETMİYOR: Türkçe ek alıyor. "yağ yak" araması "karın yağını
-  // yakar" cümlesini kaçırıyordu. `\w` de yetmiyor — JavaScript'te ASCII
-  // demek, yani "yağı"nın "ı"sını görmüyor. Harf sınıfı `\p{L}` ve `u` bayrağı
-  // şart; ikisi de ölçülerek bulundu (testte).
-  { re: /bölgesel\s*(yağ|incel|zayıfla)/u, label: 'bölgesel yağ kaybı iması' },
-  { re: /yağ\p{L}*\s*(yak|erit|söktür)/u, label: 'yağ yakma vaadi' },
-  { re: /(göbek|karın|basen|bel)\p{L}*\s*(erit|incelt)/u, label: 'bölgesel inceltme vaadi' },
-  { re: /incelt\p{L}*/u, label: 'inceltme vaadi' },
-  { re: /selülit/u, label: 'selülit vaadi' },
-  { re: /detoks|toksin/u, label: 'detoks iddiası' },
-  { re: /metabolizma\p{L}*\s*hızlandır/u, label: 'metabolizma hızlandırma iddiası' },
-  { re: /garanti|kesinlikle|mucize|anında\s*sonuç/u, label: 'aşırı kesinlik' },
-];/**
- * Hipertrofi hedefi için haftalık birincil set sınırları.
- *
- * ALT SINIR anlamlı olan: doz-yanıt meta-analizleri haftada 10+ setin daha
- * azından daha çok büyüme verdiğini gösteriyor. Bu sınır "kol kalınlaştırma"
- * adlı ama haftada dört set kol çalıştıran paketi yakalıyor.
- *
- * ÜST SINIR kaba bir toparlanma korkuluğu, en iyi hacmin ölçüsü değil — o
- * konuda kanıt çok daha zayıf. Ayrıca sayım YUKARI YANLI: bileşik bir hareket
- * setinin tamamı BİRİNCİL saydığı her kasa yazılıyor, yani çömelme de menteşe
- * de hamle de kalçaya tam set yazıyor. Kalça gibi her alt vücut hareketinden
- * pay alan bir kasta gerçek yük, sayının gösterdiğinden az. Sınır bu yüzden
- * 30 değil 40: 30'da makul bir bacak programı yanlışlıkla düşüyordu (ölçüldü,
- * `kalca-bacak` 31 set).
- */
-const MIN_WEEKLY_SETS = 10;
-const MAX_WEEKLY_SETS = 40;
-
-/**
- * Hazır paket programlar.
- *
- * Denetlenen şey biçimden ibaret değil: bu dosya kullanıcıya ne yapacağını
- * SÖYLÜYOR, o yüzden şema iki şeyi ayrıca zorluyor.
- *
- * 1. `limits` boş olamaz. Bir paket ne yapmadığını yazmadan yayına giremez;
- *    yazılmayan sınırı kullanıcı kendi hayal gücüyle dolduruyor.
- * 2. Hipertrofi hedefli bir paket, hedef aldığı her kasa haftada en az
- *    `MIN_WEEKLY_SETS` birincil set vermek zorunda. "Kol kalınlaştırma" adlı
- *    ama haftada dört set kol çalıştıran bir paket, adının vaat ettiği şeyi
- *    yapmıyor demektir — ve bunu gözle fark etmek zor, çünkü liste dolu
- *    görünüyor. Sayı veriden hesaplanıyor: setler × haftalık tekrar sayısı,
- *    kasın BİRİNCİL olduğu hareketlerde.
- */
-export function validateProgrammes(data: unknown, exerciseKeys: string[], musclesRaw: unknown): string[] {
-  const errs: string[] = [];
-  if (!isObj(data)) return ['paket programlar: kök nesne bekleniyor'];
-  const progs = data.programmes;
-  if (!isObj(progs)) return ['paket programlar: programmes nesnesi yok'];
-  if (Object.keys(progs).length === 0) errs.push('paket programlar: programmes boş');
-
-  const muscles = isObj(musclesRaw) ? musclesRaw : {};
-  /** Hareketin BİRİNCİL kasları — hacim sayımının tabanı. */
-  const primaryOf = (id: string): string[] => {
-    const m = muscles[id];
-    return isObj(m) && Array.isArray(m.primary) ? (m.primary as unknown[]).filter((x): x is string => typeof x === 'string') : [];
-  };
-
-  Object.keys(progs).forEach((id) => {
-    const bad = (msg: string) => errs.push(`paket "${id}": ${msg}`);
-    if (!SLUG.test(id)) bad('kimlik küçük harf ASCII slug olmalı (a-z, 0-9, tire)');
-    const p = progs[id];
-    if (!isObj(p)) return bad('nesne değil');
-    Object.keys(p).forEach((k) => {
-      if (!PROGRAMME_KEYS.includes(k)) bad(`bilinmeyen alan "${k}"`);
-    });
-
-    const text = (k: string): string => (typeof p[k] === 'string' ? (p[k] as string) : '');
-    if (text('name').trim() === '') bad('name boş olmayan metin olmalı');
-    if (text('promise').trim() === '') bad('promise boş olmayan metin olmalı');
-    if (text('progression').trim() === '') bad('progression boş olmayan metin olmalı');
-    if (typeof p.goal !== 'string' || !GOALS.includes(p.goal)) bad(`goal geçersiz (${GOALS.join(', ')})`);
-    if (typeof p.level !== 'string' || !LEVELS.includes(p.level)) bad(`level geçersiz (${LEVELS.join(', ')})`);
-    if (typeof p.reviewed !== 'boolean') bad('reviewed doğru/yanlış olmalı');
-    if (!num(p.weeks) || p.weeks < 1 || p.weeks > 52) bad('weeks 1..52 olmalı');
-    if (!num(p.minutes) || p.minutes < 5 || p.minutes > 180) bad('minutes 5..180 olmalı');
-    if (!Array.isArray(p.equipment) || p.equipment.some((q) => typeof q !== 'string' || q.trim() === '')) {
-      bad('equipment boş olmayan metin dizisi olmalı');
-    }
-
-    // Yasaklı ifade: vaatte ve adda.
-    ['name', 'promise'].forEach((k) => {
-      const low = text(k).toLocaleLowerCase('tr');
-      BANNED.forEach(({ re, label }) => {
-        const hit = low.match(re);
-        if (hit) bad(`${k} yanlış yönlendiren ifade içeriyor (${label}): "${hit[0]}"`);
-      });
-    });
-
-    // Sınırlar: boş bırakılamaz.
-    if (!Array.isArray(p.limits) || p.limits.length === 0) {
-      bad('limits boş olamaz — paket ne YAPMADIĞINI da yazmak zorunda');
-    } else if (p.limits.some((q) => typeof q !== 'string' || q.trim() === '')) {
-      bad('limits boş olmayan metinlerden oluşmalı');
-    }
-
-    if (!Array.isArray(p.evidence) || p.evidence.length === 0) bad('evidence boş olamaz');
-    else {
-      p.evidence.forEach((e, i) => {
-        if (!isObj(e)) return bad(`evidence[${i}] nesne değil`);
-        if (typeof e.claim !== 'string' || e.claim.trim() === '') bad(`evidence[${i}].claim boş`);
-        if (typeof e.basis !== 'string' || e.basis.trim() === '') bad(`evidence[${i}].basis boş`);
-      });
-    }
-
-    const targets = Array.isArray(p.targets) ? p.targets.filter((t): t is string => typeof t === 'string') : [];
-    targets.forEach((t) => {
-      if (!(t in MUSCLES)) bad(`targets "${t}" kas sözlüğünde yok`);
-    });
-
-    if (!Array.isArray(p.days) || p.days.length === 0) return bad('days boş olamaz');
-    const dayIds: string[] = [];
-    // Kasa haftada düşen birincil set — hipertrofi kontrolünün girdisi.
-    const weekly: Record<string, number> = {};
-    const cycles = num(p.sessionsPerWeek) && p.days.length > 0 ? p.sessionsPerWeek / p.days.length : NaN;
-    if (!num(p.sessionsPerWeek) || p.sessionsPerWeek < 1 || p.sessionsPerWeek > 14) bad('sessionsPerWeek 1..14 olmalı');
-    else if (!Number.isInteger(cycles) || cycles < 1) {
-      bad(`sessionsPerWeek (${p.sessionsPerWeek}) gün sayısının (${p.days.length}) tam katı olmalı — yoksa haftanın nasıl geçeceği belirsiz`);
-    }
-
-    p.days.forEach((d, di) => {
-      const dbad = (msg: string) => bad(`days[${di}] ${msg}`);
-      if (!isObj(d)) return dbad('nesne değil');
-      Object.keys(d).forEach((k) => {
-        if (!DAY_KEYS.includes(k)) dbad(`bilinmeyen alan "${k}"`);
-      });
-      if (typeof d.id !== 'string' || !SLUG.test(d.id)) dbad('id slug olmalı');
-      else if (dayIds.includes(d.id)) dbad(`id "${d.id}" birden fazla günde`);
-      else dayIds.push(d.id);
-      if (typeof d.name !== 'string' || d.name.trim() === '') dbad('name boş');
-
-      if (d.warmup !== undefined) {
-        if (!Array.isArray(d.warmup)) dbad('warmup dizi olmalı');
-        else {
-          d.warmup.forEach((w, wi) => {
-            if (typeof w !== 'string') dbad(`warmup[${wi}] metin olmalı`);
-            else if (!exerciseKeys.includes(w)) dbad(`warmup[${wi}] "${w}" hareket kataloğunda yok`);
-          });
-        }
-      }
-
-      if (!Array.isArray(d.exercises) || d.exercises.length === 0) return dbad('exercises boş olamaz');
-      d.exercises.forEach((x, xi) => {
-        const xbad = (msg: string) => dbad(`exercises[${xi}] ${msg}`);
-        if (!isObj(x)) return xbad('nesne değil');
-        Object.keys(x).forEach((k) => {
-          if (!SET_KEYS.includes(k)) xbad(`bilinmeyen alan "${k}"`);
-        });
-        if (typeof x.id !== 'string') return xbad('id metin olmalı');
-        if (!exerciseKeys.includes(x.id)) xbad(`"${x.id}" hareket kataloğunda yok`);
-        if (!num(x.sets) || !Number.isInteger(x.sets) || x.sets < 1 || x.sets > 10) xbad('sets 1..10 tam sayı olmalı');
-        if (typeof x.reps !== 'string' || !REPS.test(x.reps)) xbad('reps "8", "6-10", "30 sn" ya da "40 m" biçiminde olmalı');
-        if (!num(x.restSec) || x.restSec < 0 || x.restSec > 600) xbad('restSec 0..600 olmalı');
-        if (x.note !== undefined && (typeof x.note !== 'string' || x.note.trim() === '')) xbad('note boş metin olamaz');
-
-        const sets = x.sets;
-        if (num(sets) && Number.isFinite(cycles)) {
-          primaryOf(x.id).forEach((mu) => {
-            weekly[mu] = (weekly[mu] ?? 0) + sets * cycles;
-          });
-        }
-      });
-    });
-
-    if (p.goal === 'hipertrofi') {
-      if (targets.length === 0) bad('hipertrofi hedefli paket targets yazmak zorunda — hacim başka türlü denetlenemez');
-      targets.forEach((t) => {
-        const n = weekly[t] ?? 0;
-        const label = (MUSCLES[t]?.label ?? t);
-        if (n < MIN_WEEKLY_SETS) {
-          bad(`"${label}" haftada ${n} birincil set alıyor, en az ${MIN_WEEKLY_SETS} gerekiyor — paket adının vaat ettiği büyümeyi vermez`);
-        } else if (n > MAX_WEEKLY_SETS) {
-          bad(`"${label}" haftada ${n} birincil set alıyor, üst sınır ${MAX_WEEKLY_SETS} — toparlanmayı aşıyor`);
-        }
-      });
-    }
-  });
-
-  return errs;
-}
-
-/* --- paket program tipleri ------------------------------------------------ */
-
-export interface ProgrammeSet {
-  id: string;
-  sets: number;
-  /** "8", "6-10", "30 sn", "40 m". */
-  reps: string;
-  restSec: number;
-  note?: string;
-}
-
-export interface ProgrammeDay {
-  id: string;
-  name: string;
-  /** Isınma hareketleri — hacim sayımına GİRMEZ, çalışma seti değiller. */
-  warmup?: string[];
-  exercises: ProgrammeSet[];
-}
-
-export interface ProgrammeEvidence {
-  claim: string;
-  basis: string;
-}
-
-export interface Programme {
-  name: string;
-  goal: 'guc' | 'hipertrofi' | 'dayaniklilik' | 'hareketlilik';
-  level: 'baslangic' | 'orta' | 'ileri';
-  weeks: number;
-  sessionsPerWeek: number;
-  minutes: number;
-  equipment: string[];
-  /** Hipertrofi hedefli pakette zorunlu: hacim denetiminin girdisi. */
-  targets?: string[];
-  promise: string;
-  /** Paketin ne YAPMADIĞI. Boş olamaz — bkz. `validateProgrammes`. */
-  limits: string[];
-  progression: string;
-  evidence: ProgrammeEvidence[];
-  days: ProgrammeDay[];
-  /** Bir uzmanın içeriği kontrol edip etmediği. */
-  reviewed: boolean;
-}
-
-export interface ProgrammeFile {
-  programmes: Record<string, Programme>;
-}
-
-/**
- * Yükleme anında doğrular. `assertArchetypes` ile aynı gerekçe: JSON elle de
- * düzenlenebiliyor ve bozuk bir paket uygulamanın içinde patlar. Hareket
- * kimlikleri ve kas verisi de gerekiyor, çünkü denetlenen şeylerin bir kısmı
- * (ölü atıf, haftalık hacim) tek başına bu dosyadan görülemiyor.
- */
-export function assertProgrammes(data: unknown, exerciseKeys: string[], muscles: unknown): ProgrammeFile {
-  const errs = validateProgrammes(data, exerciseKeys, muscles);
-  if (errs.length) throw new Error(`programmes.json geçersiz:\n  ${errs.join('\n  ')}`);
-  return data as ProgrammeFile;
 }

@@ -6,7 +6,8 @@ Hareket figürünün motoru, kare editörü ve mekanik denetimi. Kendi başına
 ```bash
 npm install
 npm run editor      # http://127.0.0.1:8123 — hareketleri düzenle
-npm test            # mekanik denetim + şema + ROM bantları (48 test)
+npm run review      # editörü tek bir HTML'e paketler (dist/review.html)
+npm test            # mekanik denetim + şema + ROM bantları
 npm run export      # uygulamaya devredilecek dosyaları dist/ altına üretir
 ```
 
@@ -48,7 +49,6 @@ dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
 dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
 dist/anatomy.json         kas haritasının ön/arka çizim yolları
 dist/bodyParts.json       uzuv siluet parçaları
-dist/programmes.json      hazır paket programlar
 dist/rig.test.ts          motor testleri          ┐ devredilen KODUN
 dist/rigAudit.test.ts     denetim testleri        │ testleri de
 dist/rigSchema.test.ts    şema testleri           ┘ devrediliyor
@@ -105,16 +105,9 @@ edilmemiş bir çalışma ağacından çıkıp çıkmadığını (`source.dirty`
   uzayda yapılır — bu yüzden uzuvlar bükülür, kendi etraflarında dönmez.
 - Beş kök nokta: ayak yerde, dört ayak, sehpa, sırtüstü, barda asılı. Bir
   hareketin nereye bastığı çizimin temelidir.
-- Önden görünüm: gövde ve bacak dikey seviyelerini yan çözümden okur, kollar
-  TEK pozdan 3B yönle izdüşürülür (`upperA` yükselme, `armAz` düzlem — 0 öne,
-  90 yana; ön kol için `foreAz`). Kol boyu her karede doğru, yana açılan kol
-  öne bakışta kısalır. Parçalar mesh'in 90° silueti (`bodyParts.json` →
-  `front`). Bağımsız bir 3B model yok; gövde rotasyonu (eksenel dönüş)
-  temsil edilemiyor.
-- Katman sırası (ressam sırası) her iki tüketicide aynı: yan görünümde uzak
-  bacak → uzak kol → gövde → yakın bacak → yakın kol → kafa → tabak; önden
-  bacaklar → gövde → kafa → kollar → yük. Saf yan görünümde bu sıra
-  anatomik olarak doğrudur: yakın taraf hep kamera tarafında.
+- Önden görünüm, yan çözümün dikey seviyelerini okuyan şematik bir
+  izdüşümdür; bağımsız bir 3B model yok. Gövde rotasyonu gibi gerçek dönüşler
+  bu modelde temsil edilemiyor.
 
 ## Editör
 
@@ -123,12 +116,19 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 
 - Eklemi tut ve sürükle. Kemik boyu sabit: eklem hedefe bakan yöne döner.
   Kalçayı sürüklemek iki kemiği birden çözer (çömelme derinliği).
-- Önden görünümde dirsek ve el sürüklenir: ekrandaki yanal/dikey konum ile
-  kemik boyundan kolun 3B yönü çıkar (yükselme `upperA`/`foreA`, düzlem
-  `armAz`/`foreAz`); ileri bileşenin işareti bugünkü pozdan gelir.
+- **Ayak ucu tutamakları POZUN değil HAREKETİN ayarı**: yakın ayak ucu
+  `footDir`'i, uzak ayak ucu `footDirFarAdj`'ı yazıyor ve ikisi de TÜM
+  karelere birden uygular. Uzak ayağınki mutlak yön değil pay, çünkü o yön
+  her karede baldırdan türetiliyor (bkz. `footDirFarOf`). Uzak ayak ucu
+  yalnızca uzak bacak çiziliyorsa görünür.
+- **Yerleşim paneli** figürü ve sahne eşyasını ayrı ayrı kaydırır
+  (`bodyDx/bodyDy`, `propDx/propDy`). Ayak ucu tutamakları gibi bu da tüm
+  karelere birden uygular. Eşya konumları iskeletten türetildiği için figür
+  kayınca eşya da kayar; eşya kaydırması aradaki bağı gevşetir. Gövdeyi yukarı
+  çekmek ayağı yerden keserse denetim **söyler** — kaydırma denetimi
+  susturmuyor, kendisi de denetleniyor.
 - Zaman çubuğu kareler ARASINI da gösterir — geçiş hataları orada yaşar.
   Ara karede düzenleme kapalıdır.
-- Gölge komşu karelerin izini çizer.
 - Denetim uyarısına tıklamak sorunun yaşandığı ana götürür.
 - `⌘Z` / `⇧⌘Z` / `⌘S`, boşluk oynatır, ok tuşları seçili kaydırıcıyı 1° (Shift
   ile 5°) oynatır. **Diske dön** kaydedilmemiş her şeyi atar.
@@ -136,22 +136,30 @@ zaman çubuğu, sağda denetim + ekipman + açılar.
 Kaydet doğrudan `data/rigArchetypes.json` üstüne yazar; değişiklik git
 diff'inde görünür.
 
+### Uzaktan inceleme
+
+`npm run review` editörü **tek bir HTML dosyasına** paketler
+(`dist/review.html`): motor derlenir, `editor/editor.js` esbuild ile
+paketlenir, sunucunun servis ettiği beş JSON sayfaya gömülür ve `fetch`'in
+üstüne bir vekil konur. `editor/editor.js` ve `editor/index.html` HİÇ
+DEĞİŞMEZ — sayfa neyi gösteriyorsa editörün gösterdiği odur.
+
+Ne işe yarar: editör yalnızca 127.0.0.1'i dinliyor. Pozları onaylayacak kişi
+başka bir makinedeyse ekran görüntüsü yetmiyor — geçiş hataları ara karelerde
+yaşıyor ve kaydırılamayan bir tabaka onları gizliyor. Paketlenen sayfa
+herhangi bir yere konabilir ve zaman çubuğu çalışır.
+
+**Kaydetmez.** Sunucu yok, `PUT /data` gidecek bir yer yok; kaydet ve diske
+dön düğmeleri gizlenir. Sürükleme açık kalır — "bu açı 46 değil 52 olmalı"
+demenin yolu açıyı deneyip panelden okumaktır.
+
 ## Denetim kuralları tek yerde
 
 `src/rigAudit.ts` hem testlerde hem editörde çalışır: editörde kırmızı görünen
 bir şey testte de düşer. Kurallar mekaniği koruyor — eklem zeminin altına
 geçemez, topuk ayak boyundan fazla kalkamaz (basamak hariç: orada yükselten
 şey ayak değil), desteğe yaslanan hareketlerde omuz kaymaz, döngü kapanmak
-zorunda, **ağırlık merkezi** (vücut + yük, Dempster oranları) ayakta dururken
-destek tabanının içinde kalmak zorunda (`denge`) — dışına çıkan figür gerçekte
-düşer, yani gösterilen poz yapılamaz.
-
-Yan görünüm **saf ortografik**: uzak taraf kaydırılmaz, perspektif yok. Özdeş
-hareket yapan uzak uzuv çizilmez (`showFarLeg`/`showFarArm` kural, elle
-geçersiz kılınabilir); farklı hareket yapan zaten x'te ayrı düşer. Basılı arka
-ayak bir **kısıt**: karede `plantF` işaretliyse motor arka bacağı ayağı
-yerinde tutacak şekilde çözer (hamle, step-up, Bulgar squat). Ayakta parmak
-tabanı eklemi var: topuk kalkınca ayak topu yerde kalır, parmaklar düz.
+zorunda.
 
 Eklem açısı sınırları `ROM_BANDS` tablosunda veri olarak duruyor: diz, dirsek,
 kalça ve gövde. Sayılar "normal aralık" değil **anatomik imkânsızlık** eşiği —
@@ -159,46 +167,27 @@ derin çömelme klinik normalleri zaten aşar, onları sınır yapmak doğru
 hareketleri hata sayardı. Omuz, boyun ve ayak bileği tabloda yok; gerekçeleri
 `TODOS.md`'de.
 
+### Katman sırası
+
+Figürün arkadan öne çizim sırası `rig.ts`'de veri: `SIDE_LAYERS` ve
+`FRONT_LAYERS`, her katmanın gerekçesiyle (`LAYER_WHY`). Çizim kodu bunu
+çalışma anında okumuyor — üç ayrı çizim gövdesi var (editörün ana sahnesi,
+telefon önizlemesi, uygulamanın `RigFigure.tsx`'i) ve ikisi farklı SVG
+lehçesi. Bunun yerine her katmanın başında bir `KATMAN` işareti duruyor ve
+iki test (`tests/layerOrder.test.ts` burada, `RigFigure.layers.test.ts`
+uygulamada) bu işaretlerin kaynaktaki sırasını diziyle karşılaştırıyor.
+
+Neden: 11 Eylül 2026'da üç katman hatası arka arkaya çıktı — halter tabağı
+gövdenin arkasında, yakın kol kafanın arkasında, sahne eşyası uzak bacağın
+önünde — ve üçünü de kullanıcı gözle buldu. Üçü de aynı kuralın ihlaliydi
+(**katman sırası yakınlık sırasıdır**) ama kural yalnızca yorumlarda
+yazılıydı. Test sıranın yanında KURALI da denetliyor: diziyi yeniden
+sıralamak yetmiyor, gerekçeyi de bozmak gerekiyor.
+
 Verinin ŞEKLİ ayrı bir soru: `src/rigSchema.ts` yüklenirken ve editör
 kaydederken çalışır. Bilinmeyen bir `mode`, sıfırdan başlamayan bir kare
 dizisi ya da 2000ms altı bir süre motora hiç ulaşamaz — mekanik denetim
 elinde düzgün biçimli bir hareket olduğunu varsayıyor.
-
-## Hazır programlar ve yanlış vaat koruması
-
-`data/programmes.json` altı hazır program taşıyor (temel güç, kol
-kalınlaştırma, gövde ve bel, sırt-omuz dayanıklılığı, kalça-bacak, masa başı
-molası). Her programın `promise` (ne yapar), `limits` (ne YAPMAZ),
-`progression` ve özet `evidence` alanları var.
-
-Buradaki asıl mesele veri biçimi değil, kullanıcıya söylenen şeyin doğru
-olması. Üç kural şemada, yani export'u durduran yerde:
-
-1. **`limits` boş olamaz.** Bir program ne yapmadığını yazmadan yayına
-   giremez; yazılmayan sınırı kullanıcı kendi beklentisiyle dolduruyor.
-2. **Vaatte yanlış yönlendiren ifade yasak** — bölgesel yağ kaybı, inceltme,
-   detoks, "garanti". Kalıplar Türkçe ek alıyor ve Unicode harf sınıfıyla
-   eşleşiyor: düz alt dizge de `\w` de "yağı yakar"ı kaçırıyordu. Yasak
-   yalnızca `name` ve `promise` alanlarına bakıyor, çünkü `limits` içinde bu
-   ifadelerin İNKÂR EDİLİRKEN geçmesi gerekiyor.
-3. **Hipertrofi hedefli program, hedef aldığı her kasa haftada en az 10
-   birincil set vermek zorunda.** Sayı veriden hesaplanıyor: setler × haftalık
-   tekrar, kasın birincil olduğu hareketlerde. "Kol kalınlaştırma" adlı ama
-   haftada dört set kol çalıştıran bir programı gözle fark etmek zor — liste
-   dolu görünüyor. Bu kural yazılırken `kalca-bacak` paketinin arka bacağa
-   yalnız 7 set verdiğini buldu.
-
-Dikey çekiş (barfiks) 2026-09-08'de eklendi: `lat` yalnız deadlift ve
-küreklerde birincildi, yani programlarda hiç yukarıdan çekiş yoktu. `hang`
-kipi zaten vardı (asılı diz çekme), arketip onun üstüne kuruldu.
-
-**"Bel incelme" diye bir program YOK ve olmayacak.** Bölgesel yağ kaybı
-gösterilememiş bir şey: karın egzersizi karın yağını azaltmıyor. Aynı ihtiyaç
-`govde-ve-bel` altında, bel çevresini toplam yağ kaybının belirlediği ve onu
-ağırlıklı olarak beslenmenin sürdüğü açıkça yazılarak karşılanıyor.
-
-`reviewed: false` alanı içeriğin bir uzman kontrolünden geçmediğini söylüyor
-ve uygulamada kullanıcıya gösteriliyor.
 
 ## Sırada ne var
 

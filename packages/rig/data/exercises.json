@@ -1,154 +1,1323 @@
 {
-  "arm-circles": {
-    "name": "Kol çevirme",
-    "archetype": "arm_circles_front"
-  },
-  "cat-cow": {
-    "name": "Kedi-deve",
-    "archetype": "quadruped_spine"
-  },
-  "band-pull-apart": {
-    "name": "Bant pull-apart",
-    "archetype": "band_pull_apart_front"
-  },
-  "band-external-rotation": {
-    "name": "Bant ile dış rotasyon",
-    "archetype": "band_ext_rotation_front"
-  },
-  "chin-tuck": {
-    "name": "Çene içeri çekme",
-    "archetype": "chin_tuck_side"
-  },
-  "worlds-greatest-stretch": {
-    "name": "Lunge + gövde rotasyonu",
-    "archetype": "lunge_reach"
-  },
-  "goblet-squat": {
-    "name": "Goblet squat",
-    "archetype": "squat_goblet"
-  },
-  "back-squat": {
-    "name": "Back squat",
-    "archetype": "squat"
-  },
-  "front-hack-squat": {
-    "name": "Front squat",
-    "archetype": "squat_goblet"
-  },
-  "rdl": {
-    "name": "Romanian deadlift",
-    "archetype": "hip_hinge_dumbbell"
-  },
-  "deadlift": {
-    "name": "Deadlift",
-    "archetype": "hinge"
-  },
-  "hip-thrust": {
-    "name": "Hip thrust",
-    "archetype": "hip_thrust"
-  },
-  "bulgarian-split-squat": {
-    "name": "Bulgarian split squat",
-    "archetype": "bulgarian_split_squat"
-  },
-  "walking-lunge": {
-    "name": "Walking lunge",
-    "archetype": "unilateral_lunge"
-  },
-  "reverse-lunge": {
-    "name": "Reverse lunge",
-    "archetype": "unilateral_lunge"
-  },
-  "step-up": {
-    "name": "Step-up",
-    "archetype": "step_up"
-  },
-  "calf-raise": {
-    "name": "Calf raise",
-    "archetype": "calf_raise"
-  },
-  "bench-press": {
-    "name": "Bench press",
-    "archetype": "bench_press"
-  },
-  "incline-press": {
-    "name": "Incline dumbbell pres",
-    "archetype": "incline_press"
-  },
-  "shoulder-press": {
-    "name": "Omuz pres",
-    "archetype": "seated_overhead_press"
-  },
-  "barbell-row": {
-    "name": "Barbell row",
-    "archetype": "standing_row_hinged"
-  },
-  "single-arm-row": {
-    "name": "Tek kol dumbbell row",
-    "archetype": "standing_row_hinged"
-  },
-  "reverse-fly": {
-    "name": "Dumbbell reverse fly",
-    "archetype": "hinged_fly"
-  },
-  "lateral-raise": {
-    "name": "Lateral raise",
-    "archetype": "lateral_raise_front"
-  },
-  "biceps-curl": {
-    "name": "Biceps curl",
-    "archetype": "standing_arm_isolation"
-  },
-  "shrug": {
-    "name": "Omuz silkme",
-    "archetype": "shrug_front"
-  },
-  "plank": {
-    "name": "Plank",
-    "archetype": "plank_prone"
-  },
-  "side-plank": {
-    "name": "Side plank",
-    "archetype": "side_plank"
-  },
-  "bird-dog": {
-    "name": "Bird-dog",
-    "archetype": "bird_dog"
-  },
-  "pallof-press": {
-    "name": "Pallof pres",
-    "archetype": "anti_rotation_standing"
-  },
-  "ab-wheel-rollout": {
-    "name": "Ab wheel rollout",
-    "archetype": "rollout"
-  },
-  "hanging-knee-raise": {
-    "name": "Asılı diz çekme",
-    "archetype": "hanging_knee_raise"
-  },
-  "suitcase-carry": {
-    "name": "Suitcase carry",
-    "archetype": "carry"
-  },
-  "glute-bridge": {
-    "name": "Kalça köprüsü",
-    "archetype": "glute_bridge"
-  },
-  "triceps-extension": {
-    "name": "Triceps ense arkası",
-    "archetype": "triceps_extension"
-  },
-  "pullup": {
-    "name": "Barfiks",
-    "archetype": "pull_up"
-  },
-  "lat-pulldown": {
-    "name": "Lat pulldown",
-    "archetype": "lat_pulldown"
-  },
-  "leg-curl": {
-    "name": "Bacak curl",
-    "archetype": "leg_curl"
-  }
+ "arm-circles": {
+  "name": "Kollarla daire çizme",
+  "alt": "Arm circles",
+  "en": "Arm circles",
+  "archetype": "arm_circles_front",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Yok",
+  "equipEn": "None",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Ayaklarını kalça genişliğinde aç; dik dur ve kollarını rahat bir yükseklikte yanlara uzat.",
+    "Stand tall with your feet hip-width apart and your arms extended out to the sides at a comfortable height."
+   ],
+   [
+    "Omuzlarını zorlamadan küçük daireler çiz; dirseklerini hafif yumuşak tut.",
+    "Draw small circles without straining your shoulders; keep your elbows softly bent."
+   ],
+   [
+    "Ağrısız aralıkta daireleri yavaşça büyüt; belini geriye yaylandırma.",
+    "Slowly widen the circles within a pain-free range; do not arch your lower back."
+   ],
+   [
+    "Yönü değiştirerek tekrarla; sıkışma veya ağrı hissedersen daireyi küçült ya da dur.",
+    "Repeat in the other direction; make the circles smaller or stop if you feel pinching or pain."
+   ]
+  ]
+ },
+ "cat-cow": {
+  "name": "Dört ayak üzerinde sırtı yuvarlama ve açma",
+  "alt": "Cat-cow",
+  "en": "Cat-cow",
+  "archetype": "quadruped_spine",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Ellerini omuzlarının, dizlerini kalçalarının altına yerleştir.",
+    "Place your hands under your shoulders and your knees under your hips."
+   ],
+   [
+    "Nefes verirken sırtını yavaşça tavana doğru yuvarla; başının doğal olarak aşağı gelmesine izin ver.",
+    "As you exhale, slowly round your back towards the ceiling and let your head drop naturally."
+   ],
+   [
+    "Nefes alırken göğsünü öne açıp leğen kemiğini hafifçe öne döndür; belini ve boynunu aşırı çukurlaştırma.",
+    "As you inhale, open your chest forward and tilt your pelvis slightly forward; do not over-arch your lower back or neck."
+   ],
+   [
+    "İki yön arasında yumuşak geçiş yap; ağrısız aralıkta hareket et ve uç pozisyonları zorlama.",
+    "Move smoothly between the two directions; stay in a pain-free range and do not force the end positions."
+   ]
+  ]
+ },
+ "band-pull-apart": {
+  "name": "Lastikle kolları iki yana açma",
+  "en": "Band pull-apart",
+  "archetype": "band_pull_apart_front",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Direnç bandı",
+  "equipEn": "Resistance band",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Lastiğin sağlamlığını kontrol et; iki elinle göğüs önünde, dirseklerin hafif bükülü olacak şekilde tut.",
+    "Check that the band is sound; hold it with both hands in front of your chest, elbows slightly bent."
+   ],
+   [
+    "Karnını sık ve boynunu rahat bırak; ellerini iki yana açarak lastiği göğsüne yaklaştır.",
+    "Brace your core and relax your neck; open your hands out to the sides, bringing the band towards your chest."
+   ],
+   [
+    "Kürek kemiklerinin kontrollü biçimde yaklaşmasına izin ver; omuzlarını kulaklarına kaldırma ve belini geriye atma.",
+    "Let your shoulder blades draw together under control; do not shrug towards your ears or lean back."
+   ],
+   [
+    "Lastiğin seni aniden çekmesine izin vermeden başlangıca dön; omuzda ağrı varsa aralığı veya direnci azalt.",
+    "Return to the start without letting the band snap you back; reduce the range or the resistance if your shoulder hurts."
+   ]
+  ]
+ },
+ "band-external-rotation": {
+  "name": "Lastikle omuzu dışa döndürme",
+  "alt": "Band external rotation",
+  "en": "Band external rotation",
+  "archetype": "band_ext_rotation_front",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Direnç bandı",
+  "equipEn": "Resistance band",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Sağlam bir dirsek yüksekliği bağlantısına lastiği sabitle; bağlantı noktası çalışan kolunun karşı tarafında kalsın.",
+    "Anchor the band to something solid at elbow height, with the anchor point on the opposite side from your working arm."
+   ],
+   [
+    "Dirseğini yaklaşık dik açıyla büküp yanına al; gerekirse dirsekle gövde arasına küçük havlu koy.",
+    "Bend your elbow to about a right angle and keep it at your side; place a small towel between elbow and ribs if needed."
+   ],
+   [
+    "Bileğini düz ve dirseğini yerinde tutarak elini karından dış yana doğru aç; gövdeni döndürme.",
+    "Keeping your wrist straight and your elbow in place, rotate your hand outward away from your stomach; do not twist your torso."
+   ],
+   [
+    "Omuzu zorlamayan aralıkta durup yavaşça geri dön; hafif direnç kullan ve iki tarafı çalıştır.",
+    "Stop within a range that does not strain the shoulder and return slowly; use light resistance and work both sides."
+   ]
+  ]
+ },
+ "chin-tuck": {
+  "name": "Çeneyi geriye çekme",
+  "alt": "Chin tuck",
+  "en": "Chin tuck",
+  "archetype": "chin_tuck_side",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Yok",
+  "equipEn": "None",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Otururken veya ayakta gövdeni dik tut; gözlerin karşıya baksın.",
+    "Sit or stand with your torso upright and your eyes looking straight ahead."
+   ],
+   [
+    "Çeneni aşağı düşürmeden başını hafifçe geriye kaydır; küçük bir gıdı oluşturduğunu düşün.",
+    "Glide your head slightly backwards without dropping your chin; think of making a small double chin."
+   ],
+   [
+    "Omuzlarını ve çeneni gevşek tutarak birkaç saniye bekle; nefes almayı sürdür.",
+    "Hold for a few seconds with your shoulders and jaw relaxed; keep breathing."
+   ],
+   [
+    "Başlangıca dön; boyun ağrısı, baş dönmesi veya kola yayılan belirti oluşursa dur.",
+    "Return to the start; stop if you get neck pain, dizziness or symptoms travelling down your arm."
+   ]
+  ]
+ },
+ "worlds-greatest-stretch": {
+  "name": "Derin hamlede gövde döndürerek esneme",
+  "alt": "World's greatest stretch",
+  "en": "World's greatest stretch",
+  "archetype": "unilateral_lunge",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Yok",
+  "equipEn": "None",
+  "setsHint": "",
+  "restHint": "",
+  "steps": [
+   [
+    "Bir ayağını öne alıp derin hamleye yerleş; arka dizini rahatlık için minder üzerine indirebilirsin.",
+    "Step one foot forward into a deep lunge; you may rest your back knee on a pad for comfort."
+   ],
+   [
+    "Öndeki ayağının karşı tarafındaki elini yere veya bir yükseltiye koy; ön ayağın tüm tabanı destekli kalsın.",
+    "Place the hand opposite your front foot on the floor or on a block; keep the whole sole of the front foot supported."
+   ],
+   [
+    "Ön bacak tarafındaki kolunu yukarı açarken göğsünü o tarafa döndür; kalçanı mümkün olduğunca sabit tut ve beli zorla burma.",
+    "Open the arm on the front-leg side upward and rotate your chest that way; keep your hips as steady as you can and do not wrench your lower back."
+   ],
+   [
+    "Kolunu kontrollü indir; ağrısız aralıkta tekrarlayıp taraf değiştir, dirseği yere değdirmek veya kolu tam dikleştirmek için zorlama.",
+    "Lower the arm under control; repeat within a pain-free range and switch sides — do not force the elbow to the floor or the arm fully vertical."
+   ]
+  ]
+ },
+ "goblet-squat": {
+  "name": "Göğüste tek ağırlıkla squat",
+  "en": "Goblet squat",
+  "archetype": "squat_goblet",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell/Kettlebell",
+  "equipEn": "Dumbbell or kettlebell",
+  "setsHint": "3×10",
+  "restHint": "60-90 sn",
+  "steps": [
+   [
+    "Ağırlığı göğsüne yakın iki elle güvenle tut; ayaklarını rahat çömelebileceğin genişlikte aç.",
+    "Hold the weight securely with both hands close to your chest; set your feet at a width you can squat comfortably from."
+   ],
+   [
+    "Karnını sık; kalça ve dizlerini birlikte bükerek aralarına doğru çömel.",
+    "Brace your core; squat down between your legs by bending your hips and knees together."
+   ],
+   [
+    "Topuklarını yerde, dizlerini ayak yönünde tut; sırt ve denge kontrolünün korunduğu derinlikte dur.",
+    "Keep your heels down and your knees tracking over your feet; stop at the depth where you keep control of your back and balance."
+   ],
+   [
+    "Tüm tabanınla yeri itip kalk; ağırlığı gövdenden uzaklaştırma ve dipte zıplama.",
+    "Push the floor away through your whole foot to stand; do not let the weight drift away from your body or bounce at the bottom."
+   ]
+  ]
+ },
+ "back-squat": {
+  "name": "Halter sırtta squat",
+  "en": "Barbell back squat",
+  "archetype": "squat",
+  "difficulty": "ORTA-İLERİ",
+  "equipTr": "Squat rack + Bar",
+  "equipEn": "Squat rack, barbell",
+  "setsHint": "4×5-8",
+  "restHint": "120-180 sn",
+  "steps": [
+   [
+    "Güvenlik kolları ayarlı bir squat istasyonu kullan; barı boyun omurlarına değil üst sırt kaslarına yerleştir ve iki elle kavra.",
+    "Use a squat station with the safety arms set; rack the bar on your upper back muscles — never on your neck vertebrae — and grip it with both hands."
+   ],
+   [
+    "Barı askıdan alıp kısa adımlarla yerleş; ayaklarını rahat bir genişlikte aç ve karnını sık.",
+    "Lift the bar off the hooks and walk back with short steps; set your feet at a comfortable width and brace your core."
+   ],
+   [
+    "Dizlerini ayak parmaklarınla aynı yönde tutarak kalça ve dizlerinden çömel; topuklarını yerde tut.",
+    "Squat by bending at the hips and knees, keeping your knees tracking in line with your toes and your heels down."
+   ],
+   [
+    "Dengeni ve bel konumunu koruyabildiğin derinlikten tüm tabanınla iterek kalk; kontrolü kaybettiğin ağırlığı kullanma.",
+    "Stand up by driving through your whole foot from the depth at which you can keep your balance and back position; do not use a weight you cannot control."
+   ],
+   [
+    "Tam dik durduktan sonra askıya yaklaş ve barın iki tarafta da yerine oturduğunu kontrol et.",
+    "Once fully upright, walk back to the rack and check the bar has seated on both hooks."
+   ]
+  ]
+ },
+ "front-hack-squat": {
+  "name": "Halter önde squat",
+  "alt": "Ön squat",
+  "en": "Front squat",
+  "archetype": "squat_goblet",
+  "difficulty": "ORTA",
+  "equipTr": "Squat rack",
+  "equipEn": "Squat rack",
+  "setsHint": "3×8-10",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Güvenlik destekli istasyonda hafif halteri ön omuzlarına yerleştir; barın yükünü yalnızca bileklerinde taşıma.",
+    "At a station with safety supports, rack a light barbell on your front shoulders; do not let your wrists alone carry the load."
+   ],
+   [
+    "Dirseklerini öne ve rahatça yukarı yönelt; barın omuz desteğini koruyarak askıdan çık.",
+    "Point your elbows forward and comfortably up; unrack the bar keeping it supported on your shoulders."
+   ],
+   [
+    "Ayak tabanların yerdeyken kalça ve dizlerini birlikte bük; dizlerin ayaklarınla aynı yönde ilerlesin.",
+    "With your feet flat, bend your hips and knees together; let your knees travel in line with your feet."
+   ],
+   [
+    "Bar öne yuvarlanmadan ve bel kontrolün bozulmadan inebildiğin noktadan ayağa kalk; bitirince barı güvenle askıya koy.",
+    "Stand up from the depth you can reach without the bar rolling forward or your back position breaking down; rack the bar safely when you finish."
+   ],
+   [
+    "Bu adımlar halter önde squat içindir; kızaklı squat makinesi veya göğüste tek ağırlık tutulan squatyle aynı değildir.",
+    "These steps are for a front-racked barbell squat; they are not the same as a hack squat machine or a squat holding a single weight at the chest."
+   ]
+  ]
+ },
+ "rdl": {
+  "name": "Dambılla Romen kaldırışı",
+  "alt": "Romen deadlift",
+  "en": "Romanian deadlift",
+  "archetype": "hip_hinge_dumbbell",
+  "difficulty": "ORTA",
+  "equipTr": "Bar veya dumbbell",
+  "equipEn": "Barbell or dumbbell",
+  "setsHint": "3×8-10",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Dambılları uyluklarının önünde tut; ayaklarını kalça genişliğinde aç ve dizlerini hafif bük.",
+    "Hold the dumbbells in front of your thighs; set your feet hip-width apart and bend your knees slightly."
+   ],
+   [
+    "Karnını sık, kalçanı geriye gönder ve sırtının doğal konumunu koruyarak öne eğil.",
+    "Brace your core, push your hips back and hinge forward keeping the natural position of your back."
+   ],
+   [
+    "Dambılları bacaklarına yakın indir; arka bacağında gerilme hissedip bel konumunu koruyabildiğin yerde dur.",
+    "Lower the dumbbells close to your legs; stop where you feel a stretch in your hamstrings and can still hold your back position."
+   ],
+   [
+    "Ayaklarınla yeri itip kalçanı öne getirerek dikleş; tepede geriye yaslanma ve hareketi squatye dönüştürme.",
+    "Push the floor away and bring your hips forward to stand tall; do not lean back at the top or turn the movement into a squat."
+   ]
+  ]
+ },
+ "deadlift": {
+  "name": "Halteri yerden kaldırma",
+  "alt": "Ölü kaldırış",
+  "en": "Conventional deadlift",
+  "archetype": "hinge",
+  "difficulty": "İLERİ",
+  "equipTr": "Bar + Plakalar",
+  "equipEn": "Barbell and plates",
+  "setsHint": "3×4-6",
+  "restHint": "150-240 sn",
+  "steps": [
+   [
+    "Ayaklarını kalça genişliğinde, barı ayak ortanın üzerinde konumlandır; kalçanı geriye gönderip dizlerini bükerek barı bacaklarının dışından kavra.",
+    "Set your feet hip-width apart with the bar over mid-foot; push your hips back, bend your knees and grip the bar just outside your legs."
+   ],
+   [
+    "Karnını sık, sırtının doğal eğrilerini koru ve barı kaval kemiğine yakın tut; kolların düz kalsın.",
+    "Brace your core, keep the natural curves of your back and keep the bar close to your shins; keep your arms straight."
+   ],
+   [
+    "Yeri ayaklarınla iterek ayağa kalk; kalça ve omuzların uyumlu yükselsin, barı aniden çekiştirme.",
+    "Push the floor away with your feet to stand up; let your hips and shoulders rise together and do not jerk the bar."
+   ],
+   [
+    "Dik durduğunda kalçanı aşırı öne itme; barı bacaklarına yakın tutarak önce kalçadan eğil, ardından dizlerini büküp yere bırak.",
+    "At the top do not thrust your hips forward excessively; keep the bar close to your legs, hinge at the hips first, then bend your knees to set it down."
+   ],
+   [
+    "Yere uzanırken bel konumunu koruyamıyorsan yükü güvenli bir yükseltiye al ve daha hafif ağırlık kullan.",
+    "If you cannot hold your back position while reaching the floor, raise the load onto a safe block and use a lighter weight."
+   ]
+  ]
+ },
+ "hip-thrust": {
+  "name": "Sırt destekli kalça yükseltme",
+  "alt": "Kalça itişi",
+  "en": "Hip thrust",
+  "archetype": "hip_thrust",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Bar veya makine",
+  "equipEn": "Barbell or machine",
+  "setsHint": "3×10-12",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Kaymayan sehpaya üst sırtını, kürek kemiklerinin alt kenarı civarından daya; ayaklarını yere bas.",
+    "Rest your upper back against a non-slip bench, roughly at the lower edge of your shoulder blades; plant your feet on the floor."
+   ],
+   [
+    "Ağırlık kullanıyorsan kalça kıvrımına koruyucu pedle yerleştir ve ellerinle dengede tut; boynuna yük verme.",
+    "If you use a weight, place it in your hip crease with a protective pad and steady it with your hands; do not load your neck."
+   ],
+   [
+    "Karnını sıkıp ayaklarınla yeri iterek kalçanı kaldır; tepede gövde ve uyluklar yaklaşık aynı çizgide olsun.",
+    "Brace your core and push the floor away with your feet to lift your hips; at the top your torso and thighs should be roughly in line."
+   ],
+   [
+    "Belini aşırı açmadan kalça kaslarını sık; kalçanı kontrollü indir ve ayaklarının kaymasına izin verme.",
+    "Squeeze your glutes without over-extending your lower back; lower your hips under control and do not let your feet slide."
+   ]
+  ]
+ },
+ "bulgarian-split-squat": {
+  "name": "Arka ayak yükseltide tek bacak ağırlıklı squat",
+  "en": "Bulgarian split squat",
+  "archetype": "bulgarian_split_squat",
+  "difficulty": "ORTA",
+  "equipTr": "Bench + dumbbell",
+  "equipEn": "Bench and dumbbells",
+  "setsHint": "3×8",
+  "restHint": "90 sn",
+  "steps": [
+   [
+    "Arkanda kaymayan, çok yüksek olmayan bir sehpa seç; arka ayağının üstünü üzerine yerleştir.",
+    "Choose a stable bench behind you that is not too high; rest the top of your back foot on it."
+   ],
+   [
+    "Ön ayağını yeterince ileri al; ayaklarını ip üzerinde gibi aynı çizgiye değil kalça genişliğine yakın yerleştir.",
+    "Place your front foot far enough forward; keep your feet about hip-width apart rather than in line as if on a tightrope."
+   ],
+   [
+    "Ön dizini ayak yönünde bükerek aşağı in; ön tabanın yerde kalsın ve arkadaki kalçayı zorlayacak kadar derine gitme.",
+    "Lower down bending your front knee in line with your foot; keep the front sole on the floor and do not go so deep that it strains the rear hip."
+   ],
+   [
+    "Öndeki ayağınla yeri iterek kalk; dengede zorlanırsan sabit bir yerden destek al ve sonra taraf değiştir.",
+    "Push the floor away with your front foot to stand; hold on to something fixed if your balance is challenged, then switch sides."
+   ]
+  ]
+ },
+ "walking-lunge": {
+  "name": "Yürüyerek öne hamle",
+  "alt": "Yürüyen hamle",
+  "en": "Walking lunge",
+  "archetype": "unilateral_lunge",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell (opsiyonel)",
+  "equipEn": "Dumbbells (optional)",
+  "setsHint": "3×10/bacak",
+  "restHint": "60-90 sn",
+  "steps": [
+   [
+    "Önünde yeterli boş alan bırak ve ayaklarını kalça genişliğinde aç.",
+    "Leave enough clear space in front of you and set your feet hip-width apart."
+   ],
+   [
+    "Bir ayağınla ileri adım atıp iki dizini bükerek alçal; öndeki tabanın yere bassın ve dizin ayak yönünde kalsın.",
+    "Step forward with one foot and lower by bending both knees; keep the front sole flat on the floor and the knee tracking over the foot."
+   ],
+   [
+    "Arka dizini yere çarptırmadan dur; ön ayağınla itip yükselirken arka bacağını öne getir.",
+    "Stop before your back knee hits the floor; push off the front foot and bring your back leg through as you rise."
+   ],
+   [
+    "Diğer bacakla yeni bir öne hamle yap; denge için adımlar arasında ayaklarını yan yana getirerek kısa duraklayabilirsin.",
+    "Take a new forward lunge with the other leg; you may pause briefly with your feet side by side between steps for balance."
+   ]
+  ]
+ },
+ "reverse-lunge": {
+  "name": "Geriye adımlı hamle",
+  "alt": "Geriye hamle",
+  "en": "Reverse lunge",
+  "archetype": "unilateral_lunge",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Yok / hafif dumbbell",
+  "equipEn": "None or light dumbbells",
+  "setsHint": "2-3×8/bacak",
+  "restHint": "60-90 sn",
+  "steps": [
+   [
+    "Ayaklarını kalça genişliğinde aç; dik ve dengeli dur.",
+    "Set your feet hip-width apart; stand tall and balanced."
+   ],
+   [
+    "Bir ayağınla kontrollü biçimde geriye adım at; öndeki ayağının tüm tabanı yerde kalsın.",
+    "Step backwards with one foot under control; keep the whole sole of your front foot on the floor."
+   ],
+   [
+    "İki dizini büküp arka dizini zemine yaklaştır; ön dizini ayak yönünde tut ve yere çarpma.",
+    "Bend both knees and bring your back knee towards the floor; keep the front knee in line with the foot and do not hit the floor."
+   ],
+   [
+    "Öndeki ayağınla yeri iterek gerideki ayağını başlangıca getir; taraf değiştir, gerekirse sabit destek kullan.",
+    "Push the floor away with your front foot to bring the back foot to the start; switch sides and use a fixed support if needed."
+   ]
+  ]
+ },
+ "step-up": {
+  "name": "Basamağa çıkma",
+  "alt": "Basamak çıkma",
+  "en": "Step-up",
+  "archetype": "step_up",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Kutu/bench",
+  "equipEn": "Box or bench",
+  "setsHint": "3×10/bacak",
+  "restHint": "60-90 sn",
+  "steps": [
+   [
+    "Kaymayan ve dengeni koruyabileceğin yükseklikte bir basamak seç; bir ayağının tamamını üzerine koy.",
+    "Choose a non-slip step at a height where you can stay balanced; place one whole foot on it."
+   ],
+   [
+    "Gövdeni hafif öne alıp basamaktaki ayağınla it; yerdeki bacakla sıçrayarak hız alma.",
+    "Lean your torso slightly forward and drive through the foot on the step; do not gain momentum by hopping off the floor with the other leg."
+   ],
+   [
+    "Basamaktaki kalça ve dizini açarak yüksel; dizin içe çökmesin ve dengeyi koru.",
+    "Rise by extending the hip and knee on the step; do not let the knee collapse inward and keep your balance."
+   ],
+   [
+    "Aynı bacakla inişi kontrol ederek diğer ayağını yavaşça yere koy; tekrarlardan sonra taraf değiştir.",
+    "Control the descent with the same leg and place the other foot slowly on the floor; switch sides after your reps."
+   ]
+  ]
+ },
+ "calf-raise": {
+  "name": "Ayakta topuk yükseltme",
+  "alt": "Topuk yükseltme",
+  "en": "Calf raise",
+  "archetype": "calf_raise",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Yok / makine",
+  "equipEn": "Bodyweight or machine",
+  "setsHint": "3×15",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Ayaklarını kalça genişliğinde aç; denge için sabit bir yüzeye hafifçe tutun.",
+    "Set your feet hip-width apart; hold a stable surface lightly for balance."
+   ],
+   [
+    "Dizlerini zorla kilitlemeden, ayaklarının ön kısmına basarak topuklarını yavaşça yükselt.",
+    "Without forcing your knees into lockout, slowly raise your heels by pressing through the balls of your feet."
+   ],
+   [
+    "Ayak bileklerini yana yatırmadan kısa süre tepede dur; parmak uçlarında zıplama.",
+    "Pause briefly at the top without rolling your ankles outward; do not bounce on your toes."
+   ],
+   [
+    "Topuklarını kontrollü indir; başlangıçta düz zemini kullan ve rahat hareket aralığında kal.",
+    "Lower your heels under control; start on flat ground and stay in a comfortable range of motion."
+   ]
+  ]
+ },
+ "bench-press": {
+  "name": "Düz sehpada halterle göğüs itiş",
+  "alt": "Göğüs presi",
+  "en": "Barbell bench press",
+  "archetype": "bench_press",
+  "difficulty": "ORTA",
+  "equipTr": "Bench + Bar",
+  "equipEn": "Flat bench, barbell",
+  "setsHint": "4×8-10",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Güvenlik desteklerini ayarla veya yardımcı kullan; ayaklarını yere bas, kalçanı ve üst sırtını sehpaya yerleştir.",
+    "Set the safety supports or use a spotter; plant your feet on the floor and settle your hips and upper back on the bench."
+   ],
+   [
+    "Barı başparmakların etrafına kapanacak şekilde kavra; bileklerini ön kolların üzerinde dengeli tut.",
+    "Grip the bar with your thumbs wrapped around it; keep your wrists balanced over your forearms."
+   ],
+   [
+    "Barı kontrollü biçimde orta-alt göğse yaklaştır; dirseklerini omuz hizasında tamamen yana açma ve barı göğüsten sektirme.",
+    "Bring the bar under control towards your mid-to-lower chest; do not flare your elbows fully out to shoulder level and do not bounce the bar off your chest."
+   ],
+   [
+    "Ayakların sabitken barı yukarı it; kalçanı kaldırma, omuz ağrısı oluşturan derinliğe inme.",
+    "With your feet planted, press the bar up; do not lift your hips and do not lower to a depth that causes shoulder pain."
+   ],
+   [
+    "Set sonunda barı askının iki tarafına güvenle yerleştir.",
+    "At the end of the set, seat the bar safely on both sides of the rack."
+   ]
+  ]
+ },
+ "incline-press": {
+  "name": "Eğimli sehpada dambılla göğüs itiş",
+  "alt": "Eğik sehpada dumbbell pres",
+  "en": "Incline dumbbell press",
+  "archetype": "incline_press",
+  "difficulty": "ORTA",
+  "equipTr": "Bank (30°) + dumbbell",
+  "equipEn": "Incline bench, dumbbells",
+  "setsHint": "3×10-12",
+  "restHint": "75-90 sn",
+  "steps": [
+   [
+    "Sehpayı yaklaşık 15–30 derece eğime ayarla; ayaklarını yere, kalçanı ve üst sırtını sehpaya yerleştir.",
+    "Set the bench to roughly 15–30 degrees; plant your feet on the floor and settle your hips and upper back on the bench."
+   ],
+   [
+    "Dambılları göğüs yanlarında dengeli tut; bileklerin ön kollarının üzerinde, dirseklerin gövdene rahat bir açıda olsun.",
+    "Hold the dumbbells balanced beside your chest; keep your wrists over your forearms and your elbows at a comfortable angle to your body."
+   ],
+   [
+    "Ağırlıkları kontrollü biçimde yukarı it; tepede birbirine çarpma ve belini aşırı yaylandırma.",
+    "Press the weights up under control; do not clash them together at the top and do not over-arch your lower back."
+   ],
+   [
+    "Omuzlarının rahat ettiği derinliğe yavaşça indir; set sonunda dambılları güvenle bırakabileceğin ağırlık seç.",
+    "Lower slowly to a depth your shoulders are comfortable with; choose a weight you can set down safely at the end of the set."
+   ]
+  ]
+ },
+ "shoulder-press": {
+  "name": "Oturarak baş üstüne omuz itiş",
+  "alt": "Shoulder press",
+  "en": "Overhead press",
+  "archetype": "seated_overhead_press",
+  "difficulty": "ORTA",
+  "equipTr": "Bar/dumbbell/makine",
+  "equipEn": "Barbell, dumbbells, or machine",
+  "setsHint": "3×8-10",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Dik veya hafif geriye eğimli sırt desteğine otur; ayaklarını yere bas ve dambılları omuz hizasına getir.",
+    "Sit against an upright or slightly reclined back support; plant your feet and bring the dumbbells to shoulder height."
+   ],
+   [
+    "Bileklerini ön kolların üzerinde tut; dirseklerin gövdenin biraz önünde ve rahat bir açıklıkta olsun.",
+    "Keep your wrists over your forearms; keep your elbows slightly in front of your body and comfortably open."
+   ],
+   [
+    "Karnını sıkıp ağırlıkları baş üstüne it; başını öne uzatma ve belinden geriye yatma.",
+    "Brace your core and press the weights overhead; do not push your head forward or lean back from the lower back."
+   ],
+   [
+    "Omuzlarının ağrısız aralığında kontrollü indir; başlangıç ve bitişte ağırlıkları güvenle taşıyabileceğin yük seç.",
+    "Lower under control within a pain-free shoulder range; choose a load you can handle safely at both the start and the finish."
+   ]
+  ]
+ },
+ "barbell-row": {
+  "name": "Öne eğilerek halterle kürek çekiş",
+  "alt": "Barbell kürek çekme",
+  "en": "Barbell row",
+  "archetype": "standing_row_hinged",
+  "difficulty": "ORTA",
+  "equipTr": "Bar",
+  "equipEn": "Barbell",
+  "setsHint": "3-4×6-8",
+  "restHint": "120-150 sn",
+  "steps": [
+   [
+    "Halteri omuz genişliğine yakın üstten tutuşla kavra; dizlerini hafif bük ve kalçanı geriye göndererek eğil.",
+    "Grip the barbell overhand at about shoulder width; bend your knees slightly and hinge forward by pushing your hips back."
+   ],
+   [
+    "Belinin doğal konumunu koru, karnını sık ve barı kollarının altında serbestçe tut.",
+    "Keep the natural position of your lower back, brace your core and let the bar hang freely under your arms."
+   ],
+   [
+    "Barı alt kaburgalarına doğru çek; dirseklerini geriye götürürken gövdeni kaldırıp savurma.",
+    "Pull the bar towards your lower ribs; draw your elbows back without heaving your torso up."
+   ],
+   [
+    "Kollarını kontrollü uzat; kürek kemiklerinin doğal hareketine izin verirken bel konumunu koru.",
+    "Extend your arms under control; allow your shoulder blades to move naturally while keeping your back position."
+   ]
+  ]
+ },
+ "single-arm-row": {
+  "name": "Destekli tek kolla dambıl kürek çekiş",
+  "alt": "Tek kol kürek çekme",
+  "en": "Single-arm dumbbell row",
+  "archetype": "standing_row_hinged",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Bank + dumbbell",
+  "equipEn": "Bench, dumbbell",
+  "setsHint": "3×10-12/kol",
+  "restHint": "60-90 sn",
+  "steps": [
+   [
+    "Bir elini sağlam sehpaya koy; ayaklarını dengeli açıp kalçadan öne eğil ve diğer elinde dambılı tut.",
+    "Place one hand on a solid bench; set your feet in a balanced stance, hinge forward from the hips and hold a dumbbell in the other hand."
+   ],
+   [
+    "Karnını sık; başını ve sırtını aynı çizgide, omuzlarını yere dönük tut.",
+    "Brace your core; keep your head and back in line and your shoulders facing the floor."
+   ],
+   [
+    "Dirseğini kalçana doğru geriye götürerek dambılı gövdenin yanına çek; gövdeni yana çevirme.",
+    "Draw your elbow back towards your hip to pull the dumbbell alongside your body; do not rotate your torso."
+   ],
+   [
+    "Kolu yavaşça uzat; omzu aşağı sarkıtarak zorlamadan kontrollü tekrarla ve taraf değiştir.",
+    "Extend the arm slowly; repeat under control without letting the shoulder sag, then switch sides."
+   ]
+  ]
+ },
+ "reverse-fly": {
+  "name": "Öne eğilerek dambılla arka omuz açış",
+  "alt": "Arka omuz açış",
+  "en": "Dumbbell reverse fly",
+  "archetype": "hinged_fly",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell",
+  "equipEn": "Dumbbells",
+  "setsHint": "3×12-15",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Hafif dambılları tut; dizlerini az bük ve kalçadan eğilerek sırtını rahat, sabit bir konuma getir.",
+    "Hold light dumbbells; bend your knees a little and hinge from the hips into a comfortable, steady back position."
+   ],
+   [
+    "Kollarını aşağı sarkıt; dirseklerini hafif bük ve boynunu sırtınla aynı çizgide tut.",
+    "Let your arms hang down; keep your elbows slightly bent and your neck in line with your back."
+   ],
+   [
+    "Kollarını iki yana aç; ağırlıkları omuz kontrolünü koruduğun yüksekliğe kadar kaldır.",
+    "Open your arms out to the sides; raise the weights to the height at which you keep control of your shoulders."
+   ],
+   [
+    "Yavaşça indir; gövdeni yukarı kaldırarak hız alma veya omuzlarını aşırı geriye zorlama.",
+    "Lower slowly; do not gain momentum by lifting your torso and do not force your shoulders too far back."
+   ]
+  ]
+ },
+ "lateral-raise": {
+  "name": "Dambılla yana omuz açış",
+  "alt": "Yana açış",
+  "en": "Lateral raise",
+  "archetype": "lateral_raise_front",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell",
+  "equipEn": "Dumbbells",
+  "setsHint": "3×12-15",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Hafif dambılları yanında tut; ayaklarını dengeli aç ve gövdeni dik tut.",
+    "Hold light dumbbells at your sides; set your feet in a balanced stance and stand tall."
+   ],
+   [
+    "Dirseklerini hafif bükerek kollarını yanlara, gövdenin biraz önünden kaldır.",
+    "With your elbows slightly bent, raise your arms out to the sides, slightly in front of your body."
+   ],
+   [
+    "Omuz hizasına kadar veya daha düşük ağrısız aralıkta ilerle; ellerini su döker gibi içe çevirme.",
+    "Go to shoulder height, or lower if that is your pain-free range; do not turn your hands in as if pouring water."
+   ],
+   [
+    "Savurmadan yavaşça indir; omuzlarını aşırı silkme ve belinden hız alma.",
+    "Lower slowly without swinging; do not shrug heavily or gain momentum from your lower back."
+   ]
+  ]
+ },
+ "biceps-curl": {
+  "name": "Ağırlıkla ön kol bükme",
+  "alt": "Kol bükme",
+  "en": "Biceps curl",
+  "archetype": "standing_arm_isolation",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell/bar",
+  "equipEn": "Dumbbells or barbell",
+  "setsHint": "3×12",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Dambılları yanlarında, avuçların öne bakacak şekilde tut; ayaklarını rahatça aç.",
+    "Hold the dumbbells at your sides with your palms facing forward; set your feet comfortably apart."
+   ],
+   [
+    "Üst kollarını gövde yanında tutarak dirseklerini bük ve ağırlıkları omuzlarına doğru kaldır.",
+    "Keeping your upper arms at your sides, bend your elbows and lift the weights towards your shoulders."
+   ],
+   [
+    "Bileklerini düz tut; belinden hız alma ve dirseklerini belirgin biçimde öne kaçırma.",
+    "Keep your wrists straight; do not gain momentum from your lower back or let your elbows drift noticeably forward."
+   ],
+   [
+    "Dirseklerini kontrollü açarak başlangıca dön; ağırlıkları aşağı bırakma.",
+    "Open your elbows under control to return to the start; do not drop the weights."
+   ]
+  ]
+ },
+ "shrug": {
+  "name": "Ağırlıkla omuz yükseltme",
+  "alt": "Shrug",
+  "en": "Shrug",
+  "archetype": "shrug_front",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Dumbbell/bar",
+  "equipEn": "Dumbbells or barbell",
+  "setsHint": "3×12",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Dambılları yanında tut ve ayaklarını dengeli aç; başını dik, kollarını uzun tut.",
+    "Hold the dumbbells at your sides with your feet in a balanced stance; keep your head up and your arms long."
+   ],
+   [
+    "Dirseklerini bükmeden omuzlarını yavaşça kulaklarına doğru yükselt.",
+    "Without bending your elbows, slowly raise your shoulders towards your ears."
+   ],
+   [
+    "Boynunu öne uzatmadan kısa süre dur; omuzlarını öne-arkaya yuvarlama.",
+    "Pause briefly without craning your neck forward; do not roll your shoulders back and forth."
+   ],
+   [
+    "Ağırlıkları savurmadan omuzlarını yavaşça indir; tutuşunu veya boyun konumunu bozan yük kullanma.",
+    "Lower your shoulders slowly without swinging the weights; do not use a load that breaks your grip or your neck position."
+   ]
+  ]
+ },
+ "plank": {
+  "name": "Eller üzerinde düz gövde duruşu",
+  "en": "Plank",
+  "archetype": "plank_prone",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "3×30 sn",
+  "restHint": "30-45 sn",
+  "steps": [
+   [
+    "Ellerini omuzlarının altına koy ve bacaklarını geriye uzat; ayak uçlarından destek al.",
+    "Place your hands under your shoulders and extend your legs back; support yourself on your toes."
+   ],
+   [
+    "Yeri ellerinle it; karnını ve kalçanı hafifçe sıkarak başını gövdenle aynı çizgide tut.",
+    "Push the floor away with your hands; gently brace your core and glutes and keep your head in line with your body."
+   ],
+   [
+    "Belini çökertmeden veya kalçanı aşırı kaldırmadan normal nefes alarak duruşu koru.",
+    "Hold the position breathing normally, without letting your lower back sag or your hips pike up."
+   ],
+   [
+    "Duruş bozulmadan dizlerini yere indir; zorlanırsan başlangıçta diz destekli uygula.",
+    "Lower your knees to the floor before your position breaks down; start with the knee-supported version if it is hard."
+   ]
+  ]
+ },
+ "side-plank": {
+  "name": "Ön kol üzerinde yan gövde duruşu",
+  "alt": "Yan plank",
+  "en": "Side plank",
+  "archetype": "side_plank",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "3×20-30 sn/taraf",
+  "restHint": "30 sn",
+  "steps": [
+   [
+    "Yan yat; dirseğini omzunun altına koy ve ön kolunu yere yerleştir.",
+    "Lie on your side; place your elbow under your shoulder and your forearm on the floor."
+   ],
+   [
+    "Bacaklarını uzat; ayaklarını üst üste veya denge için hafif şaşırtmalı yerleştir.",
+    "Extend your legs; stack your feet, or stagger them slightly for balance."
+   ],
+   [
+    "Yeri ön kolunla itip kalçanı kaldır; baş, gövde ve bacaklarını aynı çizgide tut, göğsünü yere döndürme.",
+    "Push the floor away with your forearm and lift your hips; keep your head, torso and legs in line and do not let your chest rotate towards the floor."
+   ],
+   [
+    "Nefes alarak kısa süre koru, sonra kontrollü in ve taraf değiştir; zorlanırsan dizler bükülü destekli sürümü kullan.",
+    "Hold briefly while breathing, then lower under control and switch sides; use the bent-knee version if it is hard."
+   ]
+  ]
+ },
+ "bird-dog": {
+  "name": "Dört ayak üzerinde çapraz kol ve bacak uzatma",
+  "en": "Bird-dog",
+  "archetype": "bird_dog",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "3×6/taraf",
+  "restHint": "30-45 sn",
+  "steps": [
+   [
+    "Ellerini omuzlarının, dizlerini kalçalarının altına yerleştir; boynunu sırtınla aynı çizgide tut.",
+    "Place your hands under your shoulders and your knees under your hips; keep your neck in line with your back."
+   ],
+   [
+    "Karnını hafifçe sık; bir kolunu öne, karşı bacağını geriye doğru uzat.",
+    "Gently brace your core; extend one arm forward and the opposite leg back."
+   ],
+   [
+    "Kalçanı yana çevirmeden ve belini çukurlaştırmadan, en fazla gövde hizasına kadar uzan.",
+    "Reach no higher than body level, without rotating your hips to the side or hollowing your lower back."
+   ],
+   [
+    "Kısa süre dengede kalıp elini ve dizini yavaşça yere getir; taraf değiştir ve normal nefes al.",
+    "Hold your balance briefly, then bring your hand and knee slowly back to the floor; switch sides and breathe normally."
+   ]
+  ]
+ },
+ "pallof-press": {
+  "name": "Dönmeye direnerek öne itiş",
+  "en": "Pallof press",
+  "archetype": "anti_rotation_standing",
+  "difficulty": "ORTA",
+  "equipTr": "Kablo/bant",
+  "equipEn": "Cable or band",
+  "setsHint": "3×12/taraf",
+  "restHint": "45 sn",
+  "steps": [
+   [
+    "Lastiği göğüs hizasında sağlam bir noktaya sabitle veya kabloyu bu yüksekliğe ayarla; bağlantıya yan dön.",
+    "Anchor a band at chest height to something solid, or set the cable to that height; stand side-on to the anchor."
+   ],
+   [
+    "Tutacağı iki elinle göğsünde tut; ayaklarını rahatça açıp hafif direnç oluşana kadar uzaklaş.",
+    "Hold the handle at your chest with both hands; set your feet comfortably apart and step away until there is light tension."
+   ],
+   [
+    "Karnını sık ve ellerini göğsünün önüne uzat; omuzlarının ve kalçanın bağlantıya dönmesine izin verme.",
+    "Brace your core and extend your hands out in front of your chest; do not let your shoulders or hips turn towards the anchor."
+   ],
+   [
+    "Kısa süre bekleyip ellerini göğsüne getir; normal nefes al, ardından diğer yöne dönerek tekrarla.",
+    "Hold briefly and bring your hands back to your chest; breathe normally, then turn the other way and repeat."
+   ]
+  ]
+ },
+ "ab-wheel-rollout": {
+  "name": "Diz üstünde karın tekerleğiyle öne uzanma",
+  "alt": "Tekerlekle açılma",
+  "en": "Ab wheel rollout",
+  "archetype": "rollout",
+  "difficulty": "ORTA",
+  "equipTr": "Ab wheel",
+  "equipEn": "Ab wheel",
+  "setsHint": "3×8",
+  "restHint": "60 sn",
+  "steps": [
+   [
+    "Dizlerinin altına minder koy; tekerleği iki elinle omuzlarının altında tut.",
+    "Put a pad under your knees; hold the wheel with both hands under your shoulders."
+   ],
+   [
+    "Karnını ve kalçanı hafifçe sık; kaburgalarını öne açmadan tekerleği yavaşça ileri yuvarla.",
+    "Gently brace your core and glutes; roll the wheel slowly forward without letting your ribs flare."
+   ],
+   [
+    "Belin çukurlaşmadan ve omuzlarında ağrı oluşmadan kontrol edebildiğin noktada dur; başlangıçta kısa mesafe kullan.",
+    "Stop at the point you can control, before your lower back hollows or your shoulders hurt; use a short distance at first."
+   ],
+   [
+    "Gövdeni kontrollü biçimde geri getir; kalçanı birden geriye kaçırma ve nefesini uzun süre tutma.",
+    "Bring your body back under control; do not snap your hips backwards and do not hold your breath for long."
+   ]
+  ]
+ },
+ "hanging-knee-raise": {
+  "name": "Barda asılı dizleri karna çekme",
+  "alt": "Hanging knee raise",
+  "en": "Hanging knee raise",
+  "archetype": "hanging_knee_raise",
+  "difficulty": "ORTA",
+  "equipTr": "Barfiks barı",
+  "equipEn": "Pull-up bar",
+  "setsHint": "3×10-12",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Sağlam bir barı güvenli tutuşla kavra; gerekirse basamak kullan ve ayaklarını yerden kes.",
+    "Grip a solid bar with a secure hold; use a step if needed and lift your feet off the floor."
+   ],
+   [
+    "Omuzlarını kontrol altında tut, karnını sık ve sallanmayı durdur.",
+    "Keep your shoulders under control, brace your core and stop any swinging."
+   ],
+   [
+    "Dizlerini bükerek karnına doğru kaldır; rahatça yapabiliyorsan leğen kemiğini hafifçe gövdene doğru yuvarla.",
+    "Bend your knees and lift them towards your stomach; if it is comfortable, roll your pelvis slightly towards your torso."
+   ],
+   [
+    "Bacaklarını yavaşça indir; tutuşun veya omuz kontrolün bozulursa seti bitir ve basamağa güvenle in.",
+    "Lower your legs slowly; end the set if your grip or shoulder control breaks down and step down safely."
+   ]
+  ]
+ },
+ "suitcase-carry": {
+  "name": "Tek elde ağırlıkla yürüme",
+  "alt": "Tek el ağırlık taşıma",
+  "en": "Suitcase carry",
+  "archetype": "carry",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Kettlebell/dumbbell",
+  "equipEn": "Kettlebell or dumbbell",
+  "setsHint": "3×30 sn/kol",
+  "restHint": "45 sn",
+  "steps": [
+   [
+    "Yolunu boşalt; bir dambılı diz ve kalçalarını bükerek güvenle kaldırıp yanında tut.",
+    "Clear your path; pick up one dumbbell safely by bending your knees and hips and hold it at your side."
+   ],
+   [
+    "Başını dik, omuzlarını doğal hizada tut; karnını sık ve ağırlığın ters yönüne yatma.",
+    "Keep your head up and your shoulders naturally level; brace your core and do not lean away from the weight."
+   ],
+   [
+    "Kısa, kontrollü adımlarla yürü; ağırlığı sallama ve nefesini tutma.",
+    "Walk with short, controlled steps; do not swing the weight and do not hold your breath."
+   ],
+   [
+    "Gövden yana eğilmeye başlamadan dur; ağırlığı kontrollü bırak ve diğer elle tekrarla.",
+    "Stop before your torso starts to lean sideways; set the weight down under control and repeat with the other hand."
+   ]
+  ]
+ },
+ "glute-bridge": {
+  "name": "Yerde kalça köprüsü",
+  "alt": "Glute bridge",
+  "en": "Glute bridge",
+  "archetype": "glute_bridge",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "3×12-15",
+  "restHint": "30-45 sn",
+  "steps": [
+   [
+    "Sırtüstü yat, dizlerini bük ve ayaklarını kalça genişliğinde yere bas; kolların yanında kalsın.",
+    "Lie on your back, bend your knees and plant your feet hip-width apart; keep your arms at your sides."
+   ],
+   [
+    "Karnını hafifçe sık ve ayak tabanlarınla yeri iterek kalçanı yükselt.",
+    "Gently brace your core and push the floor away through your soles to lift your hips."
+   ],
+   [
+    "Omuzların yerde kalırken kalçanı dizlerinle gövdenin aynı çizgiye geldiği kadar kaldır; boynuna yük bindirme.",
+    "With your shoulders staying on the floor, lift your hips until your knees and torso come into line; do not load your neck."
+   ],
+   [
+    "Kalça kaslarını kısa süre sıkıp yavaşça yere dön; belini yaylandırma.",
+    "Squeeze your glutes briefly and lower slowly to the floor; do not arch your lower back."
+   ]
+  ]
+ },
+ "leg-press": {
+  "name": "Makinede bacak itiş",
+  "alt": "Bacak presi",
+  "en": "Leg press",
+  "archetype": "leg_press_seated",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Leg press makinesi",
+  "equipEn": "Leg press machine",
+  "setsHint": "3×10-12",
+  "restHint": "90-120 sn",
+  "steps": [
+   [
+    "Koltuğu ve güvenlik durdurucularını ayarla; ayaklarını platforma yaklaşık omuz genişliğinde yerleştir.",
+    "Adjust the seat and the safety stops; place your feet on the platform at roughly shoulder width."
+   ],
+   [
+    "Platformu kontrollü itip kilidi makinenin talimatına göre aç; dizlerini sertçe kilitleme.",
+    "Press the platform under control and release the lock as the machine instructs; do not snap your knees into lockout."
+   ],
+   [
+    "Dizlerini ayak yönünde bükerek platformu indir; topukların basılı, kalçan ve belin destekli kalsın.",
+    "Lower the platform bending your knees in line with your feet; keep your heels pressed down and your hips and back supported."
+   ],
+   [
+    "Kalçan yuvarlanıp sehpadan ayrılmadan dur ve tüm tabanınla it; dizlerini ellerinle bastırma.",
+    "Stop before your hips roll off the seat and press through your whole foot; do not push on your knees with your hands."
+   ],
+   [
+    "Bitirirken güvenlik kilidinin devreye girdiğinden emin ol; sonra platformdaki yükü bırak.",
+    "When you finish, make sure the safety lock has engaged, then release the load on the platform."
+   ]
+  ]
+ },
+ "leg-extension": {
+  "name": "Oturarak makinede diz açma",
+  "alt": "Ön bacak makinesi",
+  "en": "Leg extension",
+  "archetype": "leg_extension_seated",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Leg extension makinesi",
+  "equipEn": "Leg extension machine",
+  "setsHint": "3×12-15",
+  "restHint": "60 sn",
+  "steps": [
+   [
+    "Sırt desteğini ve koltuğu ayarla; dizin makinenin dönme ekseniyle hizalansın.",
+    "Adjust the back support and the seat so that your knee lines up with the machine's axis of rotation."
+   ],
+   [
+    "Alt pedi ayaklarının üzerine değil ayak bileklerinin biraz üzerindeki kaval bölgesine yerleştir; tutacakları kavra.",
+    "Place the lower pad on your shin just above your ankles, not on your feet; hold the handles."
+   ],
+   [
+    "Kalçanı ve uyluklarını koltukta tutarak dizlerini rahatça düzleştir; eklemi sertçe kilitleme.",
+    "Keeping your hips and thighs on the seat, straighten your knees comfortably; do not snap the joint into lockout."
+   ],
+   [
+    "Ağırlığı yavaşça indir; ağrı hissedersen yükü veya hareket aralığını azalt.",
+    "Lower the weight slowly; reduce the load or the range of motion if you feel pain."
+   ]
+  ]
+ },
+ "leg-curl": {
+  "name": "Oturarak makinede diz bükme",
+  "alt": "Arka bacak makinesi",
+  "en": "Leg curl",
+  "archetype": "leg_curl_seated",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Leg curl makinesi",
+  "equipEn": "Leg curl machine",
+  "setsHint": "3×12",
+  "restHint": "60-75 sn",
+  "steps": [
+   [
+    "Koltuğu diz eklemin makinenin dönme ekseniyle hizalanacak şekilde ayarla; sırtını dayanağa yerleştir.",
+    "Adjust the seat so your knee joint lines up with the machine's axis of rotation; settle your back against the support."
+   ],
+   [
+    "Uyluk pedini sabitle; alt pedi Aşil tendonuna değil ayak bileğinin biraz üstündeki alt bacak bölümüne yerleştir.",
+    "Secure the thigh pad; place the lower pad on your lower leg just above the ankle, not on your Achilles tendon."
+   ],
+   [
+    "Tutacakları kavra ve topuklarını aşağı-geriye çekerek dizlerini bük; kalçanı koltuktan kaldırma.",
+    "Hold the handles and bend your knees by pulling your heels down and back; do not lift your hips off the seat."
+   ],
+   [
+    "Dizlerini kontrollü aç; ağırlıkları çarptırma ve dizde ağrı oluşturan aralığa girme.",
+    "Open your knees under control; do not let the weights clash and do not enter a range that causes knee pain."
+   ]
+  ]
+ },
+ "lat-pulldown": {
+  "name": "Üst makaradan göğse çekiş",
+  "alt": "Lat çekişi",
+  "en": "Lat pulldown",
+  "archetype": "lat_pulldown_seated",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Pulldown makinesi",
+  "equipEn": "Lat pulldown machine",
+  "setsHint": "3×10-12",
+  "restHint": "90 sn",
+  "steps": [
+   [
+    "Uyluk desteğini ayarla ve ayaklarını yere bas; barı omuz genişliğinden biraz geniş, rahat bir tutuşla kavra.",
+    "Adjust the thigh support and plant your feet; grip the bar a little wider than shoulder width in a comfortable hold."
+   ],
+   [
+    "Gövdeni hafif geriye eğip bu açıyı koru; boynunu öne uzatma.",
+    "Lean your torso back slightly and keep that angle; do not push your head forward."
+   ],
+   [
+    "Dirseklerini aşağı götürerek barı üst göğsüne yaklaştır; belden savrulma veya barı zorla göğse bastırma.",
+    "Draw your elbows down to bring the bar towards your upper chest; do not heave from the lower back or force the bar onto your chest."
+   ],
+   [
+    "Kollarını ve omuzlarını kontrollü biçimde yukarı bırak; ağırlık yığınını çarptırma.",
+    "Let your arms and shoulders rise under control; do not let the weight stack clash."
+   ]
+  ]
+ },
+ "seated-cable-row": {
+  "name": "Oturarak kablolu kürek çekiş",
+  "alt": "Seated cable row",
+  "en": "Seated cable row",
+  "archetype": "seated_row_cable",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Kablo kürek makinesi",
+  "equipEn": "Seated row machine",
+  "setsHint": "3×10-12",
+  "restHint": "90 sn",
+  "steps": [
+   [
+    "Ayaklarını desteklere bas, dizlerini hafif bük ve tutacağı kavra; sırtının doğal eğrilerini koru.",
+    "Plant your feet on the supports, bend your knees slightly and grip the handle; keep the natural curves of your back."
+   ],
+   [
+    "Gövdeni dik ve sabit tutarak dirseklerini geriye götür; tutacağı üst karın bölgesine çek.",
+    "Keeping your torso upright and steady, draw your elbows back; pull the handle to your upper abdomen."
+   ],
+   [
+    "Omuzlarını kulaklarından uzak tut; kürek kemiklerinin kontrollü biçimde birbirine yaklaşmasına izin ver.",
+    "Keep your shoulders away from your ears; let your shoulder blades draw together under control."
+   ],
+   [
+    "Kollarını yavaşça uzat; omuzların doğal olarak öne gelebilir ancak belini yuvarlayıp ağırlığa uzanma.",
+    "Extend your arms slowly; your shoulders may come forward naturally, but do not round your back to reach for the weight."
+   ]
+  ]
+ },
+ "chest-supported-row": {
+  "name": "Göğüs destekli dambılla kürek çekiş",
+  "alt": "Chest-supported row",
+  "en": "Chest-supported row",
+  "archetype": "standing_row_hinged",
+  "difficulty": "ORTA",
+  "equipTr": "Eğik sehpa + dumbbell",
+  "equipEn": "Incline bench, dumbbells",
+  "setsHint": "4×10",
+  "restHint": "75 sn",
+  "steps": [
+   [
+    "Eğimli ve sabit bir sehpaya göğsünü dayayıp ayaklarını yere bas; başını sırtınla aynı çizgide tut.",
+    "Rest your chest on a stable incline bench and plant your feet; keep your head in line with your back."
+   ],
+   [
+    "Dambılları omuzlarının altında tut; göğsünün sehpayla temasını koru.",
+    "Hold the dumbbells under your shoulders; keep your chest in contact with the bench."
+   ],
+   [
+    "Dirseklerini geriye götürerek ağırlıkları alt kaburga yanlarına çek; omuzlarını kulaklarına yükseltme.",
+    "Draw your elbows back to pull the weights to the sides of your lower ribs; do not shrug towards your ears."
+   ],
+   [
+    "Kollarını kontrollü uzat; göğsünü sehpadan kaldırarak veya belini yaylandırarak hız alma.",
+    "Extend your arms under control; do not gain momentum by lifting your chest off the bench or arching your back."
+   ]
+  ]
+ },
+ "pullup": {
+  "name": "Üstten tutuşla barfiks",
+  "alt": "Pull-up",
+  "en": "Pull-up",
+  "archetype": "pull_up_hang",
+  "difficulty": "İLERİ",
+  "equipTr": "Barfiks barı",
+  "equipEn": "Pull-up bar",
+  "setsHint": "3×AMRAP",
+  "restHint": "120 sn",
+  "steps": [
+   [
+    "Sağlam barı omuz genişliğinden biraz geniş, rahat üstten tutuşla kavra; gerekirse basamakla yerleş.",
+    "Grip a solid bar overhand, a little wider than shoulder width, in a comfortable hold; use a step to get set if needed."
+   ],
+   [
+    "Ayaklarını yerden kes ve omuzlarını kontrollü tut; karnını sıkarak sallanmayı azalt.",
+    "Lift your feet off the floor and keep your shoulders under control; brace your core to reduce swinging."
+   ],
+   [
+    "Dirseklerini aşağı-geriye çekerek gövdeni yükselt; çeneni öne uzatarak bara yetişmeye çalışma.",
+    "Pull your elbows down and back to raise your body; do not crane your chin forward to reach the bar."
+   ],
+   [
+    "Kollarını kontrollü uzatarak in; kendini aşağı bırakma, gerekirse destekli barfiks makinesi kullan.",
+    "Lower by extending your arms under control; do not drop yourself, and use an assisted pull-up machine if needed."
+   ]
+  ]
+ },
+ "triceps-pushdown": {
+  "name": "Üst makarada arka kol aşağı itiş",
+  "alt": "Triceps itişi",
+  "en": "Triceps pushdown",
+  "archetype": "triceps_pushdown_standing",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Kablo makinesi",
+  "equipEn": "Cable machine",
+  "setsHint": "3×12-15",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Üst makaraya halat veya kısa bar tak; ayaklarını dengeli açıp tutacağı kavra.",
+    "Attach a rope or a short bar to the high pulley; set your feet in a balanced stance and grip the handle."
+   ],
+   [
+    "Dirseklerini gövdenin yanında bükülü tut; karnını sık ve bileklerini düz konumlandır.",
+    "Keep your elbows bent at your sides; brace your core and keep your wrists straight."
+   ],
+   [
+    "Üst kollarını oynatmadan dirseklerini açarak tutacağı aşağı it; eklemi sertçe kilitleme.",
+    "Without moving your upper arms, straighten your elbows to push the handle down; do not snap the joint into lockout."
+   ],
+   [
+    "Dirseklerini kontrollü büküp başlangıca dön; omuzlardan bastırma veya tüm vücut ağırlığınla yüklenme.",
+    "Bend your elbows under control to return to the start; do not press down from the shoulders or lean your whole body weight on it."
+   ]
+  ]
+ },
+ "face-pull": {
+  "name": "Halatla yüze çekiş",
+  "alt": "Face pull",
+  "en": "Face pull",
+  "archetype": "face_pull_standing",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Kablo + halat",
+  "equipEn": "Cable, rope",
+  "setsHint": "3-4×15",
+  "restHint": "45-60 sn",
+  "steps": [
+   [
+    "Halatı yüz hizasında veya biraz üzerinde makaraya tak; iki ucunu tutup kablo gerilene kadar geri adım at.",
+    "Attach the rope to the pulley at face height or slightly above; hold both ends and step back until the cable is taut."
+   ],
+   [
+    "Dengeli dur ve karnını sık; halatı burun-alın hizasına doğru çek.",
+    "Stand balanced and brace your core; pull the rope towards the level of your nose and forehead."
+   ],
+   [
+    "Ellerini başının iki yanına ayırırken dirseklerini rahatça yana ve geriye götür; omuzlarını zorlayacak kadar yükseltme.",
+    "As you separate your hands to either side of your head, take your elbows comfortably out and back; do not raise them so high that it strains your shoulders."
+   ],
+   [
+    "Kollarını yavaşça uzat; hafif ağırlıkla çalış ve halatı yüzüne çarptırma.",
+    "Extend your arms slowly; work with a light weight and do not let the rope hit your face."
+   ]
+  ]
+ },
+ "dead-bug": {
+  "name": "Sırtüstü çapraz kol ve bacak uzatma",
+  "alt": "Dead bug",
+  "en": "Dead bug",
+  "archetype": "dead_bug_supine",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "3×8-10/taraf",
+  "restHint": "30-45 sn",
+  "steps": [
+   [
+    "Sırtüstü yat; kollarını tavana uzat, kalça ve dizlerini yaklaşık dik açıya getir.",
+    "Lie on your back; reach your arms towards the ceiling and bring your hips and knees to about a right angle."
+   ],
+   [
+    "Nefes verip karnını hafifçe sık; belini rahatça zemine yaklaştır, zorla bastırma.",
+    "Exhale and gently brace your core; let your lower back settle comfortably towards the floor without forcing it down."
+   ],
+   [
+    "Bir kolunu başının arkasına, karşı bacağını ileri doğru yavaşça uzat; belin yaylanmaya başlamadan dur.",
+    "Slowly extend one arm behind your head and the opposite leg forward; stop before your lower back starts to arch."
+   ],
+   [
+    "Başlangıca dönüp taraf değiştir; zorlanırsan bacağını daha az uzat veya yalnızca topuğunu yere dokundur.",
+    "Return to the start and switch sides; if it is hard, extend the leg less far or only touch your heel to the floor."
+   ]
+  ]
+ },
+ "mcgill-curl-up": {
+  "name": "McGill kısa gövde kaldırma",
+  "en": "McGill curl-up",
+  "archetype": "curl_up_supine",
+  "difficulty": "BAŞLANGIÇ",
+  "equipTr": "Mat",
+  "equipEn": "Mat",
+  "setsHint": "5-3-1 piramit",
+  "restHint": "30 sn",
+  "steps": [
+   [
+    "Sırtüstü yat; bir dizini büküp ayağını yere bas, diğer bacağını uzat.",
+    "Lie on your back; bend one knee and plant that foot, leaving the other leg extended."
+   ],
+   [
+    "Ellerini belinin doğal boşluğuna koy; karnını hafifçe sık ve çeneni öne uzatma.",
+    "Place your hands in the natural hollow of your lower back; gently brace your core and do not push your chin forward."
+   ],
+   [
+    "Başını ve omuzlarını tek parça gibi yerden az miktarda kaldır; belindeki eğriyi koru.",
+    "Lift your head and shoulders off the floor a small amount as one piece; keep the curve in your lower back."
+   ],
+   [
+    "Normal nefes alarak kısa süre tut, sonra yavaşça indir ve dinlen; bükülü bacağı değiştir.",
+    "Hold briefly while breathing normally, then lower slowly and rest; switch which leg is bent."
+   ],
+   [
+    "Boynunu çekiştirme veya hareketi tam mekiğe dönüştürme; ağrı oluşursa dur.",
+    "Do not pull on your neck or turn this into a full sit-up; stop if you feel pain."
+   ]
+  ]
+ }
 }

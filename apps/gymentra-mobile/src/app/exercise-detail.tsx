@@ -171,7 +171,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
             {exercise.tr}
           </Text>
           <Text variant="label" tone="sub" numberOfLines={1}>
-            {exercise.en}
+            {exercise.trAlt ?? exercise.en}
           </Text>
         </View>
         <View style={{ backgroundColor: colors.surf2, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>

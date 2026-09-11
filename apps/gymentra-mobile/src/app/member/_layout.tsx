@@ -42,6 +42,16 @@ export default function MemberLayout() {
           <Stack.Screen name="workout" options={{ title: 'Program' }} />
           <Stack.Screen name="progress" options={{ title: 'Gelişim' }} />
           <Stack.Screen
+            name="goals"
+            options={{
+              headerShown: true,
+              title: 'Hedefim',
+              headerStyle: { backgroundColor: colors.bg0 },
+              headerTintColor: colors.txt,
+              headerShadowVisible: false,
+            }}
+          />
+          <Stack.Screen
             name="bookings"
             options={{
               headerShown: true,

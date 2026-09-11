@@ -9,15 +9,20 @@
  */
 
 import {
-  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirOf, footPath, footPinned, toeOf,
-  footFrontPath, frontPoints, frontTorsoPath, frontTrunk, handPath, lerpP, partTransform, partTransformScaled, poseAt,
-  shoulderWedge, showFarArm, showFarLeg, skeleton,
+  BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirFarOf, footDirOf, footPath,
+  propShift,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
+  shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
-import { applyPatch, dragFront, dragHandles, dragJoint, frontDragHandles } from '/engine/rigEdit.js';
+import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
+import { dragFootDirFar } from '/engine/rig.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
 import { groupsOf, labelsOf } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
+/** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
+const ellipsePath = (c, rx, ry) =>
+  `M ${c[0] - rx} ${c[1]} a ${rx} ${ry} 0 1 0 ${rx * 2} 0 a ${rx} ${ry} 0 1 0 ${-rx * 2} 0 Z`;
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const el = (n, a, kids) => {
   const e = document.createElementNS(NS, n);
@@ -34,10 +39,7 @@ const ANGLES = [
   ['thighF', 'Uzak uyluk', 0, 360], ['shinF', 'Uzak baldır', 0, 360],
   ['upperF', 'Uzak üst kol', 0, 360], ['foreF', 'Uzak ön kol', 0, 360],
   ['hx', 'El yatay', -200, 200], ['hy', 'El dikey', -220, 220],
-  ['armAz', 'Kol düzlemi (0 öne, 90 yana)', -30, 120], ['foreAz', 'Ön kol düzlemi', -30, 120],
-  ['armAzF', 'Uzak kol düzlemi', -30, 120], ['foreAzF', 'Uzak ön kol düzlemi', -30, 120], ['shLift', 'Omuz yükselmesi', 0, 40],
-  ['ankle', 'Ayak bileği (− dorsi, + plantar)', -40, 60], ['ankleF', 'Uzak ayak bileği', -40, 60],
-  ['toe', 'Parmak eklemi (+ yukarı)', -30, 70], ['toeF', 'Uzak parmak eklemi', -30, 70],
+  ['hxF', 'Önden el açıklığı', 0, 200], ['shLift', 'Omuz yükselmesi', 0, 40],
   ['ankleLift', 'Topuk/basamak', 0, 120],
 ];
 
@@ -45,8 +47,8 @@ const OPTIONS = {
   mode: [['stand', 'Ayakta'], ['quad', 'Dört ayak'], ['bench', 'Sehpa'], ['supine', 'Sırtüstü'], ['hang', 'Barda asılı']],
   arm: [['angles', 'Açıyla'], ['ik', 'Hedefe (ters kinematik)'], ['floor', 'Yerde']],
   bar: [['', 'Yok'], ['back', 'Sırtta'], ['hands', 'Elde'], ['hips', 'Kalçada']],
-  load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl'], ['band', 'Lastik']],
-  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası']],
+  load: [['', 'Yok'], ['barbell', 'Barbell'], ['dumbbell', 'Dambıl']],
+  prop: [['', 'Yok'], ['bench', 'Sehpa'], ['box', 'Basamak'], ['bar', 'Barfiks barı'], ['hipbench', 'Omuz sehpası'], ['seatback', 'Koltuk'], ['sled', 'Bacak presi'], ['cable', 'Kablo istasyonu'], ['legpad', 'Bacak makinesi']],
   view: [['side', 'Yandan'], ['front', 'Önden']],
   bend: [['1', 'İleri (+1)'], ['-1', 'Geri (−1)']],
 };
@@ -61,9 +63,6 @@ let MUSCLEDATA = {};
 let ANATOMY = null;
 /** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
 let PARTS = null;
-/** Çizilen arketibin kipi; parça aynalaması için (`mkLimb` e'yi görmüyor). */
-let CUR_MODE = 'stand';
-let PARTS_FRONT = null;
 /** Çizim kipi: kapsül mü parça mı. */
 let useParts = true;
 let key = null;
@@ -75,6 +74,12 @@ let playT = 0;
 let scrubT = null;
 let dragging = null;
 let dirty = false;
+/** Metinler AYRI dosyaya gidiyor; ayrı kirli bayrağı taşıyorlar. */
+let textsDirty = false;
+/** Metin panelinde seçili hareketin kimliği (arketip değil — hareket). */
+let txtId = null;
+let txtOn = false;
+let txtFilter = '';
 let filter = '';
 /** Mobil önizleme: hangi cihaz ve açık mı. */
 let phoneOn = true;
@@ -117,18 +122,42 @@ const goToTime = (t) => {
   if (near >= 0) { kfIndex = near; scrubT = null; } else { scrubT = t; }
 };
 
-const snapshot = () => {
-  undoStack.push(JSON.stringify(DATA));
+// Poz ve metin TEK yığında: kullanıcı ⌘Z'yi "az önce ne yaptıysam onu geri al"
+// diye biliyor, hangi dosyaya yazdığını değil. İki ayrı yığın, metni düzeltip
+// sonra eklem sürükleyen birinde yanlış hamleyi geri alırdı.
+const takeSnapshot = () => JSON.stringify({ DATA, CATALOG });
+
+const snapshot = (json = takeSnapshot()) => {
+  undoStack.push(json);
   if (undoStack.length > 60) undoStack.shift();
   redoStack.length = 0;
 };
 
 const restore = (json) => {
-  DATA = JSON.parse(json);
+  const snap = JSON.parse(json);
+  DATA = snap.DATA;
+  CATALOG = snap.CATALOG;
+  rebuildNames();
   if (!DATA[key]) key = Object.keys(DATA)[0];
+  if (!CATALOG[txtId]) txtId = null;
   kfIndex = Math.min(kfIndex, ex().kf.length - 1);
   renderAll();
+  // Panel açıksa geri alınan metin EKRANDA da dönmeli: `renderAll` sahneyi
+  // çiziyor, metin panelini değil.
+  if (txtOn) renderTexts();
 };
+
+/**
+ * Katalog kimlik başına (`walking-lunge` → ad + arketip); sol liste ise arketip
+ * başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
+ * (unilateral_lunge üç hareket) ters çeviriyoruz.
+ */
+function rebuildNames() {
+  NAMES = {};
+  for (const e of Object.values(CATALOG)) {
+    (NAMES[e.archetype] ||= []).push(e.name);
+  }
+}
 
 // --- çizim ---------------------------------------------------------------
 
@@ -143,21 +172,51 @@ const restore = (json) => {
  * Ana sahne ve önizleme aynı üreticiyi kullanıyor; iki yere ayrı yazmak bu
  * dosyada bir kez denendi ve `draw()` ile `drawPose()` ayrıştı.
  */
-const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
+/** Görünen kenar çizgisi kalınlığı. `RigFigure.tsx`'teki `EDGE_W` ile aynı. */
+const EDGE_W = 1.6;
+
+/**
+ * Bir uzuv zincirini TEK siluet gibi çizer.
+ *
+ * Uzuvlar kemik başına ayrı yollardan kuruluyor (uyluk + baldır + diz topu).
+ * Her parçayı ayrı ayrı konturlamak uzvun ORTASINDAN geçen enine dikiş
+ * çizgileri bırakıyordu; düz kolda dirsek, düz bacakta diz hizasında bir
+ * çizgi olarak görünüyordu. Eklem topu da dolgu rengindeydi ve siluetin
+ * dışına taştığında yumru yapıyordu.
+ *
+ * İki geçiş: altta hat renginde ŞİŞİRİLMİŞ kopya (kontur `EDGE_W`'nin iki
+ * katı, yani her yandan `EDGE_W` dışarı), üstte konturu olmayan dolgu.
+ * Dışarıda kalan şerit zincirin DIŞ hattı oluyor; parçalar arasındaki bütün
+ * ekler dolgunun altında kalıyor.
+ *
+ * Zincir sınırları çizim sırasını taşıyor: gövde ile yakın kol ayrı
+ * zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat İSTENİYOR.
+ *
+ * Aynısı `RigFigure.tsx`'te `Chain` olarak yazılı — çizim iki yerde ayrı
+ * yazılıyor ama görünüm ayrışamaz (bkz. AGENTS.md).
+ */
+const chain = (specs, fill, edge) => {
+  const paint = (q, alt) => {
+    const a = alt
+      ? { fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }
+      : { fill, stroke: null };
+    return q.d != null
+      ? el('path', { d: q.d, transform: q.tf, ...a })
+      : el('circle', { cx: q.c[0], cy: q.c[1], r: q.r, ...a });
+  };
+  const list = specs.filter(Boolean);
+  return [
+    el('g', {}, list.map((q) => paint(q, true))),
+    el('g', {}, list.map((q) => paint(q, false))),
+  ];
+};
+
+/** Zincire girecek uzuv parçaları (çizmez, tarif eder). */
+const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
   const q = useParts && name && PARTS && PARTS[name];
-  if (q) {
-    // Aynalı kiplerde (bench, supine) figürün tamamı aynalı; her parça yerel
-    // x'te aynalanır. Ölçüldü: bench press'te bel parçasının karnı aşağı
-    // bakıyordu (karın y=454, sırt y=404).
-    return [el('path', {
-      d: q.d,
-      transform: partTransform(a, b) + (facingFlip(CUR_MODE) < 0 ? ' scale(-1 1)' : ''),
-      fill: far ? css('--skinFar') : css('--skin'),
-      stroke: css('--line'),
-    })];
-  }
+  if (q) return [{ d: q.d, tf: partTransform(a, b) }];
   const m = lerpP(a, b, at);
-  return [seg(a, m, wa, wm, far), seg(m, b, wm, wb, far)];
+  return [{ d: capsule(a, m, wa, wm) }, { d: capsule(m, b, wm, wb) }];
 };
 
 /**
@@ -172,26 +231,61 @@ const mkLimb = (seg) => (a, b, wa, wm, wb, at, far, name) => {
  * Sürükleme tutamakları bundan etkilenmiyor; onlar `drawHandles`'ta ayrı
  * çiziliyor ve editörde görünür kalıyor.
  */
-const mkBall = () => (c, r, far) =>
-  el('circle', {
-    cx: c[0], cy: c[1], r,
-    fill: far ? css('--skinFar') : useParts ? css('--skin') : css('--joint'),
-    stroke: useParts ? null : css('--line'),
-  });
+/**
+ * Halter tabağı — ana sahne ve önizleme AYNI diski çizsin diye tek yerde.
+ *
+ * Dış disk saydam: 50px yarıçapla kafanın önüne geldiğinde onu tamamen
+ * örterdi. Kenar çizgisi tam opak kalıyor ki sınırı belirsizleşmesin.
+ */
+/**
+ * Baş profili — gövdeyle AYNI kalınlıkta hatla.
+ *
+ * Baş, zincirden geçmeyen tek parçaydı ve düz bir konturla çiziliyordu. Düz
+ * kontur yola ORTALANIR, yani yarısı şeklin içinde kalır; zincirin hattı ise
+ * tamamen dışarıda durur. Sonuç: gövdenin hattı belirgin, kafanınki yarı
+ * kalınlıkta. Ana sahnede daha da kötüydü — orada kafa sahne eşyasının soluk
+ * `--line` rengiyle konturlanıyordu, yani neredeyse hiç hattı yoktu.
+ *
+ * Aynı iki geçiş: altta hat renginde şişirilmiş kopya, üstte konturu olmayan
+ * dolgu. Dönüşüm ikisini birden sarıyor.
+ */
+const headNodes = (e, S, p, fill, edge) => [
+  el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` }, [
+    el('path', { d: headProfile(), fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }),
+    el('path', { d: headProfile(), fill }),
+  ]),
+];
 
 /**
- * Dambıl üreticisi: kısa sap, iki ucunda ağırlık, ön kola DİK.
+ * El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı kemik dönüşümünü
+ * kullanıyoruz, böylece elin yönü koldan geliyor — daire bunu söyleyemiyordu.
  *
- * Modül düzeyinde, çünkü hem ana sahne (`draw`) hem telefon önizlemesi
- * (`drawPose`) çiziyor. Önce yalnızca `draw` içinde tanımlıydı ve önizleme
- * onu göremediği için dambıllı 9 hareketin önizlemesi eli BOŞ gösteriyordu —
- * barbell çiziliyor, dambıl çizilmiyordu. İkinci bir kopya yazmak bu dosyanın
- * daha önce ayrışmasına yol açan hatanın aynısı olurdu.
+ * MODÜL seviyesinde, `dumbbellAt` ile aynı gerekçe: iki çizim yolu da
+ * çağırıyor. `draw()` içine gömülüyken telefon önizlemesi elleri hiç
+ * çizmiyordu.
  */
-const mkDumbbell = () => (c, from, far) => {
+const handAt = (wrist, elbow) => {
+  const dx = wrist[0] - elbow[0];
+  const dy = wrist[1] - elbow[1];
+  const l = Math.hypot(dx, dy) || 1;
+  return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
+};
+
+/**
+ * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin kavradığı
+ * yön bu. Barbell tabağını küçültmek dambıl yapmıyor; iki ayrı ağırlık olduğu
+ * görünmeli.
+ *
+ * MODÜL seviyesinde, çünkü iki çizim yolu da çağırıyor: ana sahne ve telefon
+ * önizlemesi. `draw()` içine gömülüyken önizleme ona erişemiyordu ve dokuz
+ * dambıllı arketipte ağırlık hiç çizilmiyordu — önizleme uygulamayı değil
+ * eksik bir figürü gösteriyordu.
+ */
+const dumbbellAt = (c, from, far) => {
   const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
   const fill = far ? css('--skinFar') : css('--metal');
-  const line = css('--line'), accent = css('--p');
+  const line = css('--line');
+  const accent = css('--p');
   return [el('g', { transform: `rotate(${deg} ${c[0]} ${c[1]})` }, [
     el('rect', { x: c[0] - 17, y: c[1] - 4, width: 34, height: 8, rx: 4, fill, stroke: line }),
     el('rect', { x: c[0] - 25, y: c[1] - 13, width: 13, height: 26, rx: 4, fill, stroke: accent }),
@@ -199,69 +293,82 @@ const mkDumbbell = () => (c, from, far) => {
   ])];
 };
 
+const plateAt = (c) => (c ? [
+  el('circle', { cx: c[0], cy: c[1], r: 50, fill: css('--metal'), 'fill-opacity': .62, stroke: css('--p'), 'stroke-width': 2 }),
+  el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: css('--line'), opacity: .8 }),
+  el('circle', { cx: c[0], cy: c[1], r: 11, fill: css('--joint'), stroke: css('--p'), 'stroke-width': 2 }),
+] : []);
+
 /**
- * Halter tabağı üreticisi.
+ * Eklem topu — iki katı parçanın uç uca eklendiği yerdeki kamayı doldurur.
  *
- * Figürün ÖNÜNDE duruyor (elde/sırtta tutuluyor), o yüzden en üste çiziliyor.
- * Tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen örtüyordu;
- * saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam opak kalıyor
- * ki tabağın sınırı belirsizleşmesin.
- *
- * Modül düzeyinde, çünkü ana sahne ve telefon önizlemesi AYNI şeyi çizmek
- * zorunda. Önizleme bir süre perspektif bir halter çiziyordu (çubuk derinliğe
- * uzanan bir çizgi, uçlarda eğik elipsler); uygulama öyle bir şey hiç
- * çizmiyor, dolayısıyla önizleme uygulamada olmayan bir görüntüyü vaat
- * ediyordu. Önizlemenin işi bu değil.
+ * Yarıçaplar siluetin o uçtaki yarı genişliğine göre seçili (diz 13 ↔ uyluk
+ * ucu 12 / baldır başı 15, dirsek 10 ↔ üst kol ucu 9 / ön kol başı 10):
+ * büyüğü silueti dışarı taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor.
  */
-const mkPlate = () => (c) => {
-  if (!c) return [];
-  const metal = css('--metal'), accent = css('--p'), line = css('--line'), joint = css('--joint');
-  return [
-    el('circle', { cx: c[0], cy: c[1], r: 50, fill: metal, 'fill-opacity': .62, stroke: accent, 'stroke-width': 2 }),
-    el('circle', { cx: c[0], cy: c[1], r: 38, fill: 'none', stroke: line, opacity: .8 }),
-    el('circle', { cx: c[0], cy: c[1], r: 11, fill: joint, stroke: accent, 'stroke-width': 2 }),
-  ];
-};
+const mkBall = () => (c, r) => ({ c, r });
 
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
-  return q ? el('path', { d: q.d, transform: partTransform(a, b), fill: css('--skin'), stroke: css('--line') }) : null;
+  return q ? { d: q.d, tf: partTransform(a, b) } : null;
 };
 
 
 /* --- karşılaştırma ekranı ------------------------------------------------ */
 
-/**
- * Derinlik/3-4 denemesi buradan KALDIRILDI. Yan görünüm saf ortografik
- * (bkz. src/rig.ts, "YAN GÖRÜNÜM SAF ORTOGRAFİK"); burada uzak taraf
- * sabitlerinin ikinci bir kopyası duruyordu ve kayıyordu.
- */
 /** Karşılaştırma hücresi için figür SVG'si. */
 function cmpFigure(e, p, mode) {
   const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
   const S = skeleton(e, p);
-  const pc = (n, a, b, f) => (PARTS && PARTS[n] ? `<path d="${PARTS[n].d}" transform="${partTransform(a, b)}${facingFlip(e.mode) < 0 ? ' scale(-1 1)' : ''}" fill="${f}" stroke="${line}"/>` : '');
-  const cap = (a, b, wa, wb, f) => `<path d="${capsule(a, b, wa, wb)}" fill="${f}" stroke="${line}"/>`;
-  const limbOf = (n, a, b, w1, w2, w3, at, f) =>
-    mode === 'capsule' ? (() => { const m = lerpP(a, b, at); return cap(a, m, w1, w2, f) + cap(m, b, w2, w3, f); })() : pc(n, a, b, f);
-  const groups = [
-    { d: limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42, skinFar) + limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34, skinFar) },
-    { d: limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5, skinFar) + limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3, skinFar) },
-    { d: (mode === 'capsule'
-        ? cap(S.pelvis, S.lumbar, 40, 33, skin) + cap(S.lumbar, S.thorax, 54, 46, skin) + cap(S.thorax, S.neck, 21, 19, skin)
-        : pc('lumbar', S.pelvis, S.lumbar, skin) + pc('thorax', S.lumbar, S.thorax, skin) + pc('neck', S.thorax, S.neck, skin))
-      + `<circle cx="${S.sh[0]}" cy="${S.sh[1]}" r="20" fill="${skin}" stroke="${line}"/>` },
-    { d: `<path d="${footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode), toeOf(p))}" fill="${skin}" stroke="${line}"/>`
-        + limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42, skin) + limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34, skin) },
-    { d: limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5, skin) + limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3, skin) },
-  ];
-  let g = groups.map((x) => x.d).join('');
+  // `chain`'in metin karşılığı: aynı iki geçiş, aynı gerekçe.
+  const chainStr = (ds, fill, ed) => {
+    const pass = (a) => ds.filter(Boolean).map((d) => `<path d="${d.d}" transform="${d.tf || ''}" ${a}/>`).join('');
+    return pass(`fill="${ed}" stroke="${ed}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"`) + pass(`fill="${fill}"`);
+  };
+  const circ = (c, r) => ({ d: `M ${c[0] - r} ${c[1]} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z` });
+  const pc = (n, a, b) => (PARTS && PARTS[n] ? { d: PARTS[n].d, tf: partTransform(a, b) } : null);
+  const limbOf = (n, a, b, w1, w2, w3, at) =>
+    mode === 'capsule'
+      ? (() => { const m = lerpP(a, b, at); return [{ d: capsule(a, m, w1, w2) }, { d: capsule(m, b, w2, w3) }]; })()
+      : [pc(n, a, b)];
   const dx = S.hand[0] - S.elbow[0], dy = S.hand[1] - S.elbow[1], hl = Math.hypot(dx, dy) || 1;
-  g += `<path d="${handPath()}" transform="${partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18])}" fill="${skin}" stroke="${line}"/>`;
+  let g = '';
+  g += chainStr([...limbOf('thigh', S.hipF, S.kneeF, 38, 30, 24, .42), ...limbOf('shin', S.kneeF, S.ankleF, 24, 25, 12, .34), circ(S.kneeF, 12)], skinFar, edgeFar);
+  g += chainStr([...limbOf('upper', S.shF, S.elbowF, 23, 21, 16, .5), ...limbOf('fore', S.elbowF, S.handF, 17, 17, 11, .3), circ(S.elbowF, 9)], skinFar, edgeFar);
+  g += chainStr([
+    ...(mode === 'capsule'
+      ? [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) }, { d: capsule(S.thorax, S.neck, 21, 19) }]
+      : [pc('lumbar', S.pelvis, S.lumbar), pc('thorax', S.lumbar, S.thorax), pc('neck', S.thorax, S.neck)]),
+    circ(S.sh, 16),
+  ], skin, edge);
+  g += chainStr([
+    { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+    ...limbOf('thigh', S.pelvis, S.knee, 42, 33, 26, .42), ...limbOf('shin', S.knee, S.ankle, 26, 28, 13, .34),
+    circ(S.knee, 13), circ(S.ankle, 9),
+  ], skin, edge);
+  g += chainStr([
+    ...limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5), ...limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3),
+    circ(S.elbow, 10),
+    { d: handPath(), tf: partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18]) },
+  ], skin, edge);
+  // Dambıl da çiziliyor: karşılaştırma ekranı çizim seçeneklerini yan yana
+  // koyuyor ve ağırlığı olmayan bir figür ana sahnedekiyle aynı şey değil.
+  if (e.load === 'dumbbell') {
+    [[S.handF, S.elbowF, skinFar], [S.hand, S.elbow, css('--metal')]].forEach(([c, from, fill]) => {
+      const deg = (Math.atan2(c[1] - from[1], c[0] - from[0]) * 180) / Math.PI + 90;
+      g += `<g transform="rotate(${deg} ${c[0]} ${c[1]})">`
+        + `<rect x="${c[0] - 17}" y="${c[1] - 4}" width="34" height="8" rx="4" fill="${fill}" stroke="${line}"/>`
+        + `<rect x="${c[0] - 25}" y="${c[1] - 13}" width="13" height="26" rx="4" fill="${fill}" stroke="${css('--p')}"/>`
+        + `<rect x="${c[0] + 12}" y="${c[1] - 13}" width="13" height="26" rx="4" fill="${fill}" stroke="${css('--p')}"/></g>`;
+    });
+  }
   g += mode === 'capsule'
-    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${line}"/>`
-    : `<path d="${PARTS.head.d}" transform="${partTransform(S.neck, S.head)}${facingFlip(e.mode) < 0 ? ' scale(-1 1)' : ''}" fill="${skin}" stroke="${line}"/>`;
+    ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}"/>`
+    : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)">`
+      + `<path d="${headProfile()}" fill="${edge}" stroke="${edge}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"/>`
+      + `<path d="${headProfile()}" fill="${skin}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
@@ -419,7 +526,7 @@ function renderPhone() {
 
   push(`<div class="card stats">
       <div>Tip<b>${e.bar || e.load ? 'Kuvvet' : 'Vücut ağırlığı'}</b></div>
-      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.load === 'band' ? 'Lastik' : e.bar ? 'Halter' : 'Yok'}</b></div>
+      <div>Ekipman<b>${e.load === 'dumbbell' ? 'Dambıl' : e.bar ? 'Halter' : 'Yok'}</b></div>
       <div>Süre<b>${(e.dur / 1000).toFixed(1)} sn</b></div>
     </div>`);
 
@@ -515,9 +622,83 @@ function keyPhases(e) {
 
 /** Tek bir pozu verilen SVG'ye çizer. */
 function drawPose(svg, e, p) {
-  const view = e.view ?? 'side';
-  svg.setAttribute('viewBox', boundsFor(e, view));
-  drawFigure(svg, e, p, view, { handles: false });
+  const S = skeleton(e, p);
+  svg.setAttribute('viewBox', boundsFor(e, 'side'));
+  svg.innerHTML = '';
+  const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
+  const ball = mkBall();
+  const limb = mkLimb();
+  const push = (arr) => arr.forEach((n) => svg.appendChild(n));
+  const near = (specs) => push(chain(specs, skin, edge));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar));
+  // KATMAN yan: floor
+  push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
+  // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
+  // çiziyor, ad verilmeyince kapsüle düşüyor. Önizleme bu yüzden uygulamanın
+  // çizmediği bir figürü gösteriyordu — oysa işi tam olarak uygulamayı
+  // göstermek.
+  // KATMAN yan: fleg
+  if (showFarLeg(e)) {
+    // Uzak AYAK da çiziliyor: uygulama çiziyordu, önizleme çizmiyordu — yani
+    // önizleme uygulamayı değil eksik bir figürü gösteriyordu.
+    far([{ d: footPath(S.ankleF, footDirFarOf(e, p), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+         ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
+         ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 12)]);
+  }
+  // KATMAN yan: farm
+  if (!e.hideFarArm) {
+    far([...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
+         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9),
+         handAt(S.handF, S.elbowF)]);
+    // Uzak ağırlık uzak kolun ardında, gövdeden ÖNCE: ikisi de figürün
+    // arkasında. Uygulamadaki sıranın aynısı.
+    // KATMAN yan: dbfar
+    if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
+  }
+  // Sahne eşyası UZAK UZUVLARDAN SONRA, gövdeden ÖNCE: uzak taraf figürün
+  // arkasında, eşya onunla izleyici arasında. Konumlar 0. karenin
+  // iskeletinden okunuyor, yoksa bar figürle birlikte kayardı.
+  // KATMAN yan: props
+  drawProps(e, skeleton(e, poseAt(e, 0).p), S, push);
+  // KATMAN yan: torso
+  const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
+  near(trunk.length === 3
+    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
+    : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
+       { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
+  // KATMAN yan: nleg
+  near([
+    { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
+    ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
+    ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
+    ball(S.knee, 13), ball(S.ankle, 9),
+  ]);
+  // KATMAN yan: head
+  push(headNodes(e, S, p, skin, edge));
+  // YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
+  // arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi oluyordu:
+  // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
+  // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
+  // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
+  // KATMAN yan: narm
+  near([
+    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
+    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
+    ball(S.elbow, 10),
+    handAt(S.hand, S.elbow),
+  ]);
+  // KATMAN yan: db
+  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
+
+  // Elde tutulan halter kafadan SONRA ve ana sahnenin diskiyle aynı.
+  // Burada bir zamanlar perspektif halter vardı — çubuk derinliğe uzanıyor,
+  // uçlardaki tabaklar elips. Terk edilen 3/4 yönünün son kalıntısıydı ve
+  // uygulama onu hiç çizmiyordu, yani önizleme yalan söylüyordu.
+  // Sırt ve kalça halteri de dahil: önizleme back squat'ta HİÇ tabak
+  // çizmiyordu, uygulama çiziyordu.
+  // KATMAN yan: plate
+  if (e.bar) push(plateAt(S.bar));
 }
 
 /** Önizlemedeki figür(ler)i tazeler; oynatmada her karede bu çalışıyor. */
@@ -557,42 +738,31 @@ function drawPhoneFigure() {
 const syncViewBox = () => $('stage').setAttribute('viewBox', boundsFor(ex(), plane));
 
 
-/**
- * Figürü çizen TEK yer: ana sahne de, telefon önizlemesi de buradan geçer.
- * Önizlemenin ayrı bir kopyası vardı (`drawPose`): kapsül, yalnız yan görünüm,
- * daire kafa — ön arketipleri bile yandan gösteriyordu. Kopya silindi.
- */
-function drawFigure(svg, e, p, view, opts = {}) {
-  CUR_MODE = e.mode;
+function draw() {
+  const svg = $('stage');
+  const e = ex();
+  const p = currentPose();
   const S = skeleton(e, p);
   const S0 = skeleton(e, poseAt(e, 0).p);
+  const view = plane;
   svg.innerHTML = '';
 
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint');
+  // Figürün hattı `--edge`; `--line` SAHNE eşyasının (sehpa, basamak, kablo,
+  // makine) ince hattı olarak kalıyor. Aynı vurguyu alsalardı mobilya figürle
+  // yarışırdı.
+  const edge = css('--edge'), edgeFar = css('--edgeFar');
   const line = css('--line'), metal = css('--metal'), floor = css('--floor'), surf2 = css('--surf2'), accent = css('--p');
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
-  const seg = (a, b, wa, wb, far) => el('path', { d: capsule(a, b, wa, wb), fill: far ? skinFar : skin, stroke: line });
   const ball = mkBall();
-  const limb = mkLimb(seg);
-  const db = mkDumbbell();
-  // Lastik: temel renklerden ayrı (--band), iki elin arasında gergin.
-  const band = (a, b) => el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: css('--band'), 'stroke-width': 6, 'stroke-linecap': 'round' });
-  // El, ön kolun yönünde uzanıyor: bileği (0,0) kabul edip aynı dönüşümü
-  // kullanıyoruz, böylece elin yönü kemikten geliyor. Tanım burada, çizim
-  // sırasının başında: uzak el gövdeden ÖNCE çizilmek zorunda.
-  const hand = (wrist, elbow, far) => {
-    const dx = wrist[0] - elbow[0];
-    const dy = wrist[1] - elbow[1];
-    const l = Math.hypot(dx, dy) || 1;
-    return el('path', {
-      d: handPath(),
-      transform: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]),
-      fill: far ? skinFar : skin,
-      stroke: line,
-    });
-  };
-  const plate = mkPlate();
+  const limb = mkLimb();
+  // Halter figürün ÖNÜNDE duruyor (elde tutuluyor), o yüzden en üste çiziliyor.
+  // Ama tabak 50px yarıçapında ve kafanın önüne geldiğinde onu tamamen
+  // örtüyordu; saydamlık kafanın konumunu görünür bırakıyor. Kenar çizgisi tam
+  // opak kalıyor ki tabağın sınırı belirsizleşmesin.
+  const plate = plateAt;
 
+  // KATMAN yan+ön: floor
   push([
     el('ellipse', { cx: S.pelvis[0], cy: GROUND + 4, rx: 96, ry: 12, fill: floor, opacity: .25 }),
     el('line', { x1: S0.pelvis[0] - 220, y1: GROUND, x2: S0.pelvis[0] + 280, y2: GROUND, stroke: floor, 'stroke-width': 2 }),
@@ -600,120 +770,127 @@ function drawFigure(svg, e, p, view, opts = {}) {
 
   if (view === 'front') {
     const F = frontPoints(e, p, S);
+    const trunk = frontTrunk(F);
     const cx = F.cx;
-    const FP = useParts && PARTS_FRONT;
-    // Ön parça: figürün SOL uzuvları mesh'ten; ekranın solundaki taraf (figürün sağı) aynalanır.
-    const fpart = (name, a, b, mirror) => el('path', {
-      d: FP[name].d, transform: partTransformScaled(a, b, FP[name].len) + (mirror ? ' scale(-1 1)' : ''), fill: skin, stroke: line,
-    });
     const bar = () => (F.barY === null ? [] : [
       el('rect', { x: cx - 152, y: F.barY - 5, width: 304, height: 10, rx: 5, fill: metal, stroke: line }),
       el('rect', { x: cx - 152, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
       el('rect', { x: cx + 137, y: F.barY - 48, width: 15, height: 96, rx: 6, fill: metal, stroke: line }),
     ]);
+    // KATMAN ön: barback
     if (e.bar === 'back') push(bar());
-    // Sıra: bacaklar → gövde → kafa → kollar (kol gövdenin önünden geçebilir) → yük.
-    [[F.L, true], [F.R, false]].forEach(([s, mirror]) => {
-      push([el('path', { d: footFrontPath(s.ankle), fill: skin, stroke: line })]);
-      if (FP) push([fpart('thigh', s.hip, s.knee, mirror), fpart('shin', s.knee, s.ankle, mirror)]);
-      else { push(limb(s.hip, s.knee, 40, 32, 27, .42)); push(limb(s.knee, s.ankle, 27, 29, 15, .34)); push([ball(s.knee, 13), ball(s.ankle, 9)]); }
+    const nearF = (specs) => push(chain(specs, skin, edge));
+    // KATMAN ön: side
+    [F.L, F.R].forEach((s) => {
+      nearF([
+        { d: `M ${s.ankle[0] - 15} ${GROUND - 13} h 30 v 13 h -30 Z` },
+        ...limb(s.hip, s.knee, 40, 32, 27, .42), ...limb(s.knee, s.ankle, 27, 29, 15, .34),
+        ball(s.knee, 13), ball(s.ankle, 9),
+      ]);
+      nearF([
+        ...limb(s.sh, s.elbow, 24, 21, 17, .5), ...limb(s.elbow, s.hand, 18, 18, 12, .3),
+        ball(s.elbow, 10), ball(s.hand, 10),
+      ]);
+      if (e.load === 'dumbbell') push(dumbbellAt(s.hand, s.elbow, false));
     });
-    if (FP) push([
-      fpart('lumbar', F.pelvis, F.lumbar, false), fpart('thorax', F.lumbar, F.thorax, false),
-      fpart('neck', F.thorax, F.neck, false), fpart('head', F.neck, F.head, false),
+    // Gövde kalçadan omuza TEK parça: omuz kuşağı silueti içinde, o yüzden
+    // omuz silkerken omuz gövdeden kopamıyor. Leğen, gövde, boyun ve iki
+    // omuz kapağı tek zincir — ayrı konturlanınca ekleri dikiş bırakıyordu.
+    // KATMAN ön: trunk
+    nearF([
+      { d: ellipsePath([cx, F.pelvis[1] + 8], 38, 25) },
+      { d: frontTorsoPath(F) },
+      { d: capsule(F.thorax, F.neck, 27, 24) },
+      ball(F.L.sh, 16), ball(F.R.sh, 16),
     ]);
-    else push([
-      el('ellipse', { cx, cy: F.pelvis[1] + 8, rx: 38, ry: 25, fill: skin, stroke: line }),
-      el('path', { d: frontTorsoPath(F), fill: skin, stroke: line }),
-      seg(F.thorax, F.neck, 27, 24),
-      el('ellipse', { cx: F.head[0], cy: F.head[1] - 3, rx: 23, ry: 27, fill: skin, stroke: line }),
+    // Kafa ve çene TEK zincir; çene uygulamada vardı, önizlemede yoktu.
+    // KATMAN ön: head
+    nearF([
+      { d: ellipsePath([F.head[0], F.head[1] - 3], 23, 27) },
+      { d: `M ${F.head[0] - 17} ${F.head[1] + 6} L ${F.head[0] + 17} ${F.head[1] + 6} L ${F.head[0] + 10} ${F.head[1] + 25} L ${F.head[0] - 10} ${F.head[1] + 25} Z` },
     ]);
-    [[F.L, true], [F.R, false]].forEach(([s, mirror]) => {
-      push([ball(s.sh, 16)]);
-      if (FP) push([fpart('upper', s.sh, s.elbow, mirror), fpart('fore', s.elbow, s.hand, mirror)]);
-      else { push(limb(s.sh, s.elbow, 24, 21, 17, .5)); push(limb(s.elbow, s.hand, 18, 18, 12, .3)); push([ball(s.elbow, 10)]); }
-      push([el('circle', { cx: s.hand[0], cy: s.hand[1], r: 10, fill: skin, stroke: line })]);
-      if (e.load === 'dumbbell') push(db(s.hand, s.elbow, false));
-    });
-    if (e.load === 'band') push([band(F.L.hand, F.R.hand)]);
+    // KATMAN ön: barhands
     if (e.bar === 'hands') push(bar());
-    if (opts.handles) drawHandles(svg, e, S, view);
-    return;
+    return drawHandles(svg, e, S, view, p);
   }
 
-  if (e.prop === 'bar') push([
-    el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
-    el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
-    el('rect', { x: S0.hand[0] + 138, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
-  ]);
-  if (e.prop === 'box') push([el('rect', { x: S0.ankle[0] - 62, y: S0.ankle[1] + 12, width: 150, height: Math.max(0, GROUND - S0.ankle[1] - 12), rx: 6, fill: surf2, stroke: line })]);
-  if (e.prop === 'hipbench') push([
-    el('rect', { x: S0.thorax[0] - 96, y: S0.thorax[1] + 26, width: 210, height: 18, rx: 8, fill: surf2, stroke: line }),
-    el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
-    el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
-  ]);
-  if (e.prop === 'bench' && e.mode === 'bench') {
-    const t0 = poseAt(e, 0).p.torso;
-    const deg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
-    svg.appendChild(el('g', { transform: `rotate(${deg} ${S0.pelvis[0]} ${S0.pelvis[1]})` }, [
-      el('rect', { x: S0.pelvis[0] - 70, y: S0.pelvis[1] + 24, width: 330, height: 20, rx: 10, fill: surf2, stroke: line })]));
-    push([el('rect', { x: S0.pelvis[0] - 56, y: S0.pelvis[1] + 44, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 44), fill: surf2, stroke: line })]);
-  }
-  if (e.prop === 'bench' && e.mode !== 'bench') push([
-    el('rect', { x: S0.ankleF[0] - 70, y: S0.ankleF[1] + 16, width: 150, height: 16, rx: 8, fill: surf2, stroke: line }),
-  ]);
-
+  const pin = e.prop !== 'box' && p.ankleLift > 0;
+  const near = (specs) => push(chain(specs, skin, edge));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar));
   // Gizlemek yalnızca çizimi etkiler; iskelet ve kadraj aynı kalır.
+  // KATMAN yan: fleg
   if (showFarLeg(e)) {
-    push([el('path', { d: footPath(S.ankleF, footDirOf(e, p, true), footPinned(e, p, S, true), facingFlip(e.mode), toeOf(p, true)), fill: skinFar, stroke: line })]);
-    push(limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh')); push(limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'));
-    push([ball(S.kneeF, 12, true)]);
+    far([
+      { d: footPath(S.ankleF, footDirFarOf(e, p), pin, facingFlip(e.mode)) },
+      ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
+      ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'),
+      ball(S.kneeF, 12),
+    ]);
   }
-  if (showFarArm(e)) {
-    push(limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper')); push(limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'));
-    push([ball(S.elbowF, 9, true), ball(S.handF, 9, true)]);
+  // KATMAN yan: farm
+  if (!e.hideFarArm) {
     // Uzak el ve onun taşıdığı ağırlık GÖVDEDEN ÖNCE: ikisi de figürün
     // arkasında kalıyor. Önceden ikisi de en sona, gövdenin üstüne
     // çiziliyordu; uzak dambıl gövdenin önünde belirdiği için yakın el iki
     // ağırlık tutuyormuş gibi görünüyordu.
-    push(useParts ? [hand(S.handF, S.elbowF, true)] : [el('circle', { cx: S.handF[0], cy: S.handF[1], r: 9, fill: skinFar, stroke: line })]);
-    if (e.load === 'dumbbell') push(db(S.handF, S.elbowF, true));
+    far([
+      ...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
+      ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'),
+      ball(S.elbowF, 9), ball(S.handF, 9),
+      useParts ? handAt(S.handF, S.elbowF) : null,
+    ]);
+    // KATMAN yan: dbfar
+    if (e.load === 'dumbbell') push(dumbbellAt(S.handF, S.elbowF, true));
   }
+  // Sahne eşyası UZAK UZUVLARDAN SONRA: uzak taraf figürün arkasında, eşya da
+  // onunla izleyici arasında duruyor. Basamağa çıkmada arka bacak kutunun
+  // ARKASINDA kalmalı, Bulgar squat'ta arka ayak sehpanın arkasında. Eskiden
+  // eşya en önce çiziliyordu ve uzak bacak onun üstüne biniyordu.
+  // KATMAN yan: props
+  drawProps(e, S0, S, push);
 
   const pelvisMid = add(S.pelvis, D(p.torso), 12), thoraxMid = lerpP(S.lumbar, S.thorax, .55);
-  push([
-    // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
-    // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
-    // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
-    ...(useParts ? [] : [el('ellipse', { cx: pelvisMid[0], cy: pelvisMid[1], rx: 25, ry: 21, fill: skin, stroke: line, transform: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` })]),
-    ...[trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax)].filter(Boolean),
-    ...(useParts && PARTS ? [] : [seg(S.pelvis, S.lumbar, 40, 33)]),
-    ...(useParts ? [] : [el('ellipse', { cx: thoraxMid[0], cy: thoraxMid[1], rx: 27, ry: 47, fill: skin, stroke: line, transform: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` })]),
-    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)].filter(Boolean) : [seg(S.thorax, S.neck, 21, 19)]),
-    // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
-    // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
-    // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
-    // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
-    // ayrı ayrı okunuyor.
-    ...(useParts
-      ? [el('circle', { cx: S.sh[0], cy: S.sh[1], r: 20, fill: skin, stroke: line })]
-      : [el('path', { d: shoulderWedge(S.thorax, S.sh, 20), fill: skin, stroke: line }), ball(S.sh, 17)]),
+  // Gövde tek zincir: bel, göğüs, boyun ve omuz kapağı. Ayrı ayrı
+  // konturlanınca aralarındaki ekler gövdeyi enine kesen çizgiler bırakıyor.
+  //
+  // Kapsül kipinin kalça ve göğüs elipsleri parça kipinde ÇİZİLMİYOR: iki
+  // ayrı şeklin kenarları birbirini kesiyor ve belde dikiş, göğüste çift
+  // kontur bırakıyordu. Parça kipinde hacmi parçaların kendisi taşıyor.
+  //
+  // Omuz gövdeden yan görünümde HEP 14px uzakta (ölçüldü, 30 arketip × 21
+  // kare). Bu mesafede yarıçapı 20 olan yuvarlak bir deltoid kapağı gövdeyi
+  // zaten örtüyor; kama gereksiz ve düz kenarları gövdenin üstünde görünür
+  // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
+  // ayrı ayrı okunuyor.
+  // KATMAN yan: torso
+  near([
+    // Leğen kütlesi: Bridgman'ın üç değişmez gövde kütlesinden biri. Kalça
+    // ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin — kütleler uç uca
+    // gelmez, geçer. Blok yokken bel ve uyluk parçaları tek noktada değiyor,
+    // kalça gövdeden kopuk görünüyordu.
+    { d: pelvisMass(S.pelvis, S.lumbar) },
+    trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax),
+    ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
+    ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),
+    ...(useParts ? [trunkPart('neck', S.thorax, S.neck)] : [{ d: capsule(S.thorax, S.neck, 21, 19) }]),
+    ...(useParts ? [ball(S.sh, 16)] : [{ d: shoulderWedge(S.thorax, S.sh, 20) }, ball(S.sh, 17)]),
   ]);
-  push([el('path', { d: footPath(S.ankle, footDirOf(e, p), footPinned(e, p, S, false), facingFlip(e.mode), toeOf(p)), fill: skin, stroke: line })]);
-  push(limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh')); push(limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'));
-  push([ball(S.knee, 13), ball(S.ankle, 9)]);
-  push(limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper')); push(limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'));
-  push([ball(S.elbow, 10)]);
-  push(useParts ? [hand(S.hand, S.elbow, false)] : [el('circle', { cx: S.hand[0], cy: S.hand[1], r: 10, fill: skin, stroke: line })]);
-  if (e.load === 'dumbbell') push(db(S.hand, S.elbow, false));
+  // Bacak ve kol AYRI zincirler: ikisinin de gövdenin önünden geçtiği yerde
+  // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
+  // KATMAN yan: nleg
+  near([
+    { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)) },
+    ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
+    ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
+    ball(S.knee, 13), ball(S.ankle, 9),
+  ]);
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
   const headT = `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)`;
-  // Kafa parçası mesh'ten (boyun kökü → kafa merkezi kemiği); aynalı kiplerde
-  // parça yerel x'te aynalanır, yüz doğru yöne bakar.
+  // KATMAN yan: head
   svg.appendChild(
-    useParts && PARTS && PARTS.head
-      ? el('path', { d: PARTS.head.d, transform: partTransform(S.neck, S.head) + (facingFlip(e.mode) < 0 ? ' scale(-1 1)' : ''), fill: skin, stroke: line })
+    useParts
+      ? headNodes(e, S, p, skin, edge)[0]
         // Kapsül kipinin çene kaması da YEREL koordinatta: eskiden mutlak
         // noktalarla çizilip `rotate(a cx cy)` ile döndürülüyordu, o hâlde
         // aynalanamıyordu. Sayılar birebir aynı, yalnızca kafa merkezine göre.
@@ -723,35 +900,240 @@ function drawFigure(svg, e, p, view, opts = {}) {
         ]),
   );
 
-  // Tabak EN SONA, yani kafanın da ÖNÜNE. Yan görünümde halterin iki diski
-  // üst üste düşüyor ve tek daire olarak görünüyor; onu kafanın arkasına
-  // koymak diski yarısı kesik gösteriyordu. Saydamlık kafanın konumunu
-  // görünür bırakıyor, yani öne almak bilgi kaybettirmiyor.
-  push(plate(S.bar));
-  // Lastik iki el arasında; yan görünümde eller üst üste düşünce kısa bir
-  // parça olarak görünür — ekipmanın varlığı yine okunur.
-  if (e.load === 'band') push([band(S.hand, S.handF)]);
+  // YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
+  // arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi oluyordu:
+  // kol kafanın önünden geçen altı harekette (hip_thrust, glute_bridge,
+  // bird_dog, dead_bug, hanging_knee_raise, pull_up) kafa kolun üstüne
+  // biniyor ve kol arkadan geçiyormuş gibi görünüyordu.
+  // KATMAN yan: narm
+  near([
+    ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
+    ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
+    ball(S.elbow, 10),
+    useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
+  ]);
+  // KATMAN yan: db
+  if (e.load === 'dumbbell') push(dumbbellAt(S.hand, S.elbow, false));
 
-  if (opts.handles) drawHandles(svg, e, S, view);
+  // Elde tutulan halter KAFADAN SONRA çiziliyor: figürün önünde duruyor, o
+  // yüzden en üstte — `plate`'in başındaki not zaten bunu söylüyor. Sıra
+  // ilk sürümden beri kafadan ÖNCEYDİ, yani not ile kod ayrışmıştı: tabak
+  // bilerek saydamken kafa onu opak örtüyordu ve saydamlık tam da bu durum
+  // için konmuştu. Önden görünüm barı zaten en üste çiziyor; aynı hareketin
+  // iki görünümü ters katmanlanıyordu.
+  //
+  // Ölçüldü (41 arketip × 41 kare): tabak kafa merkezinin içine giren üç
+  // hareket var — `seated_overhead_press` 24px, `face_pull_standing` 4px,
+  // `lat_pulldown_seated` 2px. İlki bu turdan önce de vardı.
+  //
+  // Sırt ve kalça halteri de aynı sıraya girdi. Onlar gövdenin ARKASINA
+  // çiziliyordu, oysa yakın taraftaki tabak izleyiciye en yakın şeydir:
+  // back squat'ta figürün önünde durur. Kural tek: halter nerede tutulursa
+  // tutulsun, YAKIN TABAK en üstte ve saydam.
+  // KATMAN yan: plate
+  if (e.bar) push(plate(S.bar));
+
+  drawHandles(svg, e, S, view, p);
 }
 
-function draw() {
-  drawFigure($('stage'), ex(), currentPose(), plane, { handles: true });
+/**
+ * Sahnedeki ekipman — sehpa, basamak, barfiks barı, koltuk, bacak presi.
+ *
+ * Ana sahne ve telefon önizlemesi AYNI ekipmanı çizmek zorunda: önizleme
+ * bunları hiç çizmiyordu ve figür sehpasız, barsız, koltuksuz görünüyordu —
+ * bacak presinde adam zeminin 110px üstünde havada oturuyordu. Uygulamanın
+ * `RigFigure.tsx`'i hepsini çiziyor; önizlemenin işi onu göstermek.
+ *
+ * Kareler arası değişmeyen şey sahne: konumlar 0. karenin iskeletinden
+ * (`S0`) okunuyor, yoksa bar figürle birlikte kayardı.
+ */
+/**
+ * Sahne eşyası. Hepsi TEK bir gruba çiziliyor ki `propShift` bir kere
+ * uygulansın: eşya konumları iskeletten türetildiği için figür kayınca eşya da
+ * kayıyor, `propDx/propDy` aradaki bağı gevşetiyor.
+ */
+function drawProps(e, S0, S, pushOut) {
+  const holder = el('g', { transform: propShift(e) });
+  const push = (arr) => arr.forEach((n) => holder.appendChild(n));
+  pushOut([holder]);
+  const surf2 = css('--surf2'), metal = css('--metal'), line = css('--line');
+    if (e.prop === 'bar') push([
+      el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 300, height: 12, rx: 6, fill: metal, stroke: line }),
+      el('rect', { x: S0.hand[0] - 150, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
+      el('rect', { x: S0.hand[0] + 138, y: BAR_Y - 6, width: 12, height: 54, fill: metal, stroke: line }),
+    ]);
+    if (e.prop === 'box') push([el('rect', { x: S0.ankle[0] - 62, y: S0.ankle[1] + 12, width: 150, height: Math.max(0, GROUND - S0.ankle[1] - 12), rx: 6, fill: surf2, stroke: line })]);
+    if (e.prop === 'hipbench') push([
+      el('rect', { x: S0.thorax[0] - 96, y: S0.thorax[1] + 26, width: 210, height: 18, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.thorax[0] - 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
+      el('rect', { x: S0.thorax[0] + 82, y: S0.thorax[1] + 44, width: 16, height: Math.max(0, GROUND - S0.thorax[1] - 44), fill: surf2, stroke: line }),
+    ]);
+    // Koltuk: kalçanın altında oturma yastığı, arkasında sırt dayaması.
+    // Ayrı bir yardımcı, çünkü kablo ve bacak yastığı istasyonları da aynı
+    // koltuğun üstüne kuruluyor — `prop` tek değer aldığı için her istasyon
+    // kendi koltuğunu çizmek zorunda.
+    const seat = () => [
+      el('rect', { x: S0.pelvis[0] - 46, y: S0.pelvis[1] + 22, width: 150, height: 18, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.pelvis[0] - 64, y: S0.pelvis[1] - 96, width: 20, height: 122, rx: 8, fill: surf2, stroke: line }),
+      el('rect', { x: S0.pelvis[0] - 32, y: S0.pelvis[1] + 40, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 40), fill: surf2, stroke: line }),
+    ];
+    if (e.prop === 'seatback') push(seat());
+
+    // Kablo istasyonu: makara, kablo ve tutamak.
+    //
+    // Bu hareketler önce `bar: 'hands'` taşıyordu ve elde TABAKLI HALTER
+    // çiziliyordu — lat pulldown'da kafanın üstünde kocaman bir disk. Direncin
+    // nereden geldiği görünmüyordu. Kablo onu söylüyor: makara nerede, kuvvet
+    // o yönden geliyor.
+    if (e.prop === 'cable') {
+      // Kablo küreğinde SANDALYE yok: alçak bir sehpaya oturulur, bacaklar öne
+      // uzanır ve ayaklar plakaya basar. Sırt dayamalı koltuk çizmek hareketi
+      // göğüs destekli kürek gibi gösteriyordu.
+      if (e.mode === 'seat' && e.cableFrom === 'low') {
+        push([
+          el('rect', { x: S0.pelvis[0] - 54, y: S0.pelvis[1] + 22, width: 128, height: 16, rx: 7, fill: surf2, stroke: line }),
+          el('rect', { x: S0.pelvis[0] - 24, y: S0.pelvis[1] + 38, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 38), fill: surf2, stroke: line }),
+        ]);
+        // Ayak plakası ayağın TABAN DÜZLEMİNE oturuyor — bacak presi
+        // levhasıyla aynı kural. Dik bir levha çizmek ayağı plakanın içinden
+        // geçiriyordu; basılan yüzeyin açısı ayağın açısıdır.
+        const [heelP, toeP] = solePoints(S0.ankle, footDirOf(e), false, facingFlip(e.mode));
+        const ux = toeP[0] - heelP[0], uy = toeP[1] - heelP[1];
+        const uL = Math.hypot(ux, uy) || 1;
+        // Levha tabandan iki yana taşıyor: ayak ondan KISA, yüzey ondan uzun.
+        const a = [heelP[0] - (ux / uL) * 26, heelP[1] - (uy / uL) * 26];
+        const b = [toeP[0] + (ux / uL) * 26, toeP[1] + (uy / uL) * 26];
+        push([
+          el('path', { d: capsule(a, b, 8, 8), fill: surf2, stroke: line }),
+          // Levhayı zemine bağlayan ayak: yüzey havada durmuyor.
+          el('path', { d: capsule([a[0], a[1]], [a[0], GROUND], 7, 7), fill: surf2, stroke: line }),
+        ]);
+      } else if (e.mode === 'seat') push(seat());
+      const from = e.cableFrom || 'front';
+      const ahead = Math.max(S.hand[0], S0.hand[0]);
+      // Makaranın YERİ direncin yönü demek. Yanlış yer hareketi başka bir
+      // hareket gibi gösteriyor: göğüs presine ÖNDEN kablo koymak onu kürek
+      // yapıyordu, çünkü kablo eli öne çekiyordu.
+      const anchor = {
+        // Pulldown'da makaranın ALTINA oturulur, pushdown'da kolonun ÖNÜNDE
+        // durulur: ayakta makarayı tepeye koymak direği figürün içinden
+        // geçiriyordu.
+        high:  [e.mode === 'stand' ? ahead + 90 : S0.hand[0], BAR_Y + 24],
+        front: [ahead + 100, S0.hand[1]],                   // önde, el hizası
+        low:   [ahead + 110, GROUND - 34],                  // önde, zemine yakın
+        back:  [S0.pelvis[0] - 132, S0.sh[1]],              // arkada, omuz hizası
+      }[from];
+      const px = anchor[0], py = anchor[1];
+      const postTop = from === 'high' ? BAR_Y : py;
+      push([
+        el('rect', { x: px - 9, y: postTop, width: 18, height: Math.max(0, GROUND - postTop), rx: 4, fill: surf2, stroke: line }),
+        ...(from === 'high' ? [el('rect', { x: Math.min(px, S0.pelvis[0]) - 30, y: BAR_Y, width: Math.abs(px - S0.pelvis[0]) + 60, height: 16, rx: 6, fill: surf2, stroke: line })] : []),
+        el('circle', { cx: px, cy: py, r: 13, fill: metal, stroke: line }),
+        // `back` bir KOL, kablo değil: makine göğüs presinde direnci taşıyan
+        // şey kaldıraç kolu. Kalın çiziliyor ve gövdenin arkasında kalıyor.
+        from === 'back'
+          ? el('path', { d: capsule([px, py], [S.hand[0], S.hand[1]], 11, 9), fill: surf2, stroke: line })
+          // Kablo makaradan ELE: figür oynarken uzayıp kısalıyor, çeken şey o.
+          : el('line', { x1: px, y1: py, x2: S.hand[0], y2: S.hand[1], stroke: metal, 'stroke-width': 4, 'stroke-linecap': 'round' }),
+        // Tutamak UÇTAN görünüyor, yandan değil.
+        //
+        // Önce kabloya dik uzun bir kapsül çiziliyordu; çubuk sagittal düzlemde
+        // YATIYOR gibi oluyordu ve elde eğik bir sopa — küreğinde direksiyon —
+        // tutuluyormuş gibi okunuyordu. Oysa çeken şey gövdeye DİK duran bir
+        // çubuk: yandan bakınca kesiti görünür. Halter tabağı zaten aynı
+        // sözleşmeyi kullanıyor, tutamak da ona uyuyor; yalnızca daha küçük.
+        el('circle', { cx: S.hand[0], cy: S.hand[1], r: 14, fill: metal, 'fill-opacity': .62, stroke: line, 'stroke-width': 2 }),
+        el('circle', { cx: S.hand[0], cy: S.hand[1], r: 6, fill: surf2, stroke: line }),
+      ]);
+    }
+
+    // Bacak makinesi yastığı: baldır rulosu ve onu koltuğun eksenine bağlayan
+    // kol. Yastıksız çizimde bacağın hangi yöne KUVVET UYGULADIĞI görünmüyor;
+    // hareket oturup boşluğa tekme atmak gibi okunuyordu.
+    //
+    // Yastık, ayağın gittiği YÖNDE duruyor: direnç harekete karşı koyar, yani
+    // ekstansiyonda baldırın önünde, curl'de arkasında. Yön veriden değil
+    // hareketin kendisinden çıkıyor (0. kare → orta kare).
+    if (e.prop === 'legpad') {
+      push(seat());
+      const mid = skeleton(e, poseAt(e, 0.45).p);
+      let vx = mid.ankle[0] - S0.ankle[0], vy = mid.ankle[1] - S0.ankle[1];
+      const vL = Math.hypot(vx, vy) || 1;
+      vx /= vL; vy /= vL;
+      const cx = S.ankle[0] + vx * 22, cy = S.ankle[1] + vy * 22;
+      // Kol: rulodan diz ekseninin altındaki mile. Ruloyu makineye bağlıyor.
+      push([
+        el('path', { d: capsule([cx, cy], [S0.knee[0], S0.knee[1] + 34], 8, 8), fill: surf2, stroke: line }),
+        el('circle', { cx, cy, r: 21, fill: metal, stroke: line }),
+        el('circle', { cx, cy, r: 8, fill: surf2, stroke: line }),
+      ]);
+    }
+    // Bacak presi makinesi: koltuk + sırt dayaması + zemine inen ayak + itilen
+    // platform. Yalnızca platform çizildiğinde figür zeminin 110px üstünde
+    // HİÇBİR ŞEYİN üstünde oturuyordu — `prop` tek değer aldığı için `sled`
+    // seçmek `seatback`'i düşürüyor. Bir kızak yalnızca bacak presinde
+    // bulunduğuna göre, tek prop bütün makineyi çizer.
+    if (e.prop === 'sled') {
+      const dx = S0.thorax[0] - S0.pelvis[0], dy = S0.thorax[1] - S0.pelvis[1];
+      const L = Math.hypot(dx, dy) || 1;
+      let nx = dy / L, ny = -dx / L;
+      // Bacaklar önde; sırt dayaması onların ters yönünde.
+      if ((S0.knee[0] - S0.pelvis[0]) * nx + (S0.knee[1] - S0.pelvis[1]) * ny > 0) { nx = -nx; ny = -ny; }
+      const o = 30;
+      const seatA = [S0.pelvis[0] + nx * o, S0.pelvis[1] + ny * o];
+      const seatB = [S0.thorax[0] + nx * o + (dx / L) * 26, S0.thorax[1] + ny * o + (dy / L) * 26];
+      const padX = S0.pelvis[0] + nx * 16, padY = S0.pelvis[1] + ny * 16;
+      push([
+        el('path', { d: capsule(seatA, seatB, 22, 19), fill: surf2, stroke: line }),
+        el('path', { d: capsule([padX, padY], [padX + 78, padY + 10], 18, 15), fill: surf2, stroke: line }),
+        el('rect', { x: padX + 4, y: padY + 14, width: 16, height: Math.max(0, GROUND - padY - 14), fill: surf2, stroke: line }),
+      ]);
+      // Kızak SABİT DEĞİL ve havada durmuyor.
+      //
+      // Sehpa, basamak ve barfiks barı sahnenin durağan parçaları, o yüzden
+      // 0. kareden çiziliyorlar. Bacak presinde kızak sahnenin HAREKET EDEN
+      // parçası: ayak ona basılı kalır, ikisi birlikte gider ve levha bacağa
+      // kuvvet uygular. Sabit çizilince bacak tekrar boyunca içinden geçiyordu.
+      //
+      // Levha ayağın TABAN DÜZLEMİNE oturuyor (`solePoints`), itiş eksenine
+      // değil: ayak bileğinden sabit mesafe ölçmek parmak ucunu levhanın
+      // içinde bırakıyordu. Ray levhayı koltuğun direğine bağlıyor — makine
+      // tek parça, plaka havada asılı değil.
+      const [heelP, toeP] = solePoints(S.ankle, footDirOf(e), false, facingFlip(e.mode));
+      const sx = toeP[0] - heelP[0], sy = toeP[1] - heelP[1];
+      const sL = Math.hypot(sx, sy) || 1;
+      const tx = sx / sL, ty = sy / sL;              // taban ekseni
+      const ox = -ty * facingFlip(e.mode), oy = tx * facingFlip(e.mode);  // tabandan dışa
+      const A = [heelP[0] - tx * 34 + ox * 8, heelP[1] - ty * 34 + oy * 8];
+      const B = [toeP[0] + tx * 34 + ox * 8, toeP[1] + ty * 34 + oy * 8];
+      const mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
+      push([
+        el('path', { d: capsule(mid, [padX + 12, padY + 6], 7, 7), fill: surf2, stroke: line }),
+        el('path', { d: capsule(A, B, 15, 15), fill: metal, stroke: line }),
+      ]);
+    }
+    if (e.prop === 'bench' && e.mode === 'bench') {
+      const t0 = poseAt(e, 0).p.torso;
+      const deg = (Math.atan2(-Math.cos((t0 * Math.PI) / 180), Math.sin((t0 * Math.PI) / 180)) * 180) / Math.PI;
+      push([el('g', { transform: `rotate(${deg} ${S0.pelvis[0]} ${S0.pelvis[1]})` }, [
+        el('rect', { x: S0.pelvis[0] - 70, y: S0.pelvis[1] + 24, width: 330, height: 20, rx: 10, fill: surf2, stroke: line })])]);
+      push([el('rect', { x: S0.pelvis[0] - 56, y: S0.pelvis[1] + 44, width: 16, height: Math.max(0, GROUND - S0.pelvis[1] - 44), fill: surf2, stroke: line })]);
+    }
+    if (e.prop === 'bench' && e.mode !== 'bench') push([
+      el('rect', { x: S0.ankleF[0] - 70, y: S0.ankleF[1] + 16, width: 150, height: 16, rx: 8, fill: surf2, stroke: line }),
+    ]);
+
 }
 
 /** Tutamaklar yalnızca kare düzenlenirken; ara karede poz kimseye ait değil. */
-function drawHandles(svg, e, S, view) {
-  if (!editable()) return;
+function drawHandles(svg, e, S, view, p) {
+  if (!editable() || view === 'front') return;
   const accent = css('--p');
   const hiddenJoints = new Set([
-    ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF']),
-    ...(showFarArm(e) ? [] : ['elbowF', 'handF']),
+    ...(showFarLeg(e) ? [] : ['kneeF', 'ankleF', 'toeF']),
+    ...(e.hideFarArm ? ['elbowF', 'handF'] : []),
   ]);
-  // Önden görünümde tutamaklar dirsek ve el: kol düzlemi ve yükselme.
-  const handles = view === 'front'
-    ? frontDragHandles(e, frontPoints(e, fillPose(frame().p), S))
-    : dragHandles(e, S).filter((h) => !hiddenJoints.has(h.joint));
-  handles.forEach((h) => {
+  dragHandles(e, S, p).filter((h) => !hiddenJoints.has(h.joint)).forEach((h) => {
     const g = el('g', { class: 'handle', 'data-joint': h.joint });
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 15, fill: 'transparent' }));
     g.appendChild(el('circle', { cx: h.at[0], cy: h.at[1], r: 7, fill: 'none', stroke: accent, 'stroke-width': 2, opacity: h.far ? .5 : 1 }));
@@ -796,13 +1178,23 @@ function startDrag(evt) {
 function moveDrag(evt) {
   if (!dragging) return;
   const e = ex();
-  const fp = fillPose(frame().p);
-  const S = skeleton(e, fp);
-  const patch = plane === 'front'
-    ? dragFront(e, fp, S, frontPoints(e, fp, S), dragging, toWorld(evt))
-    : dragJoint(e, S, dragging, toWorld(evt));
-  if (Object.keys(patch).length === 0) return;
-  frame().p = applyPatch(frame().p, patch);
+  const S = skeleton(e, fillPose(frame().p));
+  // Ayak ucu POZU değil hareketi değiştiriyor: `footDir` tek bir sayı ve
+  // bütün karelerde geçerli. Modelde ayak bileği açısı yok (TODOS.md).
+  if (dragging === 'toeF') {
+    // Uzak ayak: mutlak yön değil, türetmenin üstündeki PAY yazılıyor.
+    e.footDirFarAdj = dragFootDirFar(e, S, fillPose(frame().p), toWorld(evt));
+    markDirty();
+    renderAll();
+    return;
+  }
+  if (dragging === 'toe') {
+    e.footDir = dragFootDir(e, S, toWorld(evt));
+  } else {
+    const patch = dragJoint(e, S, dragging, toWorld(evt));
+    if (Object.keys(patch).length === 0) return;
+    frame().p = applyPatch(frame().p, patch);
+  }
   markDirty();
   syncViewBox();
   draw();
@@ -829,6 +1221,13 @@ window.addEventListener('mousemove', moveDrag);
 window.addEventListener('mouseup', endDrag);
 
 // --- paneller ------------------------------------------------------------
+
+function markTextsDirty() {
+  textsDirty = true;
+  $('savedMsg').textContent = 'kaydedilmedi';
+  $('savedMsg').style.color = css('--warn');
+  syncHistoryButtons();
+}
 
 function markDirty() {
   dirty = true;
@@ -905,9 +1304,11 @@ function renderKf() {
   });
   $('scrub').value = String(Math.round(currentT() * 1000));
   $('kfName').value = frame().tr ?? '';
-  $('kfPlantF').checked = !!frame().plantF;
   $('kfTime').value = String(frame().t);
-  const planeNote = plane === 'front' ? ' · önden: dirsek ve el sürüklenir (kol düzlemi + yükselme)' : '';
+  // Önden görünüm yan çözümden türeyen şematik bir izdüşüm: orada sürüklenecek
+  // bağımsız bir eklem yok. Bunu söylemek, tutamakları arayan birini
+  // "bozuk mu?" sorusundan kurtarıyor.
+  const planeNote = plane === 'front' ? ' · önden görünümde sürükleme yok, açıları sağdan düzenle' : '';
   $('frameInfo').textContent = playing
     ? `oynuyor · %${(playT * 100).toFixed(0)}`
     : scrubT !== null
@@ -926,7 +1327,7 @@ function relevantFields(e) {
   if (e.arm === 'ik') out.push('hy');
   out.push('thighF', 'shinF');
   if (e.arm === 'angles') out.push('upperF', 'foreF');
-  if (e.view === 'front') out.push('armAz', 'foreAz', 'armAzF', 'foreAzF', 'shLift');
+  if (e.view === 'front') out.push('hxF', 'shLift');
   if (e.mode === 'stand') out.push('ankleLift');
   return out;
 }
@@ -1004,8 +1405,81 @@ function renderIssues() {
   whole.forEach((i) => add(`%${(i.t * 100).toFixed(0)}`, i, i.t));
 }
 
+/**
+ * Kaydırma kontrolü — gövde ya da sahne eşyası.
+ *
+ * POZUN değil HAREKETİN ayarı: tek kareyi değil hepsini birden kaydırıyor,
+ * ayak ucu tutamakları gibi. O yüzden zaman çubuğundan bağımsız.
+ */
+function renderNudge(host, e, xKey, yKey, aktif, dikeyKapali) {
+  host.innerHTML = '';
+  const adim = 4;
+  const oku = (k) => e[k] ?? 0;
+  const yaz = (k, v) => {
+    snapshot();
+    // 0 yazmak alanı SİLİYOR: varsayılanı taşıyan bir arketip veride sıfır
+    // biriktirmesin, diff de sessiz kalsın.
+    if (v === 0) delete e[k]; else e[k] = Math.round(v * 10) / 10;
+    markDirty();
+    renderAll();
+  };
+  const dugme = (label, title, fn, dikey) => {
+    const b = el2('button', label);
+    b.title = dikey && dikeyKapali ? dikeyKapali : title;
+    b.disabled = !aktif || (dikey && !!dikeyKapali);
+    b.onclick = fn;
+    host.appendChild(b);
+    return b;
+  };
+  dugme('↖', '', () => {}).style.visibility = 'hidden';
+  dugme('↑', 'Yukarı', () => yaz(yKey, oku(yKey) - adim), true);
+  dugme('↻', 'Sıfırla', () => { snapshot(); delete e[xKey]; delete e[yKey]; markDirty(); renderAll(); });
+  dugme('←', 'Sola', () => yaz(xKey, oku(xKey) - adim));
+  dugme('↓', 'Aşağı', () => yaz(yKey, oku(yKey) + adim), true);
+  dugme('→', 'Sağa', () => yaz(xKey, oku(xKey) + adim));
+  const val = el2('div', '');
+  val.className = 'val';
+  const mk = (k, etiket, dikey) => {
+    const lab = el2('span', etiket);
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.step = '1';
+    inp.value = String(oku(k));
+    inp.disabled = !aktif || (dikey && !!dikeyKapali);
+    if (dikey && dikeyKapali) inp.title = dikeyKapali;
+    inp.onchange = () => yaz(k, Number(inp.value) || 0);
+    val.appendChild(lab);
+    val.appendChild(inp);
+  };
+  mk(xKey, 'x');
+  mk(yKey, 'y', true);
+  host.appendChild(val);
+  if (dikeyKapali) {
+    const not = el2('p', dikeyKapali);
+    not.className = 'hint';
+    not.style.gridColumn = '1 / -1';
+    host.appendChild(not);
+  }
+}
+
+/** Küçük yardımcı: metinli eleman. */
+const el2 = (tag, text) => {
+  const n = document.createElement(tag);
+  n.textContent = text;
+  return n;
+};
+
 function renderEquipment() {
   const e = ex();
+  // Dikey kaydırma yalnızca dikey dayanağı ZEMİN OLMAYAN kiplerde: ayakta,
+  // dört ayak ve sırtüstü figür yere oturuyor, orada yukarı çekmek figürü
+  // havada bırakmaktan başka bir şey yapmıyor. Şema da aynı kuralı koyuyor;
+  // buton en baştan kapalı olsun ki kullanıcı düzeltemediği bir hata üretmesin.
+  const zemine = ['stand', 'quad', 'supine'].includes(e.mode);
+  renderNudge($('nudgeBody'), e, 'bodyDx', 'bodyDy', true,
+    zemine ? 'Bu harekette figür yere basıyor: dikey kaydırma yok. Sahne eşyasını kaydır.' : '');
+  // Eşya kaydırması yalnızca eşya varken anlamlı; şema da bunu zorluyor.
+  renderNudge($('nudgeProp'), e, 'propDx', 'propDy', !!e.prop, '');
   const bind = (id, opts, value, apply) => {
     const sel = $(id);
     sel.innerHTML = '';
@@ -1042,17 +1516,13 @@ function renderEquipment() {
     renderAll();
   };
 
-  // Uzak kol da üç durumlu, aynı kural: ayrı hareketi yoksa çizilmez.
   const arm = $('farArm');
-  const autoArm = showFarArm({ ...e, hideFarArm: undefined });
-  arm.textContent =
-    e.hideFarArm === undefined ? `Kural: ${autoArm ? 'görünür' : 'gizli'}` : e.hideFarArm ? 'Elle: gizli' : 'Elle: görünür';
-  arm.setAttribute('aria-pressed', String(showFarArm(e)));
+  arm.textContent = e.hideFarArm ? 'Gizli' : 'Görünür';
+  arm.setAttribute('aria-pressed', String(!e.hideFarArm));
   arm.onclick = () => {
     snapshot();
-    if (e.hideFarArm === undefined) e.hideFarArm = autoArm;
-    else if (e.hideFarArm) e.hideFarArm = false;
-    else delete e.hideFarArm;
+    if (e.hideFarArm) delete e.hideFarArm;
+    else e.hideFarArm = true;
     markDirty();
     renderAll();
   };
@@ -1092,7 +1562,7 @@ $('addKf').onclick = () => {
   const cur = e.kf[kfIndex];
   const next = e.kf[kfIndex + 1];
   const t = next ? (cur.t + next.t) / 2 : Math.min(1, cur.t + 0.1);
-  e.kf.splice(kfIndex + 1, 0, { t: Math.round(t * 100) / 100, tr: cur.tr, p: { ...cur.p }, ...(cur.plantF ? { plantF: true } : {}) });
+  e.kf.splice(kfIndex + 1, 0, { t: Math.round(t * 100) / 100, tr: cur.tr, p: { ...cur.p } });
   kfIndex += 1;
   markDirty();
   renderAll();
@@ -1109,7 +1579,6 @@ $('delKf').onclick = () => {
 };
 
 $('kfName').onchange = () => { snapshot(); frame().tr = $('kfName').value; markDirty(); renderKf(); };
-$('kfPlantF').onchange = () => { snapshot(); if ($('kfPlantF').checked) frame().plantF = true; else delete frame().plantF; markDirty(); renderAll(); };
 
 // Hareket sonsuz döner: son kare ilkinden farklıysa her tekrarda zıplıyor.
 $('closeLoop').onclick = () => {
@@ -1153,6 +1622,242 @@ $('kfTime').onchange = () => {
 $('viewSide').onclick = () => { plane = 'side'; $('viewSide').setAttribute('aria-pressed', 'true'); $('viewFront').setAttribute('aria-pressed', 'false'); syncViewBox(); draw(); };
 $('viewFront').onclick = () => { plane = 'front'; $('viewSide').setAttribute('aria-pressed', 'false'); $('viewFront').setAttribute('aria-pressed', 'true'); syncViewBox(); draw(); };
 
+// --- metin paneli --------------------------------------------------------
+//
+// Kullanıcının okuduğu her metin — iki ad, İngilizce ad, ekipman, zorluk,
+// set/dinlenme ipucu ve nasıl yapılır adımları — 11 Eylül 2026'ya kadar
+// `backend/scripts/build_exercise_library.py` içinde SABİTTİ: antrenörden
+// gelen bir düzeltme ancak Python düzenlenerek girilebiliyordu. Artık
+// `data/exercises.json`'da ve burada düzenleniyor.
+//
+// Çizim notu (`note`) bilerek YOK: o iç not, uygulamaya gitmiyor.
+
+const ZORLUKLAR = ['BAŞLANGIÇ', 'ORTA', 'ORTA-İLERİ', 'İLERİ'];
+
+/** Panelde düzenlenen alanlar; sıra ekranda göründüğü sıra. */
+const TXT_FIELDS = [
+  { k: 'name', label: 'Türkçe ad', not: 'Listede ve başlıkta görünen ad.' },
+  { k: 'alt', label: 'Alt ad', ops: true,
+    not: 'Salonda söylenen ÖTEKİ ad. Karşılığı yoksa boş bırak — kimsenin söylemediği bir ad yoktan kötüdür.' },
+  { k: 'en', label: 'İngilizce ad', not: 'Alt ad boşsa uygulamada onun yerine bu görünüyor.' },
+  { k: 'difficulty', label: 'Zorluk', secim: ZORLUKLAR },
+  { k: 'equipTr', label: 'Ekipman (TR)' },
+  { k: 'equipEn', label: 'Ekipman (EN)' },
+  { k: 'setsHint', label: 'Set ipucu', ops: true, not: 'Boş bırakılırsa uygulama "Antrenörün belirler" yazıyor.' },
+  { k: 'restHint', label: 'Dinlenme ipucu', ops: true },
+];
+
+const entry = () => CATALOG[txtId];
+
+/** Kayıtta sunucunun reddedeceği şeyi kullanıcı ÖNCE burada görsün. */
+function txtProblem(e) {
+  if (!e) return null;
+  for (const f of TXT_FIELDS) {
+    const v = e[f.k];
+    if (f.ops) continue;
+    if (typeof v !== 'string' || v.trim() === '') return `${f.label} boş`;
+  }
+  if (typeof e.alt === 'string' && e.alt.trim() === String(e.name).trim()) return 'Alt ad ile Türkçe ad aynı';
+  if (!ZORLUKLAR.includes(e.difficulty)) return `Zorluk "${e.difficulty}" tanınmıyor`;
+  if (!Array.isArray(e.steps) || e.steps.length === 0) return 'Adım yok';
+  const bos = e.steps.findIndex((a) => !a[0] || !a[0].trim() || !a[1] || !a[1].trim());
+  if (bos >= 0) return `${bos + 1}. adımın bir dili boş`;
+  return null;
+}
+
+function renderTxtList() {
+  const host = $('txtList');
+  host.innerHTML = '';
+  Object.keys(CATALOG).forEach((id) => {
+    const e = CATALOG[id];
+    const hay = `${e.name} ${e.alt || ''} ${e.en || ''} ${id}`.toLowerCase();
+    if (txtFilter && !hay.includes(txtFilter)) return;
+    const b = document.createElement('button');
+    b.setAttribute('aria-pressed', String(id === txtId));
+    const sorun = txtProblem(e);
+    b.innerHTML =
+      (sorun ? '<span class="edited">!</span>' : '') +
+      `<b>${esc(e.name)}</b><small>${esc(id)}</small>`;
+    if (sorun) b.title = sorun;
+    b.onclick = () => { txtId = id; renderTexts(); };
+    host.appendChild(b);
+  });
+  if (!host.children.length) host.innerHTML = '<p class="hint">Eşleşen hareket yok.</p>';
+}
+
+const esc = (v) =>
+  String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function renderTxtForm() {
+  const host = $('txtForm');
+  const e = entry();
+  if (!e) {
+    host.innerHTML = '<p class="empty">Soldan bir hareket seç.</p>';
+    return;
+  }
+  host.innerHTML = '';
+
+  const grp = (baslik, ic) => {
+    const d = document.createElement('div');
+    d.className = 'grp';
+    d.innerHTML = `<h3>${baslik}</h3>${ic}`;
+    host.appendChild(d);
+    return d;
+  };
+
+  // --- adlar ve sınıflama ---
+  const fieldHtml = (f) => {
+    const v = e[f.k] ?? '';
+    const giris = f.secim
+      ? `<select data-fld="${f.k}">${f.secim.map((o) => `<option value="${esc(o)}"${o === v ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+      : `<input type="text" data-fld="${f.k}" value="${esc(v)}">`;
+    return `<div class="fld"><label>${f.label}</label>${giris}${f.not ? `<p class="note">${f.not}</p>` : ''}</div>`;
+  };
+  grp('Adlar', TXT_FIELDS.slice(0, 3).map(fieldHtml).join(''));
+  grp('Sınıflama', TXT_FIELDS.slice(3).map(fieldHtml).join(''));
+
+  // --- adımlar ---
+  const steps = Array.isArray(e.steps) ? e.steps : (e.steps = []);
+  const adimlar = grp(
+    'Nasıl yapılır',
+    steps.map((a, i) => `
+      <div class="step">
+        <span class="no">${i + 1}.</span>
+        <div class="pair">
+          <textarea rows="2" data-step="${i}" data-lang="0" placeholder="Türkçe">${esc(a[0])}</textarea>
+          <textarea rows="2" data-step="${i}" data-lang="1" placeholder="English">${esc(a[1])}</textarea>
+        </div>
+        <div class="ops">
+          <button data-move="${i}" data-dir="-1" title="Yukarı"${i === 0 ? ' disabled' : ''}>↑</button>
+          <button data-move="${i}" data-dir="1" title="Aşağı"${i === steps.length - 1 ? ' disabled' : ''}>↓</button>
+          <button data-del="${i}" title="Adımı sil">✕</button>
+        </div>
+      </div>`).join('') +
+    // Adımlar TR+EN kalıyor: uygulama her adımın altında İngilizcesini
+    // basıyor (`exercise-detail.tsx`), tek dile düşmek ekranda görünür bir
+    // kayıp olurdu.
+    (steps.length ? '' : '<p class="empty">Adım yok — hareketin nasıl yapıldığı yazılmalı.</p>') +
+    '<p class="note" style="grid-column:1">Her adım iki dilli: uygulama Türkçesinin altında İngilizcesini gösteriyor.</p>' +
+    '<button id="addStep">+ Adım ekle</button>',
+  );
+
+  // --- bağlama ---
+  host.querySelectorAll('[data-fld]').forEach((el) => {
+    el.oninput = () => {
+      beginTextEdit();
+      const f = el.dataset.fld;
+      const v = el.value;
+      // `alt` YAZILDIYSA boş olamaz: boşaltmak "karşılığı yok" demek, o da
+      // alanın hiç bulunmaması demek.
+      if (f === 'alt' && v.trim() === '') delete e.alt;
+      else e[f] = v;
+      afterTextEdit(f === 'name');
+    };
+  });
+  host.querySelectorAll('[data-step]').forEach((el) => {
+    el.oninput = () => {
+      beginTextEdit();
+      steps[Number(el.dataset.step)][Number(el.dataset.lang)] = el.value;
+      afterTextEdit(false);
+    };
+  });
+  host.querySelectorAll('[data-move]').forEach((el) => {
+    el.onclick = () => {
+      commitTextEdit();
+      snapshot();
+      const i = Number(el.dataset.move);
+      const j = i + Number(el.dataset.dir);
+      [steps[i], steps[j]] = [steps[j], steps[i]];
+      markTextsDirty();
+      renderTexts();
+    };
+  });
+  host.querySelectorAll('[data-del]').forEach((el) => {
+    el.onclick = () => {
+      commitTextEdit();
+      snapshot();
+      steps.splice(Number(el.dataset.del), 1);
+      markTextsDirty();
+      renderTexts();
+    };
+  });
+  adimlar.querySelector('#addStep').onclick = () => {
+    commitTextEdit();
+    snapshot();
+    steps.push(['', '']);
+    markTextsDirty();
+    renderTexts();
+    const son = host.querySelector(`[data-step="${steps.length - 1}"]`);
+    if (son) son.focus();
+  };
+}
+
+/**
+ * Tuş başına geri alma kaydı almıyoruz: her harf bir yığın girdisi olurdu ve
+ * ⌘Z bir kelimeyi geri almak için otuz kez basılırdı. Kayıt alana GİRİLDİĞİNDE
+ * alınıp, değer gerçekten değiştiyse yığına düşüyor — kaydı `change` anında
+ * almak yazılmış hâli saklardı ve ⌘Z hiçbir şeyi geri almazdı.
+ */
+/** Alana ilk dokunuşta, veriyi DEĞİŞTİRMEDEN önce alınan kayıt. */
+let txtBefore = null;
+const beginTextEdit = () => { if (txtBefore === null) txtBefore = takeSnapshot(); };
+/** Bekleyen kaydı yığına indirir; bekleyen yoksa hiçbir şey yapmaz. */
+const commitTextEdit = () => {
+  if (txtBefore === null) return;
+  snapshot(txtBefore);
+  txtBefore = null;
+  syncHistoryButtons();
+};
+
+function afterTextEdit(adDegisti) {
+  markTextsDirty();
+  renderTxtList();
+  if (adDegisti) {
+    rebuildNames();
+    renderExList();
+    renderPhone();
+  }
+}
+
+function renderTexts() {
+  renderTxtList();
+  renderTxtForm();
+}
+
+$('texts').onclick = () => {
+  // Panel açılırken sahnedeki arketibi kullanan ilk harekete düşüyor: iki
+  // seçim birbirinden kopuk kalırsa kullanıcı aradığı hareketi elle bulur.
+  if (!txtId || CATALOG[txtId].archetype !== key) {
+    txtId = Object.keys(CATALOG).find((id) => CATALOG[id].archetype === key) || Object.keys(CATALOG)[0] || null;
+  }
+  txtOn = true;
+  $('txt').classList.add('on');
+  renderTexts();
+};
+
+const closeTxt = () => {
+  // Alandan çıkılmadan kapatılırsa `change` düşmüyor; bekleyen kaydı burada
+  // indiriyoruz ki yazılan metin geri alınabilir kalsın.
+  commitTextEdit();
+  txtOn = false;
+  $('txt').classList.remove('on');
+};
+$('txtClose').onclick = closeTxt;
+$('txtSearch').oninput = () => { txtFilter = $('txtSearch').value.trim().toLowerCase(); renderTxtList(); };
+// Metin alanında Esc yazmayı kesmesin diye panel kapanışı #cmp ile aynı
+// kuralda: yalnızca panel açıkken ve odak bir girdide değilken.
+window.addEventListener('keydown', (evt) => {
+  if (evt.key === 'Escape' && txtOn && !/^(INPUT|TEXTAREA|SELECT)$/.test(evt.target.tagName)) closeTxt();
+});
+const isField = (el) => /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+// Kayıt ODAKA değil, İLK DEĞİŞİKLİĞE bağlı. Odak olaylarına bağlamak
+// kırılgandı: odak `focusin` doğurmadan da alana düşebiliyor (pencere arkada
+// olduğunda `el.focus()` böyle davranıyor), o zaman kayıt hiç alınmıyor ve
+// kullanıcı metin düzeltmesini geri alamıyordu — sessizce.
+$('txt').addEventListener('change', (evt) => {
+  if (isField(evt.target)) commitTextEdit();
+}, true);
+
 $('compare').onclick = () => {
   cmpOn = true;
   $('cmp').classList.add('on');
@@ -1169,30 +1874,47 @@ $('parts').onclick = () => {
   draw();
 };
 
+// Karşı yığına giden kayıt da POZ + METİN: yalnızca pozu saklamak, ileri
+// alındığında kataloğu tanımsız bırakırdı.
+//
+// Geri alınan hamlenin hangi dosyaya ait olduğunu bilmiyoruz, o yüzden ikisi de
+// kirli işaretleniyor. Değişmemiş dosya kaydedildiğinde birebir aynı baytlarla
+// yazılıyor — git'te görünmüyor, yani fazladan kayıt zararsız.
 $('undo').onclick = () => {
   if (!undoStack.length) return;
-  redoStack.push(JSON.stringify(DATA));
+  redoStack.push(takeSnapshot());
   restore(undoStack.pop());
   markDirty();
+  markTextsDirty();
 };
 
 $('redo').onclick = () => {
   if (!redoStack.length) return;
-  undoStack.push(JSON.stringify(DATA));
+  undoStack.push(takeSnapshot());
   restore(redoStack.pop());
   markDirty();
+  markTextsDirty();
 };
 
 $('revert').onclick = async () => {
-  if (dirty && !confirm('Kaydedilmemiş değişiklikler atılacak. Diskteki hâline dönülsün mü?')) return;
+  if ((dirty || textsDirty) && !confirm('Kaydedilmemiş değişiklikler atılacak. Diskteki hâline dönülsün mü?')) return;
   snapshot();
-  DATA = await (await fetch('/data')).json();
+  // Metinler de diskten geri geliyor: yalnızca pozları tazelemek, panelde
+  // yazılmış ama atılmış bir metni ekranda bırakırdı.
+  [DATA, CATALOG] = await Promise.all([
+    fetch('/data').then((r) => r.json()),
+    fetch('/exercises').then((r) => r.json()),
+  ]);
+  rebuildNames();
   if (!DATA[key]) key = Object.keys(DATA)[0];
+  if (!CATALOG[txtId]) txtId = null;
   kfIndex = 0;
   dirty = false;
+  textsDirty = false;
   $('savedMsg').textContent = 'diskten yüklendi';
   $('savedMsg').style.color = css('--sub');
   renderAll();
+  if (txtOn) renderTexts();
 };
 
 $('scrub').oninput = () => {
@@ -1214,21 +1936,55 @@ $('play').onclick = () => {
   renderAll();
 };
 
+const put = async (path, payload) => {
+  const res = await fetch(path, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload, null, 2),
+  });
+  const out = await res.json();
+  if (!out.ok) throw new Error(out.error);
+  return out;
+};
+
+/**
+ * İki dosya, iki kayıt: pozlar `rigArchetypes.json`'a, metinler
+ * `exercises.json`'a. Biri kuralı geçmezse ÖTEKİ yazılıyor ve kirli bayrağı
+ * yalnızca tutan tarafta siliniyor — ikisini birden geri çevirmek, kabul
+ * edilebilir yarıyı da kullanıcının elinden alırdı.
+ */
 $('save').onclick = async () => {
+  // Alandan çıkmadan ⌘S'e basılabiliyor: bekleyen metin kaydı önce yığına.
+  commitTextEdit();
   $('save').disabled = true;
-  try {
-    const res = await fetch('/data', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(DATA, null, 2) });
-    const out = await res.json();
-    if (!out.ok) throw new Error(out.error);
-    dirty = false;
-    $('savedMsg').textContent = `kaydedildi (${out.count} arketip)`;
-    $('savedMsg').style.color = css('--p');
-  } catch (e) {
-    $('savedMsg').textContent = 'kaydedilemedi: ' + e.message;
-    $('savedMsg').style.color = css('--danger');
-  } finally {
-    $('save').disabled = false;
+  const yazildi = [];
+  const hata = [];
+  if (dirty) {
+    try {
+      const out = await put('/data', DATA);
+      dirty = false;
+      yazildi.push(`${out.count} arketip`);
+    } catch (e) {
+      hata.push('pozlar: ' + e.message);
+    }
   }
+  if (textsDirty) {
+    try {
+      const out = await put('/exercises', CATALOG);
+      textsDirty = false;
+      yazildi.push(`${out.count} hareket metni`);
+    } catch (e) {
+      hata.push('metinler: ' + e.message);
+    }
+  }
+  if (hata.length) {
+    $('savedMsg').textContent = 'kaydedilemedi — ' + hata.join(' · ');
+    $('savedMsg').style.color = css('--danger');
+  } else {
+    $('savedMsg').textContent = yazildi.length ? `kaydedildi (${yazildi.join(', ')})` : 'değişiklik yok';
+    $('savedMsg').style.color = yazildi.length ? css('--p') : css('--sub');
+  }
+  $('save').disabled = false;
 };
 
 // Kısayollar: kaydetme ve geri alma, elin fareden kalkmadan.
@@ -1311,7 +2067,7 @@ function tick(now) {
 const boot = async () => {
   const [data, names, muscles, anatomy, parts] = await Promise.all([
     fetch('/data').then((r) => r.json()),
-    fetch('/names').then((r) => r.json()).catch(() => ({})),
+    fetch('/exercises').then((r) => r.json()).catch(() => ({})),
     fetch('/muscles').then((r) => r.json()).catch(() => ({})),
     fetch('/anatomy').then((r) => r.json()).catch(() => null),
     fetch('/parts').then((r) => r.json()).catch(() => null),
@@ -1319,16 +2075,9 @@ const boot = async () => {
   MUSCLEDATA = muscles;
   ANATOMY = anatomy && anatomy.front ? anatomy : null;
   PARTS = parts && parts.parts ? parts.parts : null;
-  PARTS_FRONT = parts && parts.front && parts.front.parts ? parts.front.parts : null;
   DATA = data;
-  // Katalog kimlik başına (`walking-lunge` → ad + arketip); liste ise arketip
-  // başına çiziliyor. Bir arketip birden çok harekete hizmet edebildiği için
-  // (unilateral_lunge üç hareket) ters çeviriyoruz.
   CATALOG = names;
-  NAMES = {};
-  for (const e of Object.values(names)) {
-    (NAMES[e.archetype] ||= []).push(e.name);
-  }
+  rebuildNames();
   key = Object.keys(DATA)[0];
   renderAll();
   requestAnimationFrame(tick);

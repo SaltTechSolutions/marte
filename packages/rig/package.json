@@ -6,11 +6,11 @@
   "description": "Hareket figürü motoru, kare editörü ve denetimi. Çıktısını GymEntra tüketir.",
   "scripts": {
     "editor": "node scripts/editor.mjs",
+    "review": "node scripts/review-page.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "export": "npm run typecheck && npm test && node scripts/export.mjs",
-    "parts:mesh": "node scripts/mesh-silhouette.mjs"
+    "export": "npm run typecheck && npm test && node scripts/export.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

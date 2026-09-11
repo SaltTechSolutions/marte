@@ -92,10 +92,6 @@ function RootLayout() {
                 writing a programme, so it sits outside both tab groups. */}
             <Stack.Screen name="exercise-detail" />
             <Stack.Screen name="exercise-library" />
-            {/* Hazır programlar: antrenör bir başlangıç yapısı seçerken, üye
-                kendi programı yokken açıyor. */}
-            <Stack.Screen name="programmes" />
-            <Stack.Screen name="programme-detail" />
           </Stack>
         </AuthProvider>
       </ToastProvider>

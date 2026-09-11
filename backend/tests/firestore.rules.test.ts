@@ -1545,6 +1545,57 @@ describe('Programs', () => {
   });
 });
 
+describe('Program templates (PER-18)', () => {
+  const globalTemplate = { tenantId: null, level: 'beginner', title: 'Tam Vücut Başlangıç', days: [] };
+
+  test('a member can read templates — the goal picker shows them', async () => {
+    await seedMembership('member-1', 'member');
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('program_templates/fullbody-beginner').set(globalTemplate);
+    });
+
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertSucceeds(db.doc('program_templates/fullbody-beginner').get());
+  });
+
+  test('nobody can write a global template from a client', async () => {
+    // Global şablonlar yalnızca seed betiğiyle (admin SDK) yazılır; istemciden
+    // yazılabilseydi kanıta dayalı ortak içeriği herhangi bir salon ezerdi.
+    await seedMembership('admin-1', 'admin');
+    const db = testEnv.authenticatedContext('admin-1').firestore();
+    await assertFails(db.collection('program_templates').add(globalTemplate));
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('program_templates/g-1').set(globalTemplate);
+    });
+    await assertFails(db.doc('program_templates/g-1').update({ title: 'Ele geçirildi' }));
+    await assertFails(db.doc('program_templates/g-1').delete());
+  });
+
+  test('gym staff own their gym\'s templates, a member does not', async () => {
+    await seedMembership('trainer-1', 'trainer');
+    await seedMembership('member-1', 'member');
+    const own = { tenantId: TENANT, level: 'beginner', title: 'Salonun kendi şablonu', days: [] };
+
+    const memberDb = testEnv.authenticatedContext('member-1').firestore();
+    await assertFails(memberDb.collection('program_templates').add(own));
+
+    const trainerDb = testEnv.authenticatedContext('trainer-1').firestore();
+    await assertSucceeds(trainerDb.collection('program_templates').add(own));
+  });
+
+  test('a template cannot be moved to another gym', async () => {
+    await seedMembership('trainer-1', 'trainer');
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc('program_templates/t-1').set({ tenantId: TENANT, title: 'Bizim', days: [] });
+    });
+
+    const db = testEnv.authenticatedContext('trainer-1').firestore();
+    await assertFails(db.doc('program_templates/t-1').update({ tenantId: 'BASKA-SALON' }));
+    await assertSucceeds(db.doc('program_templates/t-1').update({ title: 'Bizim — v2' }));
+  });
+});
+
 describe('Gym packages (PKG-1)', () => {
   const basePackage = {
     tenantId: TENANT,

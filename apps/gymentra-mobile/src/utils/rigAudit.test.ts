@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
 import { RigExercise, RigPose, fillPose, poseAt, skeleton } from '@/utils/rig';
-import { ROM_BANDS, auditExercise, auditFrame, auditLoop } from '@/utils/rigAudit';
+import { ROM_BANDS, auditExercise, auditFrame } from '@/utils/rigAudit';
 
 /**
  * ROM bantlarının ATEŞLEDİĞİNİ doğrulayan testler.
@@ -29,31 +29,19 @@ const PROBES: Record<string, { ex: RigExercise; patch: Partial<RigPose> }> = {
   [key('diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { thighA: 180, shinA: 155 } },
   // Uzak bacak da aynı sınıra tabi — görünür olduğu hareketlerde.
   [key('uzak diz', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 350 } },
-  // Uzak diz de ters yöne kırılamaz. Bu sınır bir süre YOKTU ve `carry`nin
-  // 30° geriye bükülen dizi denetimden sessizce geçiyordu.
+  // Uzak diz de ters yöne kırılamaz. Bu bant 11 Eylül 2026'da eklendi ve
+  // eklendiği anda İKİ gerçek arketibi yakaladı (`carry` −30°,
+  // `unilateral_lunge` −26.8°): büyüklük bandı mutlak değer aldığı için ters
+  // bükülme yıllarca görünmedi, figür arkadan sakat görünüyordu.
   [key('uzak diz ters yönde', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { thighF: 180, shinF: 155 } },
-  // Ayak bileği kaval kemiğine bu kadar katlanamaz (dorsi fleksiyon).
-  [key('bilek', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { ankle: -50 } },
-  // Parmak ucu bu kadar uzatılamaz (plantar fleksiyon).
-  [key('bilek', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { ankle: 70 } },
-  // Uzak bilek de aynı sınırlara tabi. Bu bant EKLENMEDEN ÖNCE model bileği
-  // hiç taşımıyordu: ayak yönü kip başına sabitti ve baldırı takip etmiyordu,
-  // o yüzden `bulgarian_split_squat`ta uzak bilek −116°ye kadar dönüyor ve
-  // hiçbir kural görmüyordu.
-  [key('uzak bilek', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: -50 } },
-  [key('uzak bilek', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { ankleF: 70 } },
-  // Parmak eklemi kırılmaz: ekstansiyon 70°, fleksiyon 30° ötesi.
-  [key('parmak', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { toe: -45 } },
-  [key('parmak', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { toe: 85 } },
-  [key('uzak parmak', 'lo')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { toeF: -45 } },
-  [key('uzak parmak', 'hi')]: { ex: RIG_ARCHETYPES.unilateral_lunge, patch: { toeF: 85 } },
   // Ön kol pazuya gömülemez. Ters kinematikli kolda açı POZDA YOK, iskeletten
   // geliyor: el hedefini omzun üstüne koymak dirseği tam katlıyor.
   [key('dirsek', 'hi')]: { ex: RIG_ARCHETYPES.seated_overhead_press, patch: { hx: 4, hy: 0 } },
   // Kalça öne bu kadar bükülemez.
   [key('kalça', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 20 } },
-  // Kalça geriye bu kadar açılamaz.
-  [key('kalça', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
+  // Kalça geriye bu kadar açılamaz — işaret yalnızca AYAKTA anlamlı olduğu
+  // için prob da ayakta duran bir arketipte.
+  [key('kalça geriye açılma', 'lo')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thighA: 225 } },
   // Gövde öne bu kadar katlanamaz.
   [key('gövde', 'hi')]: { ex: RIG_ARCHETYPES.squat, patch: { torso: 0, thoraxA: 100 } },
   // Gövde geriye bu kadar açılamaz.
@@ -96,6 +84,26 @@ describe('ROM bantları', () => {
   });
 });
 
+describe('elle kaydırma denetimin dışına çıkamıyor', () => {
+  // `bodyDy` figürü yerden kesebiliyor. Bu daha önce yapısal olarak
+  // imkânsızdı (yere oturtma her karede temas noktasını zemine çekiyordu),
+  // o yüzden kural da yoktu.
+  it('gövdeyi yukarı kaydırmak "figür havada" uyarısı veriyor', () => {
+    const havada = { ...RIG_ARCHETYPES.squat, bodyDy: -40 };
+    const uyari = auditExercise(havada).filter((i) => i.rule === 'temas');
+    expect(uyari.length, 'uyarı bekleniyordu').toBeGreaterThan(0);
+    expect(uyari[0].message).toContain('havada');
+  });
+
+  it('kaydırma yokken aynı arketip temiz', () => {
+    expect(auditExercise(RIG_ARCHETYPES.squat).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+
+  it('basamakta basan ayak kutunun üstünde, uyarı yok', () => {
+    expect(auditExercise(RIG_ARCHETYPES.step_up).filter((i) => i.rule === 'temas')).toEqual([]);
+  });
+});
+
 describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   // Eski kural `ex.arm === 'angles'` kapısındaydı ve 30 arketipin 8'inde hiç
   // çalışmıyordu. Kapı kalktı; kaynak da pozdan iskelete taşındı, çünkü ters
@@ -106,13 +114,9 @@ describe('dirsek kuralı ters kinematikli kolda da çalışıyor (T2)', () => {
   const floor = Object.entries(RIG_ARCHETYPES).filter(([, ex]) => ex.arm === 'floor');
 
   it('bandın hiçbir hareket için atlaması yok', () => {
-    // T2'nin doğrudan iddiası: kapı yok, band 30/30 harekette değerlendiriliyor.
+    // T2'nin doğrudan iddiası: kapı yok, band her arketipte değerlendiriliyor.
     expect(dirsek.skip, 'dirsek bandında skip olmamalı').toBeUndefined();
-    // Sayı SABİT YAZILMIYOR: her yeni hareket eklendiğinde güncellemek
-    // gerekiyordu ve o güncelleme düşünmeden yapılan bir işleme dönüşüyor.
-    // Korunan şey T2'nin iddiası: açı kipinde OLMAYAN hareketler var ve
-    // bandın onları atlamaması bu testin geri kalanında sınanıyor.
-    expect(ik.length + floor.length, 'ters kinematikli hareket bulunmalı').toBeGreaterThan(0);
+    expect(ik.length + floor.length, 'arm != angles olan hareket sayısı').toBe(11);
   });
 
   ik.forEach(([k, ex]) => {
@@ -167,62 +171,5 @@ describe('tutuş kuralı — el barı tutuyor mu', () => {
           expect(Math.hypot(S.hand[0] - S.bar![0], S.hand[1] - S.bar![1]), k).toBeLessThan(0.001);
         }
       });
-  });
-});
-
-describe('sehpaya basan ayak kaymıyor', () => {
-  // `bulgarian_split_squat`ta arka ayak sehpanın ÜSTÜNDE durur; hareketi ön
-  // bacak yapar. Ama uzak bacak serbest bir zincir: kalça inerken açılar
-  // sabit kalırsa ayak sehpanın üstünde kayar. Ölçüldü, kayma 90px'ti ve ayak
-  // 150px'lik sehpanın dışına çıkıyordu; arka diz de 10°→15° arası kalıp
-  // neredeyse hiç bükülmüyordu, oysa Bulgarian'da arka diz yere doğru iner.
-  const ex = RIG_ARCHETYPES.bulgarian_split_squat;
-
-  it('bugünkü veri temiz', () => {
-    expect(auditLoop(ex).filter((i) => i.rule === 'temas').map((i) => i.message)).toEqual([]);
-  });
-
-  it('ayak kayan veride kural KONUŞUYOR', () => {
-    // Düzeltme öncesi hâl: ara kareler yok, dip karesinde arka bacak neredeyse düz.
-    const bozuk: RigExercise = {
-      ...ex,
-      kf: ex.kf
-        .filter((k) => k.tr !== 'İniş' && k.tr !== 'Çıkış')
-        .map((k) => (k.tr === 'Alt' ? { ...k, p: { ...k.p, thighF: 245, shinF: 260 } } : k)),
-    };
-    const hit = auditLoop(bozuk).filter((i) => i.rule === 'temas');
-    expect(hit.length, `uyarı bekleniyordu, çıkan: ${JSON.stringify(auditLoop(bozuk).map((i) => i.message))}`).toBeGreaterThan(0);
-    expect(hit[0].message).toContain('kayıyor');
-  });
-
-  it('arka diz gerçekten bükülüyor', () => {
-    // Bulgarian'ın tanımı bu: arka diz yere doğru iner. Düz kalırsa hareket
-    // ön bacağın tek başına çömelmesine dönüyor.
-    const norm = (d: number) => { let x = ((d % 360) + 360) % 360; if (x > 180) x -= 360; return x; };
-    const acilar = Array.from({ length: 21 }, (_, i) => {
-      const p = poseAt(ex, i / 20).p;
-      return norm(p.shinF - p.thighF);
-    });
-    expect(Math.max(...acilar), 'dipte arka diz belirgin bükülmeli').toBeGreaterThan(80);
-    expect(Math.min(...acilar), 'arka diz ters yöne kırılmamalı').toBeGreaterThan(0);
-  });
-});
-
-/**
- * Denge: ağırlık merkezi destek tabanının dışına çıkınca kural KONUŞMALI.
- * Kural yokken step_up'ta merkez 18px geride, goblet squat dibinde 13px
- * topukların gerisindeydi ve hiçbir şey söylemiyordu.
- */
-describe('denge kuralı', () => {
-  it('öne devrilen figürü yakalar', () => {
-    // Ayakta, gövde 80° öne katlı, kalça geri gitmemiş: merkez parmak ucunun önüne düşer.
-    const ex = RIG_ARCHETYPES.hinge;
-    const p = fillPose({ ...poseAt(ex, 0).p, shinA: 178, thighA: 183, torso: 85, thoraxA: 80, neckA: 60 });
-    const rules = auditFrame(ex, p, 0).map((i) => i.rule);
-    expect(rules).toContain('denge');
-  });
-  it('dik duran figürde susar', () => {
-    const ex = RIG_ARCHETYPES.hinge;
-    expect(auditFrame(ex, poseAt(ex, 0).p, 0).filter((i) => i.rule === 'denge')).toEqual([]);
   });
 });

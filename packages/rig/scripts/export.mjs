@@ -104,7 +104,6 @@ const CONTRACT = [
   { out: 'rigMuscles.json', src: 'data/rigMuscles.json', banner: false, what: 'hareket başına kaslar', to: 'src/data/rigMuscles.json' },
   { out: 'anatomy.json', src: 'data/anatomy.json', banner: false, what: 'kas haritası yolları', to: 'src/data/rigAnatomy.json' },
   { out: 'bodyParts.json', src: 'data/bodyParts.json', banner: false, what: 'uzuv siluet parçaları', to: 'src/data/rigBodyParts.json' },
-  { out: 'programmes.json', src: 'data/programmes.json', banner: false, what: 'hazır paket programlar', to: 'src/data/rigProgrammes.json' },
   // Kare verisini TİPLEYEN ve YÜKLEME ANINDA DOĞRULAYAN sarmalayıcı.
   // Uygulamanın kendi kopyası `as unknown as` ile geçiyordu: derleyiciye söz
   // veriyor ama JSON elle de düzenlenebiliyor ve yanlış bir `mode` motorun
@@ -143,7 +142,6 @@ const REWRITE = {
   'rigMuscles.json': '@/data/rigMuscles.json',
   'anatomy.json': '@/data/rigAnatomy.json',
   'bodyParts.json': '@/data/rigBodyParts.json',
-  'programmes.json': '@/data/rigProgrammes.json',
 };
 
 /** `from './rig'` → `from '@/utils/rig'`. Yalnızca depo içi göreli yollar. */
@@ -178,7 +176,6 @@ const bundleErrors = loadSchema().validateBundle({
   muscles: readJson('data/rigMuscles.json'),
   anatomy: readJson('data/anatomy.json'),
   bodyParts: readJson('data/bodyParts.json'),
-  programmes: readJson('data/programmes.json'),
 });
 if (bundleErrors.length) {
   console.error(`✗ devir paketi geçersiz, hiçbir şey yazılmadı:\n  ${bundleErrors.join('\n  ')}`);

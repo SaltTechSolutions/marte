@@ -53,7 +53,6 @@ example
 # would catch. Ignoring the whole directory means the next credential — of
 # whatever extension — is covered before anyone has to remember a rule.
 secrets/
-.rig-editor/
 
 # Yerel build çıktıları
 *.aab

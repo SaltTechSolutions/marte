@@ -31,6 +31,27 @@ görünümde eklem açısı zaten anlamlı değil.
 
 ---
 
+## Ayak bileği açısını modele ekle
+
+**Ne:** `RigPose`'a gerçek bir ayak bileği eklem açısı eklemek.
+
+**Neden:** Model bugün ayak bileği açısı taşımıyor. Ayak yönü
+`footDirFor(mode)` sabiti ([src/rig.ts:669](src/rig.ts:669)), topuk kalkışı ise
+piksel cinsinden `ankleLift`. Bu yüzden ayak bileği ROM denetimi model
+değişmeden imkânsız.
+
+**Bağlam:** İnceleme sırasında "7 eklem denetlenecek" denmişti; doğrusu 6, ve
+ayak bileği o 6'nın dışında. Codex bu hatayı yakaladı. Dorsi/plantar fleksiyon
+topuk kalkışında, çömelme derinliğinde ve şınav duruşunda gerçekten anlamlı.
+
+**Artı:** Topuk kalkışı piksel yerine açıyla ifade edilir, model tutarlılaşır.
+**Eksi:** Geriye uyumsuz. 30 arketibin verisini ve devir sözleşmesini etkiler.
+
+**Bağlı:** Devir sözleşmesinin sürümlenmesi (bu turda ekleniyor) bu değişikliği
+güvenli kılan ön koşul.
+
+---
+
 ## Vendored Muscle-Map kopyasının bakımı
 
 **Ne:** `Muscle-Map-for-React-Native` deposunun kopyalanan halini sürdürmek;
@@ -74,63 +95,95 @@ karar oraya ait.
 
 ---
 
-## Poz modeline derinlik ekseni ekle (3/4 açılı figür) — KAPANDI (2026-09-07)
+## ~~Poz modeline derinlik ekseni ekle (3/4 açılı figür)~~ — VAZGEÇİLDİ
 
-**Karar:** 2B yan görünümde kalındı. 3/4 açılı figür hedefi bırakıldı.
+**Karar (2026-09-10): 3/4 ve açılı gösterimden tamamen vazgeçildi.** Ne
+editörde ne uygulamada açılı figür olmayacak. Bu kayıt ertelenen iş değil
+artık; **reddedilen yön** olarak duruyor ki aynı fikir yeniden keşfedilip
+denenmesin.
 
-**Neden:** Üç kez denendi, üçü de aynı tavana çarptı: (1) uzak uzuvların sahte
-kaydırmasını gerçek Z'ye çevirip kamerayı döndürmek — figür şekil değiştirmedi;
-(2) yan siluetten kesit varsayımıyla (gövde dikdörtgen, uzuvlar elips) açılı
-parça setleri üretmek — "sakat bir insan gibi"; (3) MakeHuman CC0 mesh'inden
-50° siluet üretmek — parçalar düzeldi ama figür hâlâ düzgün insan vermedi.
-Asıl engel parça kalitesi değil yapı: katı kartlar eklemde dönüyor, kameraya
-uzanan uzuv kısalıp yuvarlanmıyor, kafa/el/ayak yan profil kalıyor. 2B parça
-rig'i 3/4 görünüm veremiyor; gerçek çözüm deri ağırlıklı 3B (three.js) olurdu
-ve o ayrı bir ürün kararı.
+Kaldırılanlar (`editor/editor.js`): derinlik izdüşümü (`skel3`, `proj`),
+`cmpFigure`'ın `depth` kipi, Karşılaştır ekranındaki "Derinlik denemesi"
+hücresi ve **mobil önizlemedeki perspektif halter**. Sonuncusu bu yönün son
+kalıntısıydı: çubuk derinliğe uzanıyor, uçlardaki tabaklar elips çiziliyordu.
+Uygulama onu hiç çizmiyordu, yani önizleme uygulamayı değil olmayan bir şeyi
+gösteriyordu.
 
-**Ne kazanıldı:** Mesh'ten üretilen yan siluetler kaldı (`npm run parts:mesh`).
-Perspektif de kaldırıldı — uzak tarafın kaydırılmasının tek amacı özdeş uzuvları
-ayırmaktı; artık özdeş hareket yapan uzak uzuv çizilmiyor (`showFarLeg`,
-`showFarArm`), farklı hareket yapan zaten x'te ayrı düşüyor. Yan görünüm saf
-ortografik. Önden görünüm ayrı işte gerçek yapılıyor.
+**Neden vazgeçildi — ölçüm burada kalsın.** Uzak uzuvların 2B'deki sahte
+kaydırmasını gerçek bir Z'ye çevirip kamerayı döndürmek denendi (2026-09-06);
+ucuza 3/4 vereceği sanılmıştı. Ölçüm (`standing_row_hinged`, 0° → 26°): uyluk
+105.0 → 102.4, baldır 100.0 → 99.8, diz açısı 38.0° → 34.6°. Şekil neredeyse
+hiç değişmiyor.
+
+Sebep yapısal: poz sagittal düzlemde yazıldığı için bir taraftaki bütün
+eklemler AYNI derinlikte, ve aynı derinlikteki noktaları döndürmek onları
+göreli olarak değiştirmiyor — olan tek şey %10 yatay sıkışma. Gerçek 3/4
+eklem BAŞINA enine düzlem açısı ister: yeni poz alanları, 3B denetim,
+uygulamada yeni izdüşüm, 41 arketibin kare verisi ve devir sözleşmesi.
+**Ucuz yolu yok, pahalı yolu da istenmiyor.**
+
+Figürün okunurluğu bundan sonra 2B içinde çözülür: uzak uzuv gizleme,
+parça siluetleri ve kadraj.
+
 ---
 
-## ROM bantları MuJoCo ile karşılaştırıldı (2026-09-07)
+## ~~`carry`: salınan bacak orta noktada düzleşiyor~~ — ÇÖZÜLDÜ (2026-09-11)
 
-Kaynak: [MuJoCo humanoid.xml](https://github.com/google-deepmind/mujoco/blob/main/model/humanoid/humanoid.xml),
-Apache 2.0 — ticari kullanım serbest. Fizik simülasyonu için basitleştirilmiş
-bir gövde; anatomi atlası değil, ama eklem aralıkları bağımsız bir referans.
+**Asıl sebep düzleşme değil, TERS BÜKÜLMEYDİ.** Uzak diz salınım ortasında
+−30°'ye iniyordu, yani geriye kırılıyordu; ayak zemine girmesi bunun sonucuydu.
+Görünmemesinin sebebi denetimdeki boşluk: uzak diz bandı `Math.abs` alıp
+yalnızca üst sınırı denetliyordu, işaret mutlak değerin içinde kayboluyordu.
 
-| bant | bizim | MuJoCo | fark |
-|---|---|---|---|
-| diz | —..160 | —..160 | **tam tutuyor** |
-| uzak diz | —..160 | —..160 | **tam tutuyor** |
-| bilek | −35..50 | −50..50 | bizimki daha dar (bilerek) |
-| diz ters yönde | −15.. | −2.. | bizimki 13° gevşek |
-| kalça | −35..150 | −20..150 | üst tam, alt 15° gevşek |
-| gövde | −45..90 | −30..75 | iki uçta da 15° gevşek |
-| dirsek | —..160 | —..150 | 10° gevşek |
+Bant eklendi (`uzak diz ters yönde`, `lo: -15`) ve eklendiği anda İKİ arketibi
+yakaladı: `carry` (−30°) ve `unilateral_lunge` (−26.8°, 7 Eylül'deki zemin
+düzeltmesinden kalan). İkisi de düzeltildi. `carry` üç kare yerine beş kare
+taşıyor ve gerçek bir salınım profili izliyor: diz salınım boyunca bükülü
+kalıyor, en çok erken salınımda (62°), topuk teması öncesi açılıyor (12°).
 
-Diz fleksiyonunun 160'ta birebir tutması iyi işaret: iki kaynak da gerçek
-anatomiye dayanıyor.
+Sonuç: zemin gömülmesi kalmadı, `tests/rig.test.ts`'teki dar istisna kaldırıldı,
+40 arketip denetimden uyarısız geçiyor.
 
-**Gevşek uçlar SIKILMADI, çünkü sıkmak doğru pozları yakalardı.** Ölçüldü —
-MuJoCo'nun sınırlarıyla üç arketip düşüyor ve üçü de o aralığa ulaşmayı
-AMAÇLAYAN hareketler:
+---
 
-- `glute_bridge` kalçayı 23° açıyor (MuJoCo 20) — köprünün tanımı bu
-- `quadruped_spine` gövdeyi 32° geriye açıyor (MuJoCo 30) — kedi-deve'nin
-  "deve" evresi
-- `seated_overhead_press` dizde 8° hiperekstansiyon (MuJoCo 2) — oturmuş
-  bacakta gevşek diz; insanlarda 5-10° fizyolojik normal
+## Eski kayıt — `carry` araştırması
 
-MuJoCo'nun aralıkları yürüyen bir robotun kararlı simülasyonu için seçilmiş,
-egzersizin uç pozları için değil.
+**Nasıl bulundu (2026-09-07).** Yeni `zemin` denetimi — ÇİZİLEN ayağın en alt
+noktasını zeminle karşılaştıran kural — dört arketipte gömülme gösterdi. Üçü
+düzeltildi, biri kaldı.
 
-**Ama karşılaştırma gerçek bir açık buldu.** Dirsek 162-163°ye çıkan bir kare
-vardı ve denetim SUSUYORDU: `auditExercise` 21 kare örneklüyordu ve ihlal iki
-örnek arasında kalıyordu. Kaba örnekleme, olmayan bir kuraldan farksız.
+| arketip | gömülme | ne yapıldı |
+|---|---|---|
+| `bench_press` | 6.4px | `shinA` 150 → 143.3 ✓ |
+| `incline_press` | 6.4px | `shinA` 150 → 143.3 ✓ |
+| `unilateral_lunge` | 3.4px | `thighF` 190 → 197.3, `shinF` 178 → 170.5 ✓ |
+| `carry` | 5.1px | **açık** |
 
-Düzeltildi: örnekleme 41'e çıktı (31 arketibin tam taraması 84ms → 157ms) ve
-`lunge_reach`e dönüş süpürmesi karesi eklendi — el omuza 23px yaklaşıp dirseği
-katlıyordu. Gidiş yolunda böyle bir kare vardı, dönüşe konmamıştı.
+Tek açı oynatmak lunge'da kötü takas veriyordu (3.4px için ayağı 22.9px yana
+kaydırıyordu), çünkü bacak neredeyse dikey: dikey duyarlılık sıfıra yakın,
+yatay duyarlılık en yüksek. İki açıyı BİRLİKTE çözünce ayak yerinden
+kıpırdamadan 4.5px yükseldi ve diz bükülmesi 12° → 26.8° oldu — lunge'da arka
+diz zaten bükük olmalı, yani düzeltme anatomiyi de iyileştirdi.
+
+**`carry` neden kaldı.** Uzak bacak `thighF` 160→200, `shinF` 190→170 arasında
+salınıyor. Uçlarda diz 30° bükük ve ayak yerden 2.7px yukarıda; ama t≈0.35'te
+`thighF`≈179.6, `shinF`≈180.2 — diz neredeyse DÜZ. Düzleşen bacak daha uzağa
+uzanıyor ve ayak 5.1px yere giriyor. Gerçek yürüyüşte tersi olur: salınım
+ortasında diz en çok bükülür, ayak yerden kesilir.
+
+Denenen ve YETMEYEN iki yol:
+- İki açıyı tüm karelerde birlikte kaydırmak: ±16° içinde çözüm yok. Kaydırma
+  orta noktadaki düzleşmeyi değiştirmiyor.
+- t=0.35 ve 0.65'e bükük dizli kare eklemek: en kötü değer 5.1 → **4.9px**.
+  Çukur geniş bir plato, tepe noktası yeni karenin yanına kayıyor.
+
+Doğru düzeltme salınım boyunca diz bükülme profilini yeniden yazmak — üç
+kareye sığmıyor, yürüyüş kurgusu işi.
+
+**Şimdilik:** kural susturulmadı, eşik gevşetilmedi. `tests/rig.test.ts`'te DAR
+bir istisna var: yalnızca `carry` + `zemin` + "uzak ayak" kalıbı. O arketipte
+çıkacak başka her uyarı ve diğer 29 arketipteki her uyarı testi kırıyor.
+
+**Not — eşik neden dünya-uzayında 2px:** görünürlük kadraja göre değişiyor.
+`carry`'nin viewBox'ı 148 birim (figüre yakın kadraj), `bench_press`'inki 442.
+Aynı 3px `carry`'de ~6pt, `bench_press`'te ~2pt ekran demek. Eşiği "görünmez"
+diye büyütmek en yakın kadrajdaki hatayı gizlerdi.

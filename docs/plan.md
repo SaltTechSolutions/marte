@@ -1259,6 +1259,29 @@ gerçek antrenör onayı beklenmedi;* antrenör personası incelemesi yapıldı,
 "Antrenör personası incelemesi" bölümü. Gerçek antrenör onayı ekipman
 listesi ve Türkçe hareket adları için hâlâ önerilir.
 
+*Metinler koddan veriye alındı (11 Eylül 2026):* hareketin gördüğü her metin
+— iki ad, İngilizce ad, ekipman, zorluk, set/dinlenme ipucu ve nasıl yapılır
+adımları — artık `packages/rig/data/exercises.json`'da; düzeltme
+`npm run editor` içindeki **Metin** panelinden giriliyor,
+`build_exercise_library.py` düzenlenmiyor. Aynı gün antrenör tablosundaki
+45 Türkçe ad ve 186 adımlık yeni anlatım uygulandı.
+**Açık:** adımların İngilizcesi çeviridir, antrenör onayından geçmedi;
+14 harekette eski Türkçe eş ad (ör. "Ölü böcek") artık hiçbir alanda
+geçmiyor. Ayrıntı `docs/KARAR-DEFTERI.md`, 11 Eylül kaydı.
+
+*Figür okunur hâle getirildi (11 Eylül 2026):* renkler figürün üstünde
+durduğu karttan türetiliyor (eskiden uzak uzuv kartın rengiyle, 1.00:1
+kontrastla çiziliyordu — yani görünmüyordu) ve uzuv dikişleri kapatıldı.
+Yakın/uzak ayrımını dolgu değil kenar çizgisi taşıyor; dört temada da WCAG
+3:1 eşiği geçiliyor ve `figureColors.test.ts` bunu sınıyor.
+*Siluetler ve arka bacak (11 Eylül 2026):* uzuv siluetleri artık elle çizilmiş
+değil, `scripts/build-body-parts.mjs` ile profilden üretiliyor — kas karnının
+nerede olduğu düzenlenebilir veri. Aynı bakışta uzak dizin iki arketipte
+**ters yöne büküldüğü** çıktı (`carry`, `unilateral_lunge`); denetimdeki
+boşluk kapatıldı ve depoda hiç uyarı kalmadı.
+**Açık:** siluetler tarama değil, stilize biçimler (belgedeki 3B zincir bu
+makinede çalıştırılamıyor); uygulamanın çizimi simülatörde doğrulanmadı.
+
 **15. ~~UX-7 kalanı~~** — tamamlandı (1 Eylül 2026), on ekran.
 
 ### Kuşak 4 — borç ve temizlik
@@ -5027,7 +5050,18 @@ zaten PKG-12'nin içindeydi, yeni madde açılmadı.
 | [ ] PER-15 | Üyeden yenileme talebi | 3 | Z-7 |
 | [ ] PER-16 | Duyuru / toplu bildirim (+ promosyonun üyeye görünmesi) | 3 | H-10 |
 | [ ] PER-17 | WORKOUT: çok günlü program + "geçen sefer" | 3 | B-1, B-3 |
-| [ ] PER-18 | Hazır program şablonları (ortak kütüphane + ısınma ön bloğu) — PER-17 ile tek iş | 3 | kullanıcı isteği |
+| [x] PER-18 | Hazır program şablonları (ortak kütüphane + ısınma ön bloğu) — PER-17 ile tek iş | 3 | kullanıcı isteği |
+
+> **PER-18 kapandı — 11 Eylül 2026.** 19 global şablon üretime yazıldı
+> (`seed_program_templates.cjs --apply`; doğrulandı: 19 belge, sınırı
+> yazılmamış 0, hedef katmanında 10 şablon, dört ısınma bloğu). Isınma ön
+> bloğu bağlandı: "Antrenmana başla" önce ısınma ekranını getiriyor,
+> antrenör kurucudan kapatabiliyor, ısınma kayda girmiyor. Şablon metni
+> artık denetimden geçiyor — `limits` zorunlu, yanlış yönlendiren ifade
+> yasak, kaynak zorunlu, hipertrofi hacmi ölçülüyor
+> (`backend/scripts/programTemplateAudit.cjs`, hem testte hem seed yolunda).
+> **Açık kalan:** gerçek antrenör onayı alınmadı — özellikle ekipman
+> listesi (`docs/hareket-adlari-onay.md` tablosu bekliyor).
 | [x] PER-19 | Hareket görselleştirici — 46 hareket, kas haritası + poz kareleri, göz atılabilir liste, personel sorun bildirimi (2 Eylül 2026: kod + kurallar deploy edildi; poz kareleri antrenör onayı bekliyor, atama bağı PER-17'de `exerciseId`'ye taşınacak) | 3 | Claude Design + kullanıcı isteği |
 
 Kuyruğa yazılanlar (P2/P3) "KALAN İŞLER → Kuyruk" altında; ayrı madde

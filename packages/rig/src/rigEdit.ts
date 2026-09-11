@@ -1,4 +1,7 @@
-import { B, FrontPoints, RigExercise, RigPose, Skeleton, Vec, angleOf, ik } from './rig';
+import {
+  B, RigExercise, RigPose, Skeleton, Vec, angleOf, facingFlip, footDirFarOf, footDirFromToe, footDirOf, ik,
+  showFarLeg, solePoints,
+} from './rig';
 
 /**
  * Figür üstünde sürükleyerek poz verme.
@@ -23,7 +26,9 @@ export type DragJoint =
   | 'kneeF'
   | 'ankleF'
   | 'elbowF'
-  | 'handF';
+  | 'handF'
+  | 'toe'
+  | 'toeF';
 
 export interface DragHandle {
   joint: DragJoint;
@@ -33,8 +38,13 @@ export interface DragHandle {
   far: boolean;
 }
 
-/** Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir. */
-export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
+/**
+ * Bu hareket için sürüklenebilir eklemler — moda ve kol türüne göre değişir.
+ *
+ * `p` uzak ayak ucu için gerekiyor: onun yönü sabit değil, o karenin baldır
+ * açısından türetiliyor.
+ */
+export function dragHandles(ex: RigExercise, S: Skeleton, p: RigPose): DragHandle[] {
   const near: [DragJoint, Vec, string][] = [
     ['knee', S.knee, 'Diz'],
     ['ankle', S.ankle, 'Ayak bileği'],
@@ -70,7 +80,23 @@ export function dragHandles(ex: RigExercise, S: Skeleton): DragHandle[] {
   // Asılı figürde el barda sabit, kalça zincirin ucu.
   const armsFiltered = ex.mode === 'hang' ? arms.filter(([j]) => j !== 'hand') : arms;
 
+  // Ayak ucu: pozun değil HAREKETİN tutamağı (`footDir`). Ayak yönü tek
+  // sayıyla veriliyordu ve gözle ayarlanamıyordu — makine hareketlerinde ayak
+  // tabanı platforma basmadığı için pozlar saçma duruyordu.
+  const toe: [DragJoint, Vec, string][] = [
+    ['toe', solePoints(S.ankle, footDirOf(ex), false, facingFlip(ex.mode))[1], 'Ayak ucu (tüm kareler)'],
+  ];
+  // Uzak ayak ucu: yönü `footDirFarOf` baldırdan türetiyor, bu tutamak o
+  // türetmenin üstüne binen PAYI yazıyor (`footDirFarAdj`). Yakın ayaktaki
+  // gibi mutlak bir yön yazsaydı tek sayı bütün kareler için sabitlenir ve
+  // uzak baldır savrulunca ayak yine bilekten koparadı.
+  const toeF: [DragJoint, Vec, string][] = showFarLeg(ex)
+    ? [['toeF', solePoints(S.ankleF, footDirFarOf(ex, p), false, facingFlip(ex.mode))[1], 'Uzak ayak ucu (tüm kareler)']]
+    : [];
+
   return [
+    ...toe.map(([joint, at, label]) => ({ joint, at, label, far: false })),
+    ...toeF.map(([joint, at, label]) => ({ joint, at, label, far: true })),
     ...nearFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...armsFiltered.map(([joint, at, label]) => ({ joint, at, label, far: false })),
     ...far.map(([joint, at, label]) => ({ joint, at, label, far: true })),
@@ -94,6 +120,11 @@ export function dragJoint(ex: RigExercise, S: Skeleton, joint: DragJoint, target
       return stand
         ? { shinA: angleOf(target, S.ankle), thighA: angleOf(S.pelvis, target) }
         : { thighA: angleOf(S.pelvis, target), shinA: angleOf(target, S.ankle) };
+
+    // Ayak ucu poza DOKUNMUYOR: `footDir` hareket düzeyinde bir sayı, kare
+    // başına değil. Editör bunu `dragFootDir` ile ayrı yazıyor.
+    case 'toe':
+      return {};
 
     case 'ankle':
       // Ayakta ayak sabit; diğer modlarda baldırın ucu.
@@ -157,71 +188,12 @@ export const tidyAngle = (deg: number): number => Math.round((((deg % 360) + 360
 export function applyPatch(frame: Partial<RigPose>, patch: Partial<RigPose>): Partial<RigPose> {
   const next = { ...frame };
   (Object.entries(patch) as [keyof RigPose, number][]).forEach(([k, v]) => {
-    // Azimutlar İŞARETLİ kalır (eksi = orta hattı geçen kol); 0-360'a indirgemek
-    // −15'i 345 yapar ve interpolasyon uzun yoldan döner.
-    next[k] = k === 'hx' || k === 'hy' || k === 'shLift' || k === 'ankleLift' || k === 'armAz' || k === 'armAzF' || k === 'foreAz' || k === 'foreAzF' || k === 'toe' || k === 'toeF' ? Math.round(v) : tidyAngle(v);
+    next[k] = k === 'hx' || k === 'hy' || k === 'hxF' || k === 'shLift' || k === 'ankleLift' ? Math.round(v) : tidyAngle(v);
   });
   return next;
 }
 
-/* --- önden görünümde sürükleme -------------------------------------------- */
-
-export type FrontJoint = 'elbow' | 'hand' | 'elbowF' | 'handF';
-
-/**
- * Önden görünümde tutulabilen eklemler: dirsek ve el, iki taraf. Kol düzlemi
- * (`armAz`) ve yükselme buradan geliyor; bacak ve gövde yan çözümden türediği
- * için önden tutamakları yok.
- */
-export function frontDragHandles(ex: RigExercise, F: FrontPoints): { joint: FrontJoint; at: Vec; label: string; far: boolean }[] {
-  const angles = ex.arm === 'angles';
-  return [
-    ...(angles ? [{ joint: 'elbow' as FrontJoint, at: F.L.elbow, label: 'Dirsek', far: false }] : []),
-    { joint: 'hand', at: F.L.hand, label: angles ? 'El' : 'El (düzlem)', far: false },
-    ...(angles ? [{ joint: 'elbowF' as FrontJoint, at: F.R.elbow, label: 'Uzak dirsek', far: true }] : []),
-    { joint: 'handF', at: F.R.hand, label: angles ? 'Uzak el' : 'Uzak el (düzlem)', far: true },
-  ];
-}
-
-/**
- * Önden görünümde bir eklemi hedefe çekmek: ekrandaki (yanal, dikey) ikilisi
- * ile kemik boyu, kolun 3B yönünü belirliyor — ileri bileşen kalan uzunluktan
- * çıkıyor, işareti bugünkü pozdan (kol öne mi arkaya mı bakıyordu).
- *
- *   yükselme  sag = acos(−dy / L)
- *   düzlem    az  = atan2(yanal, ileri)
- *
- * `angles` kipinde dirsek `upperA`+`armAz`, el `foreA`+`foreAz` yazar. Ters
- * kinematik kiplerinde sagital açı çözümün sonucu; el yalnız düzlemi yazar.
- */
-export function dragFront(ex: RigExercise, p: RigPose, S: Skeleton, F: FrontPoints, joint: FrontJoint, target: Vec): Partial<RigPose> {
-  const far = joint === 'elbowF' || joint === 'handF';
-  const side = far ? F.R : F.L;
-  const sgn = far ? 1 : -1;
-  const isHand = joint === 'hand' || joint === 'handF';
-  const from = isHand ? side.elbow : side.sh;
-  const L = isHand ? B.fore : B.upper;
-  const curSag = isHand
-    ? angleOf(far ? S.elbowF : S.elbow, far ? S.handF : S.hand)
-    : angleOf(far ? S.shF : S.sh, far ? S.elbowF : S.elbow);
-  const curAz = isHand ? (far ? p.foreAzF : p.foreAz) : (far ? p.armAzF : p.armAz);
-  const deg = (r: number) => (r * 180) / Math.PI;
-  const rad = (d: number) => (d * Math.PI) / 180;
-
-  let lat = sgn * (target[0] - from[0]);
-  let dy = target[1] - from[1];
-  const r = Math.hypot(lat, dy);
-  // Tam uzanmış kol: hedef kol boyunu aşıyorsa kola oturt, ileri bileşen sıfır.
-  if (r > L) { lat *= L / r; dy *= L / r; }
-  const fwdSign = Math.sin(rad(curSag)) * Math.cos(rad(curAz)) < 0 ? -1 : 1;
-  const fwd = fwdSign * Math.sqrt(Math.max(0, L * L - lat * lat - dy * dy));
-  const az = Math.round(deg(Math.atan2(lat, fwd)));
-  const sag = Math.round(deg(Math.acos(Math.max(-1, Math.min(1, -dy / L)))) * 10) / 10;
-
-  if (ex.arm !== 'angles') {
-    // Düzlem iki kemikte birden: ters kinematikte kol tek düzlemde çalışır.
-    return far ? { armAzF: az, foreAzF: az } : { armAz: az, foreAz: az };
-  }
-  if (isHand) return far ? { foreF: sag, foreAzF: az } : { foreA: sag, foreAz: az };
-  return far ? { upperF: sag, armAzF: az } : { upperA: sag, armAz: az };
+/** Ayak ucu tutamağının yeni `footDir` değeri — tam dereceye yuvarlanmış. */
+export function dragFootDir(ex: RigExercise, S: Skeleton, target: Vec): number {
+  return Math.round(footDirFromToe(S.ankle, target, false, facingFlip(ex.mode)));
 }
