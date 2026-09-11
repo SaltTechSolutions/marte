@@ -12,11 +12,16 @@ import type { Palette } from './tokens';
  * hangi bacağın arkada olduğu, bird-dog'da hangi kolun uzandığı, step-up'ta
  * hangi ayağın basamakta olduğu hep uzak uzuvda.
  *
- * Ayrımı DOLGU değil KENAR ÇİZGİSİ taşıyor. Renk tek boyutlu ama kısıt üç
- * tane — yakın↔kart, uzak↔kart, yakın↔uzak aynı anda ayrışmalı — ve üçünü
- * birden dolgu açıklığıyla çözmeye kalkınca yakın uzuv gümüşe kadar açılıyor.
- * Bu yüzden uzak uzuv kart renginde İÇİ BOŞ, yakın uzuv dolu; ikisini de
- * görünür bir hat çiziyor.
+ * Ayrımın çoğunu KENAR ÇİZGİSİ taşıyor: renk tek boyutlu ama kısıt üç tane
+ * (yakın↔kart, uzak↔kart, yakın↔uzak) ve üçünü birden dolgu açıklığıyla
+ * çözmeye kalkınca yakın uzuv gümüşe kadar açılıyor.
+ *
+ * Uzak uzuv yine de DOLU. Bir ara kart renginde içi boş çizildi ve yanlıştı:
+ * atmosferik perspektifin kuralı uzaktaki biçimin KONTRASTININ azalması,
+ * dolgusunun kalkması değil. İçi boş bir uzuv gövdenin arkasındaki bacak
+ * gibi değil, gövdeye açılmış bir delik gibi okunuyor. Doğrusu: uzak uzuv
+ * karttan hafifçe ayrılan bir tonla dolu, hattı yakınınkinden ~2.3 kat
+ * zayıf.
  *
  * Kat sayılar keyfî değil: dört temanın (gymentra/tarabya × karanlık/aydınlık)
  * dördünde de her iki hattın karta göre kontrastı WCAG 1.4.11'in grafikler
@@ -26,7 +31,7 @@ import type { Palette } from './tokens';
 export interface FigureColors {
   /** Yakın uzuv dolgusu. */
   skin: string;
-  /** Uzak uzuv dolgusu: kartın kendisi, yani içi boş. */
+  /** Uzak uzuv dolgusu — DOLU, ama yakınından daha az kontrastlı. */
   skinFar: string;
   /** Yakın uzvun hattı. */
   edge: string;
@@ -50,9 +55,9 @@ export function figureColors(colors: Palette): FigureColors {
   const t = colors.txt;
   return {
     skin: mix(g, t, light ? 0.24 : 0.3),
-    skinFar: g,
+    skinFar: mix(g, t, light ? 0.12 : 0.15),
     edge: mix(g, t, light ? 0.74 : 0.72),
-    edgeFar: mix(g, t, light ? 0.5 : 0.38),
+    edgeFar: mix(g, t, light ? 0.5 : 0.42),
     joint: mix(g, t, light ? 0.34 : 0.4),
     floor: mix(g, t, light ? 0.3 : 0.22),
     metal: mix(colors.bg0, t, light ? 0.55 : 0.04),

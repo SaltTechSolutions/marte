@@ -44,10 +44,16 @@ describe('figureColors — figür kartın üstünde okunabiliyor', () => {
         expect(contrast(c.edgeFar, kart)).toBeGreaterThanOrEqual(3);
       });
 
-      // Uzak uzuv İÇİ BOŞ: dolgusu kartın kendisi. Ayrımı hat taşıyor,
-      // dolgu değil — üç kısıtı tek boyutlu renkle çözmenin yolu bu.
-      it('uzak uzvun dolgusu kartın kendisi', () => {
-        expect(c.skinFar).toBe(kart);
+      // Uzak uzuv DOLU. İçi boş çizilince gövdenin arkasındaki bacak gibi
+      // değil, gövdeye açılmış bir delik gibi okunuyordu.
+      it('uzak uzvun dolgusu karttan ayrılıyor ama yakınından zayıf', () => {
+        expect(contrast(c.skinFar, kart)).toBeGreaterThanOrEqual(1.25);
+        expect(contrast(c.skin, c.skinFar)).toBeGreaterThanOrEqual(1.3);
+      });
+
+      // Atmosferik perspektif: uzaktaki biçimin kontrastı AZALIR.
+      it('uzak hat yakın hattan belirgin biçimde zayıf', () => {
+        expect(contrast(c.edge, kart)).toBeGreaterThan(contrast(c.edgeFar, kart) * 1.6);
       });
 
       it('yakın uzvun dolgusu karttan ayrılıyor', () => {
@@ -59,9 +65,6 @@ describe('figureColors — figür kartın üstünde okunabiliyor', () => {
         expect(contrast(c.edge, c.skin)).toBeGreaterThanOrEqual(2.2);
       });
 
-      it('yakın hat uzak hattan belirgin biçimde güçlü', () => {
-        expect(contrast(c.edge, kart)).toBeGreaterThan(contrast(c.edgeFar, kart) * 1.3);
-      });
     });
   });
 });

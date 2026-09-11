@@ -10,7 +10,7 @@
 
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirOf, footPath,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, poseAt,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
 import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
@@ -579,7 +579,7 @@ function drawPose(svg, e, p) {
   }
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
-    ? [...trunk, ball(S.sh, 20)]
+    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 20)]
     : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
        { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
   near([
@@ -767,7 +767,11 @@ function draw() {
   // bir çentik bırakıyordu. Kapsül kipinde kama duruyor, orada uzuvlar zaten
   // ayrı ayrı okunuyor.
   near([
-    ...(useParts ? [] : [{ d: ellipsePath(pelvisMid, 25, 21), tf: `rotate(${p.torso} ${pelvisMid[0]} ${pelvisMid[1]})` }]),
+    // Leğen kütlesi: Bridgman'ın üç değişmez gövde kütlesinden biri. Kalça
+    // ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin — kütleler uç uca
+    // gelmez, geçer. Blok yokken bel ve uyluk parçaları tek noktada değiyor,
+    // kalça gövdeden kopuk görünüyordu.
+    { d: pelvisMass(S.pelvis, S.lumbar) },
     trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax),
     ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
     ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),

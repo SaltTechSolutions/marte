@@ -479,7 +479,22 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
     ankle = add(knee, D(p.shinA), B.shin);
   }
 
-  const hipF: Vec = [pelvis[0] - 18, pelvis[1] + 3];
+  /**
+   * Uzak kalça, resim düzleminde yakınının biraz GERİSİNDE.
+   *
+   * Tam yandan bakışta iki kalça eklemi aynı noktaya düşer; kaydırma, uzak
+   * bacağın yakınının arkasında olduğunu söyleyen bir okunurluk payıdır.
+   * Payın büyüklüğü örtük bir kamera dönüşü demek: leğen genişliği ≈43 birim
+   * olduğuna göre kayma = 43·sin(θ). Eski değer 18'di, yani θ≈25° — depo
+   * 3/4 ve açılı gösterimden BİLEREK vazgeçmişken (TODOS.md) figüre sessizce
+   * 25°'lik bir dönüş giriyordu ve uzak bacak gövdeden kopmuş gibi, neredeyse
+   * leğenin arka kenarından çıkıyor görünüyordu.
+   *
+   * 7 birim ≈ 9°: bakış yandan kalıyor, derinliği kaydırma değil ton ve
+   * örtüşme taşıyor. Ölçüldü: kaymayı küçültmek ne zemin temasını ne de
+   * `farLegDistinct` kararını hiçbir arketipte değiştiriyor.
+   */
+  const hipF: Vec = [pelvis[0] - 7, pelvis[1] + 2];
   const kneeF = add(hipF, D(p.thighF), B.thigh);
   const ankleF = add(kneeF, D(p.shinF), B.shin);
 
@@ -755,6 +770,54 @@ export function frontTorsoPath(F: FrontPoints): string {
     `C ${cx + waistW + 6} ${waistY - 30} ${shR[0] + 6} ${shR[1] + 14} ${shR[0]} ${shR[1]} ` +
     `C ${shR[0] - 12} ${shR[1] - 12} ${cx + neckW + 8} ${neckY + 6} ${cx + neckW} ${neckY} Z`
   );
+}
+
+/**
+ * Leğen kütlesi — yandan görünüm.
+ *
+ * Bridgman'ın `Constructive Anatomy`'si gövdeyi ÜÇ değişmez kütleyle kuruyor:
+ * baş, göğüs ve leğen. Leğen için "gövdeye kıyasla epeyce kare" diyor ve
+ * büyüklüğünü gerekçelendiriyor: vücudun mekanik ekseni, gövde ve bacak
+ * kaslarının dayanak noktası. Uyluk kemiğinin başı da "uzun bir boyunla
+ * ibiğin en geniş yerinin dışına taşınıyor" — yani uyluk gövdenin orta
+ * çizgisinden değil, geniş bir leğen bloğundan çıkıyor.
+ *
+ * Çizimde bu kütle YOKTU: parça kipinde bilerek atlanmıştı ("hacmi parçaların
+ * kendisi taşıyor"). Bel parçası kalça ekleminde bitiyor, uyluk parçası aynı
+ * noktadan başlıyordu; ikisi tek noktada değiyordu. Kenar çizgisi görünür
+ * olunca bu değme yeri dikişe dönüştü ve kalça gövdeden kopuk göründü.
+ * Bridgman'ın sözü tam bunun karşıtı: kütleler uç uca gelmez, birbirine
+ * GEÇER ("morticed"). Blok kalça ekleminin altına taşıyor ki uyluk onun
+ * üstüne binsin.
+ */
+export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
+  const dx = lumbar[0] - pelvis[0];
+  const dy = lumbar[1] - pelvis[1];
+  const l = Math.hypot(dx, dy) || 1;
+  // Omurga ekseni ve ona dik eksen: blok figürle birlikte eğiliyor.
+  const uy: Vec = [dx / l, dy / l];
+  const ux: Vec = [-uy[1], uy[0]];
+  const cx = pelvis[0] + uy[0] * 8;
+  const cy = pelvis[1] + uy[1] * 8;
+  // Ön/arka AYRI: ibiğin genişlemesi yanaldır, yandan bakışta leğenin önü
+  // belden daha ileri çıkmaz. Simetrik bir blok kalçanın önünde bir çıkıntı
+  // bırakıyordu. Derinlik arkada: gluteal kütle orada.
+  const FRONT = 20;
+  const BACK = 27;
+  const RY = 25;
+  const pts: Vec[] = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2;
+    // Köşeleri yumuşatılmış kare: Bridgman leğen için "gövdeye kıyasla epeyce
+    // kare" diyor, ama keskin köşe siluetin içinde çentik gibi görünüyor.
+    const c = Math.cos(a);
+    const s2 = Math.sin(a);
+    const k = 1 / Math.max(Math.abs(c) ** 2.6 + Math.abs(s2) ** 2.6, 1e-6) ** (1 / 2.6);
+    const px = c * (c >= 0 ? FRONT : BACK) * k;
+    const py = s2 * RY * k;
+    pts.push([cx + ux[0] * px + uy[0] * py, cy + ux[1] * px + uy[1] * py]);
+  }
+  return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
 }
 
 /**

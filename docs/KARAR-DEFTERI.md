@@ -31,6 +31,48 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-11 — kalça gövdeye bağlandı, uzak bacak yerine oturdu (Bridgman)
+
+**Yapıldı.** Kullanıcı figüre bakıp iki şey söyledi: arka bacak vücudun parçası
+değil eklenti gibi duruyor, kalça gövdeden kopuk. İkisi de doğruydu; kaynağa
+gidildi (George B. Bridgman, *Constructive Anatomy*, 1920 — tam metni
+chestofbooks.com'da).
+
+1. **Uzak kalça kayması 18 → 7 birim.** Tam yandan bakışta iki kalça eklemi
+   aynı noktaya düşer; kaydırma bir okunurluk payıdır ve büyüklüğü örtük bir
+   kamera dönüşü demektir. Leğen genişliği ≈43 birim olduğuna göre 18 birim
+   ≈25°'lik bir dönüş — oysa depo 3/4 ve açılı gösterimden BİLEREK vazgeçmişti.
+   Yani figüre sessizce reddedilmiş bir dönüş giriyordu ve uzak bacak neredeyse
+   leğenin arka kenarından çıkıyordu. 7 birim ≈ 9°.
+2. **Leğen kütlesi eklendi** (`pelvisMass`). Bridgman gövdeyi üç değişmez
+   kütleyle kuruyor — baş, göğüs, leğen — ve parçaların birbirine uç uca değil
+   GEÇMELİ ("morticed") bağlandığını söylüyor. Çizimde leğen hiç yoktu: parça
+   kipinde bilerek atlanmıştı, bel parçası kalça ekleminde bitiyor uyluk aynı
+   noktadan başlıyordu. Kenar çizgisi görünür olunca o değme yeri dikişe
+   dönüştü. Blok kalça ekleminin altına taşıyor ki uyluk üstüne binsin.
+3. **Uzak uzuv yeniden DOLU.** Bir önceki tur onu kart renginde içi boş
+   çizmişti; yanlıştı. Atmosferik perspektifin kuralı uzaktaki biçimin
+   KONTRASTININ azalması, dolgusunun kalkması değil — içi boş uzuv gövdenin
+   arkasındaki bacak gibi değil, gövdeye açılmış delik gibi okunuyor.
+
+**Karar.** **Derinliği kaydırma değil ton ve örtüşme taşır.** Uzak uzuv
+gövdenin yanında durur, karttan hafifçe ayrılan bir tonla dolu çizilir ve hattı
+yakınınkinden ~2.3 kat zayıftır. Leğen bloğunun önü belden ileri çıkmaz
+(ibiğin genişlemesi YANALdır); derinlik arkada, gluteal kütlede.
+
+**Bilerek yapılmadı.** Leğen bloğu simetrik bırakılmadı: ilk hâli önde bir
+çıkıntı yapıyordu, ön 20 / arka 27'ye ayrıldı. Kaymayı tamamen sıfırlamak da
+denenmedi — 0'da uzak bacak yakınının tam arkasına düşüyor ve hamlede iki
+bacağı ayırt etmek zorlaşıyor.
+
+**Açık.** Siluetler hâlâ stilize; antrenör onayından geçmedi. Uygulamanın
+çizimi simülatörde çalıştırılmadı.
+
+**Nerede.** `packages/rig/src/rig.ts` (`hipF`, `pelvisMass`),
+`apps/gymentra-mobile/src/theme/figureColors.ts`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`packages/rig/editor/editor.js`.
+
 ## 2026-09-11 — uzuv siluetleri profilden üretiliyor; ters bükülen diz yakalandı
 
 **Yapıldı.** `data/bodyParts.json` artık elle çizilmiş değil,

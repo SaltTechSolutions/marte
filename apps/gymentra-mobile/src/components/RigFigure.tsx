@@ -26,6 +26,7 @@ import {
   showFarLeg,
   lerpP,
   partTransform,
+  pelvisMass,
   poseAt,
   skeleton,
   solePoints,
@@ -509,6 +510,12 @@ export function RigFigure({
             yuvarlak bir deltoid kapağı birleşimi zaten örtüyor. Kama
             gereksiz ve düz kenarları gövdenin üstünde çentik bırakıyordu. */}
         {near('torso', [
+          // Leğen kütlesi: Bridgman'ın üç değişmez gövde kütlesinden biri.
+          // Kalça ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin —
+          // kütleler uç uca gelmez, geçer. Bu blok yokken bel parçası ile
+          // uyluk parçası tek noktada değiyordu ve kalça gövdeden kopuk
+          // görünüyordu.
+          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar) },
           part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
           part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
           part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
