@@ -31,6 +31,43 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-12 — editörün motoru ve şeması kaydetmede tazeleniyor
+
+**Yapıldı.** Editör sunucusu motoru ve şemayı yalnız açılışta derliyordu.
+Sunucu açıkken `src/` değişirse (başka dalda çalışmak, `git pull`, motoru
+editörün kendi oturumunda düzenlemek) kural bayatlıyor ve sonuç yanıltıcı
+oluyordu: kullanıcı geçerli veri yazıyor, kaydetme "bilinmeyen alan" diye
+reddediyor — reddeden şey verinin kendisi değil, kuralın eski kopyası.
+Artık `ensureEngine()` `src/` klasörünün mtime'ına bakıp gerekirse yeniden
+derliyor; şema da yalnız o zaman yeniden yükleniyor.
+
+**Tazelik ölçüsü klasörün tamamı, dosya listesi değil.** Derlemeye giren
+dosyaları tek tek saymak, yeni bir modül eklendiğinde listeyi güncellemeyi
+unutturur — yani tam da bu mekanizmanın önlediği sessiz bayatlamayı geri
+getirirdi.
+
+**Şema her kaydetmede YÜKLENMİYOR.** `loadSchema` her çağrıda `tsc`
+çalıştırıyor; her kayıtta bunu yapmak kaydı saniyelerce bekletirdi. Yalnızca
+motor yeniden derlendiğinde yükleniyor — ikisinin tazelik ölçüsü aynı.
+
+**`require` önbelleği temizleniyor.** Node CommonJS modülünü önbelleklediği
+için ikinci `loadSchema` çağrısı, dosya yeniden derlenmiş olsa bile ilk
+sürümü döndürüyordu; temizlik olmadan yenileme sessizce hiçbir şey yapmazdı.
+
+**Doğrulandı, varsayılmadı.** Sunucu açıkken `POSE_KEYS`ten `shinA`
+çıkarıldı ve kaydetme denendi: bayat şema kabul ederdi, taze şema
+`bilinmeyen alan "shinA"` diyerek reddetti (derleme sayacı 1 → 2). Şema geri
+alınınca kayıt yine geçti (sayaç 3). Değişiklik yokken kaydetmek yeniden
+derleme TETİKLEMİYOR — sayaç 1'de kaldı, yani kayıt yavaşlamıyor.
+
+**Açık.** Tarayıcı tarafı: `/engine/` isteği de tazeleniyor ama açık duran
+sayfa kendiliğinden yenilenmiyor; kaydetme sırasında yeniden derleme olduysa
+hata metni "tarayıcıyı yenile" diyor.
+
+**Nerede.** `packages/rig/scripts/engine-build.mjs`, `schema.mjs`,
+`editor.mjs`.
+
+
 ## 2026-09-11 — PR #1 `main` ile birleştirildi; rig tarafında main esas alındı
 
 **Yapıldı.** `uzak-diz-ters-bukulme` (81 commit) ile `main` (43 commit) 11
@@ -64,12 +101,11 @@ export'u da geri alındı — ikisi de yalnız o script için eklenmişti.
 main'in `exerciseLibrary.test.ts` içindeki iki kuralın aynısını yapıyordu
 ("her raf kimliği gerçek", "her hareket tam bir rafta"). Kapsam kaybı yok.
 
-**Açık — editörün şeması oturum boyunca eskiyor.** `scripts/editor.mjs`
-şemayı yalnız açılışta derliyor; sunucu açıkken şema kaynağı değişirse
-kaydetme "bilinmeyen alan" diye reddediyor. Dalda buna bir çözüm vardı
-(kaydetmede yeniden derleme + require önbelleği temizliği); main'in
-tasarımında karşılığı olmadığı için TAŞINMADI — kök yönerge istenmeyen
-refactoru yasaklıyor. Geçici çare: editörü yeniden başlatmak.
+**Açık — editörün şeması oturum boyunca eskiyor.** (KAPANDI 2026-09-12,
+aşağıdaki kayda bak.) `scripts/editor.mjs` şemayı yalnız açılışta derliyor;
+sunucu açıkken şema kaynağı değişirse kaydetme "bilinmeyen alan" diye
+reddediyor. O gün TAŞINMADI çünkü kök yönerge istenmeyen refactoru
+yasaklıyor; kullanıcı ertesi gün düzeltilmesini istedi.
 
 **Nerede.** Birleşme commit'i; `packages/rig` main ile birebir.
 

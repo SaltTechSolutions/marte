@@ -27,7 +27,7 @@ import { createServer } from 'node:http';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { buildEngine, OUT, ROOT } from './engine-build.mjs';
+import { buildEngine, ensureEngine, OUT, ROOT } from './engine-build.mjs';
 import { loadSchema } from './schema.mjs';
 
 const DATA = join(ROOT, 'data/rigArchetypes.json');
@@ -46,7 +46,28 @@ const send = (res, code, body, type = 'text/plain; charset=utf-8') => {
 };
 
 buildEngine();
-const schema = loadSchema(OUT);
+let schema = loadSchema(OUT);
+
+/**
+ * Sunucu açıkken kaynak değişmişse motoru ve şemayı tazeler; tazelediyse
+ * `true`.
+ *
+ * Eskiden ikisi de YALNIZ açılışta derleniyordu. Sonuç sessiz değildi ama
+ * yanıltıcıydı: `src/rigSchema.ts`'e yeni bir poz alanı eklenip sunucu açık
+ * bırakıldığında, editörde o alanı yazan kullanıcının kaydı "bilinmeyen
+ * alan" diye reddediliyordu — yani kural kendi yazdığı geçerli veriyi
+ * tutmuyordu, çünkü kuralın kendisi bayattı.
+ *
+ * Şema yalnızca motor yeniden derlendiğinde yükleniyor: `loadSchema` her
+ * çağrıda `tsc` çalıştırıyor ve her kaydetmede bunu yapmak kaydı saniyelerce
+ * bekletirdi. İkisinin tazelik ölçüsü aynı (`src/` mtime), o yüzden tek
+ * kontrol ikisini de kapsıyor.
+ */
+const freshen = () => {
+  if (!ensureEngine()) return false;
+  schema = loadSchema(OUT);
+  return true;
+};
 const readJson = (p) => JSON.parse(readFileSync(p, 'utf8'));
 
 /**
@@ -94,11 +115,17 @@ const acceptPut = (req, res, { file, key: bundleKey, birim, say, duzelt }) => {
   req.on('end', () => {
     try {
       const parsed = duzelt ? duzelt(JSON.parse(body)) : JSON.parse(body);
+      // Kural KAYDETME ANINDA tazeleniyor: bayat şema, geçerli veriyi
+      // reddeden bir kapıdır (bkz. `freshen`).
+      const yeniden = freshen();
       // Doğruluk kaynağının üstüne yazıyoruz: biçimi bozuk bir kayıt 30
       // arketibi birden götürür. Kurallar `src/rigSchema.ts`'te, testlerin
       // okuduğu yerde.
       const errs = schema.validateBundle(readBundle({ [bundleKey]: parsed }));
-      if (errs.length) throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : ''));
+      if (errs.length) {
+        const uyari = yeniden ? ' — motor yeniden derlendi, tarayıcıyı yenile' : '';
+        throw new Error(errs.slice(0, 8).join('; ') + (errs.length > 8 ? ` (+${errs.length - 8} tane daha)` : '') + uyari);
+      }
       const count = Object.keys(parsed).length;
       // Depodaki iki JSON da tek boşlukla girintili; editörün iki boşlukla
       // yazması her kaydı dosyanın tamamını değiştiren bir diff yapardı.
@@ -121,6 +148,9 @@ const server = createServer((req, res) => {
     return send(res, 200, readFileSync(join(ROOT, 'editor/editor.js')), TYPES['.js']);
   }
   if (req.method === 'GET' && url.pathname.startsWith('/engine/')) {
+    // Sayfa yenilendiğinde güncel motoru alsın: tarayıcı tarafı da aynı
+    // derlemeden besleniyor, o da bayatlıyordu.
+    freshen();
     // Derlenmiş motor. Yol depo dışına çıkamasın diye dosya adı süzülüyor.
     const name = url.pathname.replace('/engine/', '').replace(/[^\w.-]/g, '');
     // tsc modül tanımlayıcılarını olduğu gibi bırakıyor: derlenen dosyalar
