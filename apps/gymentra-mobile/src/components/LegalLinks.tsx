@@ -65,7 +65,7 @@ export function LegalConsentNotice() {
   };
 
   const link = (label: string, path: string) => (
-    <Text variant="label" weight="700" style={{ color: colors.p }} onPress={() => open(path)}>
+    <Text variant="label" weight="700" style={{ color: colors.pText }} onPress={() => open(path)}>
       {label}
     </Text>
   );

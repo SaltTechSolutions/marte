@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
  * Integration tests against the real Firestore emulator (not mocks) — the
  * whole point per plan-eng-review TR1: sorgu+auto-ID phantom reads, credit
  * double-spend, and package uniqueness only show up under a real
- * transaction, not a stubbed one. Run via `npm run test` from `marte06/`
+ * transaction, not a stubbed one. Run via `npm run test:functions` from `backend/`
  * (root), which wraps this in `firebase emulators:exec --only firestore`,
  * the same infrastructure `test:rules` already uses (JDK 21 required).
  *

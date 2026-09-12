@@ -139,7 +139,7 @@ export default function BookSession() {
           the credit is spent — it is the child's quota going down, not the
           parent's, and there is no other cue that this is not their own. */}
       {memberId ? (
-        <Text variant="helper" weight="700" style={{ color: colors.p }}>
+        <Text variant="helper" weight="700" style={{ color: colors.pText }}>
           {memberName ?? 'Çocuğun'} adına randevu alıyorsun
         </Text>
       ) : null}

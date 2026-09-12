@@ -231,7 +231,7 @@ export default function RegisterScreen() {
           style={{ alignItems: 'center', paddingVertical: 13, minHeight: 44, justifyContent: 'center' }}>
           <Text variant="helper" tone="sub">
             {mode === 'signUp' ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
-            <Text variant="helper" weight="900" style={{ color: colors.p }}>
+            <Text variant="helper" weight="900" style={{ color: colors.pText }}>
               {mode === 'signUp' ? 'Giriş yap' : 'Kayıt ol'}
             </Text>
           </Text>

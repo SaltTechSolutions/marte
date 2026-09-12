@@ -157,14 +157,17 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
       await createPtSession({
         tenantId,
         trainerId: user.uid,
-        trainerName: user.displayName || user.email || 'Antrenör',
         memberId: selectedMember.userId,
-        memberName: selectedMember.userDisplayName || selectedMember.userEmail || 'Üye',
         date,
         durationMinutes: duration,
       });
       setScheduling(false);
       setSelectedMember(null);
+    } catch (e) {
+      // A clash is a normal outcome now, not a bug: the server refuses the
+      // write and says which appointment it collides with. Swallowing it
+      // would leave the trainer staring at a form that did nothing.
+      reportError(e, toast, 'Randevu oluşturulamadı, tekrar dene.');
     } finally {
       setSaving(false);
     }
@@ -244,7 +247,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
         <Text variant="h3">Takvim</Text>
         {!isViewingToday && (
           <Pressable onPress={jumpToToday} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text variant="helper" weight="700" style={{ color: colors.p }}>
+            <Text variant="helper" weight="700" style={{ color: colors.pText }}>
               Bugüne dön
             </Text>
           </Pressable>
@@ -311,7 +314,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
                     onPress={() => setExpandedId(expanded ? null : s.id)}
                     style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 12, minHeight: 44 }}>
                     <View style={{ alignItems: 'center', width: 46 }}>
-                      <Text variant="helper" weight="900" style={{ color: cancelled ? colors.sub : colors.p }}>
+                      <Text variant="helper" weight="900" style={{ color: cancelled ? colors.sub : colors.pText }}>
                         {formatTime(s.date)}
                       </Text>
                       <Text variant="label" tone="sub">

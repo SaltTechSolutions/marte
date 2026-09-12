@@ -1,4 +1,4 @@
-import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, Timestamp, updateDoc, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { app, db } from '@/services/firebase';
@@ -10,27 +10,37 @@ import { WatchErrorHandler, watchQuery } from './watch';
 // Functions are deployed to europe-west1, same as the rest of the project.
 const functions = getFunctions(app, 'europe-west1');
 
+/**
+ * PER-6: a trainer (or an admin) puts a session on a trainer's calendar.
+ *
+ * Server-side because nothing here can be checked from the client: whether
+ * the slot collides with an appointment the member flow booked a second ago,
+ * whether the trainer still works at the gym, whether the member is still
+ * active. This used to be a bare `setDoc` and none of it was checked — two
+ * members could hold the same hour. See `createPtSessionByStaff` in
+ * backend/functions.
+ *
+ * Display names are no longer passed: the function reads them from the
+ * membership rows, so a stale name on the calendar screen cannot be written
+ * into the session.
+ */
 export async function createPtSession(params: {
   tenantId: string;
   trainerId: string;
-  trainerName: string;
   memberId: string;
-  memberName: string;
   date: Date;
   durationMinutes: number;
 }): Promise<void> {
-  const ref = doc(collection(db, 'pt_sessions'));
-  await setDoc(ref, {
+  const call = httpsCallable<
+    { tenantId: string; trainerId: string; memberId: string; date: string; durationMinutes: number },
+    { id: string }
+  >(functions, 'createPtSessionByStaff');
+  await call({
     tenantId: params.tenantId,
     trainerId: params.trainerId,
-    trainerName: params.trainerName,
     memberId: params.memberId,
-    memberName: params.memberName,
-    date: params.date,
+    date: params.date.toISOString(),
     durationMinutes: params.durationMinutes,
-    status: 'scheduled',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   });
 }
 

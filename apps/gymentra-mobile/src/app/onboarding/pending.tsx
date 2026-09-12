@@ -74,7 +74,7 @@ export default function PendingScreen() {
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-          <Ionicons name="hourglass-outline" size={34} color={colors.p} />
+          <Ionicons name="hourglass-outline" size={34} color={colors.pText} />
         </View>
 
         <Text variant="h3" style={{ textAlign: 'center' }}>

@@ -127,7 +127,7 @@ export function MonthCalendar({
                   <Text
                     variant="helper"
                     weight={selected || isToday ? '900' : '500'}
-                    style={{ color: selected ? colors.onp : isToday ? colors.p : colors.txt }}>
+                    style={{ color: selected ? colors.onp : isToday ? colors.pText : colors.txt }}>
                     {d.getDate()}
                   </Text>
                 </View>

@@ -87,7 +87,7 @@ export const emailExerciseReport = onDocumentCreated(
       note ? `Not:\n${note}` : 'Not girilmedi.',
       '',
       `Kayıt: exercise_reports/${event.params.reportId}`,
-      'Düzeltme: marte06/scripts/build_exercise_library.py → python3 scripts/build_exercise_library.py',
+      'Düzeltme: backend/scripts/build_exercise_library.py → python3 scripts/build_exercise_library.py',
     ].join('\n');
 
     try {

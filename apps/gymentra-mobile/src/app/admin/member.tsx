@@ -176,7 +176,7 @@ export default function AdminMemberDetail() {
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" weight="900" style={{ color: colors.p }}>
+          <Text variant="helper" weight="900" style={{ color: colors.pText }}>
             {name.slice(0, 2).toUpperCase()}
           </Text>
         </View>
@@ -350,7 +350,7 @@ export default function AdminMemberDetail() {
                   padding: 11,
                   gap: 2,
                 }}>
-                <Text variant="helper" weight="700" style={cancelAccess === opt.value ? { color: colors.p } : undefined}>
+                <Text variant="helper" weight="700" style={cancelAccess === opt.value ? { color: colors.pText } : undefined}>
                   {opt.title}
                 </Text>
                 <Text variant="label" tone="sub">
@@ -427,7 +427,7 @@ export default function AdminMemberDetail() {
                   <Text variant="body" weight="900">
                     {p.packageName}
                   </Text>
-                  <Text variant="body" weight="900" style={{ color: colors.p }}>
+                  <Text variant="body" weight="900" style={{ color: colors.pText }}>
                     {p.finalPrice.toLocaleString('tr-TR')} ₺
                   </Text>
                 </View>
@@ -488,7 +488,7 @@ export default function AdminMemberDetail() {
                           Sonlandır
                         </Text>
                       </Pressable>
-                      <Text variant="label" style={{ color: colors.p }}>
+                      <Text variant="label" style={{ color: colors.pText }}>
                         Değiştir ›
                       </Text>
                     </View>

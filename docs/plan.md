@@ -6,8 +6,14 @@ kaynağıdır: bir madde tamamlandığında kutusu işaretlenir ve altına kısa
 "nasıl çözüldü" notu düşülür.
 
 **Denetim tarihi:** 19 Ağustos 2026
-**Kapsam:** `gymentra-mobile/` (Expo SDK 57 istemci) + `marte06/` (Firestore
+**Kapsam:** `apps/gymentra-mobile/` (Expo SDK 57 istemci) + `backend/` (Firestore
 kuralları, indexler, Cloud Functions) — paylaşılan Firebase projesi `tarabyamarte`.
+
+> **Yol notu (7 Eylül 2026 — monorepo birleştirmesi).** Depo tek kök altında
+> toplandı: eski `gymentra-mobile/` → `apps/gymentra-mobile/`, eski `marte06/`
+> → `backend/`. Güncel iş maddelerindeki yollar 8 Eylül 2026'da düzeltildi;
+> tarihli geçmiş kayıtlarda (depo durumu tabloları, arşiv notları) o günkü
+> yollar bilerek olduğu gibi bırakıldı.
 
 **Öncelik anahtarı**
 | Seviye | Anlamı |
@@ -32,6 +38,365 @@ Sıra değerle değil, **bağımlılık ve risk** ile belirlendi: yayını engel
 "Kuşak 1.5" ekledi ve Kuşak 2–3'ü yeniden dizdi. Kuşak 1'e dokunulmadı:
 mağaza engeli olmayan hiçbir şey mağaza engelinin önüne geçmez.
 
+### Denetim — 8 Eylül 2026 · yayın altyapısı
+
+Bu altı madde planın *açık işleri* değil, planın **hiç konuşmadığı**
+boşluklar. Kod tarafı değil, yayın ve işletme tarafı; hiçbiri bir ekranı
+etkilemediği için bugüne kadar kimsenin önüne çıkmadı.
+
+**D-1. [x] CI fiilen çalışmıyor — P5-5 "kuruldu" diyor ama koşmuyor.**
+*(8 Eylül 2026 — çözüldü.* Tek dosya: `.github/workflows/ci.yml`, dört iş —
+**mobile** (typecheck + `expo lint --max-warnings 0` + `npm test`), **rules**
+(emülatöre karşı kural testleri), **functions** (derleme + emülatörlü testler),
+**rig** (typecheck + poz denetimi dahil testler). Eski iki kopya silindi.
+Dördünün de CI'da koşacağı komutlar yerel olarak çalıştırıldı ve **hepsi
+yeşil**: mobil 346, kural 220, functions 79, rig 195 test; lint ve functions
+derlemesi de temiz. **Kalan tek şey push:** dal origin'in 35 commit önünde,
+GitHub'da henüz koşmadı.)*
+
+*Özgün bulgu:*
+İki workflow dosyası da alt dizinlerde: `apps/gymentra-mobile/.github/workflows/ci.yml`
+ve `backend/.github/workflows/ci.yml`. GitHub **yalnızca depo kökündeki**
+`.github/workflows` dizinini okur ve kökte öyle bir dizin yok — yani 7 Eylül
+monorepo birleştirmesinden beri hiçbir kontrol çalışmıyor. Üstelik mobil
+workflow yalnızca typecheck + lint yapıyor; **`npm test` hiç yok**, ne 148
+mobil test ne de kural testleri o yoldan geçiyor. Ayrıca dal (`uzak-diz-ters-bukulme`)
+origin'in 35 commit önünde — dosyalar köke taşınsa bile push edilmeden koşmaz.
+*Yapılacak:* iki workflow'u kökte tek dosyada birleştir (mobil: typecheck +
+lint + `npm test`; backend: kural testleri + functions derlemesi), push et,
+yeşil olduğunu gör.
+
+**D-2. [x] EAS Update (OTA) kurulu değil.** *(8 Eylül 2026 — kuruldu.)*
+`expo-updates` eklendi, `updates.url` proje kimliğine bağlandı ve her build
+profiline kanal verildi (`production`, `preview`, `development`,
+`development-device`, `simulator`).
+
+**`runtimeVersion` politikası `fingerprint` seçildi**, `eas update:configure`'ın
+varsayılan olarak yazdığı `appVersion` değil. Fark kritik: `appVersion` ile
+runtime sürümü `1.0.0` olur ve yerel bağımlılık değişip sürüm numarası
+unutulduğunda OTA güncellemesi **uyumsuz build'lere düşer** — kullanıcı
+açılışta çöken bir uygulama alır ve OTA ile geri de alamazsın. `fingerprint`
+yerel projenin durumundan hesaplandığı için bu kapıyı kendiliğinden kapatır
+(bugünkü değer `2b3bc0e5…`, 113 kaynak dosyadan).
+
+⚠️ **OTA ancak bir sonraki build'den itibaren çalışır.** Bugün incelemede
+olan iOS build 22 ve Play'deki sürüm kodu 6, `expo-updates` içermiyor —
+onlara güncelleme gönderilemez. Yani üretim sürümü **yeni bir build'le**
+çıkmalı; aksi hâlde yayına OTA'sız girilmiş olur ve ilk JS hatası tam bir
+mağaza turu demektir.
+
+*Özgün bulgu:* `GYMENTRA_PLAN.md` Faz 5 "JS-only
+değişiklikler store onayı beklemeden yayınlanır" diyor ama `app.json`'da ne
+`updates` ne `runtimeVersion` var. Yayından sonraki ilk küçük hata tam bir
+mağaza turu demek. **Yayından önce kurulmalı** — sonradan eklemek, kurulu
+olmayan sürümdeki kullanıcılara ulaşmıyor.
+
+**D-3. [x] Firestore yedeği yok.** *(8 Eylül 2026 — kuruldu; runbook:
+`docs/BACKUP.md`.)* Ölçülen başlangıç durumu tahminden de çıplaktı: PITR
+kapalı ve sürüm saklama **1 saat**, sıfır yedek, sıfır zamanlama, üstelik
+**silme koruması da kapalı** — veritabanının kendisi tek komutla
+silinebiliyordu. Üçü de açıldı: PITR **7 gün**, **günlük** yedek (7 gün
+saklama), silme koruması. Doğrulandı (`databases describe`).
+
+Runbook'ta asıl değerli olan geri yükleme tarafı: restore **her zaman yeni
+bir veritabanı yaratır**, var olanın üzerine yazamaz — yani "geri al" tek
+komut değil, üç adım (yükle → doğrula → taşı). Üç senaryo (PITR'lı kısmi
+kurtarma, yedekten restore, silinmiş veritabanı) komutlarıyla yazıldı.
+
+**Kalan üç karar:** (1) haftalık zamanlama — bugün koruma penceresi 7 gün,
+üç hafta önce bozulmuş veri kurtarılamaz; (2) Storage sürümleme — açılmadı,
+çünkü avatar yolu sabit ve sürümleme silinen hesabın fotoğrafını eski sürüm
+olarak yaşatır (`deleteMyAccount`'un temizlediğini geri getirir, KVKK
+sorunu); (3) Auth kullanıcı dışa aktarımı bugün elle. Ayrıca **restore
+tatbikatı yayından önce bir kez yapılmalı** — yedeğin varlığı geri
+yüklenebildiğini kanıtlamaz.
+
+*Özgün bulgu:* Bu planda "yedek" kelimesi bir kez geçiyor, o
+da git hakkında. Canlı bir salonun üyelik, paket, kredi ve ödeme defteri
+Firestore'da duruyor; PITR açık değil, zamanlanmış dışa aktarma yok, geri
+yükleme provası hiç yapılmadı. Yanlış bir toplu script ya da hatalı bir kural
+deploy'u geri alınamaz. *En küçük hâli:* PITR (7 gün) + günlük export'un bir
+GCS bucket'ına yazılması.
+
+**D-4. [x] Yayın sonrası izleme kör.** *(10 Eylül 2026 — üçü de ele alındı;
+biri zaten varmış, biri koda indi, biri panelde kaldı.)*
+
+**Bütçe alarmı — zaten vardı, sıkılaştırıldı.** "Yok" tespiti yanlıştı:
+`Firebase Project tarabyamarte` bütçesi ₺500/ay olarak duruyordu, doğru
+eşiklerle (%50/90/100, aylık, yalnızca proje `171027427019`). `notificationsRule`
+boş görünüyor ama bu bildirimlerin kapalı olduğu anlamına gelmiyor —
+Budgets API'sinde boş kural **varsayılan** demek, yani fatura yöneticilerine
+e-posta gider. *Yapılan:* iki eşik eklendi — **%10 (₺50) erken tel** ve
+**%100 FORECASTED_SPEND**. Gerekçe: bugünkü harcama kuruşlar mertebesinde
+(`freeTier: true`, tek salon), dolayısıyla ilk uyarının ₺250'de gelmesi
+"kaçağı büyümeden yakala" işini görmüyordu; ₺50 bu ölçekte zaten üç
+mertebelik bir sapma demek. Tavan ₺500'de bırakıldı — altı Firebase
+projesinin hepsinde aynı düzen var, onu bozmanın sebebi yok.
+
+**GlitchTip kota uyarısı — böyle bir ayar yok.** *(10 Eylül 2026, belgeler
+okundu — önceki not yanlıştı, "panelden aç" diye bir yer aramaya göndermiş.)*
+GlitchTip'in dokümantasyonunda ve fiyatlandırma SSS'inde açılıp kapatılan bir
+kota uyarısı geçmiyor. Onun yerine **kademeli kısıtlama** var:
+
+> *"After your quota is full, we throttle by 10%. We increase this gradually
+> until at 2x the quota we block fully."*
+
+**Bu, D-4'ün özgün korkusunu kısmen çürütüyor.** "Bir çökme döngüsü kotayı
+sessizce yakar ve o andan sonra hiçbir şey görmeyiz" cümlesi yanlış: 1.000'de
+kör olmuyoruz, 1.000'de %10 kısılıyor ve tam körlük ancak **2.000** olayda
+geliyor. Yani pencere sanılandan iki kat geniş ve düşüş kademeli.
+
+⚠️ **Ama daha sinsi bir kalem çıktı: uptime kontrolleri de olay sayılıyor.**
+GlitchTip'in tanımı net — olaylar dört şeyi ölçüyor: *Issues* (her hata
+tekrarı), **Uptime (her durum kontrolü)**, *Performance* (her transaction) ve
+*Releases* (her MB sürüm dosyası). Saatte bir uptime kontrolü ayda 720 olay
+demek, yani 1.000'lik kotanın neredeyse tamamı — hata için yer kalmaz.
+**Kontrol edilmeli:** organizasyonda tanımlı bir uptime monitörü var mı.
+
+*(10 Eylül 2026 — panele bakıldı, üçü de doğrulandı.)* `/profile/notifications`
+sayfasında tek ayar var: "Send me project alerts" (+ proje bazlı istisna). **Kota
+uyarısı diye bir seçenek yok**, belgelerdeki boşluk arayüzde de böyle.
+Kullanım: `salt-tech-solutions-llc/settings/subscription` → **bu ay 33 olay,
+limitin %3'ü**; ay sonu tahmini 59 (%6); geçen ay 0. Yani kota bugün bir sorun
+değil, endişe teorikti.
+
+**Uptime monitörü yok (0).** Yukarıda "kontrol edilmeli" dediğim kalem
+mevcut değil, kotayı yiyen bir monitör bulunmuyor.
+
+⚠️ **Ama panele bakınca iki gerçek şey çıktı — ikisi de bu plana hiç
+girmemişti.**
+
+**(1) [x] Proje yanlış isimliydi — `yuvva` → `gymentra`** *(10 Eylül 2026,
+kullanıcı onayıyla yeniden adlandırıldı).* DSN `app.glitchtip.com/27190`'a
+bakıyor ve 27190 organizasyondaki tek proje; adı `yuvva`'ydı ama içine
+GymEntra rapor ediyordu.
+
+*Önce "iki ürün karışmış" diye tarif etmiştim, yanlıştı:* `~/Codes/yuvva`'da
+Sentry/GlitchTip entegrasyonu **hiç yok**, yani projeye yalnızca GymEntra
+yazıyor. Karışma değil, yanlış isimlendirme. Zarar bugünde değil gelecekteydi
+— yuvva'ya bir gün hata takibi eklenip aynı projeye bağlanması, ya da panele
+bakan birinin "yuvva" başlığı altında GymEntra hatalarını görüp yanlış sonuca
+varması.
+
+*Yeni proje açmak yerine yeniden adlandırma seçildi:* DSN **sayısal** proje
+kimliğini taşıdığı için ad değişikliği onu bozmuyor (doğrulandı: rename
+sonrası DSN hâlâ `…/27190`), 16 günlük geçmiş ve çözümlenmiş kayıtların
+regression takibi korunuyor, kod ve build değişmiyor. Yeni proje olsaydı
+geçmiş eski projede kalır, DSN üç EAS ortamında birden değişir ve ancak yeni
+build/OTA ile devreye girerdi. Kota da bölünmezdi zaten: ücretsiz sınır
+**organizasyon başına**. Yuvva'ya hata takibi eklendiği gün ona ayrı bir
+proje açılır.
+
+**(1b) ⚠️ Proje uyarısı hiç kurulmamış — asıl izleme boşluğu bu.** Proje
+ayarlarında **"No alerts"** yazıyor: yeni bir hata çıktığında kimseye
+bildirim gitmiyor. D-4'ün aradığı şey aslında buymuş — kota uyarısı (yok
+öyle bir ayar) değil, **issue alert** (var ve kurulmamış). İzin hatasının 16
+gün boyunca 26 kez tekrarlayıp kimsenin haberi olmamasının sebebi tam olarak
+bu.
+
+*(10 Eylül 2026 — kuruldu, kullanıcı onayıyla.)* Projede artık **"Alert 1"**
+var: *bir olay olursa, 1 dakikada 1 olay eşiğiyle e-posta*, alıcı proje
+ekibi. Yeniden yüklemeyle kalıcı olduğu doğrulandı ("No alerts" gitti).
+Eşik bilerek en hassas ayarda: proje ayda 33 olay görüyor, yani gürültü
+riski yok ve şu ana kadarki görünürlük sıfırdı. Yayından sonra gürültü
+yaparsa Quantity/Timespan yükseltilir.
+
+**D-4'ün izleme boşluğu asıl bununla kapandı**, kotayla değil: kademeli
+sürümde (%20) "durdurayım mı" kararını verecek sinyal bu e-posta.
+
+⚠️ *Yeniden adlandırmanın yarım kalan yanı:* GlitchTip **görünen adı**
+değiştiriyor ama **slug'ı** değiştirmiyor. Panelde her yerde `gymentra`
+yazıyor, ama URL'ler hâlâ `/settings/projects/yuvva`. Kozmetik; DSN sayısal
+kimliği kullandığı için hiçbir şeyi etkilemiyor.
+
+**Karar (kullanıcı, 10 Eylül 2026): slug için yeni proje açılmayacak, böyle
+kalacak.** Tek düzeltme yolu yeni bir proje açmaktı; o da 16 günlük geçmişi,
+çözümlenmiş iki kaydın regression takibini ve az önce kurulan alert'i
+kaybettirirdi. Kalan tutarsızlık yalnızca URL'de görünüyor. *Yeniden
+açılmasın diye yazıldı.*
+
+**(2) Çözülmemiş altı hata duruyor ve biri canlı.**
+
+| Hata | Yaş | Olay |
+|---|---|---|
+| **`FirebaseError: Missing or insufficient permissions.`** | 16 gün, **3 saat önce görüldü** | **26** |
+| `WatchdogTermination: OS watchdog terminated your app (RAM)` | 5 gün | 1 |
+| ~~`FirebaseError: Storage: no permission for 'tenant-logos/…'`~~ — **bayat, zaten düzeltilmiş** | 11 gün, 7 gün önce | 3 |
+| `FirebaseError: The query requires an index (building)` | 7 gün | 1 |
+| `FirebaseError: The query requires an index (create it here)` | 8 gün | 1 |
+| `Invariant Violation: 'RNGoogleSignin' could not be found` | 8 gün | 1 |
+
+**[x] İlki çözüldü ve deploy edildi** *(10 Eylül 2026, ruleset `41ce71b8`).*
+
+Olayın `watchContext` etiketi ("Yenileme talebi") hangi dinleyici olduğunu
+doğrudan söyledi — P2-1'de eklenen o etiket olmasa 29 dinleyici arasından
+koddan bulunamazdı. Etiketin bedelini burada geri ödedi.
+
+*Kök sebep:* okuma kuralı `resource.data.memberId`'ye bakıyordu, ama
+**`resource` var olmayan bir doküman için `null`** ve o durumda kural `false`
+dönmüyor, komple hata verip isteği reddediyor. `RenewalRequestRow` bu
+dokümanı ekran açılır açılmaz dinliyor; üye hiç yenileme istemediyse doküman
+yok. Yani **boş durum istisna değil, normal durum.**
+
+*Bir değil dört koleksiyonda vardı* — deseni arayınca üçü daha çıktı, hepsi
+önce kırmızı testle kanıtlandı: `renewal_requests` (üretimin yakaladığı),
+`member_entitlements` (paketi olmayan üye), `trainer_availability` (saatini
+girmemiş antrenör), `member_notes` (notu olmayan üye). `user_settings` ve
+`tenant_memberships` temizdi çünkü kuralları zaten kimliğe bakıyor — **bu
+sınıf bir kez yaşanıp `tenant_memberships`'te düzeltilmiş ama diğerlerine
+taşınmamıştı.**
+
+*Çözüm:* doküman yoksa yetkiyi kimlikten oku. Varsayım `tenantOfId()` içinde
+tek yerde adlandırıldı ve yanlışsa fail-closed — eşleşmeyen önek üyelik
+bulamaz, okuma reddedilir.
+
+⚠️ **Testlerin bunu görememesinin sebebi kayda değer:** hepsi dokümanı önce
+oluşturup sonra okuyordu, yani dokümanın ömrünün çoğunu geçirdiği durumu
+hiç denemiyordu. 4 yeni test (222 → 226). *Bundan sonra deterministik
+kimlikli her kural boş hâliyle de sınanmalı.*
+
+**[x] Storage izin hatası — inceleme sonucu: yapılacak bir şey yok.**
+*(10 Eylül 2026.)* Olay `environment: development`, iOS **simülatöründen**,
+**3 Eylül 11:27 UTC**. `tenant-logos` kuralı ise **4 Eylül 15:19 UTC**'de
+deploy edilmiş (`170fe0e8`, canlıdan doğrulandı: `allow read: if true`,
+yazma tamamen kapalı, yükleme `uploadTenantLogo` callable'ında Admin SDK
+ile). Düzeltme olaydan **28 saat sonra** gelmiş ve o tarihten beri yeni olay
+yok — toplam 3 olayın sonuncusu 3 Eylül.
+
+*Öncekiyle karıştırılmamalı:* renewal hatası üretimden geliyordu ve devam
+ediyordu; bu geliştirme ortamından ve ölü. GlitchTip'te açık görünmesinin
+tek sebebi kimsenin çözümlenmiş işaretlememesi. İstemci kodu `tenant-logos`
+yoluna hiç dokunmuyor (tek referans `functions/src/branding.ts`), yani
+kalan bir yüzey de yok.
+
+**Uygulama değişikliği gerekmedi:** kural düzeltmesi olduğu için deploy
+anında mevcut bütün build'lere ulaştı — Tarabya'daki Android sürümlerine de,
+App Store incelemesinde bekleyen iOS build 22'ye de.
+
+*Kapsamı bağımsız olarak doğrulandı:* olayın `watchContext` etiketi tek
+değerli değilmiş (panelde "Yenileme talebi %48"). Olaylar tek tek gezilince
+**iki bağlam** çıktı — `Yenileme talebi` ve **`Üye notu`** — ve build 21 ile
+22'ye yayılıyorlar. Yani `member_notes` düzeltmesi test ararken bulunmuş bir
+tahmin değil, üretimin de çarptığı ikinci yüzeymiş. Kalan iki koleksiyon
+(`member_entitlements`, `trainer_availability`) örneklemde görünmedi ama
+aynı kusur onlarda da testle kanıtlanmıştı.
+
+**İki GlitchTip kaydı da çözümlenmiş işaretlendi** *(kullanıcı onayıyla)*:
+izin hatası ve storage hatası. Açık kayıt 6'dan 4'e indi; kalanların hepsi
+tek olaylık (`WatchdogTermination`, iki index, `RNGoogleSignin`). Düzeltme
+tutmazsa GlitchTip kaydı regression olarak yeniden açar — takip yolu bu.
+
+*İki index hatası muhtemelen kapanmış* — index'ler bugün dosyayla birebir
+eşleşiyor (36/36) ve kayıtlar 7–8 günlük. `RNGoogleSignin` hatası ise native
+modülü olmayan bir çalıştırmadan (Expo Go ya da eksik build); Google girişi
+doğrulaması sırasında akılda tutulmalı.
+
+*Bizim tarafımızdaki azaltmalar zaten GlitchTip'in kendi önerisiyle aynı yönde:*
+SSS "aşırı olayın en yaygın kaynağı performance" deyip `tracesSampleRate`'i
+düşürmeyi öneriyor — bizde zaten **0**. Hata tarafı için `sampleRate`
+öneriyor; biz onun yerine imza başına tekrar sınırı koyduk (aşağıya bkz.),
+çünkü kör örnekleme nadir bir hatayı da eler.
+
+*Ama asıl korkulan senaryo koda bağlandı.* D-4'ün kendi cümlesi "bir çökme
+döngüsü kotayı sessizce yakar" diyordu; `src/services/eventBudget.ts` tam
+buna karşı bir kapı ve `Sentry.init`'in `beforeSend`'ine takıldı.
+`data/errors.ts`'teki mevcut süzgeç bunu yakalayamazdı — o yalnızca *bizim*
+`reportError` çağrılarımızı görüyor, çökme döngüsü ise SDK'nın küresel
+yakalayıcısından geliyor.
+
+Sınır **imza başına** (tür + sebep), küresel değil: tek bir sayaç olsaydı
+gürültülü bir hata sessiz olanı susturur, yani tam kaçınmak istediğimiz şeyi
+yapardı. Üstündeki oturum tavanı (25) her tekrarında *yeni* imza üreten
+döngüyü sınırlıyor — mesajında zaman damgası taşıyan bir hata imza sınırını
+hiç görmez. 10 birim testi (mobil 354 → 364).
+
+⚠️ **Bu bir azaltma, garanti değil.** Sayaç bellekte, yani açılışta çöküp
+yeniden başlayan bir uygulama her seferinde sıfırdan sayar. O senaryoyu ancak
+GlitchTip tarafındaki kısıtlama yakalar — yukarıdaki panel işi bu yüzden hâlâ
+gerekli.
+
+**Kademeli sürüm — karar: evet, %20 ile başla.** Üretime çıkarken tek seferde
+%100 verilmeyecek; **%20 → (48 saat temiz) → %50 → %100**. *Gerekçe istatistik
+değil:* tek salonla %20 ≈ 10 kişi, anlamlı bir örneklem değil. Sebep **durdurma
+düğmesi** — Play kademeli bir sürümü duraklatıp durdurabiliyor, tamamlanmış bir
+sürümü geri alamıyorsun (kullanıcı zaten güncellemiş olur). Google girişi, push
+ve QR üretim imzasıyla hiç denenmemişken (aşağıda 3. madde) o düğmenin
+elimizde olması gerekiyor. İlk %20 penceresinde bakılacaklar: Play Console
+vitals'ta çökmesiz oturum oranı, GlitchTip'te yeni imza, ve üç doğrulamanın
+sahada tutması.
+
+**D-5. [x] `poseReviewed` hâlâ `false`.** *(10 Eylül 2026 — etiket yeniden
+yazıldı; kareler onaylanmadı ve onaylanmış gibi de gösterilmedi.)*
+
+İki seçenekten ilki (kareleri onaylamak) gerçekte seçenek değildi: bayrağın
+anlamı "yetkin bir antrenör baktı" ve bakan olmadı. `true`'ya çekmek, olmayan
+bir denetimi iddia etmek olurdu — üstelik dosya üretilmiş (`build_exercise_library.py`),
+elle düzenlenmiyor.
+
+*Asıl sorun metnin kendisiydi:* tek cümlede iki ayrı şey vardı — bizim **iç
+kalite durumumuz** ("antrenör onayı bekliyor") ve kullanıcının **güvenliği**
+("tekniği antrenörüne doğrulat"). Birincisi kullanıcının yapabileceği bir şey
+değil ve hem incelemeciye hem ilk üyeye "bu içerik doğrulanmadı" diye
+okunuyor. İkincisi gerçek ve kalması gereken uyarı. Yeni metin ikincisini
+tutuyor, birincisini atıyor:
+
+> ⓘ Çizimler şematiktir; hareketin yolunu gösterir, tekniği anlatmaz.
+> Tekniği antrenörüne doğrulat.
+
+**Uyarı artık `poseReviewed`'a bağlı değil** — ve bu bilinçli. Doğru olduğu
+koşul o bayrak değil: bir antrenör kareleri onaylasa bile çizimler şematik
+kalır ve teknik yine antrenörden öğrenilir. Bayrağa bağlı bıraksaydık, onay
+geldiği gün güvenlik uyarısı sessizce kaybolurdu. `poseReviewed` veride
+duruyor ama artık hiçbir yerde okunmuyor; karelerin nasıl üretildiğini
+söyleyen bir künye olarak bırakıldı. *Küçük borç:* okuyucusu kalmadığı için
+ya üreticiden de kaldırılmalı ya da bu rolü açıkça belgelenmeli.
+
+**D-2 eki — OTA yolu `preview` için açıldı (10 Eylül 2026).** *"Rig
+iyileştirmeleri uygulamaya yansımıyor" şikâyetinin kökü buymuş; rig tarafında
+eksik yoktu.* `packages/rig`'de `npm run export` on dört dosyanın hiçbirini
+değiştirmedi — motor, kareler, siluetler, katalog ve programlar mobil kaynakta
+zaten güncel. Yansımayan şey çalışan binary'ydi ve sebebi runtime uyuşmazlığı:
+
+| | runtime |
+|---|---|
+| sürüm kodu 7 (internal, yerel build) | `2b3bc0e5…` |
+| bugünkü ağaç ve `preview` güncellemesi | `a58c519b36…` |
+
+Üstelik **`production` kanalına bugüne kadar hiç güncelleme yayınlanmamış**
+(`eas branch:list` → N/A). Yani mağazadaki soyun OTA ile beslenmesi iki
+sebepten birden imkânsızdı.
+
+*Yapılan:* EAS'ta **bulutta** bir `preview` build alındı (`686fd820`, sürüm
+kodu 7, APK). Bulut build'in parmak izi `eas update`'in hesapladığıyla aynı
+şekilde hesaplandığı için — yerel `--local` build'in tuzağı tam buydu — artık
+`eas update --branch preview --platform android --environment preview` ile
+JS-only değişiklikler saniyeler içinde cihaza iniyor. Poz ayarları saf
+JS/JSON olduğundan rig iterasyonu artık build gerektirmiyor.
+
+İlk güncelleme yayınlandı ve paket açılıp içi doğrulandı: RevenueCat Android
+anahtarı ve D-5'in yeni etiketi içeride, eski etiket yok. *Doğrularken not:*
+Hermes ASCII olmayan dizeleri **UTF-16** saklıyor, `strings` ya da düz UTF-8
+arama Türkçe metni bulamıyor — `.encode('utf-16-le')` ile aranmalı.
+
+**`EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` `preview` ortamına da eklendi.** Orada
+iOS anahtarı vardı, Android'inki yoktu — bir Android APK'sı için tam tersi.
+Build ortamını başlangıçta çözdüğü için APK'da yok; anahtar JS'ten okunduğu
+(`purchases.ts:25`, `configure` çalışma zamanında) OTA ile taşındı, ikinci
+build gerekmedi.
+
+⚠️ **Mağaza soyu hâlâ açıkta.** Bu APK `preview` profilinden, imzası
+production imzası değil — yayını bekleten üç doğrulama (Google ile giriş,
+push, QR) bununla geçmiş sayılamaz. Ayrıca sürüm kodu 7'nin runtime'ı
+artık orphan: üretim sürümü yeni bir build ister (D-2 zaten böyle diyordu) ve
+o build de **bulutta** alınmalı, yoksa production kanalı da OTA'sız kalır.
+
+**D-6. `packages/rig` bu planın dışında.** 5 Eylül'den bu yana yapılan
+**bütün** commitler hareket motoru ve kare editörü; onlar
+`packages/rig/TODOS.md`'de ayrı takip ediliyor ve plan.md onlardan haberdar
+değil. İki liste arasında bir bağ yok, dolayısıyla "yayına ne kaldı"
+sorusunun cevabı hiçbir dosyada tam değil. *Karar gerekiyor:* rig işleri
+yayın öncesi kapsamda mı, sonrasında mı?
+
 ### Kuşak 1 — yayını gerçekten engelleyenler
 
 **1. P0-1 · Freemium duvarı (IAP).** *(2 Eylül 2026: sunucu yarısı
@@ -46,8 +411,60 @@ paket her iki platforma bağlandı. `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` EAS
 abonelik grubu yerelleştirmesi ve iki inceleme ekran görüntüsü (1242×2208)
 yüklendi. **Kalan:** Apple'daki iki ürün hâlâ `MISSING_METADATA` — API'nin
 gösterdiği tüm alanlar dolu, eksik alan App Store Connect arayüzünden
-okunacak. Ayrıca webhook secret + deploy ve gerçek cihazda satın alma
-doğrulaması.)* Açık maddeler içinde tek başına en
+okunacak. **8 Eylül 2026 — webhook tarafı bayat çıktı: iş zaten bitmiş.**
+`REVENUECAT_WEBHOOK_TOKEN` Secret Manager'da (sürüm 2, 2 Eylül),
+`revenueCatWebhook` 3 Eylül'den beri `ACTIVE` ve **sürüm 2'ye bağlı**.
+Bugün uçtan uca sınandı: geçersiz jeton → 401, jetonsuz → 401, GET → 405.
+Secret yüklenememiş olsa 500 alınırdı, yani jeton gerçekten okunuyor.
+
+**RevenueCat tarafı da kurulu:** 2 Eylül 08:55'te `User-Agent: RevenueCat`
+ile gelen bir istek **200** almış — URL ve jeton karşı tarafta doğru.
+O olayın `app_user_id`'si bir UUID'ydi (`0ca3a471…`) ve fonksiyon "salon
+bulunamadı" dedi; bu, RevenueCat panelinden gönderilen **test olayının**
+imzası. İstemci gerçek satın almada kimliği doğru kuruyor:
+`configurePurchases` `appUserID: tenantId` ile yapılandırıyor
+(`services/purchases.ts:53`, paywall açılışında çağrılıyor).
+
+**8 Eylül 2026 — Apple tarafı da bayat çıktı.** `asc.mjs`'e yazılan yeni
+`subscriptions` komutu (grup yerelleştirmesi, ürün yerelleştirmesi, fiyat
+çizelgesi ve inceleme ekran görüntüsünü tek tek yokluyor) ikisini de
+**`READY_TO_SUBMIT`** gösteriyor — `MISSING_METADATA` geçmiş; 4–5 Eylül'de
+yüklenen grup adı ve ekran görüntüleri durumu değiştirmiş, yalnızca yeniden
+bakılmamış. Dört parçanın dördü de tam: `tr` yerelleştirme, 10 fiyat kaydı,
+inceleme ekran görüntüsü `COMPLETE`.
+
+⚠️ **Ama yeni bir engel çıktı: abonelikler incelemeye gönderilmemiş.**
+Gönderilen kapta (`00f92308…`, 5 Eylül) **tek madde** var, o da sürüm 1.0.
+Yani 1.0 bu hâliyle onaylanırsa uygulama yayına girer ama iki ürün
+`READY_TO_SUBMIT`'te kalır — paywall'daki satın alma gerçek kullanıcıda
+açılmaz. Abonelikler kendi gönderimlerini gerektiriyor; kap incelemedeyken
+değiştirilemediği için ya 1.0'ın sonucu beklenip ürünler ayrıca
+gönderilecek, ya da sürüm geri çekilip ikisi birlikte gönderilecek.
+
+**Karar (kullanıcı, 8 Eylül 2026): 1.0 geri çekilmiyor.** İnceleme sonucu
+beklenecek, abonelikler onaylandıktan sonra **ayrı bir gönderimle**
+yollanacak. Kabul edilen sonuç: uygulama yayına girdikten sonra, abonelikler
+de onaylanana kadar geçen sürede **paywall'daki satın alma çalışmaz** — yani
+o pencerede 10 üye sınırına dayanan yeni bir salon yükseltme yapamaz.
+Bugünkü durumdan kötü değil (satın alma zaten hiç çalışmıyor, Tarabya elle
+açıldı), ama ikinci salon o pencerede gelirse elle açmak gerekir.
+
+*Sırası geldiğinde:* `asc.mjs status` ile 1.0'ın durumu okunur; `APPROVED` /
+`READY_FOR_SALE` görülünce iki ürün için gönderim kabı açılır. Kap açma
+mantığı `submit` komutunda zaten var (boş kap varsa yenisini açmak yerine
+onu kullanıyor) — abonelik maddesi ekleyen bir `submit-subscriptions`
+komutu yazılacak.
+
+**Kalan:** yukarıdaki gönderim kararı ve **gerçek cihazda satın alma**
+(cihaz gerektiriyor).
+
+*Cihaz testinde ayrıca bakılacak bir şey:* salon değiştiren bir hesapta
+satın almanın hangi salona yazıldığı. `configurePurchases` ikinci salon için
+`Purchases.configure`'ı **tekrar** çağırıyor; RevenueCat kullanıcı
+değiştirmek için `logIn()` öneriyor ve iki kez `configure` etmenin davranışı
+belgede net değil. Yanlışsa yükseltme parası yanlış salona yazılır — koddan
+bakarak karara varılamaz, panelde hangi `app_user_id` ile göründüğüne
+bakmak lazım.)* Açık maddeler içinde tek başına en
 ağırı. Bir salon 10 aktif üyeye ulaşınca 11.'yi **hiçbir zaman**
 onaylayamıyor; `paywall.tsx`'teki yükseltme düğmesi yalnızca geri gidiyor.
 Tarabya Marte için elle bir abonelik yazılarak geçici olarak açıldı, yani
@@ -90,6 +507,63 @@ onları zorunlu tutmuyor.)* **Kalan tek iş: üretim kanalına sürüm çıkarma
 bugün yalnızca iç test kanalında 1.0.0 (sürüm kodu 5) var, üretim/beta/alfa
 boş.
 
+**2a. [x] Yeni production build alındı** *(8 Eylül 2026).* Sürüm kodu **7**,
+`production` profili ve kanalı, runtime sürümü `2b3bc0e5…` (parmak izi
+politikasının gerçekten devrede olduğu build çıktısında doğrulandı). Üç şeyi
+birden taşıyor: OTA desteği (D-2), mikrofon izni düzeltmesi (P0-3) ve PER-6'nın
+istemci yarısı. **Sürüm kodu 6 üretime terfi ettirilmemeli** — o build mikrofon
+izniyle üretilmişti. **Internal track'e yüklendi** (8 Eylül 2026): `play.mjs
+status` internal'da 1.0.0 / sürüm kodu 7 `completed` gösteriyor. *Not: `eas
+submit` çıktısında "You've already submitted this version" hatası göründü ama
+yükleme tamamlanmıştı — doğrulama CLI çıktısına değil Play API'sine
+bakılarak yapıldı (öncesinde internal'da 6 vardı).* **Internal sürüm notu yazıldı**
+*(8 Eylül 2026).* Notun gövdesi bir değişiklik listesi değil, bir **test
+görevi**: aşağıdaki 3. maddedeki üç doğrulama (Google ile giriş, push, QR)
+en üstte, gerekçesiyle birlikte ("önceki testler farklı imzalı APK'ylaydı").
+`play.mjs`'e bunun için `notes` komutu eklendi — script salt okunurdu.
+Komut kanalı okuyup **mevcut sürümü olduğu gibi geri yazıyor**, yalnızca
+`releaseNotes` alanını değiştirerek: `tracks.patch` `releases` dizisinin
+tamamını yerine koyduğu için eksik alan göndermek sürüm kodunu düşürürdü.
+İç test dışındaki bir kanala not yazmak `--onaylandi` istiyor (yayındaki
+sürümün açıklamasını değiştirmek kullanıcı onayına bağlı).
+Kalan: aşağıdaki cihaz doğrulaması.
+
+**2b. [x] Sürüm kodu 8 — bulutta, OTA'lı, mağaza adayı** *(10 Eylül 2026).*
+EAS'ta **bulutta** alındı (`51e3a062`, AAB, commit `c0e7166a`), runtime
+`a58c519b36…`, kanal `production`. Sürüm kodu 7'nin üstüne üç şey taşıyor:
+D-4'ün olay bütçesi, D-5'in yeni poz etiketi ve 8 Eylül'den sonraki rig
+düzeltmeleri.
+
+**Sürüm kodu 7 artık aday değil.** Runtime'ı `2b3bc0e5…` ve bugünkü ağaçla
+tutmuyor; o soya OTA gönderilemez. Üretime 8 çıkmalı.
+
+*Bulutta alınmasının sebebi kota değil, OTA:* yerel `--local` build parmak
+izini kendi geçici dizininde hesapladığı için `eas update` ona hiç ulaşamıyor
+(bkz. AGENTS §7). Bulut build'le `production` kanalı ilk kez gerçekten
+beslenebilir hâle geldi — yayından sonraki ilk JS hatası artık tam bir mağaza
+turu değil.
+
+⚠️ **Kota:** bu build sonrası EAS'ın dâhil build kredisinin **%95'i**
+kullanıldı (build başlarken %91 uyarısı geldi); sonrası ücretli tarife.
+*Karar önerisi:* kalan kredi iOS'a saklanmalı — Android'de JS değişiklikleri
+artık build istemiyor, iOS'ta ise `expo-updates`'li ilk sürüm (1.0.1) için
+mutlaka bir build gerekiyor ve o olmadan iOS'ta OTA hiç başlamıyor.
+
+**Internal track'e yüklendi ve doğrulandı** *(10 Eylül 2026, kullanıcı
+onayıyla).* `eas submit` ile gitti; doğrulama yine CLI çıktısına değil **Play
+API'sine** bakılarak yapıldı (`play.mjs status`: internal 1.0.0 / sürüm kodu
+**8** `completed`) — 8 Eylül'de CLI "already submitted" hatası verip aslında
+yüklemişti, o yüzden tek doğruluk kaynağı API.
+
+Yeni sürüm yeni bir not istiyor, eskisi taşınmıyor: sürüm kodu 8 için not
+yazıldı (412/500). Gövdesi yine bir **test görevi** — üç doğrulama en üstte,
+altında 7'den farkı (anatomi düzeltmeleri, yeni uyarı metni, çökme
+raporlamasında tekrar sınırı).
+
+**Kalan tek şey cihazda:** Play'den kurup **production imzasıyla** Google
+girişi, push ve QR denenecek. Üretime terfi ondan sonra, %20 kademeli
+başlangıçla (bkz. D-4).
+
 **3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
@@ -120,9 +594,18 @@ setine yüklendi. **App Privacy** konsoldan tamamlandı: 13 veri türü (Health,
 Photos or Videos, Other User Content, Purchase History, Crash Data ve Other
 Data Types eklendi), Crash Data dışında hepsi kimliğe bağlı, hiçbirinde
 takip yok — yani ATT ekranı gerekmiyor. Cevaplar tahmin değil, koddan
-çıkarıldı; gerekçeleriyle `gymentra-mobile/APP_PRIVACY.md` içinde. Beyan
+çıkarıldı; gerekçeleriyle `apps/gymentra-mobile/APP_PRIVACY.md` içinde. Beyan
 yayınlandıktan sonra son engel de kalktı ve **sürüm 1.0 (build 22)
 incelemeye gönderildi** → `WAITING_FOR_REVIEW`.
+
+**Karar (kullanıcı, 8 Eylül 2026): incelemedeki build 22 geri çekilmiyor.**
+O build OTA desteği (D-2), mikrofon izni düzeltmesi (P0-3) ve PER-6'nın
+istemci yarısı olmadan üretildi; yine de kuyruk sırası korunuyor.
+**Sonucu bilinerek kabul edildi:** yayına giren ilk iOS sürümü
+`expo-updates` içermediği için **1.0.1 de OTA ile gönderilemez**, o da tam
+bir mağaza turu ister. OTA iOS'ta ancak 1.0.1'den *sonraki* sürümlerde
+işlemeye başlar. Android'de böyle bir gecikme yok: sürüm kodu 7 zaten
+OTA'lı üretiliyor.
 
 Yol üzerinde bir Apple tuhaflığı: aynı anda tek bir açık "gönderim kabı"na
 izin veriliyor ama gönderilmemiş bir kap **iptal edilemiyor** ("not in
@@ -134,7 +617,41 @@ bırakıyor (`submissions` komutu kapları listeler).
 ### Kuşak 1.5 — [x] TAMAMLANDI (3 Eylül 2026)
 
 Altı maddenin altısı da kapandı. **Kalan:** `firestore.rules` (PER-1) ve
-`functions:requestPasswordReset` (PER-2 HTML gövde) deploy edilmeli.
+~~`functions:requestPasswordReset` (PER-2 HTML gövde) deploy edilmeli~~ —
+**ikisi de bayat çıktı, 8 Eylül 2026'da doğrulandı: zaten deploy edilmişler.**
+Canlı ruleset (`rulesets/34d0ff6d…`, 4 Eylül 15:19) indirilip `firestore.rules`
+ile karşılaştırıldı: **birebir aynı**, `isPendingIn` içinde. Aynı şey
+`storage.rules` için de geçerli. Composite index'ler de eşleşiyor: canlıda 36
+READY, dosyada 36, alan alan aynı. `requestPasswordReset`'in canlı kaynak
+paketi indirildi, `passwordReset.ts` yerelle **birebir aynı** ve HTML gövdeyi
+içeriyor.
+
+*Nasıl doğrulanır (tekrar gerekirse):* Firebase Rules REST API'sinden
+`releases/cloud.firestore` → `rulesetName` → ruleset içeriği; fonksiyon için
+`functions/<ad>:generateDownloadUrl`. İkisi de `x-goog-user-project:
+tarabyamarte` başlığı istiyor, yoksa 403 dönüyor. **Deploy edilip
+edilmediğine `git log`'a bakarak karar verilemez** — backend subtree olarak
+alındığı için bütün commit tarihleri 7 Eylül.
+
+**Fonksiyonların tamamı yeniden deploy edildi (8 Eylül 2026, kullanıcı
+onayıyla).** Sebep bir hata değil, bir *belirsizlik*: her fonksiyon kendi
+deploy anındaki kaynak paketini taşıyor ve 47'sinin 41'i 3–4 Eylül'de
+deploy edilmişti; aradan geçen sürede `sync.ts` ve `notifications.ts` gibi
+**ortak** dosyalar değişti. Tek tek 41 paketi indirip karşılaştırmak yerine
+hepsini bir kez yeniden deploy etmek soruyu tamamen ortadan kaldırıyor —
+artık 47'si de tek ve güncel pakete bakıyor.
+
+*Sonuç:* 47 güncelleme, sıfır oluşturma, **sıfır silme**, hata yok. Deploy
+öncesi `index.ts`'in 47 export'u canlıdaki 47 fonksiyonla birebir eşleştirildi;
+eşleşmeseydi Firebase eksik olanı silmek isterdi. Firebase hiçbirini
+"değişmemiş" diye atlamadı, yani kaç tanesinin gerçekten bayat olduğu bu
+yoldan öğrenilemedi — ama soru artık geçersiz.
+
+*PER-2'de kayıtlı tuzak bu sefer gerçekleşmedi ve kontrol edildi:* altı
+callable'ın Cloud Run servisinde `allUsers` → `roles/run.invoker` bağı yerinde.
+`revenueCatWebhook` uçtan uca sınandı — GET **405** (yani istek fonksiyonun
+kendi koduna ulaşıyor; yetki eksik olsaydı Cloud Run daha önce keserdi),
+jetonsuz POST **401** (secret okunuyor).
 
 Mağaza gönderiminden **önce**, aynı build'e girecek şekilde. Her biri en
 fazla yarım gün; toplamı Kuşak 1'in tek bir maddesinden kısa.
@@ -145,7 +662,8 @@ herkese açık `tenants` dokümanına taşımak yerine kural genişletildi —
 `isPendingIn`, onay bekleyen başvurana **yalnızca başvurduğu salonun**
 iletişim bilgisini açıyor. `tenants` dokümanı join-by-code için her oturum
 açmış kullanıcıya okunur, yani oraya taşımak her salonun iletişim bilgisini
-herkese açardı. 5 kural testi (184 → 189). **Kural deploy edilmeli.**
+herkese açardı. 5 kural testi (184 → 189). ~~**Kural deploy edilmeli.**~~
+*(8 Eylül 2026 — zaten canlıda; yukarıdaki Kuşak 1.5 notuna bakınız.)*
 
 **4b. [x] PER-2 · Şifremi unuttum** *(2 Eylül 2026 — deploy edildi ve
 simülatörde uçtan uca doğrulandı: istemci → callable →
@@ -210,7 +728,40 @@ ve ilk redde duruyor: koltuk bittiyse sıradaki de sığmaz, devam etmek
 yalnızca gürültü üretir. Duvara kadar onaylananlar onaylı kalıyor, mesaj
 kaçının geçtiğini söylüyor.
 
-**4f. PER-6 · Antrenörün eklediği randevuda çakışma kontrolü yok.**
+**4f. [x] PER-6 · Antrenörün eklediği randevuda çakışma kontrolü yok.**
+*(8 Eylül 2026 — **sunucu tarafı deploy edildi**: `createPtSessionByStaff`
+ve çakışma denetimini taşıyan `bookPtSessions` ikisi de `ACTIVE`, Cloud Run
+çağrı yetkileri doğrulandı. İstemci yarısı bir sonraki build'le sahaya
+iner.)* Antrenör tarafı
+`createPtSessionByStaff` callable'ına taşındı: antrenör hâlâ salonda mı, üye
+hâlâ aktif mi, saat gerçekten boş mu — üye akışının yıllardır yaptığı üç
+kontrol artık personel tarafında da var. `cancellationDeadlineAt` de yazılıyor
+(elle eklenen randevuda hiç yoktu, iptalde salonun o günkü ayarına düşüyordu).
+
+**Asıl düzeltme, deterministik kimliğin göremediği çakışma.** Kimlik
+`{tenant}_{trainer}_{başlangıç}` olduğu için yalnızca *aynı dakikada başlayan*
+iki randevuyu yakalıyordu. Elle eklenen randevunun başlangıcı ve süresi
+serbest olduğundan 10:00–11:00 ile 10:30–11:30 iki farklı kimlik, iki mutlu
+yazma, tek antrenör demekti. Yeni `findOverlap` yarı açık aralık
+karşılaştırması yapıyor — arka arkaya dersler (11:00'de biten, 11:00'de
+başlayan) çakışma sayılmıyor. **Aynı denetim üye akışına da eklendi**: üyenin
+ızgaraya oturan saati, antrenörün elle koyduğu 09:30'luk randevunun içine
+düşebiliyordu. 9 birim testi (functions 79 → 88).
+
+**Bilerek yapılmadı — antrenörün kendi çalışma saatleri ve salonun açık
+olması personel tarafında zorlanmıyor.** İkisi de üye akışında *teklif*: üye
+antrenörün yayınladığından seçer. Kendi takvimine yazan antrenör o takvimin
+sahibidir — telefonla sözleşilen 07:00 dersi, kapalı pazar günündeki fazladan
+saat. Bunları engellemek bugün çalışan bir akışı kırardı; PER-6'nın eksiği de
+"antrenör tuhaf saat seçti" değil, **bir saate iki üye** idi.
+
+⚠️ **Kalan tek iş — kural sıkılaştırması.**
+`pt_sessions` create kuralı hâlâ personelin doğrudan yazmasına izin veriyor;
+şimdi kapatılırsa sahadaki build'ler (hâlâ `setDoc` kullanan) randevu
+ekleyemez hâle gelir — canlı bir salonda kesinti demek. Kural, yeni build
+dağıtıldıktan **sonra** sıkılaştırılmalı.
+
+*Özgün madde:*
 `ptSessionRepo.createPtSession` doğrudan `setDoc`; ne mevcut randevularla
 çakışma, ne antrenörün kendi saatleri, ne salonun açık olması kontrol
 ediliyor. Üye tarafındaki `bookPtSessions` callable'ı bunların hepsini
@@ -609,7 +1160,7 @@ arketipi, 101 isim → kanonik id eşlemesi), `components/MuscleMap.tsx`,
 `components/PoseDiagram.tsx`, `app/exercise-detail.tsx` (üye ve antrenöre
 açık ortak rota), `trainer/builder.tsx` egzersiz seçici artık koda gömülü 10
 isim yerine kütüphaneyi okuyor, `workout/session.tsx`'teki boş gri kare
-"Nasıl yapılır?" girişine dönüştü. Üreteç: `marte06/scripts/build_exercise_library.py`
+"Nasıl yapılır?" girişine dönüştü. Üreteç: `backend/scripts/build_exercise_library.py`
 (tasarım dosyası provenance olarak yanında). 10 yeni test.
 
 *Poz kareleri şematiktir.* Üçü (bench, squat, deadlift) tasarımcının elle
@@ -698,8 +1249,8 @@ uyarısı ve "antrenörün uyarlaması gerekir" notu. Görsel/video yok — meti
 ipucu ile başlanır (telif), görsel sonra.
 
 *İçerik üretildi (2 Eylül 2026):* `program_templates.md` (13 şablon, 141
-egzersiz, kaynakçalı) + `marte06/scripts/program_templates.seed.json` +
-`marte06/scripts/seed_program_templates.cjs` (dry-run / `--apply`,
+egzersiz, kaynakçalı) + `backend/scripts/program_templates.seed.json` +
+`backend/scripts/seed_program_templates.cjs` (dry-run / `--apply`,
 idempotent). 4 ısınma (genel, kısa, alt, üst) + 5 başlık × 2 seviye = 14
 şablon. Seed, PER-17 model değişikliği ve `SCHEMA.md`'ye `program_templates`
 bölümü eklenmeden **çalıştırılmaz**. *Karar (kullanıcı, 2 Eylül 2026):
@@ -743,9 +1294,10 @@ bilinçli olarak böyle mi kalacak? Konuşulmadan kod yazılmamalı.
 `react-native-gesture-handler` **artık kullanılıyor** (LegalLinks, kaydırmalı
 satırlar) — liste yeniden doğrulanmalı, `npx expo-doctor` ile.
 
-**18. P5-1 · Test kapsamı.** Kural tarafı 175, mobil taraf 94 test
-(2 Eylül 2026). Kalan: bileşen/render testi hiç yok — `react-native`'i
-ayrıştırabilen bir kurulum gerektiriyor, ayrı bir iş.
+**18. P5-1 · Test kapsamı.** *(8 Eylül 2026 sayımı: kural 220, mobil 346,
+functions 79, rig 195 — dördü de artık CI'da koşuyor, bkz. D-1.)* Kalan:
+bileşen/render testi hiç yok — `react-native`'i ayrıştırabilen bir kurulum
+gerektiriyor, ayrı bir iş.
 
 **19. P4-7 · i18n.** Tüm metinler koda gömülü. İhracat düşünülene kadar
 gerekmiyor; sıranın sonunda olmasının sebebi bu.
@@ -892,7 +1444,7 @@ zaten duruyor.
 ---
 
 ### [~] P0-1 · Freemium duvarı çıkışsız bir çıkmaz → gerçek IAP aboneliğine bağlanacak
-`gymentra-mobile/src/app/admin/members.tsx:60-64` — aktif üye sayısı
+`apps/gymentra-mobile/src/app/admin/members.tsx:60-64` — aktif üye sayısı
 `FREE_MEMBER_LIMIT = 10`'a ulaşınca `approveMembership()` **hiç çağrılmıyor**,
 kullanıcı `/paywall` ekranına yönlendiriliyor. `paywall.tsx:56`'daki
 "Pro'ya geç ve Deniz'i onayla" butonu ise sadece `safeBack()` yapıyor — hiçbir
@@ -953,18 +1505,24 @@ yakalanıp aynı şekilde açıklanıyor.
       (`status`, `plan`, `expiresAt`, `platform`) + `activeMemberCount`.
       **İkisi de sunucu sahipli** — kural, istemcinin bu iki alanı
       değiştirmesini engelliyor (test edildi).
-- [ ] IAP kütüphanesi seçimi. `expo-in-app-purchases` **kaldırıldı**;
+- [x] IAP kütüphanesi seçimi → **RevenueCat** *(karar verildi ve bağlandı;
+      `services/purchases.ts` + `revenueCatWebhook`. Bu kutu 8 Eylül 2026'ya
+      kadar açık kalmıştı.)* Özgün madde: `expo-in-app-purchases` **kaldırıldı**;
       seçenekler `react-native-iap` (doğrudan, makbuz doğrulamasını kendin
       yaparsın) veya **RevenueCat** (abonelik durumu, yenileme, iptal ve
       çapraz platform senkronizasyonunu üstlenir).
       → Oturumun başında RevenueCat *üye aidatları* için reddedilmişti; bu
       farklı bir kullanım (salon sahibinin SaaS aboneliği) ve mağaza kuralı
       gereği IAP zorunlu. Karar ayrıca alınmalı.
-- [ ] App Store Connect + Play Console'da abonelik ürünlerinin tanımlanması
-      (aylık/yıllık, Türkiye fiyatlandırması, abonelik grubu).
-- [ ] Sunucu tarafı makbuz doğrulama (Cloud Function) + App Store Server
+- [x] App Store Connect + Play Console'da abonelik ürünlerinin tanımlanması
+      (aylık/yıllık, Türkiye fiyatlandırması, abonelik grubu). *(4 Eylül 2026:
+      Play'de `.pro.monthly` / `.pro.yearly` temel planları `ACTIVE`, 173
+      bölgede fiyat; Apple'da abonelik grubu + iki ürün. **Kalan:** Apple'daki
+      iki ürün hâlâ `MISSING_METADATA` — konsoldan bakılmalı.)*
+- [~] Sunucu tarafı makbuz doğrulama (Cloud Function) + App Store Server
       Notifications / Google Play Real-time Developer Notifications ile
-      yenileme ve iptal takibi.
+      yenileme ve iptal takibi. *(`revenueCatWebhook` yazıldı; **webhook
+      secret'ı ve deploy kaldı**, gerçek cihazda satın alma hiç denenmedi.)*
 - [x] `paywall.tsx` yeniden yazıldı. Uydurma istatistikler ("312 QR check-in",
       "46 ders rezervasyonu") ve uydurma isim ("Deniz") kaldırıldı; gerçek
       `activeMemberCount` gösteriliyor, iki plan (500₺/ay, 5.000₺/yıl) listeleniyor.
@@ -992,7 +1550,7 @@ App Store Review Guideline **5.1.1(v)**: hesap oluşturmaya izin veren her
 uygulama, **uygulama içinden hesap silme** imkânı sunmak zorundadır.
 
 **Çözüldü ve 19 Ağustos 2026'da production'a deploy edildi.**
-- `marte06/functions/src/index.ts` → yeni `deleteMyAccount` onCall fonksiyonu
+- `backend/functions/src/index.ts` → yeni `deleteMyAccount` onCall fonksiyonu
   (region `europe-west1`). Admin SDK ile çalışıyor çünkü güvenlik kuralları
   istemcinin `measurements`/`workout_logs`/`payments`/`checkins` silmesini
   bilinçli olarak engelliyor.
@@ -1011,14 +1569,66 @@ uygulama, **uygulama içinden hesap silme** imkânı sunmak zorundadır.
 
 **Kalan:**
 - [ ] Gerçek cihazda uçtan uca test (yeni build gerekiyor).
-- [ ] Gizlilik politikasına silme prosedürü ve saklama süreleri eklenmeli
-      (ödeme kayıtlarının anonimleştirilerek saklandığı açıkça yazılmalı).
-- [ ] Play Console'daki "hesap silme URL'i" alanı için web tarafında bir
-      talep sayfası gerekebilir (uygulama içi silme varken çoğu durumda
-      yeterli sayılıyor, doğrulanmalı).
+- [x] Gizlilik politikasına silme prosedürü ve saklama süreleri eklendi
+      *(8 Eylül 2026).* `apps/gymentra-site/privacy/index.html` bölüm 5 dört alt
+      başlığa ayrıldı: silme prosedürü (uygulama içi adımlar + e-posta yolu +
+      tek yönetici kısıtı), silinenlerin listesi, **anonimleştirilerek saklanan
+      iki kayıt** (ödeme defteri ve geçmiş PT randevusu — ikisinde de ad
+      "Silinmiş üye", veri sorumlusu salon) ve saklama süreleri. Metin
+      `deleteMyAccount`'un gerçekte yaptığından çıkarıldı, tahminle değil.
+      **Eski metindeki iki yanlış düzeltildi:** (1) "silme talebi için bize
+      e-posta atın" diyordu — uygulama içi silme bir yıldır var ve Apple
+      5.1.1(v) tam olarak onu istiyor; (2) salonun ödeme defterini "mevzuatın
+      gerektirdiği süre boyunca" saklayabileceğini yazıyordu — kullanıcı
+      kararına göre (bkz. v2 notu) bu defter resmi belge değil, yasal saklama
+      yükümlülüğü yok; olmayan bir hukuki dayanağı politikada iddia etmek
+      KVKK tarafında düzeltmesi zor bir beyan olurdu.
+      Ayrıca `delete-account/index.html`'deki **"yedeklerde en fazla 30 gün"**
+      ifadesi **7 güne** çekildi: D-3'te kurulan gerçek yapılandırma PITR 7 gün
+      + günlük yedek 7 gün saklama (`docs/BACKUP.md`).
+      **Yayına alındı** (8 Eylül 2026) ve dört yol da doğrulandı.
+
+      ⚠️ *Dağıtım yolu sanıldığı gibi değilmiş — bir sonrakinde vakit kaybetmemek
+      için:* `SaltTechSolutions/gymentra-site` **31 Ağustos'ta arşivlendi**, yani
+      salt okunur; `git subtree push` oraya 403 alıyor. Cloudflare Pages'teki
+      `gymentra` projesi git'e **bağlı değil** (Git Provider: No), doğrudan
+      yüklemeyle yayınlanıyor:
+      `npx wrangler pages deploy apps/gymentra-site --project-name=gymentra --branch=main`.
+
+      **Bu deploy sırasında çıkan asıl bulgu — aşağıdaki mağaza maddesi
+      yanlışmış.** Production'daki tek dağıtım üç haftalıktı; yani
+      `/delete-account/` sayfası **hiç yayına girmemişti**. Site bilinmeyen her
+      yolda ana sayfayı döndürdüğü için adres 200 dönüyor ve göze "çalışıyor"
+      gibi görünüyordu — açan kişi pazarlama sayfasını görüyordu. Play
+      Console'daki hesap silme alanı tam da bu adresi gösteriyor ve Google onu
+      denetliyor. Aynı deploy ile sayfa ve ana sayfadaki "Hesap Silme"
+      bağlantısı da yayına girdi.
+- [x] Play Console'daki "hesap silme URL'i" alanı — `gymentra.salt-tech-apps.com/delete-account/`
+      yayında ve alan dolduruldu. *(Bu kutu 8 Eylül 2026'ya kadar açık
+      kalmıştı; mağaza hazırlığı bölümünde zaten işaretliydi.)*
 
 ### [x] P0-3 · Gereksiz mikrofon izni (`RECORD_AUDIO`)
-`gymentra-mobile/app.json:27-30` Android izinleri arasında
+
+⚠️ **Düzeltme (8 Eylül 2026): bu madde yanlış kapatılmış.** `app.json`'ın
+`permissions` dizisinden kaldırmak yetmiyormuş — **`expo-image-picker`
+eklentisi izni geri ekliyor**: `microphonePermission` verilmediğinde
+plugin `RECORD_AUDIO`'yu koşulsuz ekliyor (`withImagePicker.js:11`). Yani
+girdi dosyası temiz görünürken **çözülen manifest kirliydi**;
+`npx expo config --type public` çıktısında izin duruyordu. Kontrol
+`app.json`'a bakarak yapıldığı için üç tur boyunca gözden kaçtı.
+
+*Çözüm:* `expo-image-picker` eklentisine `microphonePermission: false`
+verildi — bu hem izni eklemiyor hem de `withBlockedPermissions` ile başka
+bir paketin eklemesini engelliyor. Çözülen config artık yalnızca
+`android.permission.CAMERA` içeriyor.
+
+**Sonucu:** Play'deki sürüm kodu 6 bu düzeltmeden önce üretildi, yani
+manifestinde mikrofon izni olduğu varsayılmalı. Üretim sürümü yeni build ile
+çıkacağı için (bkz. D-2) kendiliğinden düzelir; **eski build üretime terfi
+ettirilmemeli.**
+
+*Özgün madde:*
+`apps/gymentra-mobile/app.json:27-30` Android izinleri arasında
 `android.permission.RECORD_AUDIO` var. Uygulama yalnızca QR okutuyor, ses
 kaydetmiyor. Gereksiz hassas izin hem Play Store incelemesinde risk hem de
 Data Safety formunda yanlış beyana yol açar.
@@ -1215,7 +1825,7 @@ ile çözülemez):
 
 ## P1 — Güvenlik
 
-> Tümü `marte06/firestore.rules` içinde. Her değişiklik `firebase deploy
+> Tümü `backend/firestore.rules` içinde. Her değişiklik `firebase deploy
 > --only firestore:rules --dry-run` ile doğrulanıp, kullanıcı onayıyla
 > production'a gitmeli.
 
@@ -1582,14 +2192,18 @@ render'ı azaltır.
       geçmişini zaten gösteriyor, `trainer/index`'ten erişiliyor. Yeni iş
       yapılmadı; yalnızca oradaki elle kurulmuş istatistik kartı ADMIN-7
       sözleşmesine (`StatCard`) alındı.
-- [ ] **P4-3 · Bildirim tercihleri yok.** Push açık/kapalı ayarı, kategori
+- [x] **P4-3 · Bildirim tercihleri yok.** → Kuşak 3 madde 8 ile çözüldü
+      (3 Eylül 2026): beş kategori, üç rolde ortak bileşen, `account`
+      kapatılamıyor. *Özgün madde:* Push açık/kapalı ayarı, kategori
       bazlı tercih yok. GDPR/KVKK açısından da beklenir.
 - [x] **P4-4 · Üye profil düzenleme yok.** → MEMBER-5a ile çözüldü
       (31 Ağustos 2026): ad, telefon, doğum tarihi. **Fotoğraf hâlâ yok** —
       Storage yükleme akışı gerektiriyor, ayrı iş.
-- [ ] **P4-5 · Yönetici raporlaması yok.** Aylık gelir, katılım oranı, aktif
+- [x] **P4-5 · Yönetici raporlaması yok.** → Kuşak 2 madde 5 ile çözüldü
+      (3 Eylül 2026): `/admin/reports`, altı kart. *Özgün madde:* Aylık gelir, katılım oranı, aktif
       üye trendi — salon sahibinin ilk soracağı şeyler.
-- [ ] **P4-6 · Çoklu salon üyeliği desteklenmiyor.** `getActiveMembership()`
+- [x] **P4-6 · Çoklu salon üyeliği desteklenmiyor.** → P1-8 ile birlikte
+      çözüldü (4 Eylül 2026, Kuşak 3 madde 13). *Özgün madde:* `getActiveMembership()`
       ilk aktif üyeliği alıp diğerlerini yok sayıyor. Kullanıcı iki salona
       üyeyse ikincisine hiç erişemez.
 - [ ] **P4-7 · Dil desteği sabit Türkçe.** Tüm metinler koda gömülü. i18n
@@ -2328,7 +2942,7 @@ gerekiyor.
 ## P5 — Kod sağlığı
 
 - [ ] **P5-1 · Test kapsamı** — ⚠️ *İlk denetimde "hiç test yok" yazmıştım,
-      bu **yanlıştı**.* `marte06/tests/firestore.rules.test.ts` (355 satır) ve
+      bu **yanlıştı**.* `backend/tests/firestore.rules.test.ts` (355 satır) ve
       `npm run test:rules` script'i zaten mevcut: vitest +
       `@firebase/rules-unit-testing` + Firestore emülatörü.
       Kapsadıkları: legacy marte06 koleksiyonları, `tenants`,
@@ -2399,19 +3013,24 @@ gerekiyor.
       iddialar uygulanmadan önce koda bakılarak doğrulanmalı.*
 - [x] **P5-5 · CI kuruldu.**
 
-      `gymentra-mobile/.github/workflows/ci.yml` — `npm ci` + `tsc --noEmit`
+      `apps/gymentra-mobile/.github/workflows/ci.yml` — `npm ci` + `tsc --noEmit`
       + `expo lint --max-warnings 0`. **Uyarılar hata sayılıyor**; keyfi bir
       katılık değil: kırık bir Firestore sorgusu günlerce 12 exhaustive-deps
       uyarısının içinde gizli kaldı (DEV-1).
       → İlk çalıştırma **yeşil** doğrulandı (run 32298840421). `.env`
       olmadan da geçiyor.
 
-      `marte06/.github/workflows/ci.yml` — iki iş: güvenlik kuralı testleri
+      `backend/.github/workflows/ci.yml` — iki iş: güvenlik kuralı testleri
       (gerçek emülatöre karşı, JDK 21 ile) ve functions derlemesi. İkincisi
       ayrı çünkü deploy `functions/lib`'i yüklüyor; derleme sessizce
       düşerse deploy eski çıktıyı gönderir (P5-7).
       → İkisi de CI'ın çalıştıracağı komutlarla **yerel olarak doğrulandı**
       (70/70 test, build OK). GitHub'da henüz koşmadı — depo push edilmedi.
+
+      **Güncelleme (8 Eylül 2026):** bu iki dosya hiçbir zaman koşmadı —
+      GitHub yalnızca depo kökündeki `.github/workflows`'u okur. İkisi de
+      silindi, yerlerine kökte tek `.github/workflows/ci.yml` geldi (dört iş:
+      mobile, rules, functions, rig). Ayrıntı: **D-1**.
 - [~] **P5-6 · Firestore indexleri elle yönetiliyor.** Yeni sorgu eklendiğinde
       index unutulursa hata sahada çıkıyor (bu denetimde de yaşandı — DEV-1).
 
@@ -2450,7 +3069,7 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] Kamera / fotoğraf izin açıklamaları (Türkçe, `app.json` plugin'lerinde)
 - [x] App Privacy anketi dolduruldu ve **yayınlandı** — 13 veri türü; Crash
       Data dışında hepsi kimliğe bağlı, hiçbirinde tracking yok
-      (gerekçeler: `gymentra-mobile/APP_PRIVACY.md`)
+      (gerekçeler: `apps/gymentra-mobile/APP_PRIVACY.md`)
 - [x] Gizlilik politikası URL'i
 - [x] Açıklama, anahtar kelimeler, destek/pazarlama URL'i
 - [x] **Ekran görüntüleri** — 6.1" ve 6.5" setleri yüklü (Supergym-88)
@@ -2462,6 +3081,10 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] Demo hesap bilgileri — `uye01@supergym88.test`, onaylı üye; İngilizce
       inceleme notu ve iletişim bilgileri yazıldı
 - [ ] TestFlight ile gerçek cihaz doğrulaması
+- ⏳ **Sürüm 1.0 `WAITING_FOR_REVIEW`** — 5 Eylül'de gönderildi, 8 Eylül
+      itibarıyla hâlâ sırada (build 22 VALID). Apple'daki iki abonelik
+      ürününün `MISSING_METADATA` durumu `asc.mjs` ile okunamıyor —
+      script'te abonelik komutu yok, konsoldan bakılmalı.
 - [ ] Privacy manifest (`PrivacyInfo.xcprivacy`) — Expo SDK 57 çoğunu üretir,
       üçüncü parti SDK'lar için doğrulanmalı
 
@@ -2481,8 +3104,11 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] **Data Safety formu** — dolduruldu (1 Eylül 2026)
 - [x] İçerik derecelendirme anketi — tamamlandı
 - [x] Ekran görüntüleri — kullanıcı hazırladı (1 Eylül 2026)
-- [ ] 1024×500 öne çıkan grafik
-- [ ] Mağaza girişi metinleri — hazır, `PLAY_STORE.md` §1'den yapıştırılacak
+- [x] 1024×500 öne çıkan grafik — **yüklü** *(8 Eylül 2026, `play.mjs images`:
+      icon 1, featureGraphic 1, phoneScreenshots 6; 7"/10" tablet setleri boş,
+      Play onları zorunlu tutmuyor)*
+- [x] Mağaza girişi metinleri — **yayında** *(8 Eylül 2026, `play.mjs listing`:
+      başlık 8/30, kısa açıklama 75/80, uzun açıklama 1619/4000, tr-TR)*
 - [x] **`eas.json` `submit.production.android`** eklendi
       (`./secrets/play-service-account.json`, `track: internal`).
       **Dosyanın kendisi henüz yok** — Play Console → Ayarlar → API erişimi
@@ -2498,14 +3124,22 @@ Takvim + Profil sekmeleri aynı anda mount olduğu için üye listesi tek başı
 - [x] Hesap silme — `gymentra.salt-tech-apps.com/delete-account/` yayında,
       Play Console'daki alan dolduruldu. Sayfa `deleteMyAccount`'un gerçekte
       yaptığına göre yazıldı (o sırada bulunan hata için bkz. aşağısı).
+      ⚠️ *Bu kutu 1 Eylül'de işaretlendi ama sayfa 8 Eylül 2026'ya kadar
+      **gerçekte yayında değildi** — dosya depoya girmişti, Cloudflare'e hiç
+      dağıtılmamıştı ve adres ana sayfayı döndürüyordu. 8 Eylül'de deploy edilip
+      doğrulandı. Ders: "commit edildi" ile "yayında" ayrı şeyler; bu sitede
+      **her yol 200 döndüğü için** adresi açıp göz kararı doğrulamak da yetmiyor,
+      sayfanın başlığına bakmak gerekiyor.*
 - [x] `internal` track'e ilk yükleme — versionCode 2 AAB, `eas submit` ile
       API üzerinden gitti. (Play'in "ilk sürümü elle yükle" davranışını
       bekliyordum, gerçekleşmedi.)
 - [ ] Gerçek cihazda doğrulama: **Google ile giriş**, **push bildirimi** ve
       **QR okutma**. Üçü de Android'de production imzasıyla hiç denenmedi;
       önceki denemeler `preview` APK'sıylaydı ve imzası farklı.
-- [ ] Tüm beyanlar tamamlandı (1 Eylül 2026) — kalan yalnızca mağaza girişi
-      ve üretim sürümü.
+- [x] Tüm beyanlar tamamlandı (1 Eylül 2026). Mağaza girişi de yüklü
+      (yukarı bkz.) — **kalan tek iş üretim sürümü.** *(8 Eylül 2026,
+      `play.mjs status`: internal 1.0.0 sürüm kodu **6**, production/beta/alpha
+      boş.)*
 
 **Android'de bugün ne çalışıyor:** paket adı, adaptive icon, Google Sign-In
 (SHA-1/SHA-256 Firebase'de), FCM V1 servis hesabı EAS'ta, preview APK ile
@@ -2521,10 +3155,17 @@ Android'de zaten yerel akışla çalışıyor.)
 
 ### Her iki mağaza
 
-- [ ] Sürüm numaralandırma stratejisi (`autoIncrement` production profilinde
-      açık, `appVersionSource: remote`) — doğrulanmalı
-- [ ] Çökme izleme (P5-2) yayından önce aktif olmalı
-- [ ] Destek e-postası / iletişim kanalı belirlenmeli
+- [x] Sürüm numaralandırma stratejisi — *(8 Eylül 2026 doğrulandı:* `eas.json`'da
+      `appVersionSource: remote`, `production` profilinde `autoIncrement`;
+      karşılığı sahada Play internal sürüm kodu 6 ve iOS build 22.)
+- [x] Çökme izleme (P5-2) — `@sentry/react-native` eklentisi `app.json`'da,
+      DSN GlitchTip'e yönlendirilmiş. **Canlı olay akışı doğrulanmadı**;
+      ilk üretim build'inde bilerek bir hata fırlatılıp GlitchTip'te
+      görüldüğü teyit edilmeli.
+- [x] Destek e-postası / iletişim kanalı — *(8 Eylül 2026, `play.mjs details`:*
+      `gymentrasupport@salt-tech-apps.com`, +90 850 885 43 38,
+      `gymentra.salt-tech-apps.com`.) **Kalan:** uygulama içinde yardım/iletişim
+      yolu yok — üye yalnızca mağaza sayfasından ulaşabiliyor.
 
 ---
 
@@ -3282,7 +3923,7 @@ içinde kalsın" maddesi **ADMIN-2 olmadan uygulanamaz** — şemada salon
 girişte antrenör listesi hiç gelmedi ("Henüz antrenör yok" boş durumu),
 ekrandan çıkıp tekrar girince liste doğru geldi.
 
-**Kök neden:** [`member/trainers.tsx`](gymentra-mobile/src/app/member/trainers.tsx)
+**Kök neden:** [`member/trainers.tsx`](apps/gymentra-mobile/src/app/member/trainers.tsx)
 `loading` state'ini `useState(!!activeTenant)` ile mount anında hesaplıyordu.
 `AuthContext`'in `activeTenant`'ı henüz yüklemediği ilk render'da bu `false`
 oluyor — yani gerçekte hâlâ yükleniyorken ekran "yükleniyor" değil "antrenör
@@ -3505,7 +4146,10 @@ metni artık doğru.
 
 ---
 
-### [ ] P1-8 · Birden çok salonun üyesi olan kişi salonlar arasında geçemiyor
+### [x] P1-8 · Birden çok salonun üyesi olan kişi salonlar arasında geçemiyor
+
+*(4 Eylül 2026 — çözüldü; ayrıntı Kuşak 3 madde 13'te. Bu kutu 8 Eylül
+2026'ya kadar yanlışlıkla açık kalmıştı.)*
 
 **Bulgu (27 Ağustos 2026):** güvenlik kuralları çoklu salon üyeliğine izin
 veriyor (yukarıdaki B senaryosu ✅) ve veri modeli de destekliyor (üyelik
@@ -3591,7 +4235,7 @@ otomatik):**
 
 Bu geldikten sonra ajan tarafında yapılacaklar (kullanıcı müdahalesi
 gerekmeden):
-- `.p8` dosyası `gymentra-mobile/secrets/` altına taşınır (zaten
+- `.p8` dosyası `apps/gymentra-mobile/secrets/` altına taşınır (zaten
   `.gitignore`'da).
 - `eas.json`'ın `submit.production` bölümüne `ascApiKeyPath`, `ascApiKeyId`,
   `ascApiKeyIssuerId` eklenir.
@@ -3614,8 +4258,8 @@ anahtarı Admin yetkili — commit edilmemesi ve gitignore'da kalması kritik
 #### İlerleme (26 Ağustos 2026)
 
 - Kullanıcı App Store Connect API Key oluşturdu (Admin rol, Key ID
-  `DLVPQCL56S`), `.p8` dosyasını `gymentra-mobile/secrets/` altına taşıdık
-  (zaten `.gitignore`'da, `marte06/secrets/` ile aynı desen).
+  `DLVPQCL56S`), `.p8` dosyasını `apps/gymentra-mobile/secrets/` altına taşıdık
+  (zaten `.gitignore`'da, `backend/secrets/` ile aynı desen).
 - `eas.json`'ın `submit.production.ios` bölümüne `ascApiKeyPath`,
   `ascApiKeyId`, `ascApiKeyIssuerId`, `ascAppId` eklendi.
 - İlk App Store dağıtım sertifikası **kullanıcı tarafından interaktif**
@@ -3846,7 +4490,7 @@ Kullanıcı kararı: web uygulaması kapatılacak, **üyeler** GymEntra'ya
 taşınacak; dersler, paketler ve üyelik atamaları taşınmayacak.
 
 ### [x] WEB-1 · Legacy veri arşivlendi
-`marte06/archive/marte06-legacy/` — 7 koleksiyon, **224 doküman** JSON olarak
+`backend/archive/marte06-legacy/` — 7 koleksiyon, **224 doküman** JSON olarak
 dışa aktarıldı (members 51, lessons 146, packages 5, assigned_packages 9,
 payments 9, settings 1, branches 3).
 
@@ -3954,6 +4598,8 @@ suçsuz olduğu böyle doğrulandı (asıl sebep kullanıcının build 4'te olma
 112/112 geçiyor.
 
 **Yapılmadı — bilinçli:** `marte06/src/` web uygulaması kaynağı silinmedi.
+*(Güncelleme, 7 Eylül 2026: monorepo birleştirmesinde kaldırıldı —
+`6b1b676c`, artık `backend/` yalnızca Firebase arka ucu.)*
 Orada başka bir oturumdan kalan 31 dosyalık commit'lenmemiş çalışma var;
 silmek o işi yok ederdi. Web uygulaması artık verisi olmadığı için kesin
 olarak ölü — kaynağın arşivlenmesi/kaldırılması ayrı bir iş olarak duruyor

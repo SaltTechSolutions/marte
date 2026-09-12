@@ -54,7 +54,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "GymEntra, salon logonu seçebilmen için fotoğraflarına erişim istiyor."
+          "photosPermission": "GymEntra, salon logonu seçebilmen için fotoğraflarına erişim istiyor.",
+          "microphonePermission": false
         }
       ],
       "expo-image",
@@ -83,6 +84,12 @@
         "projectId": "b6fadc31-ce35-4004-901e-12868ef02002"
       }
     },
-    "owner": "salttech-team"
+    "owner": "salttech-team",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b6fadc31-ce35-4004-901e-12868ef02002"
+    }
   }
 }

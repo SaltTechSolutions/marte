@@ -59,7 +59,7 @@ export function GymCodeCard({
           paddingHorizontal: 14,
           paddingVertical: 12,
         }}>
-        <Ionicons name="key-outline" size={18} color={colors.p} />
+        <Ionicons name="key-outline" size={18} color={colors.pText} />
         <Text variant="body" weight="900" selectable style={{ flex: 1, letterSpacing: 1 }}>
           {code}
         </Text>
@@ -83,8 +83,8 @@ export function GymCodeCard({
             borderWidth: 1,
             borderColor: colors.p,
           }}>
-          <Ionicons name="qr-code-outline" size={18} color={colors.p} />
-          <Text variant="helper" weight="700" style={{ color: colors.p }}>
+          <Ionicons name="qr-code-outline" size={18} color={colors.pText} />
+          <Text variant="helper" weight="700" style={{ color: colors.pText }}>
             Karekodu göster
           </Text>
         </Pressable>

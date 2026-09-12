@@ -157,6 +157,26 @@ service cloud.firestore {
       return isSignedIn() && exists(path) && get(path).data.status == 'pending';
     }
 
+    /**
+     * The tenant a `{tenantId}_{...}` document belongs to, read from its id.
+     *
+     * Needed because `resource` is null for a document that does not exist,
+     * so a read rule that guards on `resource.data.tenantId` cannot run at
+     * all in the empty case — it fails the request instead of returning
+     * false. Every deterministically-addressed document spends most of its
+     * life empty (nobody has left a note, asked for a renewal, set their
+     * hours yet), and the client subscribes to it anyway.
+     *
+     * Safe because the id is composed, not free: each collection's create
+     * rule enforces `tenantId + '_' + ...`, and tenant ids carry no
+     * underscore (Firestore auto-ids are alphanumeric; the one legacy id is
+     * `tarabya-marte`). If that ever stopped holding, this returns a prefix
+     * that matches no membership and the read is denied — it fails closed.
+     */
+    function tenantOfId(compositeId) {
+      return compositeId.split('_')[0];
+    }
+
     // Same shape as isTenantAdmin, but accepts either staff role — used for
     // program authoring (trainers build programs; admins can too for oversight).
     function isTenantStaff(tid) {
@@ -777,9 +797,15 @@ service cloud.firestore {
     }
 
     match /renewal_requests/{requestId} {
+      // Both the member's home screen (RenewalRequestRow) and the admin's
+      // member detail subscribe to this document on mount, long before anyone
+      // asks for a renewal — so the empty case IS the common case. Production
+      // found that, not the tests: 26 denials over 16 days, tagged with the
+      // watch context "Yenileme talebi". See tenantOfId.
       allow read: if isSignedIn() && (
-        resource.data.memberId == request.auth.uid ||
-        isTenantStaff(resource.data.tenantId)
+        resource != null
+          ? (resource.data.memberId == request.auth.uid || isTenantStaff(resource.data.tenantId))
+          : (requestId.matches('^.*_' + request.auth.uid + '$') || isTenantStaff(tenantOfId(requestId)))
       );
       allow create: if isSignedIn() &&
         request.resource.data.memberId == request.auth.uid &&
@@ -809,7 +835,11 @@ service cloud.firestore {
     }
 
     match /member_notes/{noteId} {
-      allow read: if isSignedIn() && isTenantStaff(resource.data.tenantId);
+      // Most members have no note; the staff detail screen subscribes anyway.
+      // See tenantOfId.
+      allow read: if isSignedIn() && (resource != null
+        ? isTenantStaff(resource.data.tenantId)
+        : isTenantStaff(tenantOfId(noteId)));
       allow create, update: if isSignedIn() &&
         isTenantStaff(request.resource.data.tenantId) &&
         noteId == request.resource.data.tenantId + '_' + request.resource.data.memberId &&
@@ -938,7 +968,11 @@ service cloud.firestore {
      * an admin can write it.
      */
     match /trainer_availability/{availabilityId} {
-      allow read: if isTenantMember(resource.data.tenantId);
+      // A trainer who has not published hours yet has no document, and the
+      // member's booking screen subscribes to it anyway. See tenantOfId.
+      allow read: if resource != null
+        ? isTenantMember(resource.data.tenantId)
+        : isTenantMember(tenantOfId(availabilityId));
       allow write: if isSignedIn() && (
         request.resource.data.trainerId == request.auth.uid ||
         isTenantAdmin(request.resource.data.tenantId)
@@ -1099,9 +1133,11 @@ service cloud.firestore {
      * Admin SDK) ever writes it, triggered on `member_packages` changes.
      */
     match /member_entitlements/{cacheId} {
+      // A member with no packages yet has no cache document. See tenantOfId.
       allow read: if isSignedIn() && (
-        resource.data.memberId == request.auth.uid ||
-        isTenantStaff(resource.data.tenantId)
+        resource != null
+          ? (resource.data.memberId == request.auth.uid || isTenantStaff(resource.data.tenantId))
+          : (cacheId.matches('^.*_' + request.auth.uid + '$') || isTenantStaff(tenantOfId(cacheId)))
       );
       allow write: if false;
     }

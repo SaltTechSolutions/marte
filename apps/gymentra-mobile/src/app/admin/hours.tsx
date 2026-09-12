@@ -154,7 +154,7 @@ function HoursForm({ tenantId, tenant }: { tenantId: string; tenant: Tenant }) {
                     </Text>
                     <TimeStepper value={value.close} onChange={(close) => setDay(d.key, { ...value, close })} step={30} />
                     <Pressable onPress={() => applyToAll(value)} accessibilityRole="button">
-                      <Text variant="helper" weight="700" style={{ color: colors.p, textAlign: 'center' }}>
+                      <Text variant="helper" weight="700" style={{ color: colors.pText, textAlign: 'center' }}>
                         Bu saatleri tüm açık günlere uygula
                       </Text>
                     </Pressable>

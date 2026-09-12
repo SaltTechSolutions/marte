@@ -34,5 +34,5 @@ export function useRefreshControl(onRefresh?: () => void) {
     timer.current = setTimeout(() => setRefreshing(false), SPINNER_MS);
   }, [onRefresh]);
 
-  return <RefreshControl refreshing={refreshing} onRefresh={handle} tintColor={colors.p} colors={[colors.p]} />;
+  return <RefreshControl refreshing={refreshing} onRefresh={handle} tintColor={colors.pText} colors={[colors.pText]} />;
 }

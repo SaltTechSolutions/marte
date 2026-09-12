@@ -34,7 +34,7 @@ export function MemberAvatar({ name, photoUrl, size = 34 }: { name: string; phot
   }
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel={name}>
-      <Text weight="900" style={{ color: colors.p, fontSize: Math.round(size * 0.38) }}>
+      <Text weight="900" style={{ color: colors.pText, fontSize: Math.round(size * 0.38) }}>
         {initialsOf(name)}
       </Text>
     </View>

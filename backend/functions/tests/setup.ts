@@ -16,7 +16,7 @@ import '../src/index';
 if (!process.env.FIRESTORE_EMULATOR_HOST) {
   throw new Error(
     'FIRESTORE_EMULATOR_HOST is not set — refusing to run functions tests ' +
-      'against a real project. Run via `npm run test` from marte06/ (root), ' +
+      'against a real project. Run via `npm run test:functions` from backend/ (root), ' +
       'which wraps this in `firebase emulators:exec --only firestore`.',
   );
 }

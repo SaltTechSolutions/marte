@@ -398,7 +398,7 @@ function ProgramBuilderForm({ program }: { program: Program }) {
           <Pressable
             onPress={() => setPickingFromLibrary(true)}
             style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.p, borderRadius: radius.md, padding: 12, alignItems: 'center' }}>
-            <Text variant="helper" weight="700" style={{ color: colors.p }}>
+            <Text variant="helper" weight="700" style={{ color: colors.pText }}>
               + Kütüphaneden egzersiz ekle
             </Text>
           </Pressable>

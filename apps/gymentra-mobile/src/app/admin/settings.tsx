@@ -40,9 +40,10 @@ import { signOutAndForget } from '@/services/signOut';
  * Marka rengi seçenekleri, tayf sırasıyla — satır bir renk çemberi gibi
  * okunsun diye hue'ya göre dizildi, popülerliğe göre değil.
  *
- * Hepsi güvenli: `onColorFor` ana rengin üstündeki metni parlaklığa göre
- * seçiyor ve açık temada `derivePalette` ana rengi l≤0.42'ye indiriyor, bu
- * yüzden sarı ve limon da beyaz zeminde okunur kalıyor.
+ * Hepsi güvenli: `onColorFor` ana rengin üstündeki metni iki mürekkepten
+ * kontrastı yüksek olanı seçerek belirliyor ve açık temada `derivePalette`
+ * ana rengi l≤0.42'ye indiriyor, bu yüzden sarı ve limon da beyaz zeminde
+ * okunur kalıyor.
  */
 /** Salonların gerçekte kullandığı eşikler. Ara değerler bir politika değil,
  *  ince ayar; kimse iptal süresini 19 saat yapmıyor. */
@@ -288,7 +289,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-            <Text style={{ color: colors.p, fontSize: 16 }}>↑</Text>
+            <Text style={{ color: colors.pText, fontSize: 16 }}>↑</Text>
           </View>
         )}
         <View>
@@ -426,7 +427,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
             borderRadius: radius.md,
             padding: 13,
           }}>
-          <Ionicons name={isPro ? 'star' : 'star-outline'} size={18} color={isPro ? colors.ok : colors.p} />
+          <Ionicons name={isPro ? 'star' : 'star-outline'} size={18} color={isPro ? colors.ok : colors.pText} />
           <View style={{ flex: 1 }}>
             <Text variant="helper" weight="700">
               {isPro ? 'GymEntra Pro — aktif' : 'GymEntra Pro'}

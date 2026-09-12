@@ -189,11 +189,24 @@ function Detail({ exercise }: { exercise: Exercise }) {
           </Text>
         </View>
         <RigFigure rig={rig} />
-        {!exercise.poseReviewed && (
-          <Text variant="label" tone="sub">
-            ⓘ Çizimler şematiktir, antrenör onayı bekliyor. Tekniği antrenörüne doğrulat.
-          </Text>
-        )}
+        {/*
+          plan.md D-5. Eski metin "antrenör onayı bekliyor" diyordu ve iki ayrı
+          şeyi tek cümlede karıştırıyordu: bizim **iç kalite durumumuz** ile
+          kullanıcının **güvenliği**. Birincisi kullanıcının yapabileceği bir
+          şey değil, üstelik hem incelemeciye hem ilk üyeye "bu içerik
+          doğrulanmadı" diye okunuyordu. İkincisi ise gerçek ve kalması
+          gereken uyarı.
+
+          Uyarı artık `poseReviewed`'a bağlı değil, çünkü doğru olduğu koşul
+          bu bayrak değil: bir antrenör kareleri onaylasa bile çizimler
+          şematik kalır ve teknik yine antrenörden öğrenilir. Bayrağa
+          bağlasaydık, onay geldiği gün güvenlik uyarısı sessizce kaybolurdu.
+          `poseReviewed` veride kalıyor — karelerin nasıl üretildiğini
+          söyleyen bir künye, arayüz anahtarı değil.
+        */}
+        <Text variant="label" tone="sub">
+          ⓘ Çizimler şematiktir; hareketin yolunu gösterir, tekniği anlatmaz. Tekniği antrenörüne doğrulat.
+        </Text>
       </Card>
 
       {/* --- Kaslar / anlatım --- */}

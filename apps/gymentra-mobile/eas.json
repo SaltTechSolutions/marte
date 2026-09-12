@@ -9,20 +9,24 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "development"
     },
     "development-device": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "development-device"
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
     },
     "simulator": {
       "extends": "production",
@@ -30,7 +34,8 @@
       "ios": {
         "simulator": true
       },
-      "autoIncrement": false
+      "autoIncrement": false,
+      "channel": "simulator"
     }
   },
   "submit": {

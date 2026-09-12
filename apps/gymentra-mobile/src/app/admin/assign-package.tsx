@@ -132,7 +132,7 @@ export default function AdminAssignPackage() {
                     <Text variant="body" weight="900">
                       {pkg.name}
                     </Text>
-                    <Text variant="body" weight="900" style={{ color: colors.p }}>
+                    <Text variant="body" weight="900" style={{ color: colors.pText }}>
                       {pkg.price.toLocaleString('tr-TR')} ₺
                     </Text>
                   </View>

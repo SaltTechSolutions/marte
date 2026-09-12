@@ -243,7 +243,7 @@ export default function MemberClasses() {
           <Text
             variant="helper"
             weight="700"
-            style={{ color: colors.p }}
+            style={{ color: colors.pText }}
             onPress={() => {
               const now = startOfDay(new Date());
               setSelectedDate(now);

@@ -1274,6 +1274,47 @@ describe('Announcements (PER-16)', () => {
   });
 });
 
+/**
+ * The same defect class as the renewal-request one above (GlitchTip: 26
+ * denials, watch context "Yenileme talebi"): a screen subscribes to a
+ * document with a deterministic `{tenantId}_{memberId}` id BEFORE anything
+ * has been written there. `resource` is null for a document that does not
+ * exist, so a rule reading `resource.data` fails outright instead of
+ * evaluating to false.
+ *
+ * Every rule that guards a deterministically-addressed document has to be
+ * exercised in its empty state, because that is the state it spends most of
+ * its life in. `tenant_memberships` already learned this (its rule matches on
+ * the id, not on `resource.data`); these are the rest of the single-document
+ * watchers in `data/firebase/`.
+ */
+describe('Deterministik kimlikli boş dokümanlar okunabilmeli', () => {
+  test('member_entitlements — a member with no packages yet', async () => {
+    await seedMembership('member-1', 'member');
+    await assertSucceeds(
+      testEnv.authenticatedContext('member-1').firestore().doc(`member_entitlements/${TENANT}_member-1`).get(),
+    );
+  });
+
+  test('trainer_availability — a trainer who has not set hours yet', async () => {
+    await seedMembership('member-1', 'member');
+    await assertSucceeds(
+      testEnv.authenticatedContext('member-1').firestore().doc(`trainer_availability/${TENANT}_trainer-9`).get(),
+    );
+  });
+
+  test('member_notes — a member nobody has written a note about', async () => {
+    await seedMembership('admin-1', 'admin');
+    await assertSucceeds(
+      testEnv.authenticatedContext('admin-1').firestore().doc(`member_notes/${TENANT}_member-1`).get(),
+    );
+  });
+
+  test('user_settings — already id-based, kept here so it stays that way', async () => {
+    await assertSucceeds(testEnv.authenticatedContext('member-1').firestore().doc('user_settings/member-1').get());
+  });
+});
+
 describe('Renewal requests (PER-15)', () => {
   const id = `${TENANT}_member-1`;
   const req = (over: Record<string, unknown> = {}) => ({
@@ -1285,6 +1326,28 @@ describe('Renewal requests (PER-15)', () => {
     const db = testEnv.authenticatedContext('member-1').firestore();
     await assertSucceeds(db.doc(`renewal_requests/${id}`).set(req()));
     await assertSucceeds(db.doc(`renewal_requests/${id}`).get());
+  });
+
+  test('the member can subscribe before any request exists', async () => {
+    // The home screen subscribes to this document on mount, long before the
+    // member has ever asked for a renewal — so the common case is a document
+    // that does not exist. `resource` is null there, and a rule that reads
+    // `resource.data.memberId` fails the whole condition instead of
+    // evaluating to false. Production caught this, not us: 26 permission
+    // denials over 16 days, tagged with the `watchQuery` context
+    // "Yenileme talebi" (GlitchTip, iOS build 22).
+    await seedMembership('member-1', 'member');
+    await assertSucceeds(testEnv.authenticatedContext('member-1').firestore().doc(`renewal_requests/${id}`).get());
+  });
+
+  test('a missing document is not a hole: still only your own id', async () => {
+    // The empty-doc path authorises from the document id, so it has to be as
+    // strict as the create rule: someone else's id stays closed even when
+    // nothing is there to read.
+    await seedMembership('member-1', 'member');
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertFails(db.doc(`renewal_requests/${TENANT}_member-2`).get());
+    await assertFails(db.doc('renewal_requests/free-id').get());
   });
 
   test('not for someone else, not under a foreign id', async () => {

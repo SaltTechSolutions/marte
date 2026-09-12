@@ -173,7 +173,7 @@ export default function TrainerMemberDetail() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <View
           style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" weight="900" style={{ color: colors.p }}>
+          <Text variant="helper" weight="900" style={{ color: colors.pText }}>
             {initialsOf(name)}
           </Text>
         </View>
@@ -316,7 +316,7 @@ export default function TrainerMemberDetail() {
             {first && (
               <Text variant="label" tone="sub">
                 İlk ölçümden bu yana kilo{' '}
-                <Text variant="label" weight="700" style={{ color: colors.p }}>
+                <Text variant="label" weight="700" style={{ color: colors.pText }}>
                   {latest.weightKg - first.weightKg > 0 ? '+' : '−'}
                   {formatNumber(Math.abs(latest.weightKg - first.weightKg))} kg
                 </Text>{' '}

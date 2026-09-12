@@ -275,7 +275,7 @@ export default function MemberHome() {
             bookings screen. Without a way in, a member with a class on
             Thursday and a session on Friday has no place that shows both. */}
         <Pressable onPress={() => router.push('/member/bookings')} hitSlop={8}>
-          <Text variant="label" weight="700" style={{ color: colors.p }}>
+          <Text variant="label" weight="700" style={{ color: colors.pText }}>
             Tümü ›
           </Text>
         </Pressable>
@@ -283,7 +283,7 @@ export default function MemberHome() {
       {nextSession && (
         <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="barbell-outline" size={19} color={colors.p} />
+            <Ionicons name="barbell-outline" size={19} color={colors.pText} />
           </View>
           <View style={{ flex: 1 }}>
             <Text variant="helper" weight="700">

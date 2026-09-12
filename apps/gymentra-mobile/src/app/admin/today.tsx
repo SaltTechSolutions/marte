@@ -64,7 +64,7 @@ export default function AdminToday() {
     <ScrollView
       refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">
-        Bugün girenler <Text variant="h3" style={{ color: colors.p }}>{entries?.length ?? 0}</Text>
+        Bugün girenler <Text variant="h3" style={{ color: colors.pText }}>{entries?.length ?? 0}</Text>
       </Text>
 
       {failed ? (
@@ -82,7 +82,7 @@ export default function AdminToday() {
           {entries.map((e, i) => (
             <ListRow key={e.id} last={i === entries.length - 1}>
               <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-                <Text variant="helper" weight="900" style={{ color: colors.p }}>
+                <Text variant="helper" weight="900" style={{ color: colors.pText }}>
                   {initialsOf(nameOf(e.userId))}
                 </Text>
               </View>
@@ -91,7 +91,7 @@ export default function AdminToday() {
                   {nameOf(e.userId)}
                 </Text>
               </View>
-              <Text variant="helper" weight="700" style={{ color: colors.p }}>
+              <Text variant="helper" weight="700" style={{ color: colors.pText }}>
                 {e.checkedInAt.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
               </Text>
             </ListRow>

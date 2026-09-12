@@ -29,6 +29,7 @@
     "expo-splash-screen": "~57.0.6",
     "expo-symbols": "~57.0.2",
     "expo-system-ui": "~57.0.2",
+    "expo-updates": "~57.0.21",
     "firebase": "^12.16.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -59,8 +60,9 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build:android:local": "ANDROID_HOME=$HOME/Library/Android/sdk eas build --platform android --profile production --local",
-    "build:ios:local": "eas build --platform ios --profile production --local"
+    "build:android:local": "JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk npx eas build --platform android --profile production --local",
+    "build:android:preview:local": "JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=$HOME/Library/Android/sdk npx eas build --platform android --profile preview --local",
+    "build:ios:local": "npx eas build --platform ios --profile production --local"
   },
   "private": true
 }
