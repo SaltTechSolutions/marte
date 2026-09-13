@@ -386,29 +386,70 @@ async function submit(flag) {
 
 
 /**
- * Ekran görüntüsü yükler.
+ * Bir ekran görüntüsü kümesinin içeriğini klasördekilerle DEĞİŞTİRİR.
  *
  * Apple'ın akışı üç adımlı: önce dosyayı BİLDİR (boyut ve ad), Apple parça
  * parça yükleme talimatı döndürür, parçalar yüklenir, sonra sağlama toplamıyla
  * "bitti" denir. Tek adımda dosya göndermek diye bir şey yok.
  *
+ * Sıra: yenileri yükle → Apple işleyene kadar bekle → eskileri sil → sırayı
+ * yaz. Eski sürüm yenileri ekleyip eskileri hiç silmiyordu; sondaki sıralama
+ * isteği yalnız yeni kimlikleri gönderdiği için küme eski ve yeni görsellerin
+ * karışımı olarak kalıyordu. Eskiler en SONDA siliniyor: yenilerden biri
+ * işlenemezse küme hiçbir anda boş kalmıyor, eskiler yerinde duruyor ve
+ * yarım yüklenen yeniler geri alınıyor.
+ *
+ * Bu sıra bir sınır getiriyor: bir kümede en fazla 10 görsel olabildiği için
+ * eski + yeni 10'u aşıyorsa yenilerin eskiler silinmeden sığacak yeri yok.
+ * O durumda hiçbir şey yazılmıyor.
+ *
  * Sıra korunuyor: dosya adları alfabetik yükleniyor ve sonunda kümenin
  * sırası açıkça yazılıyor — mağazadaki ilk üç görsel listede öne çıktığı için
  * sıra bir tasarım kararı.
+ *
+ * `--dry`: yalnız okur; ne yükleneceğini, ne silineceğini ve dosyaların piksel
+ * ölçülerini yazdırır.
  */
-async function uploadScreenshots(displayType, dir) {
+async function uploadScreenshots(displayType, dir, flag) {
   const { createHash } = await import('node:crypto');
   const { readFileSync, readdirSync } = await import('node:fs');
   const { join } = await import('node:path');
   const cfg = config();
+  const dry = flag === '--dry';
+  if (!displayType || !dir) throw new Error('kullanım: upload-screenshots <tip> <dizin> [--dry]');
 
-  const versions = await call(`/apps/${cfg.appId}/appStoreVersions?limit=1&fields[appStoreVersions]=versionString`);
+  const files = readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.png')).sort();
+  if (!files.length) throw new Error(`${dir} içinde PNG yok`);
+  if (files.length > 10) throw new Error(`${files.length} görsel var, bir kümeye en fazla 10 sığar`);
+
+  const versions = await call(`/apps/${cfg.appId}/appStoreVersions?limit=1&fields[appStoreVersions]=versionString,appStoreState`);
   const version = versions.data[0];
   const locs = await call(`/appStoreVersions/${version.id}/appStoreVersionLocalizations?limit=10`);
   const loc = locs.data[0];
 
   const sets = await call(`/appStoreVersionLocalizations/${loc.id}/appScreenshotSets?limit=20`);
   let set = sets.data.find((x) => x.attributes.screenshotDisplayType === displayType);
+  const old = set ? (await call(`/appScreenshotSets/${set.id}/appScreenshots?limit=10`)).data : [];
+
+  console.log(`\nSÜRÜM ${version.attributes.versionString} · ${version.attributes.appStoreState} · ${loc.attributes.locale} · ${displayType}`);
+  console.log('  yüklenecek:');
+  files.forEach((name) => {
+    // PNG genişlik/yükseklik IHDR'de, 16. bayttan itibaren iki uint32.
+    const b = readFileSync(join(dir, name));
+    const size = b.length >= 24 ? `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}` : '?';
+    console.log(`    ${name}  ${size}`);
+  });
+  console.log(old.length ? '  silinecek (yeniler işlendikten sonra):' : '  kümede eski görsel yok');
+  old.forEach((x) => console.log(`    ${x.attributes.fileName}`));
+
+  if (old.length + files.length > 10) {
+    throw new Error(`eski ${old.length} + yeni ${files.length} > 10 — yeniler eskiler silinmeden sığmıyor, hiçbir şey yazılmadı`);
+  }
+  if (dry) {
+    console.log('\n(--dry: hiçbir şey yazılmadı)\n');
+    return;
+  }
+
   if (!set) {
     const created = await call('/appScreenshotSets', {
       method: 'POST',
@@ -426,50 +467,86 @@ async function uploadScreenshots(displayType, dir) {
     console.log(`✓ ${displayType} kümesi oluşturuldu (${loc.attributes.locale})`);
   }
 
-  const files = readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.png')).sort();
   const ids = [];
+  const rollback = async (why) => {
+    for (const id of ids) await call(`/appScreenshots/${id}`, { method: 'DELETE' }).catch(() => {});
+    throw new Error(`${why} — yüklenen ${ids.length} yeni görsel geri alındı, eskiler yerinde`);
+  };
+
   for (const name of files) {
-    const bytes = readFileSync(join(dir, name));
-    const reserved = await call('/appScreenshots', {
-      method: 'POST',
-      body: {
-        data: {
-          type: 'appScreenshots',
-          attributes: { fileSize: bytes.length, fileName: name },
-          relationships: { appScreenshotSet: { data: { type: 'appScreenshotSets', id: set.id } } },
+    try {
+      const bytes = readFileSync(join(dir, name));
+      const reserved = await call('/appScreenshots', {
+        method: 'POST',
+        body: {
+          data: {
+            type: 'appScreenshots',
+            attributes: { fileSize: bytes.length, fileName: name },
+            relationships: { appScreenshotSet: { data: { type: 'appScreenshotSets', id: set.id } } },
+          },
         },
-      },
-    });
-    const shot = reserved.data;
-    for (const op of shot.attributes.uploadOperations) {
-      const headers = {};
-      (op.requestHeaders || []).forEach((h) => (headers[h.name] = h.value));
-      const res = await fetch(op.url, {
-        method: op.method,
-        headers,
-        body: bytes.subarray(op.offset, op.offset + op.length),
       });
-      if (!res.ok) throw new Error(`${name} parçası yüklenemedi: ${res.status}`);
-    }
-    await call(`/appScreenshots/${shot.id}`, {
-      method: 'PATCH',
-      body: {
-        data: {
-          type: 'appScreenshots',
-          id: shot.id,
-          attributes: { uploaded: true, sourceFileChecksum: createHash('md5').update(bytes).digest('hex') },
+      const shot = reserved.data;
+      ids.push(shot.id);
+      for (const op of shot.attributes.uploadOperations) {
+        const headers = {};
+        (op.requestHeaders || []).forEach((h) => (headers[h.name] = h.value));
+        const res = await fetch(op.url, {
+          method: op.method,
+          headers,
+          body: bytes.subarray(op.offset, op.offset + op.length),
+        });
+        if (!res.ok) throw new Error(`${name} parçası yüklenemedi: ${res.status}`);
+      }
+      await call(`/appScreenshots/${shot.id}`, {
+        method: 'PATCH',
+        body: {
+          data: {
+            type: 'appScreenshots',
+            id: shot.id,
+            attributes: { uploaded: true, sourceFileChecksum: createHash('md5').update(bytes).digest('hex') },
+          },
         },
-      },
-    });
-    ids.push(shot.id);
-    console.log(`  ↑ ${name} (${(bytes.length / 1024).toFixed(0)} KB)`);
+      });
+      console.log(`  ↑ ${name} (${(bytes.length / 1024).toFixed(0)} KB)`);
+    } catch (e) {
+      await rollback(`${name}: ${e.message}`);
+    }
+  }
+
+  // Apple dosyayı ayrıca doğruluyor (ölçü, biçim). Eskiler ancak yenilerin
+  // hepsi COMPLETE olunca siliniyor; beklemeden silmek, reddedilen bir görsel
+  // yüzünden kümeyi eksik bırakabilirdi.
+  console.log('  Apple işliyor…');
+  const deadline = Date.now() + 5 * 60 * 1000;
+  for (;;) {
+    const states = await Promise.all(
+      ids.map((id) => call(`/appScreenshots/${id}?fields[appScreenshots]=fileName,assetDeliveryState`)),
+    );
+    const failed = states.filter((r) => r.data.attributes.assetDeliveryState?.state === 'FAILED');
+    if (failed.length) {
+      const why = failed
+        .map((r) => `${r.data.attributes.fileName}: ${(r.data.attributes.assetDeliveryState.errors || []).map((e) => e.description).join('; ')}`)
+        .join(' | ');
+      await rollback(`Apple reddetti (${why})`);
+    }
+    if (states.every((r) => r.data.attributes.assetDeliveryState?.state === 'COMPLETE')) break;
+    if (Date.now() > deadline) {
+      throw new Error('5 dakikada işlenmedi — yeniler yüklü, eskiler SİLİNMEDİ; `screenshots` ile durumu kontrol edip tekrar çalıştır');
+    }
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+
+  for (const x of old) {
+    await call(`/appScreenshots/${x.id}`, { method: 'DELETE' });
+    console.log(`  ✗ ${x.attributes.fileName} silindi`);
   }
 
   await call(`/appScreenshotSets/${set.id}/relationships/appScreenshots`, {
     method: 'PATCH',
     body: { data: ids.map((id) => ({ type: 'appScreenshots', id })) },
   });
-  console.log(`\n✓ ${files.length} görsel yüklendi ve sırası yazıldı. Apple işleyene kadar birkaç dakika sürebilir.\n`);
+  console.log(`\n✓ ${files.length} görsel yüklendi, ${old.length} eski silindi, sıra yazıldı.\n`);
 }
 
 /**
@@ -622,7 +699,7 @@ if (!cmd || !COMMANDS[cmd]) {
   age-rating ['{"...":"..."}']    yaş sınırı anketini oku / yaz
   screenshots                     ekran görüntüsü setleri, hangisi eksik
   subscriptions                   abonelik ürünleri ve MISSING_METADATA'nın sebebi
-  upload-screenshots <tip> <dizin>  klasördeki PNG'leri sırayla yükle
+  upload-screenshots <tip> <dizin> [--dry]  kümeyi klasördeki PNG'lerle değiştir
   testers                         TestFlight grupları ve kişiler
 `);
   process.exit(cmd ? 1 : 0);

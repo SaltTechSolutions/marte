@@ -98,7 +98,12 @@ export function TabBar({ items }: { items: TabItem[] }) {
             <Text
               variant="label"
               weight={!isIOS && active ? '700' : undefined}
-              style={{ color: active ? colors.pText : colors.sub, fontSize: isIOS ? undefined : 12 }}>
+              // The iOS branch must not carry a `fontSize` key at all: style
+              // flattening copies `undefined` over the label variant's 11pt,
+              // the text fell back to the 14pt default inside the variant's
+              // 14pt line height, and the dots of "Ü" in "Üye Kartım" were
+              // clipped off.
+              style={[{ color: active ? colors.pText : colors.sub }, isIOS ? null : { fontSize: 12 }]}>
               {item.label}
             </Text>
           </Pressable>

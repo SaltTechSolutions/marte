@@ -152,7 +152,9 @@ function Detail({ exercise }: { exercise: Exercise }) {
         accessibilityRole="tab"
         accessibilityState={{ selected: on }}
         style={{ flex: 1, alignItems: 'center', paddingVertical: 10, gap: 8 }}>
-        <Text variant="label" weight="900" tone={on ? 'inherit' : 'sub'}>
+        {/* `inherit` leaves color undefined and nothing above sets one, so the
+            selected label fell back to black on the dark background. */}
+        <Text variant="label" weight="900" tone={on ? 'primary' : 'sub'}>
           {label}
         </Text>
         <View style={{ height: 2, width: '70%', borderRadius: 2, backgroundColor: on ? colors.p : 'transparent' }} />

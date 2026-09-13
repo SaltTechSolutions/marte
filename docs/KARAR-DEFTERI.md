@@ -31,6 +31,78 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-13 — GymEntra 1.0 abonelikleriyle yeniden incelemede
+
+**Yapıldı.** 5 Eylül'den beri 7 gün `WAITING_FOR_REVIEW`'da bekleyen 1.0
+geri çekildi ve 13 Eylül 12:14 UTC'de tek kapla yeniden gönderildi: sürüm 1.0
+(build 24) + GymEntra Pro grubu + aylık + yıllık abonelik. Geri çekmenin
+sebebi sıra değil, eksik gönderimdi: uygulamada RevenueCat paywall'u var ama
+iki abonelik kapta yoktu (2.1 reddi) ve build 22 rig'in 30 arketipli eski
+halini taşıyordu. Build 23 (rig 40 arketip/45 hareket + build 22 sonrası 84
+commit) ve build 24 (iki arayüz düzeltmesi) yerelde alındı, TestFlight'a
+yüklendi. Ücretsiz planda ayrı bir inceleme salonu kuruldu
+(`review-gym-iap`, kod `INCELEME-10`, `yonetici@gymentra-inceleme.test`),
+Supergym verisi tazelendi, 6.9" slotuna iPhone 17 Pro Max simülatöründen 5
+yeni görsel yüklendi; eski 6.5" ve 6.1" setleri kaldırıldı. App Store Server
+Notifications URL'leri (Production + Sandbox) RevenueCat'e yönlendirildi.
+
+İki arayüz hatası düzeltildi. Sekme çubuğunda `fontSize: isIOS ? undefined :
+12` — RN stil birleştirmesi `undefined`'ı da üstüne yazıyor, iOS'ta etiket
+11pt'den 14pt'ye düşüyor ve 14'lük satır yüksekliğinde "Üye"nin Ü noktaları
+kırpılıyordu. Hareket ekranında seçili sekme `tone="inherit"` ile renksiz
+kalıp siyaha düşüyordu. İkisi de simülatörde gözle doğrulandı.
+
+**Karar.**
+- **İlk abonelik yalnızca grubuyla ve sürümle AYNI kapta gönderilir.** Apple
+  üç ayrı kural uyguluyor: abonelik tek başına gönderilemez
+  (`FIRST_SUBSCRIPTION_MUST_BE_SUBMITTED_ON_VERSION`), grup versiyonu olmadan
+  gönderilemez (`SUBSCRIPTION_SUBMISSION_REQUIRES_GROUP_VERSION`), ve sürüm
+  sayfasında "In-App Purchases" bölümü bu akışta hiç görünmüyor. Doğru yol:
+  abonelik ve grup sayfalarından "Add for Review" → sürümü o taslağa ekle →
+  kapta 4 kalem gör → gönder. `asc.mjs submit` kendi boş kabını açtığı için
+  bu durumda KULLANILMAZ; 13 Eylül'deki ilk yeniden gönderim tam bu yüzden
+  aboneliksiz gitti ve iptal edildi.
+- **Satın alma incelemesi Supergym'le yapılamaz.** Supergym `grandfathered`
+  (status `active`), paywall aktif abonelikte satın alma seçeneklerini hiç
+  göstermiyor. İnceleme ücretsiz plandaki `review-gym-iap` salonuyla yapılır.
+- **Görsel seti tek boyut: 6.9" (1320×2868).** `precheck` küçük ekranlar için
+  set istemedi; tek seti güncel tutmak üç seti tutarlı tutmaktan kolay.
+- **`upload-screenshots` kümeyi DEĞİŞTİRİR, üstüne eklemez:** yenileri yükle →
+  Apple işlesin → eskileri sil → sırayı yaz. Eski sürüm eskileri hiç
+  silmiyordu.
+
+**Bilerek yapılmadı.**
+- Kuyruk sırası uğruna build 22'yle beklemeye devam edilmedi: onaylansa bile
+  `AFTER_APPROVAL` yüzünden çalışmayan bir paywall'la otomatik yayına girerdi.
+- Supergym'in planı ücretsize çekilmedi: 20 üyeyle sınırın üstünde kalır, üye
+  onaylama ekranları tanıtım görsellerinde bozulurdu.
+- Simülatör, açık olan (başka uygulamanın çalıştığı) iOS 26.5 cihazında
+  sürülmedi; ayrı cihaz (iOS 26.1, iPhone 17 Pro Max) kullanıldı. Parola
+  alanlarını ajan hiç doldurmadı.
+- RevenueCat'e ASC API anahtarı eklenmedi: satın almayı engellemiyor, anahtar
+  girişi insan işi.
+
+**Açık.**
+- RevenueCat → GymEntra iOS → **App Store Connect API** bölümü boş; iOS
+  ürünleri "Could not check". Satın almayı etkilemiyor, tamamlanmalı.
+- Server Notifications'ta seçili sürümün **Version 2** olduğu salt görünümde
+  doğrulanamadı; kullanıcı teyit etmeli.
+- İki aboneliğin kendi Review Notes alanı dolu mu API'den okunamadı.
+- İnceleme salonunda sandbox satın alma yapılırsa salon Pro'ya geçer; sonraki
+  bir incelemeden önce `seed_review_gym.cjs --reset --apply`.
+- `upload-screenshots`'ın gerçek değiştirme yolu (eskileri silme, hata olunca
+  geri alma) canlıda eski kümesi olan bir slotta henüz koşmadı; yalnız boş
+  6.9" slotuna yükleme ve `--dry` doğrulandı.
+- Expo SDK paket yama sürümleri geride (`expo-doctor` uyarısı, build'i
+  durdurmuyor).
+- Aynı hesaptaki Yuvva 2 günde geçerken GymEntra'nın 7 gün beklemesinin sebebi
+  bilinmiyor.
+
+**Nerede.** `apps/gymentra-mobile/scripts/asc.mjs` (`uploadScreenshots`),
+`apps/gymentra-mobile/src/components/TabBar.tsx`,
+`apps/gymentra-mobile/src/app/exercise-detail.tsx`,
+`backend/scripts/seed_review_gym.cjs`.
+
 ## 2026-09-12 — editörün motoru ve şeması kaydetmede tazeleniyor
 
 **Yapıldı.** Editör sunucusu motoru ve şemayı yalnız açılışta derliyordu.
