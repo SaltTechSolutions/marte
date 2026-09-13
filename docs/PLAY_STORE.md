@@ -80,8 +80,9 @@ tamamlanmaz. Ebeveyn, çocuğunun paketini ve randevularını görebilir, onun
 adına randevu iptal edebilir ve ödemesini yapabilir. Birden çok çocuğu varsa
 tek ödeme yapıp tutarı çocuklar arasında eşit böldürebilir.
 
-GymEntra uygulama içinden ödeme almaz. Ödemeler salonda yapılır; uygulama
-yalnızca kaydını tutar.
+Üyelerin salon ödemeleri GymEntra içinde alınmaz; ödemeler salonda yapılır ve
+uygulama yalnızca kaydını tutar. Salon işletmelerine sunulan GymEntra Pro
+aboneliği ise Google Play üzerinden satın alınabilir.
 ```
 
 ---
