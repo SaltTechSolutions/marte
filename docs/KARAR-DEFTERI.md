@@ -31,6 +31,26 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-14 — SDK 57 yamaları; OTA artık dal üzerinden
+
+**Yapıldı.** `npx expo install --fix` (kullanıcı uyguladı): expo 57.0.22,
+react-native 0.86.3, Expo modül yamaları. Kontrol, typecheck, 385 test temiz.
+Play optimizasyon uyarıları (R8, edge-to-edge, yön) `plan.md` 3b'ye yazıldı.
+
+**Karar.** Yamalar ve R8 aynı preview APK'da denenip tek production build'e
+girer. Yayındaki sürümlere OTA bundan sonra `main`'den değil, o build'in
+commit'inden açılan daldan gider (Android: `ota/android-8-paywall`).
+
+**Bilerek yapılmadı.** Edge-to-edge uyarısı için kütüphane yamalanmadı —
+çağrılar RN ve Material'da, SDK 58 beklenir. Yön kısıtı kaldırılmadı.
+
+**Açık.** Yamaların native tarafı hiçbir build'de denenmedi. iOS 1.0 onaylanırsa
+build 24 için de OTA dalı gerekecek. Build 27'yi kimin ne için yüklediği bilinmiyor.
+
+**Nerede.** `apps/gymentra-mobile/package.json`, `docs/plan.md` (3b).
+
+---
+
 ## 2026-09-14 — Paywall bağlantıları Android'e OTA ile
 
 **Yapıldı.** `eas update` production kanalına, yalnızca Android (güncelleme
