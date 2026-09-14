@@ -31,6 +31,31 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-14 — Paywall bağlantıları Android'e OTA ile
+
+**Yapıldı.** `eas update` production kanalına, yalnızca Android (güncelleme
+grubu `cb271b9b-7f97-4503-9e06-865af626e90c`, runtime `a58c519b…`). Expo
+sunucusu bu runtime ve kanal için yeni güncellemeyi dönüyor; paket içeriği
+indirilemedi (varlık URL'i 403), cihazda görülmedi.
+
+**Karar.** OTA `main`'den değil, sürüm kodu 8'in commit'inden (c0e7166) açılan
+`ota/android-8-paywall` dalından gönderildi, üstüne yalnızca bc769539 alındı.
+Gerekçe: `main`'deki `.gitignore` ve `package.json` script satırı parmak izini
+değiştiriyor (`eas fingerprint:compare`), oradan giden güncelleme sürüm 8'e
+hiç ulaşmazdı.
+
+**Bilerek yapılmadı.** `main`'deki diğer JS değişiklikleri (rig, iOS arayüz
+düzeltmeleri; c0e7166 sonrası 41 dosya) Android'e gönderilmedi — onay yalnızca
+paywall içindi. Parmak izini tutturmak için `main`'deki dosyalar geri alınmadı.
+
+**Açık.** Parmak izine giren dosyalar (package.json, .gitignore) `main`'de
+değiştikçe sonraki Android OTA'ları da aynı dal hilesini ister; kalıcı çözüm
+bir sonraki build. Cihazda güncellemenin indiğini gören olmadı.
+
+**Nerede.** `ota/android-8-paywall` dalı (yerel), EAS dashboard.
+
+---
+
 ## 2026-09-14 — GymEntra Android üretimde (%100, Türkiye)
 
 **Yapıldı.** Sürüm kodu 8 (1.0.0) production kanalına %100 çıkarıldı, yalnızca
