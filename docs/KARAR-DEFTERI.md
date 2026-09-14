@@ -31,6 +31,28 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-14 — GymEntra Android üretimde (%100, Türkiye)
+
+**Yapıldı.** Sürüm kodu 8 (1.0.0) production kanalına %100 çıkarıldı, yalnızca
+Türkiye; Play API'sinde `completed` görüldü. `play.mjs`'e `rollout` komutu
+eklendi (`--onaylandi` zorunlu).
+
+**Karar.** D-4'teki %20 kademeli başlangıç uygulanamadı: Play, bir kanaldaki
+ilk sürümün kademeli olmasına izin vermiyor. Kullanıcı riski bilerek %100
+seçti. Kademeli yayın kararı bundan sonraki üretim sürümleri için geçerli.
+
+**Bilerek yapılmadı.** Cihaz testi beklenmedi (kullanıcı kararı, bkz. aynı
+günün önceki kaydı). Önerilen "önce 15 dakika cihazda dene" seçeneği seçilmedi.
+
+**Açık.** Google girişi, push, QR üretim imzasıyla hâlâ doğrulanmadı ve durdurma
+düğmesi yok — imza kaynaklı bir sorun yeni build ister. Paywall bağlantıları
+(bc769539) OTA ile production kanalına henüz gönderilmedi. Üretim ülkesi API'den
+ayarlanamıyor, Play Console'dan eklendi.
+
+**Nerede.** `apps/gymentra-mobile/scripts/play.mjs`, `docs/plan.md` (D-4).
+
+---
+
 ## 2026-09-14 — Cihaz doğrulaması üretim ön şartı değil
 
 **Yapıldı.** `plan.md`'deki "production imzasıyla cihaz doğrulaması olmadan

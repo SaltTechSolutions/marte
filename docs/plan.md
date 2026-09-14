@@ -315,7 +315,7 @@ yeniden başlayan bir uygulama her seferinde sıfırdan sayar. O senaryoyu ancak
 GlitchTip tarafındaki kısıtlama yakalar — yukarıdaki panel işi bu yüzden hâlâ
 gerekli.
 
-**Kademeli sürüm — karar: evet, %20 ile başla.** Üretime çıkarken tek seferde
+**Kademeli sürüm — karar: evet, %20 ile başla.** *(14 Eylül 2026: ilk üretim sürümü %100 çıktı — Play kanaldaki ilk sürümü kademeli kabul etmiyor. Karar sonraki sürümler için geçerli.)* Üretime çıkarken tek seferde
 %100 verilmeyecek; **%20 → (48 saat temiz) → %50 → %100**. *Gerekçe istatistik
 değil:* tek salonla %20 ≈ 10 kişi, anlamlı bir örneklem değil. Sebep **durdurma
 düğmesi** — Play kademeli bir sürümü duraklatıp durdurabiliyor, tamamlanmış bir
