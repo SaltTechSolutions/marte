@@ -560,11 +560,11 @@ yazıldı (412/500). Gövdesi yine bir **test görevi** — üç doğrulama en �
 altında 7'den farkı (anatomi düzeltmeleri, yeni uyarı metni, çökme
 raporlamasında tekrar sınırı).
 
-**Kalan tek şey cihazda:** Play'den kurup **production imzasıyla** Google
-girişi, push ve QR denenecek. Üretime terfi ondan sonra, %20 kademeli
-başlangıçla (bkz. D-4).
+**~~Kalan tek şey cihazda~~** *(14 Eylül 2026 — kullanıcı kararıyla ön
+şart kaldırıldı).* Üretime terfi cihaz doğrulaması beklemeden, %20 kademeli
+başlangıçla yapılır (bkz. D-4); doğrulama sahada, ilk %20 penceresinde.
 
-**3. Android'de gerçek cihaz doğrulaması.** Google ile giriş, push bildirimi
+**3. ~~Android'de gerçek cihaz doğrulaması~~ — üretim ön şartı değil** *(14 Eylül 2026, kullanıcı kararı; risk kabul edildi, izleme %20 penceresinde)*. Google ile giriş, push bildirimi
 ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
 Android yayını anlamsız.

@@ -31,6 +31,25 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-14 — Cihaz doğrulaması üretim ön şartı değil
+
+**Yapıldı.** `plan.md`'deki "production imzasıyla cihaz doğrulaması olmadan
+üretime çıkılmaz" şartı kaldırıldı.
+
+**Karar.** Sürüm kodu 8 üretime cihaz testi beklemeden çıkabilir; %20 → %50 →
+%100 kademeli yayın kararı (D-4) aynen geçerli ve artık tek güvence o.
+Gerekçe: kullanıcı kararı.
+
+**Bilerek yapılmadı.** Kademeli yayın kaldırılmadı — cihaz testi yokken
+durdurma düğmesi daha da gerekli.
+
+**Açık.** Google girişi, push ve QR üretim imzasıyla hâlâ denenmedi; ilk %20
+penceresinde vitals + GlitchTip'te bu üçüne bakılmalı.
+
+**Nerede.** `docs/plan.md` (D-4, 3. madde).
+
+---
+
 ## 2026-09-14 — Abonelik ekranı bağlantıları; Android build yerine OTA
 
 **Yapıldı.** Paywall'a koşullar + gizlilik bağlantıları (`SubscriptionLegalLinks`)
