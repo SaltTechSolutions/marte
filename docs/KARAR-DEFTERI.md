@@ -70,6 +70,57 @@ Android sürüm kodu 8'e ulaştığı yayından sonra doğrulanmalı.
 
 ---
 
+## 2026-09-14 — 3.1.2 reddi: EULA bağlantısı eklendi, build 27 incelemede
+
+**Yapıldı.** 13 Eylül gönderimi otomatik mesajla reddedildi (Guideline
+3.1.2): otomatik yenilenen abonelik var ama mağaza sayfasında Kullanım
+Koşulları (EULA) bağlantısı yok. Uygulama hiç test edilmedi, abonelikler ve
+grup ayrıca reddedilmedi. Sürüm 1.0'ın tr açıklaması yeniden yazıldı:
+"GYMENTRA PRO — YALNIZCA SALON SAHİPLERİ İÇİN" bölümü (üyeler ve antrenörler
+ödeme yapmaz, satın alma ekranı görmez; aylık/yıllık; standart otomatik
+yenileme ve iptal metni) ve en altta Apple standart EULA + gizlilik
+bağlantıları. "Tüm ödemeler uygulama dışında" ifadesi salon–üye ödemeleriyle
+sınırlandı. Paywall'a `SubscriptionLegalLinks` eklendi (satın alma düğmesinin
+altında). Build 25 ve 26 ağ kesintisinde `hermes-engine` indirilemeden düştü;
+build 27 geçti, paywall metni ve EULA adresi `.ipa`'nın bundle'ında
+doğrulandı. Kap 14 Eylül 12:26 UTC'de yeniden incelemede.
+
+**Karar.**
+- **Abonelik satılan her gönderimde açıklamanın sonunda EULA + gizlilik
+  bağlantısı durur.** Apple bunu mağaza metadata'sında otomatik denetliyor.
+- **iOS'ta abonelik koşulu Apple standart EULA'sıdır**, kendi `/terms/`
+  sayfamız değil: o sayfa otomatik yenileme ve iptali anlatmıyor. Android
+  kendi sayfamızda kalır (Google'da standart EULA yok). Açıklama ve paywall
+  aynı Apple adresini gösterir.
+- **Mağaza metni Pro'nun yalnızca salon sahiplerine satıldığını açıkça
+  söyler** (kullanıcı talebi): üye/antrenör hiçbir zaman ödeme yapmaz.
+- **Açıklamaya fiyat yazılmaz;** Apple ülke başına fiyatı kendi gösteriyor.
+- **Reddedilmiş kalem içeren kap API'den yeniden gönderilemiyor**
+  ("Version is not ready to be submitted yet", 9 dakikada 7 deneme, build
+  durumu gönderilmiş build 24 ile birebir aynıydı). Konsoldaki "Resubmit to
+  App Review" ile gönderilir.
+
+**Bilerek yapılmadı.**
+- Özel EULA App Store Connect'e yüklenmedi: standart EULA yeterli ve
+  abonelik şartlarını zaten kapsıyor.
+- Paywall'a ayrıca "salon sahipleri için" uyarısı konmadı: ekrana yalnızca
+  yönetici yolları çıkıyor ve ekranda "üyeler ve antrenörler hiçbir zaman ödeme
+  yapmaz" satırı zaten var.
+- Hermes tarball'ı elle indirilip `HERMES_ENGINE_TARBALL_PATH` ile build
+  alınmadı: sorun geçici ağ kesintisiydi, bağlantı dönünce build normal geçti.
+
+**Açık.**
+- Paywall bağlantıları ekranda gözle görülmedi; yalnızca bundle'da metin ve
+  adres doğrulandı. TestFlight build 27 ile İnceleme Salonu yöneticisinden
+  bakılmalı.
+- Build numarası 25 ve 26 başarısız denemelerde yandı; App Store Connect'te
+  bu numaralı build yok (zararsız).
+- 13 Eylül kaydındaki açıklar sürüyor (RevenueCat ASC API anahtarı, bildirim
+  Version 2 teyidi, abonelik inceleme notları).
+
+**Nerede.** `apps/gymentra-mobile/src/components/LegalLinks.tsx`
+(`SubscriptionLegalLinks`), `apps/gymentra-mobile/src/app/paywall.tsx`.
+
 ## 2026-09-13 — GymEntra 1.0 abonelikleriyle yeniden incelemede
 
 **Yapıldı.** 5 Eylül'den beri 7 gün `WAITING_FOR_REVIEW`'da bekleyen 1.0
