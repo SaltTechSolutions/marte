@@ -1,12 +1,22 @@
 import * as Linking from 'expo-linking';
 import React from 'react';
-import { Pressable, View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
 
 import { Text } from './Text';
 
 const SITE = 'https://gymentra.salt-tech-apps.com';
+
+/**
+ * The terms a subscription is sold under. On iOS that is Apple's standard
+ * EULA: our own /terms/ page says nothing about auto-renewal or cancellation,
+ * and the App Store description links the same Apple page, so the listing
+ * and the purchase screen point at one document. Google has no standard
+ * EULA, so Android keeps our page.
+ */
+const SUBSCRIPTION_TERMS_URL =
+  Platform.OS === 'ios' ? 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/' : `${SITE}/terms/`;
 
 /**
  * Both stores expect the privacy policy and terms to be reachable from
@@ -75,5 +85,47 @@ export function LegalConsentNotice() {
       Devam ederek {link('Kullanım Şartları', '/terms/')} ve{' '}
       {link('Gizlilik Politikası', '/privacy/')}&rsquo;nı kabul etmiş olursun.
     </Text>
+  );
+}
+
+/**
+ * Terms and privacy links on the subscription purchase screen.
+ *
+ * Guideline 3.1.2 wants both reachable from the screen that sells an
+ * auto-renewable subscription, not only from settings. The first 1.0
+ * submission was rejected for the missing EULA link in the listing; the
+ * purchase screen had the same gap.
+ */
+export function SubscriptionLegalLinks() {
+  const { colors } = useAppTheme();
+
+  const open = (url: string) => {
+    Linking.openURL(url).catch(() => {});
+  };
+
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+      <Pressable
+        onPress={() => open(SUBSCRIPTION_TERMS_URL)}
+        hitSlop={8}
+        accessibilityRole="link"
+        style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Text variant="label" weight="700" style={{ color: colors.pText }}>
+          Kullanım Koşulları (EULA)
+        </Text>
+      </Pressable>
+      <Text variant="label" style={{ color: colors.line }}>
+        |
+      </Text>
+      <Pressable
+        onPress={() => open(`${SITE}/privacy/`)}
+        hitSlop={8}
+        accessibilityRole="link"
+        style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Text variant="label" weight="700" style={{ color: colors.pText }}>
+          Gizlilik Politikası
+        </Text>
+      </Pressable>
+    </View>
   );
 }

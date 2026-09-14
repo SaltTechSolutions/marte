@@ -5,6 +5,7 @@ import type { PurchasesOffering, PurchasesPackage } from 'react-native-purchases
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { SubscriptionLegalLinks } from '@/components/LegalLinks';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -231,6 +232,7 @@ export default function Paywall() {
               Abonelik dönem sonunda otomatik yenilenir. İptal, cihazının mağaza hesabı
               ayarlarından yapılır.
             </Text>
+            <SubscriptionLegalLinks />
           </>
         )}
 
