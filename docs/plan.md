@@ -584,6 +584,13 @@ Android build'ine girer.
   denenmeden production build'e girmez. ⚠️ `app.json` değiştiği an `main`'in
   parmak izi sürüm 8'den ayrılır; o build yayına çıkana kadar Android OTA'ları
   `ota/android-8-paywall` dalından gönderilir (bkz. karar defteri 14 Eylül).
+- [x] **SDK 57 yamaları uygulandı** *(14 Eylül 2026, `npx expo install --fix`)*:
+  `expo` 57.0.13 → 57.0.22, `react-native` 0.86.2 → 0.86.3 ve Expo modüllerinin
+  yamaları. `expo install --check` temiz, typecheck temiz, 385/385 test.
+  **Native tarafı hiçbir build'de denenmedi** — R8 ile aynı preview APK'da
+  denenir, tek production build'e girer. ⚠️ Bu commit'ten itibaren `main`'in
+  parmak izi Android sürüm 8 ve iOS build 24'ten ayrı: yayındaki sürümlere OTA
+  yalnızca o build'lerin commit'inden açılan dallardan gider.
 - [ ] **Kenardan kenara ekranda eskimiş API'ler — bizim kodumuzda değil, iş yok.**
   `Window.get/setStatusBarColor`, `setNavigationBarColor`,
   `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES/DEFAULT`. Çağrı yerlerinin hepsi
