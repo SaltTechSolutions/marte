@@ -208,6 +208,53 @@ async function notes(track = 'internal', text, ...rest) {
   );
 }
 
+/**
+ * Staged production rollout: puts a version code on `production` at the given
+ * percentage, or raises the percentage of the rollout already there.
+ *
+ * Always requires --onaylandi: a production release is on the /play skill's
+ * "ask first" list. Status is `inProgress` below 100% so the release can still
+ * be halted; at 100 it becomes `completed` and cannot be taken back.
+ */
+async function rollout(versionCode, percent, ...rest) {
+  if (!rest.includes('--onaylandi')) {
+    throw new Error("üretim sürümü kullanıcı onayı ister. Onay alındıysa komutun sonuna --onaylandi ekleyin.");
+  }
+  const code = String(Number(versionCode));
+  const pct = Number(percent);
+  if (code === 'NaN' || !(pct > 0 && pct <= 100)) throw new Error('kullanım: rollout <sürüm kodu> <yüzde 1-100> --onaylandi');
+  const noteIdx = rest.indexOf('--not');
+  const noteText = noteIdx >= 0 ? rest[noteIdx + 1] : undefined;
+
+  await withEdit(
+    async (editId, pkg) => {
+      const bundles = await call(`/applications/${pkg}/edits/${editId}/bundles`);
+      if (!(bundles.bundles ?? []).some((b) => String(b.versionCode) === code)) {
+        throw new Error(`sürüm kodu ${code} yüklü paketler arasında yok`);
+      }
+      const prod = await call(`/applications/${pkg}/edits/${editId}/tracks/production`).catch(() => ({ releases: [] }));
+      const existing = (prod.releases ?? []).find((r) => (r.versionCodes ?? []).includes(code));
+      const releaseNotes = noteText
+        ? [{ language: 'tr-TR', text: noteText }]
+        : existing?.releaseNotes;
+      if (!releaseNotes?.length) throw new Error('üretimde ilk kez çıkan sürüm için --not "metin" gerekli');
+
+      const release = {
+        name: existing?.name ?? '1.0.0',
+        versionCodes: [code],
+        releaseNotes,
+        ...(pct < 100 ? { status: 'inProgress', userFraction: pct / 100 } : { status: 'completed' }),
+      };
+      await call(`/applications/${pkg}/edits/${editId}/tracks/production`, {
+        method: 'PUT',
+        body: { track: 'production', releases: [release] },
+      });
+      console.log(`✓ production · sürüm kodu ${code} · %${pct} (${release.status})`);
+    },
+    { commit: true },
+  );
+}
+
 /** İnceleme durumu ve uygulama detayları. */
 async function details() {
   await withEdit(async (editId, pkg) => {
@@ -219,7 +266,7 @@ async function details() {
   });
 }
 
-const COMMANDS = { status, listing: (p) => listing(p), images: (l) => images(l), details, notes: (...a) => notes(...a) };
+const COMMANDS = { status, listing: (p) => listing(p), images: (l) => images(l), details, notes: (...a) => notes(...a), rollout: (...a) => rollout(...a) };
 
 const [cmd, ...args] = process.argv.slice(2);
 if (!cmd || !COMMANDS[cmd]) {
@@ -228,6 +275,8 @@ if (!cmd || !COMMANDS[cmd]) {
   status                     kanallar, sürümler, yüklenen paketler
   listing ['{"...":"..."}']  mağaza girişini oku / yaz (yazınca commit eder)
   notes [kanal] ['metin']    sürüm notunu oku / yaz (yazınca commit eder)
+  rollout <kod> <yüzde> --onaylandi [--not 'metin']
+                             üretime kademeli sürüm / yüzdeyi artır (commit eder)
   images [dil]               grafikler, hangisi eksik
   details                    varsayılan dil ve iletişim bilgileri
 
