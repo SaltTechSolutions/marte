@@ -31,6 +31,26 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-14 — Abonelik ekranı bağlantıları; Android build yerine OTA
+
+**Yapıldı.** Paywall'a koşullar + gizlilik bağlantıları (`SubscriptionLegalLinks`)
+commit edildi (bc769539); typecheck temiz, 385/385 test. Play üretime hazırlık
+kontrolü: mağaza girişi, grafikler, formlar tamam; üretim kanalı boş.
+
+**Karar.** Bu değişiklik için Android build alınmadı; sürüm kodu 8 üretime
+çıktıktan sonra `eas update` ile production kanalına gidecek. Gerekçe: EAS
+kredisinin %95'i bitmiş, değişiklik yalnızca JS.
+
+**Bilerek yapılmadı.** Sürüm kodu 9 build'i — kredi iOS'a saklanıyor.
+
+**Açık.** Sürüm kodu 8'in production imzasıyla cihaz doğrulaması (Google girişi,
+push, QR) hâlâ yapılmadı; üretime %20 kademeli çıkış ondan sonra. OTA'nın
+Android sürüm kodu 8'e ulaştığı yayından sonra doğrulanmalı.
+
+**Nerede.** `apps/gymentra-mobile/src/components/LegalLinks.tsx`, `docs/plan.md` (D-4, 3. madde).
+
+---
+
 ## 2026-09-13 — GymEntra 1.0 abonelikleriyle yeniden incelemede
 
 **Yapıldı.** 5 Eylül'den beri 7 gün `WAITING_FOR_REVIEW`'da bekleyen 1.0
