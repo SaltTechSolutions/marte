@@ -569,6 +569,33 @@ ve QR okutma — üçü de production imzasıyla **hiç denenmedi**; önceki
 denemeler `preview` APK'sıylaydı ve imzası farklı. Bunlar çalışmıyorsa
 Android yayını anlamsız.
 
+**3b. Play Console optimizasyon uyarıları — sürüm kodu 8.** *(14 Eylül 2026 —
+Aside ile Play Console'da, Üretim > Sürüm kontrol paneli'nden okundu. Vitals
+sayfasında görünmüyorlar.)* Üçü de native; OTA ile kapanmaz, bir sonraki
+Android build'ine girer.
+
+- [ ] **R8 kapalı — kod karartma %2. Zorunlu, son tarih Şubat 2027.** Play %25
+  altını görünürlük ve yayın kısıtıyla eşleştiriyor. Paket ayrıntısı: "R8
+  yapılandırması: -", daraltma "-", sıkıştırılmamış DEX 69,3 MB. Sebep:
+  `app.json`'da `expo-build-properties` yok. *Nereden başlanır:* eklentiyi ekle,
+  `android.enableMinifyInReleaseBuilds` + `enableShrinkResourcesInReleaseBuilds`
+  aç; **önce preview APK** — R8 RevenueCat / Firebase / Sentry / ML Kit
+  sınıflarını silebilir. Açılış, Google girişi, abonelik ekranı ve QR okutma
+  denenmeden production build'e girmez. ⚠️ `app.json` değiştiği an `main`'in
+  parmak izi sürüm 8'den ayrılır; o build yayına çıkana kadar Android OTA'ları
+  `ota/android-8-paywall` dalından gönderilir (bkz. karar defteri 14 Eylül).
+- [ ] **Kenardan kenara ekranda eskimiş API'ler — bizim kodumuzda değil, iş yok.**
+  `Window.get/setStatusBarColor`, `setNavigationBarColor`,
+  `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES/DEFAULT`. Çağrı yerlerinin hepsi
+  kütüphane: React Native `StatusBarModule`, `WindowUtilKt.statusBarHide/Show`;
+  Material `BottomSheetDialog`, `SheetDialog`, `EdgeToEdgeUtils`. Son tarih yok.
+  Expo SDK / RN yükseltmesinde tekrar bakılır.
+- [ ] **Yön kısıtlaması — bilerek bırakıldı.** `MainActivity`
+  `screenOrientation="PORTRAIT"` (`app.json` `"orientation": "portrait"`) ve ML
+  Kit'in `GmsBarcodeScanningDelegateActivity`'si (kütüphanenin kendi manifest'i,
+  bizden bağımsız). Android 16 büyük ekranda bunu zaten yok sayıyor. Kaldırmak
+  yatay düzen tasarımı ister; tablet hedefi olursa açılır. Son tarih yok.
+
 **4. iOS mağaza kalanları.** *(5 Eylül 2026 — `/appstore` ajanıyla
 doğrulandı, üçü de gerçekten eksik.)* Yaş sınırı anketinde **26 yanıtsız
 alan**; inceleme bilgileri **tamamen boş** (demo hesap adı, parolası, not ve
