@@ -122,6 +122,10 @@ export default function RegisterScreen() {
       }
     } catch (e) {
       const code = (e as { code?: string }).code ?? '';
+      // A returning member who filled in the sign-up form: flip to sign-in
+      // with the e-mail and password kept, so one more tap signs them in.
+      // App Review hit exactly this on 15 Sep 2026 and gave up.
+      if (mode === 'signUp' && code === 'auth/email-already-in-use') setModeOverride('signIn');
       setError(authErrorMessage(code));
     } finally {
       setLoading(false);
@@ -169,6 +173,45 @@ export default function RegisterScreen() {
           <Text variant="helper" tone="sub">
             Powering Modern Gyms
           </Text>
+        </View>
+
+        {/* Both modes as equal tabs above the form. The old single link under
+            the button was missed: returning members filled in the sign-up
+            form, and App Review rejected 1.0 after landing on "join a gym"
+            with a fresh account (15 Sep 2026). */}
+        <View
+          accessibilityRole="tablist"
+          style={{ flexDirection: 'row', padding: 4, borderRadius: 14, backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, gap: 4 }}>
+          {(
+            [
+              ['signUp', 'Kayıt ol'],
+              ['signIn', 'Giriş yap'],
+            ] as const
+          ).map(([value, label]) => {
+            const selected = mode === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => {
+                  setModeOverride(value);
+                  setError(null);
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                style={{
+                  flex: 1,
+                  minHeight: 44,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: selected ? colors.surf2 : 'transparent',
+                }}>
+                <Text variant="label" weight={selected ? '900' : '700'} tone={selected ? 'primary' : 'sub'}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {mode === 'signUp' && (
@@ -223,19 +266,6 @@ export default function RegisterScreen() {
             </Text>
           </Pressable>
         )}
-
-        <Pressable
-          onPress={() => setModeOverride(mode === 'signUp' ? 'signIn' : 'signUp')}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'signUp' ? 'Giriş yap' : 'Kayıt ol'}
-          style={{ alignItems: 'center', paddingVertical: 13, minHeight: 44, justifyContent: 'center' }}>
-          <Text variant="helper" tone="sub">
-            {mode === 'signUp' ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
-            <Text variant="helper" weight="900" style={{ color: colors.pText }}>
-              {mode === 'signUp' ? 'Giriş yap' : 'Kayıt ol'}
-            </Text>
-          </Text>
-        </Pressable>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ flex: 1, height: 1, backgroundColor: colors.line }} />

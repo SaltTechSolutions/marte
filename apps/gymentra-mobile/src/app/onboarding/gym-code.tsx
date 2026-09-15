@@ -210,7 +210,7 @@ export default function GymCodeScreen() {
           style={{ marginBottom: spacing.lg }}
           onPress={async () => {
             await signOutAndForget();
-            router.replace('/onboarding/register');
+            router.replace('/onboarding/register?mode=signIn');
           }}
         />
       </View>
