@@ -47,10 +47,12 @@ kullanıcı, giriş moduyla karşılanıyor.
 **Bilerek yapılmadı.** Varsayılan mod tamamen girişe çevrilmedi — salona yeni
 katılan üye akışı kayıtla başlıyor. İncelemedeki build 27'ye girmiyor.
 
-**Açık.** Yeni build ister (iOS + Android); OTA ile yayındaki sürümlere gidebilir
-ama `main`'in parmak izi SDK yamalarıyla ayrıldığı için Android'de
-`ota/android-8-paywall`, iOS'ta build 27'nin commit'inden bir dal gerekir.
-Sekmenin görünümü cihazda kontrol edilmedi.
+**Açık.** ~~Sekmenin görünümü cihazda kontrol edilmedi.~~ *(15 Eylül: iPhone 17e
+simülatöründe sekmeler ve kayıtlı e-postayla otomatik giriş moduna geçiş
+görüldü; çıkış sonrası giriş modu denenmedi.)* **Android'e OTA ile gitti**
+(`ota/android-8-paywall` f97f7d93, güncelleme grubu `721ee0a7`, Expo sunucusu
+sürüm 8 runtime'ına bu güncellemeyi veriyor). iOS'a gitmedi: build 27
+incelemede, OTA dalı yok.
 
 **Nerede.** `apps/gymentra-mobile/src/app/onboarding/register.tsx`.
 
