@@ -647,7 +647,7 @@ function AdminSettingsForm({ tenantId, tenant }: { tenantId: string; tenant: Ten
         variant="ghost"
         onPress={async () => {
           await signOutAndForget();
-          router.replace('/onboarding/register');
+          router.replace('/onboarding/register?mode=signIn');
         }}
       />
 

@@ -31,6 +31,31 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-15 — Kayıt ekranında giriş modu öne alındı
+
+**Yapıldı.** `onboarding/register.tsx`: "Kayıt ol / Giriş yap" formun üstünde
+iki eşit sekme (butonun altındaki tek bağlantı kaldırıldı); kayıtlı e-postayla
+kayıt denenirse ekran e-posta ve şifreyi koruyarak giriş moduna geçiyor. Çıkış
+yolları (yönetici ayarları, antrenör profili, "Salonuna katıl", AuthRedirect)
+artık `?mode=signIn` ile açıyor. Typecheck temiz, 385/385 test. **Cihazda
+görülmedi.**
+
+**Karar.** Soğuk açılış (`index.tsx`) ve hesap silme sonrası kayıt modunda
+kalıyor: ilk kez kuran kişi çoğunluk. Oturumu kapanmış biri ise geri dönen
+kullanıcı, giriş moduyla karşılanıyor.
+
+**Bilerek yapılmadı.** Varsayılan mod tamamen girişe çevrilmedi — salona yeni
+katılan üye akışı kayıtla başlıyor. İncelemedeki build 27'ye girmiyor.
+
+**Açık.** Yeni build ister (iOS + Android); OTA ile yayındaki sürümlere gidebilir
+ama `main`'in parmak izi SDK yamalarıyla ayrıldığı için Android'de
+`ota/android-8-paywall`, iOS'ta build 27'nin commit'inden bir dal gerekir.
+Sekmenin görünümü cihazda kontrol edilmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/app/onboarding/register.tsx`.
+
+---
+
 ## 2026-09-15 — iOS 1.0 ikinci ret (2.1 demo hesap); yeniden gönderildi
 
 **Yapıldı.** 1.0 (build 27) 15 Eylül'de 2.1 "Information Needed" ile reddedildi:

@@ -29,7 +29,7 @@ export function AuthRedirect() {
 
   useEffect(() => {
     if (authLoading || user || isPublic(pathname)) return;
-    router.replace('/onboarding/register');
+    router.replace('/onboarding/register?mode=signIn');
   }, [authLoading, user, pathname, router]);
 
   return null;
