@@ -31,6 +31,33 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-15 — iOS 1.0 ikinci ret (2.1 demo hesap); yeniden gönderildi
+
+**Yapıldı.** 1.0 (build 27) 15 Eylül'de 2.1 "Information Needed" ile reddedildi:
+incelemeci demo hesapla giremediğini yazdı; iPad ekran görüntüleri "Salonuna
+katıl" ekranında "SUPERGYM" / "DEMO GYM" / "GYMENTRA PRO" kodlarını denediğini
+gösteriyor. Firebase'den okundu: `uye01@supergym88.test` açık, Supergym
+(`SUPERGYM-88`) aktif üyesi, `roles: [member]` — yani incelemeci başka bir
+hesapla oturum açmıştı. İnceleme notunun başına giriş adımları eklendi
+(geri okunup birebir doğrulandı), Çözüm Merkezi'ne yanıt yazıldı, sürüm 1.0
+build 27 + iki abonelik 15 Eylül 20:59'da yeniden gönderildi (`WAITING_FOR_REVIEW`).
+
+**Karar.** Sebep kod değil, ilk ekranın kayıt modunda açılması: dönen kullanıcı
+alttaki "Giriş yap" bağlantısını görmeden yeni hesap açıyor. Bu seferlik notla
+çözüldü.
+
+**Bilerek yapılmadı.** Demo şifreyle cihazda giriş denenmedi (ajan parola
+giremez); kullanıcıya önerildi, gönderim ondan önce yapıldı. Uygulamada kayıt
+ekranı değiştirilmedi — yayında olmayan sürüme kod değişikliği yeni build ister.
+
+**Açık.** Kayıt/giriş ekranında dönen kullanıcının "Giriş yap"ı kaçırması gerçek
+bir UX sorunu (salon üyeleri de yaşar): varsayılan modu ya da iki eylemin
+ağırlığını düşünmek gerek. Build 27'yi kimin yüklediği hâlâ yazılmadı.
+
+**Nerede.** App Store Connect inceleme notu, `apps/gymentra-mobile/src/app/onboarding/register.tsx`.
+
+---
+
 ## 2026-09-14 — SDK 57 yamaları; OTA artık dal üzerinden
 
 **Yapıldı.** `npx expo install --fix` (kullanıcı uyguladı): expo 57.0.22,
