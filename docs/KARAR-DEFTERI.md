@@ -49,6 +49,15 @@ dalı gerekiyor (Android'de `ota/android-8-paywall` ile gitti). Üretim imzasıy
 Google girişi/push/QR hâlâ sahada doğrulanmadı. R8 (Play, son tarih Şub 2027)
 ve SDK 57 yamaları bir sonraki build'i bekliyor.
 
+**Ek (16 Eylül).** Onaydan sonra uygulama App Store'da indirilemiyordu: dağıtım
+sayfası "removed from sale" diyordu, sebebi **App Availability'nin hiç
+ayarlanmamış olmasıydı** (fiyat 175 ülkede 0,00 girilmiş ama hiçbir ülke açık
+değil; "Remove App From Sale" pasif, yani kimse kaldırmamıştı). Kullanıcı
+erişilebilirliği **yalnızca Türkiye** olarak kurdu; kontrol edildi: 1 açık /
+174 kapalı, uyarı kalktı, 1.0 "Ready for Distribution". Temel ülke Türkiye
+(TRY), vergi kategorisi "Fitness and Health". Onay tek başına yayın demek
+değil — sonraki uygulamada erişilebilirlik gönderimden önce kurulmalı.
+
 **Nerede.** `docs/plan.md` (3b, 4. madde), App Store Connect.
 
 ---
