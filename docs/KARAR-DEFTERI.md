@@ -31,6 +31,28 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-16 — GymEntra 1.0 iOS'ta yayında
+
+**Yapıldı.** Sürüm 1.0 (build 27) `READY_FOR_SALE`; GymEntra Pro aylık ve yıllık
+abonelikleri `APPROVED`. 15 Eylül'deki 2.1 reddinden sonra tek değişiklik
+inceleme notuna eklenen giriş adımlarıydı (kod değişmedi, build aynı kaldı).
+
+**Karar.** İki platform da yayında: Android sürüm kodu 8 (%100, Türkiye),
+iOS 1.0 build 27. Bundan sonraki JS düzeltmeleri OTA ile, her platformun kendi
+build commit'inden açılan daldan gider.
+
+**Bilerek yapılmadı.** Build 27'ye kayıt ekranı düzeltmesi konmadı — ret
+sırasında yeni build almak inceleme sırasını sıfırlardı.
+
+**Açık.** Kayıt ekranı düzeltmesi iOS'ta yok; build 27'nin commit'inden bir OTA
+dalı gerekiyor (Android'de `ota/android-8-paywall` ile gitti). Üretim imzasıyla
+Google girişi/push/QR hâlâ sahada doğrulanmadı. R8 (Play, son tarih Şub 2027)
+ve SDK 57 yamaları bir sonraki build'i bekliyor.
+
+**Nerede.** `docs/plan.md` (3b, 4. madde), App Store Connect.
+
+---
+
 ## 2026-09-15 — Kayıt ekranında giriş modu öne alındı
 
 **Yapıldı.** `onboarding/register.tsx`: "Kayıt ol / Giriş yap" formun üstünde
