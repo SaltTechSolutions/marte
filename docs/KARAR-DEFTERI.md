@@ -31,6 +31,111 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-20 — UI/UX/performans denetimi; DEN-1, 2, 3, 4, 5, 7, 9 ve 10 düzeltildi
+
+**Yapıldı.** Uygulama salt okunur denetlendi (19 ajan, her rapor bağımsız bir
+doğrulayıcıdan geçti): 456 ham bulgu, 4'ü çürütüldü, 132 kök sorun (10 yüksek,
+82 orta, 40 düşük). Rapor `docs/denetim-2026-09-20.md`, plana `DEN` bölümü
+olarak işlendi. Sekiz yüksek bulgu düzeltildi: salon belgesinin oturumda bir
+kez okunması (`AuthProvider` artık canlı dinliyor, `ThemeSync` marka
+değerlerine bağlı; önbellekten gelen "belge yok"u iletmeyen ortak
+`watchConfirmedDoc`, 5 test), çevrimdışı soğuk açılışta
+üyelik kartının silinmesi (`getActiveMemberships` sunucudan okuyor,
+`watchMembership` önbellekten gelen "belge yok"u iletmiyor; 8 test, biri gerçek
+SDK ile ağ kapalıyken), onaylanan yeni üyenin boş
+uygulamaya düşmesi (`pending.tsx` onayda `refreshMembership` çağırıyor,
+`approved.tsx` ikinci salona katılanı yeni salona geçiriyor),
+raporlardan üye detayına giden
+`id` / `memberId` uyuşmazlığı (`admin/reports.tsx`), yönetici paneline "Giriş
+kabul et" kartı (`admin/index.tsx`), program kurucuda "Şablondan başla"nın çok
+günlü programı ezmesi (`hasNoExercises`, `data/program.ts`, 3 birim test),
+üyenin yaklaşan randevu sorgusunun iptalleri de getirip 3'te kesmesi
+(`upcomingScheduled`, `data/ptSession.ts`, 4 birim test) ve ölçüm formunun
+dokunulmamış 75/100/85/35 varsayılanlarını gerçek ölçü diye kaydetmesi
+(`data/measurement.ts`, 6 birim test; form artık boş açılıyor, yalnızca
+üyenin eklediği alan kaydediliyor). `tsc`, lint ve 411 test temiz. DEN-1 ve
+DEN-3'ün ekran/bağlam akışı testle örtülü değil. **Uygulama cihazda görülmedi.**
+
+**Karar.** Denetim işleri `plan.md` **DEN** bölümünde izlenir; yalnızca on
+yüksek madde ve üç toplu iş plana alındı, orta ve düşük maddeler raporda kalır
+ve karar verildiğinde plana açılır (yüzlük bir listeyi plana dökmek planı
+okunmaz yapardı). Küçük JS düzeltmeleri bitti; sıra: deploy onayı
+isteyenler (DEN-8, ödeme penceresi), paket boyutu bir sonraki native build'e;
+DEN-6 tasarım kararı ister. (DEN-3'ü sunucu işi sanmıştım: istemci işiymiş,
+kural değişikliği gerekmedi.)
+**Android'e güncelleme gönderilmeyecek** (kullanıcı): Play Store'da bir
+ilerleme olmadıkça ne build ne OTA gidiyor. Düzeltmeler `main`'e girer, OTA
+yalnızca iOS'a. Kaldırma koşulu: kullanıcının Play'de ilerleme olduğunu
+söylemesi (ilerlemenin ne olduğu söylenmedi, tahmin edilmedi).
+
+**Bilerek yapılmadı.** Y9'da `member.tsx` `memberId` bulamayınca çıkan
+yanıltıcı "Salon yönetici oturumu gerekli" kilit ekranına dokunulmadı; yalnızca
+kök sebep (parametre adı) düzeltildi. Admin check-in kartına `canCheckIn`
+koşulu konmadı: admin kapıyı her zaman açabiliyor. Denetimin çürüttüğü "aynı
+sorgu birden çok ekranda üç kez faturalanır" endişesi için önlem alınmadı;
+Firestore istemcisi aynı sorguyu tek hedefe birleştiriyor. DEN-7'de randevu
+durumu sunucuda süzülmedi: `where('status', ...)` yeni bir composite index ve
+deploy ister; bunun yerine pencere 3 → 20 yapılıp durum istemcide süzüldü
+(dinleyici başına ≤20 belge okuması). DEN-4'te eski ölçüm kayıtları
+temizlenmedi: kural silmeye izin vermiyor, Admin SDK ile silmek onay ister ve
+hangi kaydın uydurma olduğu bilinmiyor. Kilo stepper'ının dokunuş sayısına
+(0,5 adımla 75'ten) dokunulmadı. DEN-1'de `AuthContext` değiştirilmedi:
+`refreshMembership(preferTenantId)` eklenmedi, ikinci salona katılan için
+`approved.tsx` mevcut `switchTenant`'i çağırıyor (`GymSwitcher`'ın yolu).
+Bekleyen üyelikleri de izleyen kalıcı bir dinleyici yerine ekran düzeyinde
+yenileme seçildi; `create-gym.tsx` aynı deseni kullanıyor. (İlk yazdığım
+"ikinci salona katılma yolu yok" savı yanlıştı: `GymSwitcher.tsx:124` böyle
+bir düğme taşıyor; düzeltildi.) DEN-2'de `AuthContext` değişmedi: sorun onu
+besleyen iki okumadaydı (`getActiveMemberships`, `watchMembership`), tüketicinin
+`catch`i zaten önbellekle devam etmek için yazılmıştı. `findTenantByCode` ve
+`register.tsx` `routeAfterAuth` dokunulmadı. Denetim yalnızca `getDocs`
+yolunu söylemişti; canlı dinleyicinin aynı sonucu doğurduğu SDK ile denenerek
+bulundu, yalnız birini kapatmak yetmezdi. DEN-3'te `hours.tsx`'in tüm
+`openingHours` haritasını yazması (`openingHours.<gün>` alan yolu) ve
+`settings.tsx` renk önizlemesinin çıkışta geri alınmaması dokunulmadı; iki
+yönetici aynı anda saat düzenlerse sonuncusu öncekini ezer. Aynı çevrimdışı
+tuzağa açık sekiz başka `watchDoc` kullanıcısı (availability, member note,
+renewal request, workout log, user settings, package change, program, member
+package) `watchConfirmedDoc`'a çevrilmedi: disk önbelleğine yalnızca
+`AuthProvider` yazıyor (grep), bunlarda kalıcı kayıp yok, geçici yanlış boş
+durum olabilir.
+
+**Açık.** DEN-6, 8 ve DEN-11..13. Daha önce yalnızca kilosunu kaydeden
+üyelerin uydurma göğüs/bel/kol kayıtları veritabanında duruyor (DEN-4).
+DEN-2: Firestore'un çevrimdışı davranışı gerçek SDK ile ağ kapalıyken denendi
+(sözleşme testi), uygulama cihazda uçak modunda denenmedi. `findTenantByCode`
+çevrimdışıyken hâlâ "salon bulunamadı" diyor; ağ takılıysa (kapalı değil)
+`Launcher` 10 sn'ye kadar boş kalıyor. "Android'de kalın Inter kesimleri sistem fontuna düşüyor"
+iddiası yalnızca kaynak okumasıyla çıktı, ekranda görülmedi; Android
+güncellemesi gönderilmeyeceği için düzelse bile kullanıcıya ulaşmaz. Şablon
+seçici artık çok günlü programda hiç görünmüyor (bilinçli, DEN-5). Değişiklikler
+commit'lenmedi ve OTA gönderilmedi; iOS OTA'sı build 27'nin commit'inden açılan
+dal ister.
+
+**Nerede.** `docs/denetim-2026-09-20.md`, `docs/plan.md` (DEN),
+`apps/gymentra-mobile/src/app/admin/reports.tsx`,
+`apps/gymentra-mobile/src/app/admin/index.tsx`,
+`apps/gymentra-mobile/src/app/trainer/builder.tsx`,
+`apps/gymentra-mobile/src/data/program.ts`,
+`apps/gymentra-mobile/src/data/ptSession.ts`,
+`apps/gymentra-mobile/src/data/firebase/ptSessionRepo.ts`,
+`apps/gymentra-mobile/src/app/member/bookings.tsx`,
+`apps/gymentra-mobile/src/data/measurement.ts`,
+`apps/gymentra-mobile/src/app/member/progress.tsx`,
+`apps/gymentra-mobile/src/app/onboarding/pending.tsx`,
+`apps/gymentra-mobile/src/app/onboarding/approved.tsx`,
+`apps/gymentra-mobile/src/data/firebase/membershipRepo.ts`,
+`apps/gymentra-mobile/src/data/firebase/membershipRepo.test.ts`,
+`apps/gymentra-mobile/src/data/firebase/firestoreOffline.contract.test.ts`,
+`apps/gymentra-mobile/vitest.setup.mts`,
+`apps/gymentra-mobile/src/data/firebase/watch.ts`,
+`apps/gymentra-mobile/src/data/firebase/watch.test.ts`,
+`apps/gymentra-mobile/src/data/firebase/tenantRepo.ts`,
+`apps/gymentra-mobile/src/context/AuthContext.tsx`,
+`apps/gymentra-mobile/src/theme/ThemeSync.tsx`.
+
+---
+
 ## 2026-09-16 — GymEntra 1.0 iOS'ta yayında
 
 **Yapıldı.** Sürüm 1.0 (build 27) `READY_FOR_SALE`; GymEntra Pro aylık ve yıllık
