@@ -8,6 +8,7 @@ import { OpeningHours, Tenant, TenantBranding, TenantContact } from '../types';
 import { tenantFromDoc } from './convert';
 import { membershipId } from './membershipRepo';
 import { seedDefaultPackages } from './packageRepo';
+import { WatchErrorHandler, watchConfirmedDoc } from './watch';
 
 const functions = getFunctions(app, 'europe-west1');
 
@@ -26,6 +27,19 @@ export async function getTenant(tenantId: string): Promise<Tenant | null> {
   const snap = await getDoc(doc(db, 'tenants', tenantId));
   if (!snap.exists()) return null;
   return tenantFromDoc(snap);
+}
+
+/**
+ * The gym document, live (DEN-3). AuthProvider used to read it once per
+ * session, so a change to opening hours, the cancellation window, the
+ * subscription or the branding only showed after a restart, and a screen
+ * seeded from the stale copy wrote it back over the newer one.
+ *
+ * `null` means the server says the gym is gone; a cache-only miss (offline cold
+ * start) is not forwarded, so the cached gym survives. See `watchConfirmedDoc`.
+ */
+export function watchTenant(tenantId: string, onChange: (tenant: Tenant | null) => void, onError?: WatchErrorHandler) {
+  return watchConfirmedDoc('Salon', doc(db, 'tenants', tenantId), tenantFromDoc, onChange, onError);
 }
 
 /**
