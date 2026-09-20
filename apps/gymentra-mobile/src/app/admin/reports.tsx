@@ -226,7 +226,7 @@ export default function AdminReports() {
             <ListRow
               key={e.pkg.id}
               last={i === Math.min(expiring.length, PREVIEW_ROWS) - 1 && expiring.length <= PREVIEW_ROWS}
-              onPress={() => router.push({ pathname: '/admin/member', params: { id: e.pkg.memberId } })}>
+              onPress={() => router.push({ pathname: '/admin/member', params: { memberId: e.pkg.memberId, memberName: e.pkg.memberName } })}>
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="600">
                   {e.pkg.memberName}
@@ -273,7 +273,7 @@ export default function AdminReports() {
             <ListRow
               key={l.memberId}
               last={i === Math.min(lapsed.length, PREVIEW_ROWS) - 1 && lapsed.length <= PREVIEW_ROWS}
-              onPress={() => router.push({ pathname: '/admin/member', params: { id: l.memberId } })}>
+              onPress={() => router.push({ pathname: '/admin/member', params: { memberId: l.memberId, memberName: l.memberName } })}>
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="600">
                   {l.memberName}

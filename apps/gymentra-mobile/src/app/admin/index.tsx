@@ -73,6 +73,19 @@ export default function AdminPanel() {
         </GymSwitchTarget>
       </View>
 
+      {/* Front-desk check-in is frequent and time-critical, so it sits on the
+          landing screen like it does on the trainer's. No canCheckIn guard: this
+          is the admin surface and an admin can always take the door
+          (membership.ts). It had no entry point here until 20 Sep 2026. */}
+      <InfoCard
+        outlined
+        onPress={() => router.push('/checkin')}
+        icon="qr-code-outline"
+        title="Giriş kabul et"
+        subtitle="Üyenin QR kodunu okut veya 6 haneli kodu gir"
+        trailing
+      />
+
       <Pressable onPress={() => router.push('/admin/today')}>
         <Card style={{ alignItems: 'center' }} outlineColor={colors.p}>
           <Text variant="helper" tone="sub">
