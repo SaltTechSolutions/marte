@@ -3,6 +3,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { app, db } from '@/services/firebase';
 
+import { upcomingScheduled } from '../ptSession';
 import { PtSession, PtSessionStatus } from '../types';
 import { ptSessionFromDoc } from './convert';
 import { WatchErrorHandler, watchQuery } from './watch';
@@ -92,11 +93,24 @@ export function watchSessionsForMember(
 }
 
 /**
- * A member's own upcoming PT sessions.
+ * How many upcoming documents the member query reads, cancelled ones included.
+ *
+ * Cancelling only flips `status`, so a cancelled future session still comes
+ * back from the date query. The old `limit(3)` counted those too: the home
+ * card showed a cancelled booking and the bookings list was capped at three
+ * lessons (DEN-7). Filtering on `status` in the query would need a new
+ * (tenantId, memberId, status, date) composite index and a deploy, so the
+ * window is wider and the status is filtered on the client
+ * (`upcomingScheduled`). 20 covers a 12-lesson package plus its cancellations.
+ */
+const UPCOMING_WINDOW = 20;
+
+/**
+ * A member's own upcoming PT sessions — still-scheduled ones only.
  *
  * Security rules already allowed this (`memberId == request.auth.uid`); there
  * was simply no query for it, so the member had no way to see a booking made
- * for them. `limit` keeps the home card cheap — it only ever shows the next one.
+ * for them.
  */
 export function watchUpcomingSessionsForMember(
   tenantId: string,
@@ -110,9 +124,9 @@ export function watchUpcomingSessionsForMember(
     where('memberId', '==', memberId),
     where('date', '>=', Timestamp.fromDate(new Date())),
     orderBy('date', 'asc'),
-    limit(3),
+    limit(UPCOMING_WINDOW),
   );
-  return watchQuery('Randevularım', q, (snap) => snap.docs.map(ptSessionFromDoc), onChange, onError);
+  return watchQuery('Randevularım', q, (snap) => upcomingScheduled(snap.docs.map(ptSessionFromDoc)), onChange, onError);
 }
 
 /**
