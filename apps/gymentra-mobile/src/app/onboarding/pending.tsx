@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking as RNLinking, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
+import { useAuth } from '@/context/AuthContext';
 import { watchMembership } from '@/data/firebase/membershipRepo';
 import { getTenantContact } from '@/data/firebase/tenantRepo';
 import { auth } from '@/services/firebase';
@@ -46,17 +47,45 @@ export default function PendingScreen() {
     };
   }, [tenantId]);
 
+  // AuthProvider only reads the membership at sign-in and on `refreshMembership`,
+  // and its live listener starts only once an active membership is already
+  // known. A pending member has none, so approval never reached it: the app
+  // went on to a home screen with no package, no branding and a "pending" QR
+  // until it was restarted (DEN-1). Refresh before leaving this screen.
+  // Held in a ref because `refreshMembership` is a new function every render and
+  // must not re-subscribe the listener below.
+  const { refreshMembership } = useAuth();
+  const refreshRef = useRef(refreshMembership);
+  useEffect(() => {
+    refreshRef.current = refreshMembership;
+  }, [refreshMembership]);
+
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid || !tenantId) return;
+    let alive = true;
+    let handled = false;
     const unsubscribe = watchMembership(tenantId, uid, (membership) => {
+      if (handled) return;
       if (membership?.status === 'active') {
-        router.replace({ pathname: '/onboarding/approved', params: { tenantId, tenantName } });
+        // The document can snapshot again while the refresh is in flight.
+        handled = true;
+        // A failed refresh must not strand an approved member on this screen:
+        // continue either way, as before.
+        refreshRef
+          .current()
+          .catch(() => {})
+          .then(() => {
+            if (alive) router.replace({ pathname: '/onboarding/approved', params: { tenantId, tenantName } });
+          });
       } else if (membership?.status === 'rejected') {
         router.replace('/onboarding/gym-code');
       }
     });
-    return unsubscribe;
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
   }, [tenantId, tenantName, router]);
 
   return (
