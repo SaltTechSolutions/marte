@@ -20,6 +20,16 @@ export const allProgramExercises = (program: Program): ProgramExercise[] =>
   programDays(program).flatMap((d) => d.exercises);
 
 /**
+ * Hiçbir günde egzersiz yok mu — AKTİF güne değil, TÜM günlere bakar.
+ *
+ * "Şablondan başla" bunu soruyor ve şablon günlerin YERİNE geçiyor. Kurucu
+ * önce yalnızca açık günün listesine bakıyordu: "+ Gün" ile eklenen boş günde
+ * düğme çıkıyor ve şablon, diğer günlerdeki egzersizleri de sessizce
+ * eziyordu (denetim DEN-5).
+ */
+export const hasNoExercises = (days: ProgramDay[]): boolean => days.every((d) => d.exercises.length === 0);
+
+/**
  * Liste ekranlarındaki tek satırlık özet.
  *
  * `program.exercises` çok günlü programda yalnızca ilk günün aynası; onu

@@ -16,7 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
-import { programDays } from '@/data/program';
+import { hasNoExercises, programDays } from '@/data/program';
 import { Program, ProgramDay, ProgramExercise, ProgramTemplate } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
@@ -309,8 +309,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
         })}
 
         {/* Şablondan başlama yalnızca program BOŞKEN: dolu bir programın
-            üstüne şablon kopyalamak antrenörün yazdığını sessizce silerdi. */}
-        {exercises.length === 0 && !pickingFromLibrary && (
+            üstüne şablon kopyalamak antrenörün yazdığını sessizce silerdi.
+            "Boş" TÜM günler için: açık günün listesine bakmak, "+ Gün" ile
+            eklenen boş günde dolu günleri de ezdiriyordu (DEN-5). */}
+        {hasNoExercises(days) && !pickingFromLibrary && (
           pickingTemplate ? (
             <View style={{ gap: 8 }}>
               <Text variant="label" tone="sub">
