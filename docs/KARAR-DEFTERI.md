@@ -31,6 +31,44 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — iOS build 27 için OTA dalı hazırlandı (yayınlanmadı)
+
+**Yapıldı.** `ota/ios-27-denetim` (yerel, `6ac705f4`): build 27'nin commit'i
+`1b74932e` üzerine `denetim-2026-09-20`'nin `apps/gymentra-mobile/src` ağacı ve
+`vitest.setup.mts` alındı (1b74932e'den beri `src`'ye dokunan 15 commit, 87 dosya).
+`app.json`, `package.json`, `package-lock.json` build 27'nin haliyle kaldı.
+**Ölçüm:** build 27'nin `.xcarchive`'ındaki `EXUpdates.bundle/fingerprint`
+(23, 24 ve 27'de aynı) = `8de843714b45a333f7daa619ed47ab076daf3e1d`; `1b74932e`'den
+`expo-updates fingerprint:generate` ile hesaplanan ve bu dalda hesaplanan değer de
+aynı. `main`/`denetim` dalının parmak izi `698caebc62c2…`, yani oradan giden OTA
+build 27'ye inmez. **Doğrulama (build 27'nin bağımlılıklarıyla, `npm ci`):** `tsc`,
+lint, 421 test temiz, `expo export --platform ios` derlendi. Cihazda görülmedi.
+
+**Karar.** Parmak izini bozanlar ölçülerek ayrıldı: build 27'den sonra native modül
+yükseltmeleri (`expo` 57.0.13→57.0.22, `react-native` 0.86.3 ve 14 modül), ayrıca
+`app.json`'dan `web` bloğunun ve `package.json`'dan `web` script'inin kaldırılması
+(her biri tek başına). `android`/`ios` script değişikliği ve `react-dom`/
+`react-native-web` bildirimleri parmak izini değiştirmiyor. Bu yüzden OTA dalı
+yalnızca JS taşıyor; `main` web temizliği ve native yükseltmelerle yeni build 28'e
+kalıyor. AGENTS.md'deki "yerel build'e `eas update` ulaşmıyor" uyarısı bu build için
+doğrulanmadı: yerelde alınmış build 27'nin gömülü değeri, çalışma dizininde hesaplanan
+değerle birebir aynı.
+
+**Bilerek yapılmadı.** Yayınlanmadı ve push edilmedi. Yalnızca DEN işleri
+seçilmedi: 15 commit'in hepsi gider (iOS'ta olmayan kayıt ekranı düzeltmesi dahil).
+Android'e bir şey gitmedi (güncelleme durdurulu).
+
+**Açık.** (1) JS, build 27'nin native modül sürümleri (57.0.13) üzerinde *cihazda*
+çalıştırılmadı; tip ve test düzeyinde uyumlu. (2) Yayın, `EXPO_PUBLIC_*` değerlerinin
+pakete girdiğini doğrulamadan yapılırsa Firebase anahtarsız bir paket gidebilir;
+yayından önce pakette `tarabyamarte` aranmalı. (3) `production` kanalı EAS'ta `production`
+dalını gösteriyor; oradaki son grup Android'e ait (`cb271b9b…`), iOS güncellemesi farklı
+runtime olduğundan onunla çakışmaz.
+
+**Nerede.** Dal `ota/ios-27-denetim` (`6ac705f4`), `docs/KARAR-DEFTERI.md`.
+
+---
+
 ## 2026-09-21 — backend/functions/lib git'ten çıkarıldı
 
 **Yapıldı.** Derlenmiş çıktı `backend/functions/lib/` (34 dosya) yanlışlıkla izleniyordu:
