@@ -52,7 +52,7 @@ yapılandırması).
 `functions:log --only refundOnClassCancelled` ve `class_cancellation_refunds`
 belgesine bakılmalı. CLI `firebase-functions` sürümünün eski olduğunu uyarıyor
 (yükseltme ayrı iş, dokunulmadı). iOS OTA (DEN-6 istemcisi) hâlâ gönderilmedi ve
-`denetim-2026-09-20` dalı `main`'e alınmadı/push edilmedi.
+`denetim-2026-09-20` dalı `main`'e alınmadı (aynı gün `origin`'e push edildi, PR açılmadı).
 
 **Nerede.** `docs/plan.md` (DEN-6, DEN-8), `backend/functions/src/{classCancellation,sessions,index}.ts`.
 
@@ -90,7 +90,7 @@ Ağustos'ta zaten silinmişti; 50/51 üye `tenant_memberships`'a taşınmıştı
 taşınmayan bir kayıt (Baran Demir) da kullanıcının onayıyla arşiv kaydıydı.
 Kullanıcı bunu bilerek seçti (yedekli silme önerilmişti). Ayrıca:
 `denetim-2026-09-20` dalının upstream'i yok, bu oturumdaki tüm commit'ler yalnızca
-yerel diskte (push edilmedi). `backend/functions/lib/*` git'te izleniyor ve
+yerel diskteydi (aynı gün, kullanıcının `git push -u origin denetim-2026-09-20`'ıyla `origin`'e gitti). `backend/functions/lib/*` git'te izleniyor ve
 kullanıcının deploy denemesindeki `npm run build` onları değiştirdi
 (`classCancellation.js` yeni); commit'lenmedi.
 
