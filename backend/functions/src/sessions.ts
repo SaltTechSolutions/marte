@@ -20,6 +20,20 @@ function timeAt(base: Date, hhmm: string): Date {
 }
 
 /**
+ * May this membership own a PT calendar (be the `trainerId` of a session)?
+ *
+ * DEN-6 / CX-08. An admin always coaches (AGENTS.md §4b; `canCoach` in the
+ * app's `membership.ts`): in a small gym the person who runs it usually trains
+ * the members too, and needs no separate `trainer` role for that. The server
+ * only accepted an explicit `trainer` role, so an admin-only owner could not
+ * put an appointment on their own calendar even though every screen said they
+ * could coach. Same decision on both sides now.
+ */
+export function canHoldPtSessions(roles: readonly string[] | null | undefined): boolean {
+  return !!roles && (roles.includes('trainer') || roles.includes('admin'));
+}
+
+/**
  * PER-6: does a proposed session collide with one that already exists?
  *
  * The deterministic per-slot document id below stops two bookings for the
@@ -525,7 +539,7 @@ export const createPtSessionByStaff = onCall(
       }
 
       const trainer = trainerSnap.data();
-      if (!trainerSnap.exists || trainer?.status !== 'active' || !(trainer?.roles ?? []).includes('trainer')) {
+      if (!trainerSnap.exists || trainer?.status !== 'active' || !canHoldPtSessions(trainer?.roles)) {
         throw new HttpsError('failed-precondition', 'Bu antrenör artık salonda çalışmıyor.');
       }
       const member = memberSnap.data();
