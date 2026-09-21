@@ -5145,7 +5145,7 @@ türden değil.
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
 | [~] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket) yapıldı; **yapılmadı:** 44pt altı dokunma hedefleri (ekranlarda ~68 yer), semantik renk/sınır kontrastı (token kararı), 11pt `label` metni, grafik metin karşılığı | m | designplan D3-1, D2-4 |
-| [~] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. En yoğun dört ekran (`member/index`, `admin/index`, `admin/classes`, `trainer/member`) yapıldı; ölçülen eksik 70 → 49 (102 çağrı yeri). Kalan: ikinci kademe ekranlar | m | P2-1 "Kalan" |
+| [x] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. Ölçülen eksik 70 → 3 (102 çağrı yeri); kalan 3 bilerek dışarıda (aşağıdaki not) | m | P2-1 "Kalan" |
 
 **DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
 (paketi bitenler ve paketi olmayanlar) artık `memberId` ve `memberName`
@@ -5452,36 +5452,27 @@ preview build'de denenmeli. Reanimated + worklets (828 KB) `SwipeableRow`'un
 yeniden yazımını ve native bağımlılık değişikliğini ister (`designplan` D2-6 ile
 birlikte karar).
 
-**DEN-13 kısmen kapandı — 21 Eylül 2026.** Dört ekranda düşen dinleyici
-artık kullanıcıya görünüyor: `ErrorNotice` + "Tekrar dene", kartlarda
-"Alınamadı", ve ilk veri gelmeden "boş" iddiası yok (`member/index` paket,
-ziyaret, haftalık hedef; `admin/index` bekleyen istek "–"; `admin/classes`
-"Henüz ders eklenmedi" ve "Eğitmen adı" geri düşüşü; `trainer/member` ölçüm ve
-antrenman kartları). Ortak kanca yazılmadı (istenmemiş refactor); ekran başına
-`failed` + `retryKey`. Bu sırada `sharedWatch`'ın düşmüş dinleyiciyi yeniden
-başlatmadığı bulundu ve düzeltildi (8 test). Ölçüm: tip denetleyicisiyle sayılan
-102 `watch*` çağrı yerinden `onError` geçmeyen 70 → 49. **Kalan 49:** `trainer/profile`
-(6), `admin/member` (4), `member/book-session`, `child`, `profile`, `progress`
-(3'er), `AuthContext` ve `RenewalRequestRow` bilerek atlandı (bkz. karar defteri
-21 Eylül), gerisi 1–2'şer. Cihazda görülmedi.
-
-**DEN-12 kısmen kapandı — 21 Eylül 2026.** Yalnızca ortak bileşenler, ekran
-okuyucu tarafı (O29, O37, O35'in bileşen kısmı): `Button` `accessibilityRole="button"`,
-durum ve emoji ön ekinden arınmış etiket; `Chip` (`onPress`'liyse) rol +
-`selected`; `Stepper` `label` prop'u, "Ağırlık azalt/artır", değer etiketi ve
-Android canlı bölgesi (dokuz çağrı yeri etiket alıyor); `Toast`
-`announceForAccessibility` + eylemli toast'ta dış öğe artık tek erişilebilir öğe
-değil (etiketli `Pressable` çocuklarını VoiceOver'dan gizlediği için "Geri al"
-düğmesine ulaşılamıyordu) ve eylem 44pt; `ErrorNotice` duyuru; `ListSkeleton`
-tek "Yükleniyor" öğesi; `MonthCalendar` ay okları ve gün hücreleri (tarih,
-etkinlik sayısı, seçili); `ListRow` `onPress`'liyse rol. **Yapılmadı:** O28 (44pt
-altı hedefler ekran ekran, ~68 yer), O31 (alan sınırı ve `onp`/`#F87171`
-kontrastı: yeni palet tokenı = görsel karar), O32 (11pt `label`), O33
-(`maxFontSizeMultiplier`), O34/O36 (grafik ve kas haritası metin karşılığı:
-çağıran ekranlar), O30 (basılı durum; not: `Button` ana dalı `press` yerine
-doğrudan `onPress` çağırıyor, yani haptik çalışmıyor; kimse istemedi, dokunmadım).
-**VoiceOver/TalkBack ile denenmedi**; bileşen testi altyapısı yok, doğrulama
-`tsc`, lint ve mevcut 419 testle sınırlı.
+**DEN-13 kapandı — 21 Eylül 2026.** `watch*` çağrılarında `onError` geçmeyen
+yer 70 → **3** (tip denetleyicisiyle sayılan 102 çağrı yeri). İlk tur: `member/index`,
+`admin/index`, `admin/classes`, `trainer/member`. İkinci tur: `trainer/profile`,
+`admin/member`, `book-session`, `child`, `member/profile`, `progress`,
+`assign-package`, `propose-package-change`, `promotion-form`, `members`,
+`trainer/classes`, `trainer/availability`, `trainer/builder`, `trainer/calendar`,
+`member/classes`, `exercise-library`, `card`, `goals`, `package-offer`,
+`payments`, `workout/{index,session,warmup}`, `NotificationPreferences`,
+`onboarding/pending`. Kalıp her yerde aynı: ekran başına `failed` + `retryKey`,
+`ErrorNotice` + "Tekrar dene", `failed` bayrağını efekt değil dokunuş temizliyor
+(AGENTS §4); ortak kanca yazılmadı. Ek olarak `sharedWatch` düşmüş dinleyiciyi
+yeniden başlatmıyordu, düzeltildi (8 test). **Yolda bulunan gerçek kusurlar:**
+`trainer/availability` "Kaydet" veriler gelmeden açıktı, yavaş ya da düşmüş
+yüklemede antrenörün gerçek haftasını varsayılanla ezebilirdi (artık `loaded`
+ister); `book-session` düşmüş "meşgul saat" dinleyicisiyle dolu saatleri boş
+gösteriyordu; `pending` dinleyicisi düşerse onaylanan üye ekranda kalıyordu;
+`NotificationPreferences` düşünce anahtarlar sessizce kapalı kalıyordu.
+**Bilerek dışarıda kalan 3:** `AuthContext.tsx` içindeki `watchMembership` ve
+`watchTenant` (oturum akışının kalbi; hata davranışı ayrı ve dikkatli bir iş,
+bir ekran bandı değil) ve `RenewalRequestRow` (hata halinde satır zaten hiç
+çizilmiyor, yanıltıcı bir iddia yok). Cihazda görülmedi.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

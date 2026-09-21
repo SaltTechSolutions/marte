@@ -4,6 +4,8 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
+import { ListSkeleton } from '@/components/ListSkeleton';
 import { StatCard } from '@/components/StatCard';
 import { MiniBarChart } from '@/components/MiniBarChart';
 import { Stepper } from '@/components/Stepper';
@@ -54,6 +56,11 @@ export default function MemberProgress() {
   const [retryKey, setRetryKey] = useState(0);
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
+  // Failed listeners used to leave "Henüz ölçüm yok / İlk ölçümünü ekle" on
+  // screen for a member with months of measurements (DEN-13). The tap clears
+  // the flag (AGENTS §4: no synchronising setState in the effect).
+  const [failed, setFailed] = useState(false);
+  const onError = () => setFailed(true);
   const [entries, setEntries] = useState<MeasurementEntry[] | undefined>(undefined);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [visits, setVisits] = useState<Date[]>([]);
@@ -66,12 +73,12 @@ export default function MemberProgress() {
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMeasurements(tenantId, uid, setEntries);
+    return watchMeasurements(tenantId, uid, setEntries, onError);
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchWorkoutLogsForMember(tenantId, uid, setLogs);
+    return watchWorkoutLogsForMember(tenantId, uid, setLogs, onError);
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
@@ -81,7 +88,7 @@ export default function MemberProgress() {
     const since = new Date();
     since.setDate(since.getDate() - 84);
     since.setHours(0, 0, 0, 0);
-    return watchMyCheckins(tenantId, uid, since, setVisits);
+    return watchMyCheckins(tenantId, uid, since, setVisits, onError);
   }, [tenantId, uid, retryKey]);
 
   const openForm = () => {
@@ -147,6 +154,16 @@ export default function MemberProgress() {
       refreshControl={refreshControl} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Text variant="h3">Gelişim</Text>
 
+      {failed ? (
+        <ErrorNotice
+          message="Bazı bilgiler yüklenemedi; ölçümlerin ve özetlerin eksik olabilir."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      ) : null}
+
       {visits.length > 0 && (
         <StatCard
           label="SALONA GELİŞ"
@@ -171,7 +188,9 @@ export default function MemberProgress() {
         />
       )}
 
-      {!latest ? (
+      {entries === undefined ? (
+        failed ? null : <ListSkeleton rows={2} avatar={false} />
+      ) : !latest ? (
         <Card style={{ alignItems: 'center', gap: 6, paddingVertical: spacing.lg }}>
           <Ionicons name="trending-up-outline" size={24} color={colors.sub} />
           <Text variant="body" weight="900" style={{ textAlign: 'center' }}>

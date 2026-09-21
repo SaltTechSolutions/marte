@@ -76,7 +76,7 @@ function MyClasses({ tenantId, trainerId }: { tenantId: string; trainerId: strin
 
   // Names for the register: a class stores uids, and the client cannot look up
   // another user's Auth profile — the roster is the only join available.
-  useEffect(() => watchActiveMembers(tenantId, setMembers), [tenantId]);
+  useEffect(() => watchActiveMembers(tenantId, setMembers, () => setFailed(true)), [tenantId, retryKey]);
 
   const nameOf = (uid: string) => {
     const m = members.find((x) => x.userId === uid);

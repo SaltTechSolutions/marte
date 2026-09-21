@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
@@ -25,11 +26,15 @@ export default function WorkoutOverview() {
   const [starting, setStarting] = useState(false);
   const [recent, setRecent] = useState<WorkoutLog[]>([]);
   const [dayId, setDayId] = useState<string | null>(null);
+  // A failed listener left a blank screen where the workout starts (DEN-13).
+  // The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchActiveProgramForMember(tenantId, uid, setProgram);
-  }, [tenantId, uid]);
+    return watchActiveProgramForMember(tenantId, uid, setProgram, () => setFailed(true));
+  }, [tenantId, uid, retryKey]);
 
   // Sıradaki günü önermek için geçmiş bir kez okunuyor.
   useEffect(() => {
@@ -71,7 +76,20 @@ export default function WorkoutOverview() {
     }
   };
 
-  if (program === undefined) return <View style={{ flex: 1 }} />;
+  if (program === undefined) {
+    if (!failed) return <View style={{ flex: 1 }} />;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
+        <ErrorNotice
+          message="Programın yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
 
   if (!program) {
     return (

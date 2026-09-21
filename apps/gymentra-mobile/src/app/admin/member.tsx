@@ -93,23 +93,23 @@ export default function AdminMemberDetail() {
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMemberCredits(tenantId, memberId, 'ptLesson', setPtCredits);
-  }, [tenantId, memberId]);
+    return watchMemberCredits(tenantId, memberId, 'ptLesson', setPtCredits, () => setFailed(true));
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits);
-  }, [tenantId, memberId]);
+    return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits, () => setFailed(true));
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchActiveProgramForMember(tenantId, memberId, setProgram);
-  }, [tenantId, memberId]);
+    return watchActiveProgramForMember(tenantId, memberId, setProgram, () => setFailed(true));
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMyRenewalRequest(tenantId, memberId, setRenewal);
-  }, [tenantId, memberId]);
+    return watchMyRenewalRequest(tenantId, memberId, setRenewal, () => setFailed(true));
+  }, [tenantId, memberId, retryKey]);
 
   if (!tenantId || !memberId) {
     return <AccessGuard title="Salon yönetici oturumu gerekli" />;
@@ -215,7 +215,9 @@ export default function AdminMemberDetail() {
           openingProgram
             ? '…'
             : program === undefined
-              ? 'Program yükleniyor…'
+              ? failed
+                ? 'Program alınamadı'
+                : 'Program yükleniyor…'
               : program
                 ? 'Programı düzenle'
                 : '+ Program ata'
@@ -413,7 +415,7 @@ export default function AdminMemberDetail() {
       </Text>
 
       {failed ? (
-        <ErrorNotice message="Paketler alınamadı." onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }} />
+        <ErrorNotice message="Paketler, dersler ya da program alınamadı; bu ekrandaki bilgiler eksik olabilir." onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }} />
       ) : packages === undefined ? (
         <ListSkeleton rows={2} avatar={false} />
       ) : packages.length === 0 ? (

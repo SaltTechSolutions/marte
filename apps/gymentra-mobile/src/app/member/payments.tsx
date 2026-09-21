@@ -58,8 +58,8 @@ export default function MemberPayments() {
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMyChildren(tenantId, uid, setChildren);
-  }, [tenantId, uid]);
+    return watchMyChildren(tenantId, uid, setChildren, () => setFailed(true));
+  }, [tenantId, uid, retryKey]);
 
   if (!tenantId || !user) return <View style={{ flex: 1 }} />;
 
@@ -178,7 +178,7 @@ export default function MemberPayments() {
 
           {failed ? (
             <ErrorNotice
-              message="Ödeme geçmişin alınamadı."
+              message="Ödeme geçmişin ya da bağlı çocukların alınamadı."
               onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }}
             />
           ) : payments === undefined ? (

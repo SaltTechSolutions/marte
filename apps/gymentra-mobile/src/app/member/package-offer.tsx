@@ -4,6 +4,7 @@ import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
@@ -25,11 +26,15 @@ export default function MemberPackageOffer() {
 
   const [request, setRequest] = useState<PackageChangeRequest | null | undefined>(undefined);
   const [responding, setResponding] = useState(false);
+  // A failed listener left a blank screen behind a push notification (DEN-13).
+  // The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!requestId) return;
-    return watchPackageChangeRequest(requestId, setRequest);
-  }, [requestId]);
+    return watchPackageChangeRequest(requestId, setRequest, () => setFailed(true));
+  }, [requestId, retryKey]);
 
   if (!requestId || request === null) {
     return (
@@ -41,7 +46,18 @@ export default function MemberPackageOffer() {
     );
   }
   if (request === undefined) {
-    return <View style={{ flex: 1 }} />;
+    if (!failed) return <View style={{ flex: 1 }} />;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: spacing.md }}>
+        <ErrorNotice
+          message="Teklif yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
   }
 
   const respond = (approve: boolean) => {

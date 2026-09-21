@@ -6,6 +6,7 @@ import { Linking as RNLinking, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -36,6 +37,12 @@ export default function PendingScreen() {
    * number on file: a control you can never use is noise.
    */
   const [phone, setPhone] = useState<string | null>(null);
+  // This listener is the only thing that moves an approved member off this
+  // screen. If it drops the screen keeps saying "isteğin salonda" for good, so
+  // the failure is shown and retryable (DEN-13). The tap clears the flag
+  // (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     if (!tenantId) return;
     let alive = true;
@@ -81,12 +88,12 @@ export default function PendingScreen() {
       } else if (membership?.status === 'rejected') {
         router.replace('/onboarding/gym-code');
       }
-    });
+    }, () => setFailed(true));
     return () => {
       alive = false;
       unsubscribe();
     };
-  }, [tenantId, tenantName, router]);
+  }, [tenantId, tenantName, router, retryKey]);
 
   return (
     <Screen>
@@ -116,6 +123,18 @@ export default function PendingScreen() {
           </Text>{' '}
           sürer.
         </Text>
+
+        {failed ? (
+          <View style={{ alignSelf: 'stretch' }}>
+            <ErrorNotice
+              message="Onay durumun kontrol edilemedi; onaylandığında bu ekran kendiliğinden ilerlemeyebilir."
+              onRetry={() => {
+                setFailed(false);
+                setRetryKey((k) => k + 1);
+              }}
+            />
+          </View>
+        ) : null}
 
         <Card style={{ alignSelf: 'stretch', marginTop: spacing.md }}>
           <Text variant="helper" weight="700" style={{ marginBottom: 6 }}>

@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
@@ -46,11 +47,15 @@ export default function ExerciseLibrary() {
   const programOnly = scope === 'program';
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
+  // `program === undefined` renders nothing, so a failed listener was an empty
+  // screen (DEN-13). The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!programOnly || !tenantId || !user) return;
-    return watchActiveProgramForMember(tenantId, user.uid, setProgram);
-  }, [programOnly, tenantId, user]);
+    return watchActiveProgramForMember(tenantId, user.uid, setProgram, () => setFailed(true));
+  }, [programOnly, tenantId, user, retryKey]);
 
   /** The member's own movements, in the order their coach wrote them. */
   const assigned = useMemo(() => {
@@ -139,7 +144,17 @@ export default function ExerciseLibrary() {
             <ListGroup>{results.map((e, i) => row(e, i === results.length - 1))}</ListGroup>
           )
         ) : programOnly ? (
-          program === undefined ? null : assigned.length === 0 ? (
+          program === undefined ? (
+            failed ? (
+              <ErrorNotice
+                message="Programın yüklenemedi."
+                onRetry={() => {
+                  setFailed(false);
+                  setRetryKey((k) => k + 1);
+                }}
+              />
+            ) : null
+          ) : assigned.length === 0 ? (
             <EmptyState
               icon="barbell-outline"
               title="Programında anlatımlı hareket yok"

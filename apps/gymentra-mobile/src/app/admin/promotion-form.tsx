@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
@@ -75,9 +76,14 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
   const toast = useToast();
 
   const [packages, setPackages] = useState<GymPackage[] | undefined>(undefined);
+  // Without this a dropped listener showed an empty "Seçili paketler" list and
+  // no reason why (DEN-13). Saving stays blocked meanwhile: `valid` needs a
+  // picked package that is in this list. The tap clears the flag.
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
-    return watchPackagesForTenant(tenantId, setPackages);
-  }, [tenantId]);
+    return watchPackagesForTenant(tenantId, setPackages, () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   const [name, setName] = useState(existing?.name ?? '');
   const [kind, setKind] = useState<PromotionKind>(existing?.kind ?? 'bonusDays');
@@ -189,6 +195,15 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
           <Chip label="Tüm paketler" selected={appliesToAll} onPress={() => setAppliesToAll(true)} />
           <Chip label="Seçili paketler" selected={!appliesToAll} onPress={() => setAppliesToAll(false)} />
         </View>
+        {!appliesToAll && failed ? (
+          <ErrorNotice
+            message="Paketler yüklenemedi."
+            onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+          />
+        ) : null}
         {!appliesToAll && (
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
             {eligiblePackages.map((pkg) => (

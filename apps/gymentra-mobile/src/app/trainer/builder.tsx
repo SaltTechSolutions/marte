@@ -5,6 +5,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -36,11 +37,29 @@ export default function ProgramBuilder() {
 export function ProgramBuilderScreen() {
   const { programId } = useLocalSearchParams<{ programId: string }>();
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
+  // A failed listener left a blank screen with no way out (DEN-13). The tap
+  // clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!programId) return;
-    return watchProgram(programId, setProgram);
-  }, [programId]);
+    return watchProgram(programId, setProgram, () => setFailed(true));
+  }, [programId, retryKey]);
+
+  if (failed && program === undefined) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
+        <ErrorNotice
+          message="Program yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
 
   if (!programId || program === undefined) return <View style={{ flex: 1 }} />;
 
@@ -71,6 +90,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   const [pickingFromLibrary, setPickingFromLibrary] = useState(false);
   const [pickingTemplate, setPickingTemplate] = useState(false);
   const [templates, setTemplates] = useState<ProgramTemplate[]>([]);
+  const [templatesFailed, setTemplatesFailed] = useState(false);
+  const [templatesRetry, setTemplatesRetry] = useState(0);
   const [assigning, setAssigning] = useState(false);
 
   const { activeMembership } = useAuth();
@@ -80,8 +101,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   // belge çekmenin karşılığı yok, antrenörlerin çoğu elle yazmaya devam edecek.
   useEffect(() => {
     if (!pickingTemplate || !tenantId) return;
-    return watchProgramTemplates(tenantId, setTemplates);
-  }, [pickingTemplate, tenantId]);
+    return watchProgramTemplates(tenantId, setTemplates, () => setTemplatesFailed(true));
+  }, [pickingTemplate, tenantId, templatesRetry]);
 
   const activeDay = days.find((d) => d.id === dayId) ?? days[0];
   const exercises = activeDay.exercises;
@@ -319,9 +340,19 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                 HAZIR ŞABLONLAR
               </Text>
               {templates.length === 0 ? (
-                <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
-                  Şablonlar yükleniyor…
-                </Text>
+                templatesFailed ? (
+                  <ErrorNotice
+                    message="Şablonlar yüklenemedi."
+                    onRetry={() => {
+                      setTemplatesFailed(false);
+                      setTemplatesRetry((k) => k + 1);
+                    }}
+                  />
+                ) : (
+                  <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
+                    Şablonlar yükleniyor…
+                  </Text>
+                )
               ) : (
                 templates.map((t) => (
                   <Pressable

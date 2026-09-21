@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/Button';
 import { Stepper } from '@/components/Stepper';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
 import { completeWorkoutLog, getRecentLogs, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
@@ -50,10 +51,14 @@ export default function WorkoutSession() {
   const exerciseAccumulatedMsRef = useRef(0);
   const exerciseSegmentStartRef = useRef<number | null>(null);
 
+  // A failed listener left an empty <View /> in the middle of a workout
+  // (DEN-13). The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     if (!logId) return;
-    return watchWorkoutLog(logId, setLog);
-  }, [logId]);
+    return watchWorkoutLog(logId, setLog, () => setFailed(true));
+  }, [logId, retryKey]);
 
   // Only the start time seeds the clocks; depending on the whole log would
   // reset them on every set the member ticks off.
@@ -109,6 +114,19 @@ export default function WorkoutSession() {
   const currentExerciseMs = () =>
     exerciseAccumulatedMsRef.current + (running && exerciseSegmentStartRef.current ? Date.now() - exerciseSegmentStartRef.current : 0);
 
+  if (log === undefined && failed) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: spacing.md }}>
+        <ErrorNotice
+          message="Antrenman yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
   if (log === undefined || !logId) return (
         <View />
     );

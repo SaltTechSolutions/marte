@@ -31,6 +31,41 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-13 ikinci tur: kalan ekranlar, dinleyici hatası artık her yerde görünüyor
+
+**Yapıldı.** Ölçülen `onError` eksiği 49 → **3** (toplam 102). 25 ekran ve bileşen
+aynı kalıba geçti (liste `plan.md` DEN-13'te). Yolda bulunanlar, her biri gerçek
+kusur: `trainer/availability`'de "Kaydet" veriler gelmeden açıktı; yavaş ya da
+düşmüş yüklemede antrenörün gerçek haftası varsayılanla ezilebilirdi, artık
+`loaded` ister. `book-session` düşmüş meşgul-saat dinleyicisiyle dolu saatleri
+boş gösteriyordu. `onboarding/pending` dinleyicisi düşerse onaylanan üye
+"isteğin salonda" ekranında kalıyordu. `NotificationPreferences` düşünce
+anahtarlar sessizce devre dışı kalıyordu. `trainer/calendar` ve `member/classes`
+zaten `failed` gösteriyordu ama hiç temizlemiyordu ("Tekrar dene" yoktu); eklendi.
+`tsc`, lint, 419 test temiz. **Cihazda görülmedi.**
+
+**Karar.** İlk turdaki kalıp değişmedi: ekran başına `failed` + `retryKey`, ortak
+kanca yok, bayrağı dokunuş temizliyor. Hata halinde ekranın ne yapacağı ekranın
+işine göre seçildi (tam ekran uyarı / kartta "Alınamadı" / banner); tek biçim
+dayatılmadı çünkü örneğin kaydedilebilir bir form ile salt okunur bir özet aynı
+şekilde davranamaz.
+
+**Bilerek yapılmadı.** `AuthContext.tsx`'in `watchMembership` ve `watchTenant`
+çağrıları ve `RenewalRequestRow`: sonuncusu hata halinde zaten çizilmiyor;
+ilk ikisi oturum akışının parçası, hata davranışı (çıkış mı, yeniden deneme mi,
+önbellek mi) bir ürün kararı ve bir ekran bandına sığmaz. Dinleyici hatalarının
+`reportError`/Sentry'ye gitmesi ayrı bir soru, bu tur ele alınmadı.
+
+**Açık.** Yukarıdaki iki `AuthContext` çağrısı. `admin/member`'deki
+`getMembership(...).then(setMembership)` bir `catch` taşımıyor (dinleyici değil,
+ölçüme girmiyor); yakalanmamış ret olarak kalıyor. Ekranların hiçbiri cihazda
+görülmedi, hata yollarını elle tetiklemek için uçak modu ya da kural reddi gerek.
+
+**Nerede.** `apps/gymentra-mobile/src/app/**` (yukarıdaki ekranlar),
+`components/NotificationPreferences.tsx`, `docs/plan.md` (DEN-13).
+
+---
+
 ## 2026-09-21 — DEN-12: ortak bileşenlerde ekran okuyucu desteği (kısmen)
 
 **Yapıldı.** `Button`, `Chip`, `Stepper`, `Toast`, `ErrorNotice`, `ListSkeleton`,

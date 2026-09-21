@@ -96,11 +96,17 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => watchActiveMembers(tenantId, setMembers), [tenantId]);
+  useEffect(() => watchActiveMembers(tenantId, setMembers, () => setFailed(true)), [tenantId, retryKey]);
 
   useEffect(
-    () => watchSharesGrantedToMe(tenantId, user.uid, (s) => setShares(s.map((x) => ({ ownerTrainerId: x.ownerTrainerId, ownerTrainerName: x.ownerTrainerName })))),
-    [tenantId, user.uid],
+    () =>
+      watchSharesGrantedToMe(
+        tenantId,
+        user.uid,
+        (s) => setShares(s.map((x) => ({ ownerTrainerId: x.ownerTrainerId, ownerTrainerName: x.ownerTrainerName }))),
+        () => setFailed(true),
+      ),
+    [tenantId, user.uid, retryKey],
   );
 
   // One month at a time — the grid never shows more, and an unbounded
@@ -329,7 +335,13 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
         )}
 
         {failed ? (
-          <ErrorNotice message="Takvim alınamadı." />
+          <ErrorNotice
+            message="Takvim, üye listesi ya da paylaşımlar alınamadı."
+            onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+          />
         ) : daySessions.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: spacing.lg, gap: 4 }}>
             <Text variant="helper" tone="sub">

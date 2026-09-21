@@ -64,8 +64,8 @@ export default function AdminMembers() {
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchPendingRenewals(tenantId, (reqs) => setRenewalIds(new Set(reqs.map((r) => r.memberId))));
-  }, [tenantId]);
+    return watchPendingRenewals(tenantId, (reqs) => setRenewalIds(new Set(reqs.map((r) => r.memberId))), () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;

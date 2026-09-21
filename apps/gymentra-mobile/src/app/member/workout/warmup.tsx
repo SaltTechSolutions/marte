@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
@@ -49,11 +50,15 @@ export default function WorkoutWarmup() {
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
   const [template, setTemplate] = useState<ProgramTemplate | null | undefined>(undefined);
   const [starting, setStarting] = useState(false);
+  // A failed program listener left a blank screen before the warm-up (DEN-13).
+  // The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchActiveProgramForMember(tenantId, uid, setProgram);
-  }, [tenantId, uid]);
+    return watchActiveProgramForMember(tenantId, uid, setProgram, () => setFailed(true));
+  }, [tenantId, uid, retryKey]);
 
   const warmupId = program?.warmup;
   useEffect(() => {
@@ -83,6 +88,19 @@ export default function WorkoutWarmup() {
     }
   };
 
+  if (program === undefined && failed) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
+        <ErrorNotice
+          message="Programın yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
   if (program === undefined || template === undefined) return <View style={{ flex: 1 }} />;
 
   const lines = template?.days[0]?.exercises ?? [];

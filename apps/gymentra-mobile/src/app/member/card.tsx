@@ -29,7 +29,10 @@ export default function MemberCard() {
   const qrValue = user && activeMembership ? membershipId(activeMembership.tenantId, user.uid) : 'pending';
   const displayName = user?.displayName || user?.email || 'Üye';
 
-  const [todayEntries, setTodayEntries] = useState<Date[]>([]);
+  // `undefined` = not here yet; [] used to say "Bugün henüz giriş yapılmadı" to a
+  // member who had just been let in when the listener dropped (DEN-13).
+  const [todayEntries, setTodayEntries] = useState<Date[] | undefined>(undefined);
+  const [entriesFailed, setEntriesFailed] = useState(false);
 
   const todayStart = useMemo(() => {
     const d = new Date();
@@ -39,10 +42,10 @@ export default function MemberCard() {
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMyCheckins(tenantId, uid, todayStart, setTodayEntries);
+    return watchMyCheckins(tenantId, uid, todayStart, setTodayEntries, () => setEntriesFailed(true));
   }, [tenantId, uid, todayStart]);
 
-  const lastEntry = todayEntries[0];
+  const lastEntry = todayEntries?.[0];
 
   return (
     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: spacing.lg }}>
@@ -86,9 +89,13 @@ export default function MemberCard() {
       {/* Answers "did it actually register?" without walking back to the desk. */}
       <View style={{ marginTop: 12, alignItems: 'center' }}>
         <Text variant="label" tone="sub">
-          {lastEntry
-            ? `Bugün giriş yapıldı · ${lastEntry.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
-            : 'Bugün henüz giriş yapılmadı'}
+          {todayEntries === undefined
+            ? entriesFailed
+              ? 'Giriş durumu alınamadı'
+              : ' '
+            : lastEntry
+              ? `Bugün giriş yapıldı · ${lastEntry.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`
+              : 'Bugün henüz giriş yapılmadı'}
         </Text>
       </View>
 

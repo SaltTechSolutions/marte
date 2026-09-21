@@ -103,18 +103,18 @@ export default function MemberClasses() {
     // activeTenant is a new object on every AuthContext recompute; only its
     // identity should restart the listener.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTenant?.id, range]);
+  }, [activeTenant?.id, range, retryKey]);
 
   const tenantId = activeTenant?.id;
   useEffect(() => {
     if (!tenantId || !user) return;
-    return watchMemberEntitlements(tenantId, user.uid, setEntitlements);
+    return watchMemberEntitlements(tenantId, user.uid, setEntitlements, () => setFailed(true));
   }, [tenantId, user, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !user) return;
-    return watchSessionsForMember(tenantId, user.uid, range, setPtSessions);
-  }, [tenantId, user, range]);
+    return watchSessionsForMember(tenantId, user.uid, range, setPtSessions, () => setFailed(true));
+  }, [tenantId, user, range, retryKey]);
 
   const route = bookingRoute(entitlements);
   const canJoin = route !== 'none';
@@ -280,7 +280,14 @@ export default function MemberClasses() {
       </View>
 
       {failed ? (
-        <ErrorNotice message="Ders programı alınamadı." />
+        <ErrorNotice
+          message="Ders programı ya da haklarının bir kısmı alınamadı."
+          onRetry={() => {
+            setFailed(false);
+            setLoading(true);
+            setRetryKey((k) => k + 1);
+          }}
+        />
       ) : loading ? (
         <ListSkeleton rows={3} avatar={false} />
       ) : gymClasses.length === 0 ? (
