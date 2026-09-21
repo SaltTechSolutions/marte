@@ -83,7 +83,9 @@ export default function AdminMemberDetail() {
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    getMembership(tenantId, memberId).then(setMembership);
+    // Only feeds the phone / birth-date line, but a rejection here was
+    // unhandled; the same banner covers it.
+    getMembership(tenantId, memberId).then(setMembership, () => setFailed(true));
   }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {

@@ -5138,9 +5138,9 @@ türden değil.
 | [x] DEN-3 (Y3) | Salon belgesi (`activeTenant`) oturumda bir kez yükleniyor: saat/iptal süresi/marka değişince ekranlar bayat veri gösteriyor ve eskiyi geri yazabiliyor; `ThemeSync` marka güncellemesini bir açılış geç uyguluyor | m | — |
 | [x] DEN-4 (Y4) | Ölçüm formu dokunulmamış 75 kg / 100 / 85 / 35 varsayılanlarını gerçek ölçü diye kaydediyor; kayıtlar yalnızca eklenebilir | s | personatalepleri Z-10 |
 | [x] DEN-5 (Y5) | Program kurucuda "Şablondan başla" çok günlü programın **tüm** günlerini onaysız eziyor (koşul yalnızca aktif günün listesine bakıyor) | xs | — |
-| [~] DEN-6 (Y6) | Yönetici+antrenör antrenör yüzeyinde randevu oluşturamıyor, kendi takvimi yerine tüm salonu görüyor (`canCreate = !isAdmin`) | m | CX-08 |
+| [~] DEN-6 (Y6) | Yönetici+antrenör antrenör yüzeyinde randevu oluşturamıyor, kendi takvimi yerine tüm salonu görüyor (`canCreate = !isAdmin`) | m | CX-08 — **sunucu kısmı (`createPtSessionByStaff`) 21 Eylül'de deploy edildi; istemci henüz yayında değil** |
 | [x] DEN-7 (Y7) | `watchUpcomingSessionsForMember` durum filtresiz `limit(3)`: ana ekran iptal edileni "yaklaşan" gösteriyor, Rezervasyonlarım en çok 3 özel ders listeliyor | s | — |
-| [~] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor; sunucuda `cancelClassByStaff` gerekir, **deploy onayı ister** | m | CX-03 |
+| [x] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor. `refundOnClassCancelled` tetikleyicisi yazıldı, 12 emülatör testi geçti, **21 Eylül'de `tarabyamarte`'ye deploy edildi**; canlıda gerçek bir ders silinerek denenmedi | m | CX-03 |
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
@@ -5504,6 +5504,32 @@ SVG içindeki 11pt başlık ~8pt çiziliyordu. Kutu artık çizimi izliyor (ayn�
 "Ön görünüm. Ana çalışan kaslar: …; yardımcı kaslar: …" diyor. viewBox yüksekliği
 460 bırakıldı: alt ~20 birim eski başlığın şeridi, ayak kırpılmasın diye cihazsız
 kesmedim. Cihazda görülmedi.
+
+**DEN-8 emülatör testleri geçti — 21 Eylül 2026.** Kullanıcı
+`cd backend && npm run test:functions`'ı kendi makinesinde koştu (emülatör
+jar'ını ben indirmemiştim, izin verilmemişti): **13 dosya, 118 test geçti**;
+`tests/` altındaki 13 test dosyasının tamamı, `classCancellation.refund.test.ts`
+(12 emülatör testi: transaction, çift iade engeli, eşzamanlılık) dahil. Çıktının
+yalnızca son kısmını gördüm (dosya listesi ve özet), dosya sayısı `tests/`
+ile birebir tutuyor. **Hâlâ kanıtlanmayan:** `createPtSessionByStaff`
+callable'ının kendisi (yalnızca `canHoldPtSessions` karar fonksiyonu testli) ve
+ikisinin de canlıdaki davranışı: **deploy edilmedi.**
+
+**Sunucu deploy edildi — 21 Eylül 2026, ~11:25.** Kullanıcı
+`cd backend && firebase deploy --only functions:refundOnClassCancelled,functions:createPtSessionByStaff --project tarabyamarte`
+komutunu kendisi çalıştırdı ve onayladı. Sonuç: `refundOnClassCancelled`
+**oluşturuldu** (Firestore `classes/{classId}` silinme tetikleyicisi, 2. nesil,
+`europe-west1`, tetik bölgesi `europe-north1`, **yeniden deneme açık**),
+`createPtSessionByStaff` **güncellendi** (revizyon 00002 → 00003).
+`functions:list` ikisini `ACTIVE` gösteriyor; yeni örnekler başladı ve günlükte
+hata yok. **Canlıda uçtan uca denenmedi:** gerçek bir salon dersi silinip iadenin
+oluştuğu gözlenmedi (bu, gerçek üyenin hakkını oynatır). Yeniden deneme uyarısı
+için: tetikleyici işaretçi belge + transaction ile idempotent, çift iade engeli
+emülatör testli. **Bir önceki denemenin hatası:** CLI aktif projeyi
+`tarabyamartefighting`'e çözdü (`Marte` dizini için eski bir `firebase use`
+kaydı); Blaze planı olmadığından hiçbir şey yazılmadan durdu. Komuta artık
+`--project tarabyamarte` veriliyor. **Sıra bozulmasın: fonksiyonlar yayında, iOS
+OTA artık gönderilebilir** (DEN-6 istemcisi ve DEN-8'in kapsadığı ekranlar).
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

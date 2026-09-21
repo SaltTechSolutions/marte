@@ -31,6 +31,95 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-8 ve DEN-6 sunucu kısmı üretime deploy edildi
+
+**Yapıldı.** `refundOnClassCancelled` (yeni) ve `createPtSessionByStaff`
+(güncelleme) `tarabyamarte` projesine deploy edildi; komutu kullanıcı kendisi
+çalıştırdı. `functions:list` ikisi de `ACTIVE`, günlükte hata yok. Kural ve index
+değişmedi.
+
+**Karar.** Deploy komutuna her zaman `--project tarabyamarte` verilir. Kök
+`Marte` dizini için Firebase CLI'de eski bir `firebase use` kaydı
+(`tarabyamartefighting`) var ve `backend/.firebaserc`'yi yeniyor; bir önceki
+deneme yüzünden yanlış projeye yöneldi (Blaze yok, hiçbir şey yazılmadan durdu).
+İlk mesajımdaki "hedef `tarabyamarte`" bilgisi bu yüzden yanlıştı.
+
+**Bilerek yapılmadı.** Canlıda gerçek bir ders silerek iade denenmedi: gerçek
+üyenin hakkı oynar. Kalıcı `firebase use` düzeltmesi yapılmadı (kullanıcının CLI
+yapılandırması).
+
+**Açık.** Tetikleyicinin ilk gerçek çalışması gözlenmedi: ilk gerçek ders silmede
+`functions:log --only refundOnClassCancelled` ve `class_cancellation_refunds`
+belgesine bakılmalı. CLI `firebase-functions` sürümünün eski olduğunu uyarıyor
+(yükseltme ayrı iş, dokunulmadı). iOS OTA (DEN-6 istemcisi) hâlâ gönderilmedi ve
+`denetim-2026-09-20` dalı `main`'e alınmadı/push edilmedi.
+
+**Nerede.** `docs/plan.md` (DEN-6, DEN-8), `backend/functions/src/{classCancellation,sessions,index}.ts`.
+
+---
+
+## 2026-09-21 — Web dönemi kalıntıları silindi (yalnızca mobil)
+
+**Yapıldı.** Kullanıcı "yalnızca mobile odaklanıyoruz, eski/web kod ve verileri
+silebiliriz, GitHub'da var" dedi; envanter çıkarıldı, kapsam kullanıcıyla tek tek
+onaylandı, sonra silindi: `backend/archive/marte06-legacy/` (7 JSON), `backend/logs/`,
+`backend/firestore-debug.log`, kökteki `.wrangler/` önbelleği,
+`backend/CHANGELOG.md`, `backend/scripts/purge_legacy_web_collections.cjs`,
+`apps/gymentra-mobile`'de `web` script'i, `app.json` `web` bloğu,
+`assets/images/favicon.png` (yalnızca o blok kullanıyordu), `react-dom` ve
+`react-native-web` bağımlılıkları (lock −141 satır). `tsc`, lint, 421 test temiz;
+`expo export --platform ios` derlendi. Android paketi derlenmedi (güncelleme
+durdurulu), iOS ile aynı çözümleme.
+
+**Karar.** Kapsam dışı bırakılanlar, gerekçeleriyle: `apps/gymentra-site`
+(gizlilik/koşullar/hesap silme sayfaları Cloudflare Pages'ten
+`gymentra.salt-tech-apps.com` olarak yayında, mağaza beyanları bu adreslere
+bağlı: web gibi görünen ama mağaza yükümlülüğü), `packages/rig` (mobil figürlerin
+kaynağı, editörü yerel araç), `backend/secrets` ve `.env` (GitHub'da yok, betikler
+ve deploy ister). `backend/.gitignore`'daki `archive/` satırı kaldı: bir daha oraya
+düz metin şifreli dışa aktarım konursa yanlışlıkla commit'lenmesin.
+
+**Bilerek yapılmadı.** `plan.md`/karar defterindeki WEB-* kayıtları silinmedi
+(defterin kuralı). `.gstack/` ve `.expo/` günlükleri "yerel çöp" onayına dahil
+değildi, dokunulmadı.
+
+**Açık / kalıcı kayıp.** **`archive/marte06-legacy` yedeksiz silindi ve GitHub'da
+hiç yoktu** (gitignore'lu, düz metin şifre içeriyordu): eski web üyelerinin
+(51 üye, 146 ders, ödemeler) tek kopyası gitti. Üretimdeki eski koleksiyonlar 29
+Ağustos'ta zaten silinmişti; 50/51 üye `tenant_memberships`'a taşınmıştı,
+taşınmayan bir kayıt (Baran Demir) da kullanıcının onayıyla arşiv kaydıydı.
+Kullanıcı bunu bilerek seçti (yedekli silme önerilmişti). Ayrıca:
+`denetim-2026-09-20` dalının upstream'i yok, bu oturumdaki tüm commit'ler yalnızca
+yerel diskte (push edilmedi). `backend/functions/lib/*` git'te izleniyor ve
+kullanıcının deploy denemesindeki `npm run build` onları değiştirdi
+(`classCancellation.js` yeni); commit'lenmedi.
+
+**Nerede.** `apps/gymentra-mobile/{package.json,package-lock.json,app.json}`,
+`backend/`, `docs/KARAR-DEFTERI.md`.
+
+---
+
+## 2026-09-21 — DEN-8 emülatör testleri geçti; admin/member kalıntısı kapandı
+
+**Yapıldı.** Kullanıcı `npm run test:functions`'ı koştu: 13 dosya, 118 test
+geçti, `classCancellation.refund.test.ts` (12 emülatör testi) dahil. Önceki
+kayıtlardaki "emülatör testleri koşulmadı" bununla güncellendi; eski kayıtlar
+silinmedi. `admin/member`'deki `getMembership(...).then(setMembership)`'a ret
+işleyicisi eklendi (aynı `failed` uyarısı), önceki kaydın "Açık" maddesi kapandı.
+
+**Karar.** —
+
+**Bilerek yapılmadı.** Deploy: `refundOnClassCancelled` ve
+`createPtSessionByStaff` üretime gider, açık onay gerekir.
+
+**Açık.** `createPtSessionByStaff` callable'ının kendisi emülatörde testli değil
+(yalnızca `canHoldPtSessions` kararı). Deploy sırası değişmedi: **önce fonksiyon,
+sonra OTA.** Çıktının yalnızca sonunu gördüm; 13 dosya `tests/` ile birebir.
+
+**Nerede.** `docs/plan.md` (DEN-8), `apps/gymentra-mobile/src/app/admin/member.tsx`.
+
+---
+
 ## 2026-09-21 — DEN-12 ikinci tur: 44pt hedefler, grafik metni, alan sınırı kontrastı
 
 **Yapıldı.** 44pt altı dokunma hedefleri tarayıcıyla bulundu ve düzeltildi
@@ -101,9 +190,8 @@ devam ediyor. Kaybedilen: canlı rol/askıya alma/tema değişikliği yeniden
 başlatmaya kadar gelmiyor; yetkiyi sunucu kuralları zaten uyguluyor.
 
 **Açık.** Yukarıdaki iki `AuthContext` çağrısı (öneri: olduğu gibi bırak; istenirse
-üstel gecikmeli sessiz yeniden abone olma, kullanıcıya bildirim yok). `admin/member`'deki
-`getMembership(...).then(setMembership)` bir `catch` taşımıyor (dinleyici değil,
-ölçüme girmiyor); yakalanmamış ret olarak kalıyor. Ekranların hiçbiri cihazda
+üstel gecikmeli sessiz yeniden abone olma, kullanıcıya bildirim yok). (`admin/member`'deki `getMembership(...).then` maddesi aynı gün kapandı, üst kayda
+bak.) Ekranların hiçbiri cihazda
 görülmedi, hata yollarını elle tetiklemek için uçak modu ya da kural reddi gerek.
 
 **Nerede.** `apps/gymentra-mobile/src/app/**` (yukarıdaki ekranlar),
