@@ -376,7 +376,7 @@ function MeasureRow({
       {value == null ? (
         <Button label={addLabel} variant="secondary" compact onPress={() => onChange(start)} />
       ) : (
-        <Stepper value={value} unit={unit} step={step} decimals={decimals} onChange={onChange} />
+        <Stepper value={value} unit={unit} label={label} step={step} decimals={decimals} onChange={onChange} />
       )}
     </View>
   );

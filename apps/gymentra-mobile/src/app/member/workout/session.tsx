@@ -242,7 +242,7 @@ export default function WorkoutSession() {
           </Text>
         )}
 
-        <Stepper value={exercise.weightKg} unit="kg" onChange={(w) => updateExercise({ weightKg: w })} />
+        <Stepper value={exercise.weightKg} unit="kg" label="Ağırlık" onChange={(w) => updateExercise({ weightKg: w })} />
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {Array.from({ length: exercise.setsTarget }, (_, i) => i + 1).map((setNumber) => {

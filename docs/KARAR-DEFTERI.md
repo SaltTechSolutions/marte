@@ -31,6 +31,37 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-12: ortak bileşenlerde ekran okuyucu desteği (kısmen)
+
+**Yapıldı.** `Button`, `Chip`, `Stepper`, `Toast`, `ErrorNotice`, `ListSkeleton`,
+`MonthCalendar` ve `ListRow`'a rol, durum ve etiket eklendi; dokuz `Stepper`
+çağrı yerine `label` verildi. Ayrıntı ve yapılmayanlar `plan.md` DEN-12'de.
+En değerli bulgu: eylemli `Toast`'ta dış `Pressable` `accessibilityLabel`
+taşıdığı için çocuğu olan "Geri al" düğmesi VoiceOver'a görünmüyordu; artık
+eylem varken dış öğe erişilebilir değil. `tsc`, lint, 419 test temiz.
+**Ekran okuyucuyla ve cihazda denenmedi.**
+
+**Karar.** Bileşen düzeyinde kalındı (denetim: "ekran ekran değil"). Toast ve
+ErrorNotice duyuruyu `AccessibilityInfo.announceForAccessibility` ile yapıyor:
+iOS düz öğede `alert` rolünü yok sayıyor, Android yalnızca değişen canlı
+bölgeyi okuyor.
+
+**Bilerek yapılmadı.** Alan sınırı/`onp` kontrastı için yeni palet tokenı:
+görsel karar, kullanıcıya sorulmadan renk değişmez. 44pt altı ~68 ekran hedefi:
+ekran ekran iş. `Button`'un ana dalında haptik hiç çalışmıyor (`press` yerine
+`onPress` bağlı; designplan D0-4 "çözüldü" diyor): davranış değişikliği
+olduğundan bildirildi, düzeltilmedi.
+
+**Açık.** Yukarıdaki yapılmayanlar (DEN-12 `[~]`); `designplan.md` D3-1 metni bayat
+(artık 54 rol var) ve düzeltilmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/components/{Button,Chip,Stepper,Toast,
+ErrorNotice,ListSkeleton,MonthCalendar,ListRow}.tsx`, `Stepper` çağıran
+`member/progress`, `member/workout/session`, `admin/promotion-form`,
+`admin/package-form`, `docs/plan.md`.
+
+---
+
 ## 2026-09-21 — DEN-13: düşen dinleyici artık "boş" ya da "yükleniyor" gibi görünmüyor (kısmen)
 
 **Yapıldı.** Dört ekranda (`member/index`, `admin/index`, `admin/classes`,

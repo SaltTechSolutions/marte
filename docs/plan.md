@@ -5144,7 +5144,7 @@ türden değil.
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
-| [ ] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket), 44pt altı dokunma hedefleri, semantik renk kontrastı. Bileşen düzeyinde tek iş, ekran ekran değil | m | designplan D3-1, D2-4 |
+| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket) yapıldı; **yapılmadı:** 44pt altı dokunma hedefleri (ekranlarda ~68 yer), semantik renk/sınır kontrastı (token kararı), 11pt `label` metni, grafik metin karşılığı | m | designplan D3-1, D2-4 |
 | [~] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. En yoğun dört ekran (`member/index`, `admin/index`, `admin/classes`, `trainer/member`) yapıldı; ölçülen eksik 70 → 49 (102 çağrı yeri). Kalan: ikinci kademe ekranlar | m | P2-1 "Kalan" |
 
 **DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
@@ -5464,6 +5464,24 @@ başlatmadığı bulundu ve düzeltildi (8 test). Ölçüm: tip denetleyicisiyle
 (6), `admin/member` (4), `member/book-session`, `child`, `profile`, `progress`
 (3'er), `AuthContext` ve `RenewalRequestRow` bilerek atlandı (bkz. karar defteri
 21 Eylül), gerisi 1–2'şer. Cihazda görülmedi.
+
+**DEN-12 kısmen kapandı — 21 Eylül 2026.** Yalnızca ortak bileşenler, ekran
+okuyucu tarafı (O29, O37, O35'in bileşen kısmı): `Button` `accessibilityRole="button"`,
+durum ve emoji ön ekinden arınmış etiket; `Chip` (`onPress`'liyse) rol +
+`selected`; `Stepper` `label` prop'u, "Ağırlık azalt/artır", değer etiketi ve
+Android canlı bölgesi (dokuz çağrı yeri etiket alıyor); `Toast`
+`announceForAccessibility` + eylemli toast'ta dış öğe artık tek erişilebilir öğe
+değil (etiketli `Pressable` çocuklarını VoiceOver'dan gizlediği için "Geri al"
+düğmesine ulaşılamıyordu) ve eylem 44pt; `ErrorNotice` duyuru; `ListSkeleton`
+tek "Yükleniyor" öğesi; `MonthCalendar` ay okları ve gün hücreleri (tarih,
+etkinlik sayısı, seçili); `ListRow` `onPress`'liyse rol. **Yapılmadı:** O28 (44pt
+altı hedefler ekran ekran, ~68 yer), O31 (alan sınırı ve `onp`/`#F87171`
+kontrastı: yeni palet tokenı = görsel karar), O32 (11pt `label`), O33
+(`maxFontSizeMultiplier`), O34/O36 (grafik ve kas haritası metin karşılığı:
+çağıran ekranlar), O30 (basılı durum; not: `Button` ana dalı `press` yerine
+doğrudan `onPress` çağırıyor, yani haptik çalışmıyor; kimse istemedi, dokunmadım).
+**VoiceOver/TalkBack ile denenmedi**; bileşen testi altyapısı yok, doğrulama
+`tsc`, lint ve mevcut 419 testle sınırlı.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

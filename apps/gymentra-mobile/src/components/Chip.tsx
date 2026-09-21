@@ -24,6 +24,11 @@ export function Chip({
   return (
     <Wrapper
       onPress={() => { hapticSelection(); onPress?.(); }}
+      // A chip without `onPress` is a static tag: no role, so it is not
+      // announced as something that can be pressed.
+      {...(onPress
+        ? { accessibilityRole: 'button' as const, accessibilityLabel: label, accessibilityState: { selected: !!selected } }
+        : {})}
       style={{
         backgroundColor: selected ? colors.p : colors.surf2,
         borderRadius: radius.pill,

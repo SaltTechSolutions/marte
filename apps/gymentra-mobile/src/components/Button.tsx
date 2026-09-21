@@ -36,7 +36,13 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
 
   if (variant === 'pulse') {
     return (
-      <Pressable onPress={press} disabled={disabled} style={[{ opacity: disabled ? 0.5 : 1 }, style]}>
+      <Pressable
+        onPress={press}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: !!disabled }}
+        style={[{ opacity: disabled ? 0.5 : 1 }, style]}>
         <LinearGradient
           colors={[colors.g1, colors.g2, colors.g3]}
           start={{ x: 0, y: 1 }}
@@ -59,6 +65,11 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      // `icon` is an emoji prefix drawn into the text; a screen reader would
+      // read its name aloud in front of every label.
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
       style={[
         styles.base,
         {

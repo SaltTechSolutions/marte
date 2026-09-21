@@ -76,7 +76,7 @@ export function MonthCalendar({
         padding: 10,
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Pressable onPress={() => shiftMonth(-1)} hitSlop={10} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => shiftMonth(-1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Önceki ay" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" weight="900" tone="sub">
             ‹
           </Text>
@@ -84,7 +84,7 @@ export function MonthCalendar({
         <Text variant="helper" weight="700">
           {monthAnchor.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}
         </Text>
-        <Pressable onPress={() => shiftMonth(1)} hitSlop={10} style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => shiftMonth(1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Sonraki ay" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" weight="900" tone="sub">
             ›
           </Text>
@@ -112,6 +112,11 @@ export function MonthCalendar({
               <Pressable
                 key={d.toISOString()}
                 onPress={() => { hapticSelection(); onSelectDate(d); }}
+                accessibilityRole="button"
+                accessibilityLabel={`${d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}${
+                  count > 0 ? `, ${count} etkinlik` : ''
+                }${isToday ? ', bugün' : ''}`}
+                accessibilityState={{ selected }}
                 style={{ flex: 1, height: 42, alignItems: 'center', justifyContent: 'center' }}>
                 <View
                   style={{

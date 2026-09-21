@@ -162,6 +162,7 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
         <Stepper
           value={value}
           unit={selectedKind.unit}
+          label="Değer"
           step={kind === 'percentDiscount' ? 5 : kind === 'amountDiscount' ? 50 : 1}
           decimals={0}
           onChange={setValue}
@@ -172,7 +173,7 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
         <Text variant="label" tone="sub">
           NE KADAR SÜRECEK
         </Text>
-        <Stepper value={durationDays} unit="gün" step={1} decimals={0} onChange={setDurationDays} />
+        <Stepper value={durationDays} unit="gün" label="Süre" step={1} decimals={0} onChange={setDurationDays} />
         {existing && (
           <Text variant="label" tone="sub">
             Başlangıç sabit kalır ({existing.startsAt.toLocaleDateString('tr-TR')}); bu süreyi değiştirmek yalnızca bitişi kaydırır.
@@ -209,7 +210,7 @@ function PromotionFormBody({ tenantId, existing }: { tenantId: string; existing:
           </Text>
           <Chip label={hasCap ? 'Sınırlı' : 'Sınırsız'} selected={hasCap} onPress={() => setHasCap((v) => !v)} />
         </View>
-        {hasCap && <Stepper value={maxRedemptions} unit="kez" step={1} decimals={0} onChange={setMaxRedemptions} />}
+        {hasCap && <Stepper value={maxRedemptions} unit="kez" label="Kullanım sınırı" step={1} decimals={0} onChange={setMaxRedemptions} />}
       </View>
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={!valid || saving} onPress={save} />

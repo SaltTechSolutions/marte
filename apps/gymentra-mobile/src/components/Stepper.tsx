@@ -13,12 +13,16 @@ export function Stepper({
   step = 2.5,
   onChange,
   decimals = 1,
+  label: fieldLabel,
 }: {
   value: number;
   unit: string;
   step?: number;
   onChange: (v: number) => void;
   decimals?: number;
+  /** What is being adjusted ("Ağırlık", "Tekrar"). Spoken with the buttons and
+   *  the value; without it the unit stands in for it. */
+  label?: string;
 }) {
   const { colors, radius } = useAppTheme();
 
@@ -28,6 +32,7 @@ export function Stepper({
   };
 
   const label = decimals > 0 ? value.toFixed(decimals).replace('.', ',') : String(value);
+  const what = fieldLabel ?? unit;
 
   return (
     <View
@@ -41,6 +46,8 @@ export function Stepper({
       }}>
       <Pressable
         onPress={() => bump(-step)}
+        accessibilityRole="button"
+        accessibilityLabel={`${what} azalt`}
         style={{
           width: 48,
           height: 48,
@@ -53,7 +60,13 @@ export function Stepper({
           −
         </Text>
       </Pressable>
-      <View style={{ flex: 1, alignItems: 'center' }}>
+      <View
+        accessible
+        accessibilityLabel={`${fieldLabel ? `${fieldLabel}, ` : ''}${label} ${unit}`}
+        // Android speaks the new value after each tap; iOS re-reads the label
+        // when the element is focused again.
+        accessibilityLiveRegion="polite"
+        style={{ flex: 1, alignItems: 'center' }}>
         <Text variant="h2" weight="900">
           {label}
         </Text>
@@ -63,6 +76,8 @@ export function Stepper({
       </View>
       <Pressable
         onPress={() => bump(step)}
+        accessibilityRole="button"
+        accessibilityLabel={`${what} artır`}
         style={{
           width: 48,
           height: 48,
