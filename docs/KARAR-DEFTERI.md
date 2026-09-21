@@ -91,10 +91,17 @@ dayatılmadı çünkü örneğin kaydedilebilir bir form ile salt okunur bir öz
 **Bilerek yapılmadı.** `AuthContext.tsx`'in `watchMembership` ve `watchTenant`
 çağrıları ve `RenewalRequestRow`: sonuncusu hata halinde zaten çizilmiyor;
 ilk ikisi oturum akışının parçası, hata davranışı (çıkış mı, yeniden deneme mi,
-önbellek mi) bir ürün kararı ve bir ekran bandına sığmaz. Dinleyici hatalarının
-`reportError`/Sentry'ye gitmesi ayrı bir soru, bu tur ele alınmadı.
+önbellek mi) bir ürün kararı ve bir ekran bandına sığmaz. **Düzeltme (aynı
+gün):** "hata Sentry'ye gidiyor mu?" sorusu açık değil, cevabı evet:
+`data/firebase/watch.ts` `report()` `onError` verilmese de her düşen aboneliği
+konsola yazıp `Sentry.captureException` ile `watchContext` etiketiyle
+gönderiyor. Yani bu iki çağrıda hata **sessiz değil, yalnızca kullanıcıya
+görünmüyor**; düşünce oturum, son bilinen (önbellekteki) üyelik ve salonla
+devam ediyor. Kaybedilen: canlı rol/askıya alma/tema değişikliği yeniden
+başlatmaya kadar gelmiyor; yetkiyi sunucu kuralları zaten uyguluyor.
 
-**Açık.** Yukarıdaki iki `AuthContext` çağrısı. `admin/member`'deki
+**Açık.** Yukarıdaki iki `AuthContext` çağrısı (öneri: olduğu gibi bırak; istenirse
+üstel gecikmeli sessiz yeniden abone olma, kullanıcıya bildirim yok). `admin/member`'deki
 `getMembership(...).then(setMembership)` bir `catch` taşımıyor (dinleyici değil,
 ölçüme girmiyor); yakalanmamış ret olarak kalıyor. Ekranların hiçbiri cihazda
 görülmedi, hata yollarını elle tetiklemek için uçak modu ya da kural reddi gerek.
