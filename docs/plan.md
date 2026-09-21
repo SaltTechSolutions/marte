@@ -5138,9 +5138,9 @@ türden değil.
 | [x] DEN-3 (Y3) | Salon belgesi (`activeTenant`) oturumda bir kez yükleniyor: saat/iptal süresi/marka değişince ekranlar bayat veri gösteriyor ve eskiyi geri yazabiliyor; `ThemeSync` marka güncellemesini bir açılış geç uyguluyor | m | — |
 | [x] DEN-4 (Y4) | Ölçüm formu dokunulmamış 75 kg / 100 / 85 / 35 varsayılanlarını gerçek ölçü diye kaydediyor; kayıtlar yalnızca eklenebilir | s | personatalepleri Z-10 |
 | [x] DEN-5 (Y5) | Program kurucuda "Şablondan başla" çok günlü programın **tüm** günlerini onaysız eziyor (koşul yalnızca aktif günün listesine bakıyor) | xs | — |
-| [ ] DEN-6 (Y6) | Yönetici+antrenör antrenör yüzeyinde randevu oluşturamıyor, kendi takvimi yerine tüm salonu görüyor (`canCreate = !isAdmin`) | m | CX-08 |
+| [~] DEN-6 (Y6) | Yönetici+antrenör antrenör yüzeyinde randevu oluşturamıyor, kendi takvimi yerine tüm salonu görüyor (`canCreate = !isAdmin`) | m | CX-08 |
 | [x] DEN-7 (Y7) | `watchUpcomingSessionsForMember` durum filtresiz `limit(3)`: ana ekran iptal edileni "yaklaşan" gösteriyor, Rezervasyonlarım en çok 3 özel ders listeliyor | s | — |
-| [ ] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor; sunucuda `cancelClassByStaff` gerekir, **deploy onayı ister** | m | CX-03 |
+| [~] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor; sunucuda `cancelClassByStaff` gerekir, **deploy onayı ister** | m | CX-03 |
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [ ] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
@@ -5314,6 +5314,87 @@ alınmıyor (denetimin ayrı orta maddesi). (3) Aynı çevrimdışı tuzağa aç
 Sonuçlarını tek tek incelemedim; disk önbelleğine yazan yalnızca `AuthProvider`
 (grep ile doğrulandı), yani bunlarda en kötü ihtimal geçici yanlış boş durum,
 kalıcı kayıp değil. Dokunulmadı.
+
+**DEN-8 yarım — kod ve testler yazıldı, DEPLOY EDİLMEDİ, emülatör testleri
+KOŞULMADI (20 Eylül 2026).** Salon grup dersini silince kotalı üyenin hakkı
+iade edilmiyordu (`classRepo.deleteClass` / `deleteClassSeriesFrom` belgeyi
+doğrudan siliyor, `cancelGroupClassBooking` yalnızca tek üyenin iptalini
+karşılıyordu). **Plandaki "`cancelClassByStaff` callable'ı" yerine silme
+tetikleyicisi seçildi:** `backend/functions/src/classCancellation.ts`,
+`refundOnClassCancelled` (`classes` silme, `retry: true`). Sebep: yayındaki
+istemciler (iOS build 27, Android 8) belgeyi doğrudan siliyor; callable bir
+istemci güncellemesi ve doğrudan silmeyi kapatan bir kural değişikliği isterdi,
+ve o iki yayın dersi hiç iptal edemez hale gelirdi. Tetikleyici her istemciyi
+kapsıyor, kural ve istemci değişikliği gerektirmiyor.
+*Kurallar:* yalnızca `bookedUserIds`'te hâlâ olan ve `bookingCredits` kaydı
+bulunan üye (üye kuralla kendini diziden çıkarabiliyor, haritadaki kaydı
+kalıyor; o kişiye iade yok); **ders başlamışsa iade yok** (yapılan dersin
+iadesi bedava ders olurdu; bilerek başlangıç anına göre, bitişe göre değil);
+kredi o üyeye, aynı salona ve `groupClass` türüne ait olmalı (personel
+`bookingCredits`'e istediği kimliği yazabilir, kredi doğrulanıyor); bekleme
+listesine ve sınırsız hakla rezerve edene dokunulmuyor; her (ders, üye) için
+bir kez: tetikleyiciler en az bir kez çalıştığı için deterministik kimlikli
+`class_cancellation_refunds/{classId}_{memberId}` kaydı iadeyle aynı
+transaction'da yazılıyor, ikinci çalışma onu görüp duruyor; kayıt aynı zamanda
+iade geçmişi (ders belgesi silindi). Ders silme ile eşzamanlı rezervasyon/iptal:
+Firestore transaction'ları sıralandığı için ya rezervasyon önce commit olur
+(silme verisi onu içerir, tetikleyici iade eder) ya silme önce olur (rezervasyon
+"ders bulunamadı" alır, hiçbir şey harcanmaz).
+*Testler:* `tests/classCancellation.decision.test.ts` (14, **koşuldu**: kime ve
+neyin iade edileceği, Firestore'suz; kararı bilerek bozan 4 mutasyonun hepsi
+testi kırdı) ve `tests/classCancellation.refund.test.ts` (12, emülatörlü;
+**yazıldı, koşulmadı**): transaction, tekrar işlemede çift iade olmaması ve
+eşzamanlı iki işleme tek iade. `tsc` (kaynak ve test) temiz. Emülatör jar'ı
+(`cloud-firestore-emulator-v1.19.8.jar`, 63,6 MB, Google'ın deposundan) bu
+makinede yok ve kullanıcı indirmeye izin vermedi; **transaction/işaretçi/
+eşzamanlılık kısmı kanıtlanmış değil.** Koşmak için `backend/`'de
+`npm run test:functions` (JDK 21 hazır: `openjdk@21`).
+*Deploy:* `firebase deploy --only functions:refundOnClassCancelled`, **açık
+onay ister**; kural/index değişikliği yok (`class_cancellation_refunds` kuralda
+tanımsız = istemciye kapalı). `docs/SCHEMA.md` güncellendi.
+*Açık kalan:* (1) Deploy'dan ÖNCE silinmiş derslerin iadeleri geri
+getirilemez (belge yok); etkilenen üyeye yönetici yeni kredi tanımlayarak
+telafi edebilir (`member_credits` create admin'e açık). (2) Yönetici ekranı
+"iptal edince ders programlarından kalkacak" diyor, kotalı hakkın iade
+edileceğini söylemiyor; metin deploy'dan sonra eklenmeli (önce deploy, sonra
+OTA, yoksa metin yalan söyler). (3) Bildirim metni değişmedi: üye "Ders iptal
+edildi" alıyor, iadeyi paket kartında görüyor. (4) Sunucu tarafında
+`notifyOnClassCancelled` ile aynı silmeye bağlı iki tetikleyici çalışacak; ikisi
+birbirinden bağımsız.
+
+**DEN-6 kısmen kapandı — 21 Eylül 2026 (istemci + sunucu kodu yazıldı; sunucu
+kısmı DEPLOY EDİLMEDİ).** Kullanıcı tasarım sorusuna (hangi yüzey) yanıt
+vermeden "devam et" dedi; ben karar vermedim, projenin zaten verdiği karara
+uydum: `AGENTS.md` §4b ("yönetici her zaman antrenördür, ama yetenek ile yüzey
+ayrı") ve `CX-08` ("antrenörlük yapan yönetici kendi takviminde randevu
+oluşturabilmeli, çalıştırmayan yöneticiye zorunlu antrenör navigasyonu ekleme").
+*İstemci* (`trainer/calendar.tsx`): (1) **Antrenör yüzeyi** artık hangi rolle
+girilirse girilsin yalnızca kişinin kendi takvimini (+ paylaşılanları) gösteriyor
+ve randevu ekletiyor; eskiden `isAdmin={canOverseeCalendars(...)}` yüzünden
+admin+antrenör hesabı tüm salonun oturumlarını görüyor, randevu ekleyemiyordu.
+(2) **Admin yüzeyi** (`admin/calendar`) hâlâ "Tüm salon" özetiyle açılıyor ve
+yanına **"Benim takvimim"** çipi geldi; orada kendi takvimine randevu ekleniyor
+(antrenör sekme çubuğu eklenmedi, çalıştırmayan sahip için hiçbir şey değişmedi).
+*Sunucu* (`sessions.ts`): `createPtSessionByStaff` takvim sahibi olarak yalnızca
+açık `trainer` rolünü kabul ediyordu; artık `canHoldPtSessions` (`trainer` ya da
+`admin`) kabul ediyor, böylece **yalnızca admin rolü olan** sahip de kendi
+takvimine yazabiliyor. `tests/sessions.canCoach.test.ts` (4, **koşuldu**, iki
+mutasyon testi kırdı; `docs/SCHEMA.md` fonksiyon tablosu güncellendi). `tsc` ve
+lint temiz, mobil 411 test geçiyor.
+*Sıra önemli:* roller `admin + trainer` olan hesaplar için istemci değişikliği tek
+başına yetiyor (sunucu zaten `trainer` rolünü kabul ediyor). **Yalnızca admin
+rolü olan** hesapta "Benim takvimim"den randevu eklemek, `createPtSessionByStaff`
+deploy edilene kadar "Bu antrenör artık salonda çalışmıyor" hatası verir; **önce
+fonksiyon deploy, sonra OTA.** **Cihazda görülmedi; sunucudaki çağrı yolu
+(`createPtSessionByStaff` callable'ının kendisi) emülatörde koşulmadı**, yalnızca
+karar fonksiyonu test edildi.
+*Açık kalan (DEN-6'nın parçası olmayan ama CX-08'in "uygun biçimde
+seçilebilmeli" dediği kısım):* `watchActiveTrainers` yalnızca `trainer` rolünü
+listeliyor; bu yüzden yalnızca admin olan sahip (a) üyenin "Antrenör seç"
+listesinde, (b) sınıf formunun antrenör seçicisinde ve (c) ekip ekranında
+görünmüyor (denetimin "sahip kendi dersini kendine atayamıyor" maddesi). Üye
+tarafındaki `bookPtSessions` da aynı `trainer` şartını koşuyor. Bunlar ayrı iş:
+sorgu `array-contains-any` ister ve üye tarafı sunucu değişikliği demek.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

@@ -31,6 +31,45 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-6: antrenörlük yapan yöneticinin takvimi
+
+**Yapıldı.** İstemci: `trainer/calendar.tsx` antrenör yüzeyinde artık hangi rolle
+girilirse girilsin yalnızca kişinin kendi takvimini gösteriyor ve randevu
+ekletiyor (admin+antrenör hesabı tüm salonu görüyor, randevu ekleyemiyordu);
+`admin/calendar` "Tüm salon" özetiyle açılmaya devam ediyor, yanına "Benim
+takvimim" çipi geldi. Sunucu: `createPtSessionByStaff` takvim sahibi olarak
+`trainer` ya da `admin` rolünü kabul ediyor (`canHoldPtSessions`, 4 test, iki
+mutasyon testi kırdı). `tsc`, lint temiz, mobil 411 test geçiyor. **Cihazda
+görülmedi. Sunucu değişikliği deploy edilmedi.**
+
+**Karar.** Kullanıcı 20 Eylül'de sorduğum tasarım sorusuna (hangi yüzey)
+yanıt vermeden "devam et" dedi; kendi başıma yeni bir karar üretmedim, projenin
+verilmiş kararına uydum: `AGENTS.md` §4b (yetenek ile yüzey ayrı; çalıştırmayan
+sahibe antrenör navigasyonu dayatılmaz) ve `CX-08`. Sıra: **önce fonksiyon
+deploy, sonra OTA.** `admin + trainer` rollü hesaplar için istemci tek başına
+yeter; yalnızca admin rollü sahip deploy'dan önce "Benim takvimim"den randevu
+eklerse "Bu antrenör artık salonda çalışmıyor" hatası alır.
+
+**Bilerek yapılmadı.** Antrenör sekme çubuğu ya da zorunlu navigasyon
+eklenmedi. `bookPtSessions` (üyenin kendi randevusu) ve `watchActiveTrainers`
+yalnızca `trainer` rolünü aramaya devam ediyor: yalnızca admin olan sahip
+üyenin "Antrenör seç" listesinde, sınıf formunun antrenör seçicisinde ve ekip
+ekranında görünmüyor. Bu, CX-08'in "uygun biçimde seçilebilmeli" dediği ayrı
+iş: sorgu `array-contains-any` ister, üye tarafı sunucu değişikliği demek.
+
+**Açık.** Yukarıdaki seçilebilirlik işi. `createPtSessionByStaff` callable'ının
+kendisi emülatörde koşulmadı (yalnızca karar fonksiyonu test edildi; emülatör
+jar'ı indirilmedi). Deploy açık onay ister. Sunucu değişikliği DEN-8'in
+deploy'uyla aynı pakette gidebilir (`firebase deploy --only
+functions:refundOnClassCancelled,functions:createPtSessionByStaff`).
+
+**Nerede.** `apps/gymentra-mobile/src/app/trainer/calendar.tsx`,
+`backend/functions/src/sessions.ts`,
+`backend/functions/tests/sessions.canCoach.test.ts`, `docs/SCHEMA.md`,
+`docs/plan.md` (DEN).
+
+---
+
 ## 2026-09-20 — UI/UX/performans denetimi; DEN-1, 2, 3, 4, 5, 7, 9 ve 10 düzeltildi
 
 **Yapıldı.** Uygulama salt okunur denetlendi (19 ajan, her rapor bağımsız bir
@@ -100,6 +139,19 @@ package) `watchConfirmedDoc`'a çevrilmedi: disk önbelleğine yalnızca
 `AuthProvider` yazıyor (grep), bunlarda kalıcı kayıp yok, geçici yanlış boş
 durum olabilir.
 
+**DEN-8 (grup dersi iptalinde kredi iadesi) yarım kaldı: kod yazıldı,
+deploy edilmedi, emülatör testleri koşulmadı.** Plandaki "`cancelClassByStaff`
+callable'ı" yerine silme tetikleyicisi (`refundOnClassCancelled`) seçildi:
+yayındaki iOS build 27 ve Android 8 dersi doğrudan siliyor, callable istemci
+güncellemesi ve doğrudan silmeyi kapatan bir kural değişikliği isterdi, o iki
+yayın dersi iptal edemez hale gelirdi. **Başlamış derste iade yok** (bilerek:
+yapılan dersin iadesi bedava ders olur; başlangıç anına göre, bitişe göre
+değil). Emülatör jar'ının (`cloud-firestore-emulator-v1.19.8.jar`, 63,6 MB)
+indirilmesine kullanıcı izin vermedi; kararı Firestore'suz sınayan 14 test
+koşuldu (kararı bozan 4 mutasyon testi kırdı), transaction / çift iade engeli /
+eşzamanlılığı sınayan 12 emülatör testi yazıldı ama koşulmadı, o kısım
+kanıtlanmış değil. Deploy açık onay ister; kural/index değişikliği yok.
+
 **Açık.** DEN-6, 8 ve DEN-11..13. Daha önce yalnızca kilosunu kaydeden
 üyelerin uydurma göğüs/bel/kol kayıtları veritabanında duruyor (DEN-4).
 DEN-2: Firestore'un çevrimdışı davranışı gerçek SDK ile ağ kapalıyken denendi
@@ -132,7 +184,12 @@ dal ister.
 `apps/gymentra-mobile/src/data/firebase/watch.test.ts`,
 `apps/gymentra-mobile/src/data/firebase/tenantRepo.ts`,
 `apps/gymentra-mobile/src/context/AuthContext.tsx`,
-`apps/gymentra-mobile/src/theme/ThemeSync.tsx`.
+`apps/gymentra-mobile/src/theme/ThemeSync.tsx`,
+`backend/functions/src/classCancellation.ts`,
+`backend/functions/src/index.ts`,
+`backend/functions/tests/classCancellation.decision.test.ts`,
+`backend/functions/tests/classCancellation.refund.test.ts`,
+`docs/SCHEMA.md`.
 
 ---
 
