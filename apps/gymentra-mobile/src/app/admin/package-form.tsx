@@ -231,7 +231,7 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
                 <Chip key={p.days} label={p.label} selected={durationDays === p.days} onPress={() => changeDuration(p.days)} />
               ))}
             </View>
-            <Stepper value={durationDays} unit="gün" step={1} decimals={0} onChange={changeDuration} />
+            <Stepper value={durationDays} unit="gün" label="Paket süresi" step={1} decimals={0} onChange={changeDuration} />
           </View>
 
           <View style={{ gap: 6 }}>
@@ -245,8 +245,8 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
             </View>
             {groupClassMode === 'quota' && (
               <>
-                <Stepper value={groupClassCount} unit="ders" step={1} decimals={0} onChange={setGroupClassCount} />
-                <Stepper value={groupClassPeriod} unit="günde bir yenilenir" step={1} decimals={0} onChange={setGroupClassPeriod} />
+                <Stepper value={groupClassCount} unit="ders" label="Grup dersi hakkı" step={1} decimals={0} onChange={setGroupClassCount} />
+                <Stepper value={groupClassPeriod} unit="günde bir yenilenir" label="Grup dersi yenilenme aralığı" step={1} decimals={0} onChange={setGroupClassPeriod} />
               </>
             )}
           </View>
@@ -260,8 +260,8 @@ function PackageFormBody({ tenantId, existing }: { tenantId: string; existing: G
             </View>
             {hasBonusLessons && (
               <>
-                <Stepper value={bonusLessonCount} unit="ders" step={1} decimals={0} onChange={setBonusLessonCount} />
-                <Stepper value={bonusLessonPeriod} unit="günde bir yenilenir" step={1} decimals={0} onChange={setBonusLessonPeriod} />
+                <Stepper value={bonusLessonCount} unit="ders" label="Hediye özel ders sayısı" step={1} decimals={0} onChange={setBonusLessonCount} />
+                <Stepper value={bonusLessonPeriod} unit="günde bir yenilenir" label="Hediye özel ders yenilenme aralığı" step={1} decimals={0} onChange={setBonusLessonPeriod} />
               </>
             )}
           </View>

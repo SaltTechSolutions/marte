@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { isSameDay, MonthCalendar, startOfDay } from '@/components/MonthCalendar';
 import { Text } from '@/components/Text';
@@ -51,16 +52,23 @@ export default function BookSession() {
   const [monthAnchor, setMonthAnchor] = useState(() => startOfDay(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<Date | null>(null);
   const [booking, setBooking] = useState(false);
+  // Any of the three listeners failing means the slot list cannot be trusted:
+  // no availability spun the skeleton forever, and a dropped busy-slot listener
+  // offered slots the trainer has already given away (DEN-13). The screen says
+  // so instead; the tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const onError = () => setFailed(true);
 
   useEffect(() => {
     if (!tenantId || !trainerId) return;
-    return watchTrainerAvailability(tenantId, trainerId, setAvailability);
-  }, [tenantId, trainerId]);
+    return watchTrainerAvailability(tenantId, trainerId, setAvailability, onError);
+  }, [tenantId, trainerId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !trainerId) return;
-    return watchTrainerBusySlotsForDay(tenantId, trainerId, selectedDate, setBusySlots);
-  }, [tenantId, trainerId, selectedDate]);
+    return watchTrainerBusySlotsForDay(tenantId, trainerId, selectedDate, setBusySlots, onError);
+  }, [tenantId, trainerId, selectedDate, retryKey]);
 
   // A slot chosen on a previous day shouldn't stay "selected" once the day
   // changes underneath it — derived rather than reset via effect.
@@ -72,8 +80,8 @@ export default function BookSession() {
 
   useEffect(() => {
     if (!tenantId || !bookingForId) return;
-    return watchMemberCredits(tenantId, bookingForId, 'ptLesson', setCredits);
-  }, [tenantId, bookingForId]);
+    return watchMemberCredits(tenantId, bookingForId, 'ptLesson', setCredits, onError);
+  }, [tenantId, bookingForId, retryKey]);
 
   const freeSlots = useMemo(() => {
     if (!availability) return [];
@@ -101,6 +109,20 @@ export default function BookSession() {
       setBooking(false);
     }
   };
+
+  if (failed) {
+    return (
+      <View style={{ padding: spacing.md }}>
+        <ErrorNotice
+          message="Müsait saatler alınamadı. Bağlantını kontrol edip tekrar dene."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
 
   if (loading) {
     return (

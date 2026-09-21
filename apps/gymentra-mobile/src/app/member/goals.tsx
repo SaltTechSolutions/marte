@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
@@ -36,11 +37,15 @@ export default function MemberGoals() {
 
   const [templates, setTemplates] = useState<ProgramTemplate[] | undefined>(undefined);
   const [openId, setOpenId] = useState<string | null>(null);
+  // A failed listener left the skeleton up for good (DEN-13). The tap clears
+  // the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchProgramTemplates(tenantId, setTemplates);
-  }, [tenantId]);
+    return watchProgramTemplates(tenantId, setTemplates, () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   const byId = useMemo(() => new Map((templates ?? []).map((t) => [t.id, t])), [templates]);
   const goals = useMemo(() => (templates ?? []).filter((t) => t.goal), [templates]);
@@ -56,7 +61,17 @@ export default function MemberGoals() {
       </View>
 
       {templates === undefined ? (
-        <ListSkeleton rows={5} avatar={false} />
+        failed ? (
+          <ErrorNotice
+            message="Hedef listesi yüklenemedi."
+            onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+          />
+        ) : (
+          <ListSkeleton rows={5} avatar={false} />
+        )
       ) : goals.length === 0 ? (
         <EmptyState
           icon="compass-outline"

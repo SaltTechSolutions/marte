@@ -1,10 +1,13 @@
-import {
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_900Black,
-  useFonts,
-} from '@expo-google-fonts/inter';
+// One entry per weight, never the package root. The root index `require`s ALL
+// 18 Inter cuts (9 weights x normal/italic), so Metro bundled every TTF into
+// the app: ~6 MB shipped for the 4 cuts used below, ~4.7 MB of it dead weight
+// (DEN-11). `useFonts` from `/useFonts` is the same hook the root re-exports,
+// just without the barrel.
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { Inter_900Black } from '@expo-google-fonts/inter/900Black';
+import { useFonts } from '@expo-google-fonts/inter/useFonts';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
@@ -40,7 +43,14 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
     // performance traces — this app doesn't need those, and every extra
     // capture is more of the free tier's monthly event budget spent on
     // something other than the errors it exists to catch.
-    tracesSampleRate: 0,
+    //
+    // Tracing is off because `tracesSampleRate` is NOT set. It used to say
+    // `tracesSampleRate: 0`, which reads as "off" but is not: the RN SDK turns
+    // tracing on for any NUMBER (integrations/default.js:
+    // `typeof options.tracesSampleRate === 'number'`), so app-start,
+    // native-frames, stall, user-interaction and time-to-display integrations
+    // were installed and ran for traces that were never going to be sent
+    // (DEN-11).
     beforeSend: (event) => (allowEvent(event) ? event : null),
   });
 }

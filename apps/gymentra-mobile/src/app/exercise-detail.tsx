@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -128,7 +128,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
         accessibilityRole="button"
         accessibilityState={{ selected: on }}
         style={{
-          height: 32,
+          height: 44,
           minWidth: 60,
           alignItems: 'center',
           justifyContent: 'center',

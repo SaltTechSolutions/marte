@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { DateStepper } from '@/components/DateStepper';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
@@ -82,6 +83,12 @@ export default function TrainerAvailability() {
   const [dayOffOffset, setDayOffOffset] = useState(1);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  // "Kaydet" used to be live before the stored hours arrived, so a tap on a
+  // slow or failed load wrote the default week (and no day-offs) over the
+  // trainer's real one (DEN-13). Saving now waits for `loaded`; the tap on
+  // "Tekrar dene" clears the flag.
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!tenantId || !user) return;
@@ -96,8 +103,8 @@ export default function TrainerAvailability() {
         setExceptions(availability.exceptions);
       }
       setLoaded(true);
-    });
-  }, [tenantId, user]);
+    }, () => setFailed(true));
+  }, [tenantId, user, retryKey]);
 
   if (!tenantId || !user) {
     return (
@@ -132,7 +139,7 @@ export default function TrainerAvailability() {
   const upcomingDaysOff = exceptions.filter((e) => e.closed && e.date >= todayIso).sort((a, b) => a.date.localeCompare(b.date));
 
   const save = async () => {
-    if (saving) return;
+    if (saving || !loaded) return;
     setSaving(true);
     try {
       const weekly: Partial<Record<Weekday, TimeWindow[]>> = {};
@@ -150,6 +157,16 @@ export default function TrainerAvailability() {
 
   return (
     <KeyboardAwareScroll contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
+      {failed && !loaded ? (
+        <ErrorNotice
+          message="Çalışma saatlerin yüklenemedi. Yüklenmeden kaydedersen kayıtlı saatlerin varsayılanla değişirdi; bu yüzden kaydetme kapalı."
+          onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+        />
+      ) : null}
+
       {loaded && Object.values(days).every((d) => d === null) && (
         <Text variant="helper" tone="sub">
           Henüz hiç gün açmadın — üyeler senden randevu alamaz.
@@ -273,7 +290,7 @@ export default function TrainerAvailability() {
         </View>
       </View>
 
-      <Button label={saving ? '…' : 'Kaydet'} critical disabled={saving} onPress={save} />
+      <Button label={saving ? '…' : 'Kaydet'} critical disabled={saving || !loaded} onPress={save} />
     </KeyboardAwareScroll>
   );
 }

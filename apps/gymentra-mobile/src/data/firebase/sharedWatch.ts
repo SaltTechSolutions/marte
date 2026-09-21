@@ -25,11 +25,15 @@ interface Entry {
   /** Last value seen, replayed to late joiners so they don't flash empty. */
   last?: unknown;
   hasValue: boolean;
-  /** Last error seen, replayed to late joiners. A listener that has failed
-   *  never produces a value, so without this a screen mounting after the
-   *  failure would sit in its loading state forever: it neither starts its
-   *  own listener (one already exists) nor receives anything from this one. */
+  /** Last error seen. */
   lastError?: unknown;
+  /**
+   * The underlying listener has errored. Firestore ends a listener that
+   * errors, so it will never produce another value: the next subscriber has to
+   * start a fresh one. Without this a screen's "Tekrar dene" re-subscribed to
+   * the corpse, was replayed the same error and could never recover (DEN-13).
+   */
+  failed: boolean;
   teardown?: ReturnType<typeof setTimeout>;
 }
 
@@ -44,7 +48,7 @@ export function sharedWatch<T>(
   let entry = registry.get(key);
 
   if (!entry) {
-    entry = { subscribers: new Set(), errorHandlers: new Set(), hasValue: false };
+    entry = { subscribers: new Set(), errorHandlers: new Set(), hasValue: false, failed: false };
     registry.set(key, entry);
   }
 
@@ -59,7 +63,14 @@ export function sharedWatch<T>(
   current.subscribers.add(onChange as (value: never) => void);
   if (onError) current.errorHandlers.add(onError);
 
-  if (!current.stop) {
+  if (!current.stop || current.failed) {
+    // A failed listener is replaced, not reused: release it (safe to call on an
+    // already-ended Firestore listener) and start a fresh one. Everyone still
+    // attached, including screens showing their error state, hears from the new
+    // one through `current.subscribers` / `current.errorHandlers`.
+    current.stop?.();
+    current.failed = false;
+    current.lastError = undefined;
     current.stop = start(
       (value) => {
         current.last = value;
@@ -69,13 +80,14 @@ export function sharedWatch<T>(
       },
       (error) => {
         current.lastError = error;
+        // Set here, not after `start` returns: an error delivered before it
+        // returns must still mark the listener dead.
+        current.failed = true;
         current.errorHandlers.forEach((fn) => fn(error));
       },
     );
   } else if (current.hasValue) {
     onChange(current.last as T);
-  } else if (current.lastError !== undefined) {
-    onError?.(current.lastError as Parameters<WatchErrorHandler>[0]);
   }
 
   return () => {

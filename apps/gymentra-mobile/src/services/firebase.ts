@@ -2,7 +2,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Auth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Firestore, initializeFirestore } from 'firebase/firestore';
-import { FirebaseStorage, getStorage } from 'firebase/storage';
 
 // Same Firebase project as marte06 (tarabyamarte). Tarabya Marte is the
 // seeded test tenant — its data stays in place; new tenants start empty.
@@ -23,4 +22,7 @@ export const auth: Auth = initializeAuth(app, {
 
 export const db: Firestore = initializeFirestore(app, {});
 
-export const storage: FirebaseStorage = getStorage(app);
+// No Firebase Storage client on purpose: logo and photo uploads go through the
+// `uploadTenantLogo` / `uploadMemberPhoto` callables (Admin SDK), so nothing
+// reads `storage` and `firebase/storage` would only be dead weight in the
+// bundle and one more service started at launch (DEN-11).

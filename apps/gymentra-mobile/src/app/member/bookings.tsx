@@ -96,16 +96,15 @@ function BookingList({ tenantId, userId }: { tenantId: string; userId: string })
   const loading = sessions === undefined || classes === undefined;
 
   const bookings: Booking[] = [
-    ...(sessions ?? [])
-      .filter((s) => s.status !== 'cancelled')
-      .map<Booking>((s) => ({
-        kind: 'pt',
-        id: s.id,
-        date: s.date,
-        title: 'Özel ders',
-        subtitle: s.trainerName,
-        session: s,
-      })),
+    // The watcher already returns only still-scheduled sessions (DEN-7).
+    ...(sessions ?? []).map<Booking>((s) => ({
+      kind: 'pt',
+      id: s.id,
+      date: s.date,
+      title: 'Özel ders',
+      subtitle: s.trainerName,
+      session: s,
+    })),
     ...(classes ?? []).map<Booking>((c) => ({
       kind: 'class',
       id: c.id,

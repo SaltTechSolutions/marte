@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -7,6 +7,7 @@ import { QRCode } from '@/components/QRCode';
 import { Screen } from '@/components/Screen';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
+import { useAuth } from '@/context/AuthContext';
 import { membershipId } from '@/data/firebase/membershipRepo';
 import { auth } from '@/services/firebase';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -19,6 +20,26 @@ export default function ApprovedScreen() {
   const user = auth.currentUser;
   const firstName = user?.displayName?.split(' ')[0] ?? 'orada';
   const qrValue = user && tenantId ? membershipId(tenantId, user.uid) : 'gymentra://pending';
+
+  const { activeMembership, switchTenant } = useAuth();
+  const [entering, setEntering] = useState(false);
+
+  // Someone who already belongs to another gym (the switcher's "Başka bir salona
+  // katıl") keeps that gym selected after the refresh: the saved choice is still
+  // the old one. This screen just showed the NEW gym's card, so put that gym on
+  // screen, the same way the switcher does. For a first-time member the active
+  // gym already is this one and nothing switches (DEN-1).
+  const enter = async () => {
+    setEntering(true);
+    try {
+      if (tenantId && activeMembership && activeMembership.tenantId !== tenantId) await switchTenant(tenantId);
+    } catch {
+      // Best effort: landing on the previous gym beats being stuck here.
+    } finally {
+      setEntering(false);
+    }
+    router.replace('/member');
+  };
 
   return (
     <Screen>
@@ -63,7 +84,7 @@ export default function ApprovedScreen() {
       </View>
 
       <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
-        <Button label="Salonu keşfet" critical onPress={() => router.replace('/member')} />
+        <Button label="Salonu keşfet" critical onPress={enter} disabled={entering} />
       </View>
     </Screen>
   );

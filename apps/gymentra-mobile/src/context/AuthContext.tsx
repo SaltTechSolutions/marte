@@ -2,7 +2,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 import { getActiveMemberships, watchMembership } from '@/data/firebase/membershipRepo';
-import { getTenant } from '@/data/firebase/tenantRepo';
+import { getTenant, watchTenant } from '@/data/firebase/tenantRepo';
 import { primaryRole, selectMembership } from '@/data/membership';
 import { MembershipRole, Tenant, TenantMembership } from '@/data/types';
 import { loadActiveRole, saveActiveRole } from '@/services/activeRole';
@@ -57,6 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     membershipsRef.current = memberships;
   }, [memberships]);
+  // Same reason, for the live-gym subscription below, which writes the cache.
+  const activeMembershipRef = useRef<TenantMembership | null>(null);
+  useEffect(() => {
+    activeMembershipRef.current = activeMembership;
+  }, [activeMembership]);
 
   /** Restore the stored surface, falling back to the most privileged role.
    * A stored role that is no longer granted (an admin demoted to trainer)
@@ -147,6 +152,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await saveMembershipCache(uid, { membership, tenant: activeTenantRef.current, memberships: membershipsRef.current });
     });
     // uid + tenant are the only inputs that should restart the listener.
+  }, [user?.uid, activeMembership?.tenantId]);
+
+  /**
+   * Keep the gym document live too (DEN-3).
+   *
+   * `activeTenant` used to be read once per session, at sign-in. An owner who
+   * changed the opening hours, the cancellation window, the subscription or the
+   * branding kept seeing the old values everywhere until a restart, members saw
+   * the old rule, and a settings screen seeded from the stale copy wrote it
+   * back over the newer one. The paywall had the same gap after a purchase: the
+   * store webhook flips `subscription` on the server and the client never heard.
+   *
+   * A cache-only "no such gym" (offline cold start) is not forwarded by
+   * `watchTenant`, so the cached gym survives a launch without signal.
+   */
+  useEffect(() => {
+    const uid = user?.uid;
+    const tenantId = activeMembership?.tenantId;
+    if (!uid || !tenantId) return;
+    let alive = true;
+    const unsubscribe = watchTenant(tenantId, (tenant) => {
+      // `alive` covers a gym switch: the effect re-runs for the new tenant, and
+      // a snapshot still in flight for the old one must not land on top of it.
+      if (!alive || activeUidRef.current !== uid) return;
+      setActiveTenant(tenant);
+      void saveMembershipCache(uid, {
+        membership: activeMembershipRef.current,
+        tenant,
+        memberships: membershipsRef.current,
+      });
+    });
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
   }, [user?.uid, activeMembership?.tenantId]);
 
   const refreshMembership = async () => {

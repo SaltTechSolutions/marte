@@ -57,12 +57,30 @@ export function MyPackageCard({
   activePackage,
   groupCredits,
   ptCredits,
+  status,
 }: {
   activePackage: MemberPackage | null;
   groupCredits: MemberCredit[];
   ptCredits: MemberCredit[];
+  /**
+   * The packages have not arrived. `null` for `activePackage` means "the
+   * member has none" and draws "Aktif paketin yok"; before the first snapshot
+   * that is a claim nobody has checked (DEN-13), so the caller says so here.
+   */
+  status?: 'loading' | 'failed';
 }) {
   const { spacing } = useAppTheme();
+
+  if (status) {
+    return (
+      <InfoCard
+        label="PAKETİM"
+        icon="ribbon-outline"
+        title={status === 'loading' ? 'Paketin yükleniyor…' : 'Paket bilgisi alınamadı'}
+        subtitle={status === 'loading' ? undefined : 'Yukarıdaki "Tekrar dene"ye dokun.'}
+      />
+    );
+  }
 
   if (!activePackage) {
     return (

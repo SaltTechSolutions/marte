@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { DeleteAccountButton } from '@/components/DeleteAccountButton';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { GymCodeCard } from '@/components/GymCodeCard';
 import { GymSwitchRow } from '@/components/GymSwitcher';
 import { GymInfoCard } from '@/components/GymInfoCard';
@@ -51,6 +52,13 @@ export default function MemberProfile() {
   const toast = useToast();
   const [photoBusy, setPhotoBusy] = useState(false);
   const [entries, setEntries] = useState<MeasurementEntry[]>([]);
+  // The measurement, package-offer and children listeners feed rows that are
+  // hidden when empty, so a dropped one looked exactly like "nothing pending" —
+  // including a parent-approval request or a package offer waiting on this
+  // member (DEN-13). One banner; the tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const onError = () => setFailed(true);
   const latestWeight = entries[0]?.weightKg ?? null;
   const bmi =
     latestWeight && activeMembership?.heightCm
@@ -59,8 +67,8 @@ export default function MemberProfile() {
 
   useEffect(() => {
     if (!user || activeMembership?.status !== 'active') return;
-    return watchMeasurements(activeMembership.tenantId, user.uid, setEntries);
-  }, [user, activeMembership]);
+    return watchMeasurements(activeMembership.tenantId, user.uid, setEntries, onError);
+  }, [user, activeMembership, retryKey]);
 
   const pickPhoto = async () => {
     if (!activeMembership) return;
@@ -95,8 +103,8 @@ export default function MemberProfile() {
   const tenantId = activeMembership?.status === 'active' ? activeMembership.tenantId : null;
   useEffect(() => {
     if (!tenantId || !user) return;
-    return watchPendingPackageChangeRequests(tenantId, user.uid, setPackageOffers);
-  }, [tenantId, user]);
+    return watchPendingPackageChangeRequests(tenantId, user.uid, setPackageOffers, onError);
+  }, [tenantId, user, retryKey]);
 
   // Children linked to this member. The entry point only appears when there
   // are any: a parent link is uncommon, and a permanently visible "Ebeveyn
@@ -104,8 +112,8 @@ export default function MemberProfile() {
   const [children, setChildren] = useState<TenantMembership[]>([]);
   useEffect(() => {
     if (!tenantId || !user) return;
-    return watchMyChildren(tenantId, user.uid, setChildren);
-  }, [tenantId, user]);
+    return watchMyChildren(tenantId, user.uid, setChildren, onError);
+  }, [tenantId, user, retryKey]);
 
   // Contact lives in a members-only subdocument, so it needs its own read.
   // Failing quietly is right here: the card simply omits the contact lines
@@ -140,13 +148,23 @@ export default function MemberProfile() {
         <Text variant="h3">{displayName}</Text>
         {activeMembership ? (
           <View style={{ flexDirection: 'row', gap: 14 }}>
-            <Pressable onPress={pickPhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+            <Pressable
+              onPress={pickPhoto}
+              disabled={photoBusy}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text variant="label" weight="700" style={{ color: colors.pText }}>
                 {photoBusy ? '…' : activeMembership.photoUrl ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
               </Text>
             </Pressable>
             {activeMembership.photoUrl ? (
-              <Pressable onPress={removePhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+              <Pressable
+                onPress={removePhoto}
+                disabled={photoBusy}
+                hitSlop={8}
+                accessibilityRole="button"
+                style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text variant="label" weight="700" tone="sub">
                   Kaldır
                 </Text>
@@ -161,6 +179,16 @@ export default function MemberProfile() {
         ) : null}
         {activeMembership?.status === 'active' && <StatusBadge label={`${tenantName} · Aktif üyelik`} tone="ok" />}
       </Card>
+
+      {failed ? (
+        <ErrorNotice
+          message="Bekleyen paket teklifi ya da çocuk isteği yüklenemedi; görünmüyor olabilir."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      ) : null}
 
       {pendingChildCount > 0 || children.length > 0 ? (
         <InfoCard

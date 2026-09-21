@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { EmptyState } from '@/components/EmptyState';
@@ -64,8 +64,8 @@ export default function AdminMembers() {
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchPendingRenewals(tenantId, (reqs) => setRenewalIds(new Set(reqs.map((r) => r.memberId))));
-  }, [tenantId]);
+    return watchPendingRenewals(tenantId, (reqs) => setRenewalIds(new Set(reqs.map((r) => r.memberId))), () => setFailed(true));
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -258,7 +258,11 @@ export default function AdminMembers() {
           İstekler <Text variant="h3" style={{ color: colors.pText }}>{requests.length}</Text>
         </Text>
         {requests.length > 0 && (
-          <Pressable onPress={() => void approveAll()} disabled={bulkBusy} accessibilityRole="button">
+          <Pressable
+            onPress={() => void approveAll()}
+            disabled={bulkBusy}
+            accessibilityRole="button"
+            style={{ minHeight: 44, justifyContent: 'center' }}>
             <Text variant="helper" weight="700" style={{ color: bulkBusy ? colors.sub : colors.pText }}>
               {bulkBusy ? 'Onaylanıyor…' : 'Tümünü onayla'}
             </Text>

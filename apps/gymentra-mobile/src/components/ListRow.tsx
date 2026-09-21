@@ -18,6 +18,7 @@ export function ListRow({
   return (
     <Wrapper
       onPress={onPress}
+      {...(onPress ? { accessibilityRole: 'button' as const } : {})}
       style={{
         flexDirection: 'row',
         alignItems: 'center',

@@ -5,6 +5,7 @@ import { ScrollView, View } from 'react-native';
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { StatCard } from '@/components/StatCard';
 import { Text } from '@/components/Text';
@@ -95,27 +96,43 @@ export default function TrainerMemberDetail() {
   const tenantId = tenantIdIf(activeMembership, isStaff(activeMembership));
 
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
-  const [entries, setEntries] = useState<MeasurementEntry[]>([]);
-  const [logs, setLogs] = useState<WorkoutLog[]>([]);
+  // `undefined` = not here yet. Both used to start as [] and so drew "Bu üye
+  // henüz ölçüm girmemiş" / "Henüz tamamlanmış antrenman yok" for a member who
+  // has both, until the first snapshot — and for good if the listener failed
+  // (DEN-13).
+  const [entries, setEntries] = useState<MeasurementEntry[] | undefined>(undefined);
+  const [logs, setLogs] = useState<WorkoutLog[] | undefined>(undefined);
   const [creating, setCreating] = useState(false);
   const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
   const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
   const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
 
-  useEffect(() => {
-    if (!tenantId || !memberId) return;
-    return watchActiveProgramForMember(tenantId, memberId, setProgram);
-  }, [tenantId, memberId]);
+  // One flag for all six listeners: the cards say "Alınamadı" instead of
+  // spinning or claiming emptiness, and a single banner offers the retry. The
+  // tap clears the flag; doing that in the effect would be a synchronising
+  // setState (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const retry = () => {
+    setFailed(false);
+    setRetryKey((k) => k + 1);
+  };
+  const onError = () => setFailed(true);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMeasurements(tenantId, memberId, setEntries);
-  }, [tenantId, memberId]);
+    return watchActiveProgramForMember(tenantId, memberId, setProgram, onError);
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchWorkoutLogsForMember(tenantId, memberId, setLogs);
-  }, [tenantId, memberId]);
+    return watchMeasurements(tenantId, memberId, setEntries, onError);
+  }, [tenantId, memberId, retryKey]);
+
+  useEffect(() => {
+    if (!tenantId || !memberId) return;
+    return watchWorkoutLogsForMember(tenantId, memberId, setLogs, onError);
+  }, [tenantId, memberId, retryKey]);
 
   // PER-7. Rules already allowed this — `member_packages` and `member_credits`
   // are readable by any tenant staff — the screen simply never asked, so the
@@ -123,25 +140,26 @@ export default function TrainerMemberDetail() {
   // kaldı?". Read-only here; assigning a package stays an admin action.
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMemberPackages(tenantId, memberId, setPackages);
-  }, [tenantId, memberId]);
+    return watchMemberPackages(tenantId, memberId, setPackages, onError);
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMemberCredits(tenantId, memberId, 'ptLesson', setPtCredits);
-  }, [tenantId, memberId]);
+    return watchMemberCredits(tenantId, memberId, 'ptLesson', setPtCredits, onError);
+  }, [tenantId, memberId, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !memberId) return;
-    return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits);
-  }, [tenantId, memberId]);
+    return watchMemberCredits(tenantId, memberId, 'groupClass', setGroupCredits, onError);
+  }, [tenantId, memberId, retryKey]);
 
   if (!tenantId || !memberId) {
     return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
   const name = memberName || 'Üye';
-  const completedLogs = logs.filter((l) => l.completedAt != null);
+  const pendingText = failed ? 'Alınamadı' : 'Yükleniyor…';
+  const completedLogs = (logs ?? []).filter((l) => l.completedAt != null);
   const totalSeconds = completedLogs.reduce((sum, l) => sum + logActiveSeconds(l), 0);
   const lastWorkout = completedLogs.length > 0 ? completedLogs[completedLogs.length - 1] : null;
 
@@ -152,8 +170,8 @@ export default function TrainerMemberDetail() {
   const groupLeft = remaining(groupCredits);
   const daysLeft = activePackage ? daysUntil(activePackage.endsAt) : 0;
 
-  const latest = entries[0];
-  const first = entries.length > 1 ? entries[entries.length - 1] : undefined;
+  const latest = entries?.[0];
+  const first = entries && entries.length > 1 ? entries[entries.length - 1] : undefined;
 
   const openProgram = async () => {
     if (!user || creating) return;
@@ -184,6 +202,10 @@ export default function TrainerMemberDetail() {
         </View>
       </View>
 
+      {failed ? (
+        <ErrorNotice message="Bazı bilgiler yüklenemedi; aşağıdaki kartlar eksik olabilir." onRetry={retry} />
+      ) : null}
+
       <MemberNoteCard tenantId={tenantId} memberId={memberId} />
 
       {/* --- What they bought (PER-7) --- */}
@@ -193,7 +215,7 @@ export default function TrainerMemberDetail() {
         </Text>
         {packages === undefined ? (
           <Text variant="helper" tone="sub">
-            Yükleniyor…
+            {pendingText}
           </Text>
         ) : activePackage ? (
           <>
@@ -232,7 +254,7 @@ export default function TrainerMemberDetail() {
         </Text>
         {program === undefined ? (
           <Text variant="helper" tone="sub">
-            Yükleniyor…
+            {pendingText}
           </Text>
         ) : program ? (
           <>
@@ -269,11 +291,15 @@ export default function TrainerMemberDetail() {
       <StatCard
         label="ANTRENMAN"
         stats={[
-          { value: completedLogs.length, label: 'toplam' },
-          { value: formatDuration(totalSeconds), label: 'toplam süre' },
+          { value: logs ? completedLogs.length : '–', label: 'toplam' },
+          { value: logs ? formatDuration(totalSeconds) : '–', label: 'toplam süre' },
         ]}
         footnote={
-          lastWorkout ? `Son antrenman: ${formatDate(lastWorkout.startedAt)}` : 'Henüz tamamlanmış antrenman yok'
+          !logs
+            ? pendingText
+            : lastWorkout
+              ? `Son antrenman: ${formatDate(lastWorkout.startedAt)}`
+              : 'Henüz tamamlanmış antrenman yok'
         }
       />
 
@@ -282,7 +308,11 @@ export default function TrainerMemberDetail() {
         <Text variant="label" tone="sub">
           ÖLÇÜMLER
         </Text>
-        {!latest ? (
+        {entries === undefined ? (
+          <Text variant="helper" tone="sub">
+            {pendingText}
+          </Text>
+        ) : !latest ? (
           <Text variant="helper" tone="sub">
             Bu üye henüz ölçüm girmemiş.
           </Text>

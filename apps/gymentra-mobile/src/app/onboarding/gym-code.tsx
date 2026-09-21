@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -210,7 +210,7 @@ export default function GymCodeScreen() {
           style={{ marginBottom: spacing.lg }}
           onPress={async () => {
             await signOutAndForget();
-            router.replace('/onboarding/register');
+            router.replace('/onboarding/register?mode=signIn');
           }}
         />
       </View>

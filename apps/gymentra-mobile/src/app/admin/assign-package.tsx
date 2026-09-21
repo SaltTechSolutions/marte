@@ -7,6 +7,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
@@ -46,19 +47,24 @@ export default function AdminAssignPackage() {
 
   const [packages, setPackages] = useState<GymPackage[] | undefined>(undefined);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  // A dropped listener left the skeleton up for good (packages) or silently
+  // hid every campaign (promotions) — DEN-13. The tap clears the flag.
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const onError = () => setFailed(true);
   const [selected, setSelected] = useState<GymPackage | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchPackagesForTenant(tenantId, setPackages);
-  }, [tenantId]);
+    return watchPackagesForTenant(tenantId, setPackages, onError);
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchPromotionsForTenant(tenantId, setPromotions);
-  }, [tenantId]);
+    return watchPromotionsForTenant(tenantId, setPromotions, onError);
+  }, [tenantId, retryKey]);
 
   if (!tenantId || !memberId || !user) {
     return <AccessGuard title="Salon yönetici oturumu gerekli" />;
@@ -105,8 +111,18 @@ export default function AdminAssignPackage() {
         {memberName} için bir paket seç
       </Text>
 
+      {failed ? (
+        <ErrorNotice
+          message="Paketler ya da kampanyalar yüklenemedi; liste eksik olabilir."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      ) : null}
+
       {packages === undefined ? (
-        <ListSkeleton rows={3} avatar={false} />
+        failed ? null : <ListSkeleton rows={3} avatar={false} />
       ) : active.length === 0 ? (
         <EmptyState
           icon="pricetags-outline"

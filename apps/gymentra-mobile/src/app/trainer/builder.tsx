@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
@@ -16,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
-import { programDays } from '@/data/program';
+import { hasNoExercises, programDays } from '@/data/program';
 import { Program, ProgramDay, ProgramExercise, ProgramTemplate } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
@@ -36,11 +37,29 @@ export default function ProgramBuilder() {
 export function ProgramBuilderScreen() {
   const { programId } = useLocalSearchParams<{ programId: string }>();
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
+  // A failed listener left a blank screen with no way out (DEN-13). The tap
+  // clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!programId) return;
-    return watchProgram(programId, setProgram);
-  }, [programId]);
+    return watchProgram(programId, setProgram, () => setFailed(true));
+  }, [programId, retryKey]);
+
+  if (failed && program === undefined) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', padding: 16 }}>
+        <ErrorNotice
+          message="Program yüklenemedi."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      </View>
+    );
+  }
 
   if (!programId || program === undefined) return <View style={{ flex: 1 }} />;
 
@@ -71,6 +90,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   const [pickingFromLibrary, setPickingFromLibrary] = useState(false);
   const [pickingTemplate, setPickingTemplate] = useState(false);
   const [templates, setTemplates] = useState<ProgramTemplate[]>([]);
+  const [templatesFailed, setTemplatesFailed] = useState(false);
+  const [templatesRetry, setTemplatesRetry] = useState(0);
   const [assigning, setAssigning] = useState(false);
 
   const { activeMembership } = useAuth();
@@ -80,8 +101,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   // belge çekmenin karşılığı yok, antrenörlerin çoğu elle yazmaya devam edecek.
   useEffect(() => {
     if (!pickingTemplate || !tenantId) return;
-    return watchProgramTemplates(tenantId, setTemplates);
-  }, [pickingTemplate, tenantId]);
+    return watchProgramTemplates(tenantId, setTemplates, () => setTemplatesFailed(true));
+  }, [pickingTemplate, tenantId, templatesRetry]);
 
   const activeDay = days.find((d) => d.id === dayId) ?? days[0];
   const exercises = activeDay.exercises;
@@ -233,7 +254,7 @@ function ProgramBuilderForm({ program }: { program: Program }) {
       </ScrollView>
 
       {days.length > 1 && (
-        <Pressable onPress={removeDay} accessibilityRole="button">
+        <Pressable onPress={removeDay} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text variant="label" style={{ color: colors.danger }}>
             {activeDay.name} gününü kaldır
           </Text>
@@ -270,7 +291,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     }
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel={`${ex.name} nasıl yapılır`}>
+                    accessibilityLabel={`${ex.name} nasıl yapılır`}
+                    style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="information-circle-outline" size={19} color={colors.sub} />
                   </Pressable>
                 )}
@@ -297,7 +319,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     </Text>
                     <Stepper value={ex.targetWeightKg} unit="kg" step={2.5} onChange={(v) => updateExercise(ex.id, { targetWeightKg: v })} />
                   </View>
-                  <Pressable onPress={() => removeExercise(ex.id)}>
+                  <Pressable
+                    onPress={() => removeExercise(ex.id)}
+                    accessibilityRole="button"
+                    style={{ minHeight: 44, justifyContent: 'center' }}>
                     <Text variant="helper" weight="700" style={{ color: colors.danger, textAlign: 'center' }}>
                       Egzersizi kaldır
                     </Text>
@@ -309,17 +334,29 @@ function ProgramBuilderForm({ program }: { program: Program }) {
         })}
 
         {/* Şablondan başlama yalnızca program BOŞKEN: dolu bir programın
-            üstüne şablon kopyalamak antrenörün yazdığını sessizce silerdi. */}
-        {exercises.length === 0 && !pickingFromLibrary && (
+            üstüne şablon kopyalamak antrenörün yazdığını sessizce silerdi.
+            "Boş" TÜM günler için: açık günün listesine bakmak, "+ Gün" ile
+            eklenen boş günde dolu günleri de ezdiriyordu (DEN-5). */}
+        {hasNoExercises(days) && !pickingFromLibrary && (
           pickingTemplate ? (
             <View style={{ gap: 8 }}>
               <Text variant="label" tone="sub">
                 HAZIR ŞABLONLAR
               </Text>
               {templates.length === 0 ? (
-                <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
-                  Şablonlar yükleniyor…
-                </Text>
+                templatesFailed ? (
+                  <ErrorNotice
+                    message="Şablonlar yüklenemedi."
+                    onRetry={() => {
+                      setTemplatesFailed(false);
+                      setTemplatesRetry((k) => k + 1);
+                    }}
+                  />
+                ) : (
+                  <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
+                    Şablonlar yükleniyor…
+                  </Text>
+                )
               ) : (
                 templates.map((t) => (
                   <Pressable
@@ -352,7 +389,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
               <Text variant="label" tone="sub">
                 Şablon kopyalanır, atanmaz — kopyaladıktan sonra üyeye göre serbestçe düzenle.
               </Text>
-              <Pressable onPress={() => setPickingTemplate(false)}>
+              <Pressable
+                onPress={() => setPickingTemplate(false)}
+                accessibilityRole="button"
+                style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                   Vazgeç
                 </Text>
@@ -388,7 +428,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                 </View>
               </View>
             ))}
-            <Pressable onPress={() => setPickingFromLibrary(false)}>
+            <Pressable
+              onPress={() => setPickingFromLibrary(false)}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                 Vazgeç
               </Text>

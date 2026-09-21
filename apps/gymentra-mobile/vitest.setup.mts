@@ -61,6 +61,7 @@ vi.mock('firebase/firestore', () => ({
   // (the guardian check-in lookup, for one) crashed against the looser stub,
   // which made a mock gap look like a production bug.
   getDocs: () => ({ docs: [], empty: true, size: 0 }),
+  getDocsFromServer: () => ({ docs: [], empty: true, size: 0 }),
   addDoc: () => ({}),
   updateDoc: () => ({}),
   setDoc: () => ({}),

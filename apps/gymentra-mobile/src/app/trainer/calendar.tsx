@@ -13,7 +13,7 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { watchSharesGrantedToMe } from '@/data/firebase/calendarShareRepo';
-import { canOverseeCalendars, isStaff } from '@/data/membership';
+import { isStaff } from '@/data/membership';
 import { watchActiveMembers } from '@/data/firebase/membershipRepo';
 import {
   cancelPtSession,
@@ -36,24 +36,34 @@ function formatLongDate(d: Date): string {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 
-/** Trainer's own PT calendar, colleagues' shared calendars, and — for admins — every trainer's. */
+/**
+ * The trainer SURFACE: the signed-in person's own PT calendar plus colleagues'
+ * shared ones.
+ *
+ * Never the whole-gym overview, whatever roles the person holds. This used to
+ * pass `isAdmin` for anyone with the admin capability, so an admin who also
+ * coaches (roles admin + trainer) opened this tab to see EVERYONE's sessions
+ * and no way to book one for a member (DEN-6). The overview belongs to the
+ * admin surface (`admin/calendar`); AGENTS.md §4b keeps capability and
+ * surface apart.
+ */
 export default function TrainerCalendar() {
   const { user, activeMembership } = useAuth();
   if (!isStaff(activeMembership) || !user || !activeMembership) {
     return <AccessGuard title="Salon antrenör oturumu gerekli" />;
   }
 
-  return (
-    <TrainerCalendarView
-      tenantId={activeMembership.tenantId}
-      isAdmin={canOverseeCalendars(activeMembership)}
-      user={user}
-    />
-  );
+  return <TrainerCalendarView tenantId={activeMembership.tenantId} isAdmin={false} user={user} />;
 }
 
-/** Exported so the admin-side route can render the same calendar without
- * dragging the admin into the trainer tab group. */
+/**
+ * Exported so the admin-side route can render the same calendar without
+ * dragging the admin into the trainer tab group.
+ *
+ * `isAdmin` = the admin SURFACE: it opens on the whole-gym overview, and an
+ * admin who coaches switches to "Benim takvimim" to book appointments on their
+ * own calendar (a coach is an admin's capability, not a second tab bar).
+ */
 export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: string; isAdmin: boolean; user: User }) {
   const { colors, spacing, radius } = useAppTheme();
   const toast = useToast();
@@ -67,6 +77,9 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   const [shares, setShares] = useState<{ ownerTrainerId: string; ownerTrainerName: string }[]>([]);
   const [allSessions, setAllSessions] = useState<PtSession[]>([]);
   const [viewingTrainerId, setViewingTrainerId] = useState(user.uid);
+  // Admin surface only: overview of every trainer (default) or the admin's own calendar.
+  const [overview, setOverview] = useState(true);
+  const oversight = isAdmin && overview;
 
   // Calendar starts on today, so the trainer's most common question —
   // "what do I have now?" — is answered without any interaction.
@@ -83,11 +96,17 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  useEffect(() => watchActiveMembers(tenantId, setMembers), [tenantId]);
+  useEffect(() => watchActiveMembers(tenantId, setMembers, () => setFailed(true)), [tenantId, retryKey]);
 
   useEffect(
-    () => watchSharesGrantedToMe(tenantId, user.uid, (s) => setShares(s.map((x) => ({ ownerTrainerId: x.ownerTrainerId, ownerTrainerName: x.ownerTrainerName })))),
-    [tenantId, user.uid],
+    () =>
+      watchSharesGrantedToMe(
+        tenantId,
+        user.uid,
+        (s) => setShares(s.map((x) => ({ ownerTrainerId: x.ownerTrainerId, ownerTrainerName: x.ownerTrainerName }))),
+        () => setFailed(true),
+      ),
+    [tenantId, user.uid, retryKey],
   );
 
   // One month at a time — the grid never shows more, and an unbounded
@@ -102,9 +121,9 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
   }, [monthAnchor]);
 
   useEffect(() => {
-    if (isAdmin) return watchSessionsForTenant(tenantId, range, setAllSessions, () => setFailed(true));
+    if (oversight) return watchSessionsForTenant(tenantId, range, setAllSessions, () => setFailed(true));
     return watchSessionsForTrainer(tenantId, viewingTrainerId, range, setAllSessions, () => setFailed(true));
-  }, [tenantId, isAdmin, viewingTrainerId, range, retryKey]);
+  }, [tenantId, oversight, viewingTrainerId, range, retryKey]);
 
   const trainerOptions = useMemo(() => {
     const mine = { id: user.uid, name: 'Ben' };
@@ -112,13 +131,14 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
     return [mine, ...colleagues];
   }, [user.uid, shares]);
 
-  // A trainer can only book/complete/cancel on their OWN calendar. Admin
-  // doesn't train members themselves, so no creation UI — only oversight
-  // (complete/cancel/reassign any session, useful when covering a gap).
-  const isOwnCalendar = !isAdmin && viewingTrainerId === user.uid;
+  // A coach can only book/complete/cancel on their OWN calendar. The whole-gym
+  // overview is oversight only (complete/cancel/reassign any session, useful
+  // when covering a gap) and has no creation UI: which calendar would it be
+  // for? An admin who coaches switches to their own calendar to book (DEN-6).
+  const isOwnCalendar = !oversight && viewingTrainerId === user.uid;
   const canCreate = isOwnCalendar;
-  const canManageStatus = isAdmin || isOwnCalendar;
-  const canTakeOver = !isAdmin && viewingTrainerId !== user.uid;
+  const canManageStatus = oversight || isOwnCalendar;
+  const canTakeOver = !oversight && viewingTrainerId !== user.uid;
 
   /** Day-of-month → count of non-cancelled sessions, for the grid's dots. */
   const countsByDay = useMemo(() => {
@@ -254,6 +274,27 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
         )}
       </View>
 
+      {isAdmin && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm }}>
+          <Chip
+            label="Tüm salon"
+            selected={overview}
+            onPress={() => {
+              setOverview(true);
+              setScheduling(false);
+            }}
+          />
+          <Chip
+            label="Benim takvimim"
+            selected={!overview}
+            onPress={() => {
+              setOverview(false);
+              setViewingTrainerId(user.uid);
+            }}
+          />
+        </View>
+      )}
+
       {!isAdmin && trainerOptions.length > 1 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm }}>
           {trainerOptions.map((t) => (
@@ -294,7 +335,13 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
         )}
 
         {failed ? (
-          <ErrorNotice message="Takvim alınamadı." />
+          <ErrorNotice
+            message="Takvim, üye listesi ya da paylaşımlar alınamadı."
+            onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+          />
         ) : daySessions.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: spacing.lg, gap: 4 }}>
             <Text variant="helper" tone="sub">
@@ -364,7 +411,7 @@ export function TrainerCalendarView({ tenantId, isAdmin, user }: { tenantId: str
                           <Button label="İptal et" variant="ghost" compact disabled={busyId === s.id} onPress={() => setStatus(s, 'cancelled')} />
                         </View>
                       )}
-                      {isAdmin && knownTrainers.length > 0 && (
+                      {oversight && knownTrainers.length > 0 && (
                         <View style={{ gap: 4 }}>
                           <Text variant="label" tone="sub">
                             Başka antrenöre ata:

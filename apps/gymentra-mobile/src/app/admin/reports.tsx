@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -226,7 +226,7 @@ export default function AdminReports() {
             <ListRow
               key={e.pkg.id}
               last={i === Math.min(expiring.length, PREVIEW_ROWS) - 1 && expiring.length <= PREVIEW_ROWS}
-              onPress={() => router.push({ pathname: '/admin/member', params: { id: e.pkg.memberId } })}>
+              onPress={() => router.push({ pathname: '/admin/member', params: { memberId: e.pkg.memberId, memberName: e.pkg.memberName } })}>
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="600">
                   {e.pkg.memberName}
@@ -273,7 +273,7 @@ export default function AdminReports() {
             <ListRow
               key={l.memberId}
               last={i === Math.min(lapsed.length, PREVIEW_ROWS) - 1 && lapsed.length <= PREVIEW_ROWS}
-              onPress={() => router.push({ pathname: '/admin/member', params: { id: l.memberId } })}>
+              onPress={() => router.push({ pathname: '/admin/member', params: { memberId: l.memberId, memberName: l.memberName } })}>
               <View style={{ flex: 1 }}>
                 <Text variant="body" weight="600">
                   {l.memberName}
@@ -316,7 +316,11 @@ export default function AdminReports() {
             </Text>
           </View>
         </View>
-        <MiniBarChart values={revenue.map((b) => b.total)} baseline="zero" />
+        <MiniBarChart
+          values={revenue.map((b) => b.total)}
+          baseline="zero"
+          label={`Aylık gelir: ${revenue.map((b) => `${b.fullLabel} ${money(b.total)}`).join(', ')}`}
+        />
         <View style={{ flexDirection: 'row' }}>
           {revenue.map((b) => (
             <Text key={b.fullLabel} variant="label" tone="sub" style={{ flex: 1, textAlign: 'center' }}>
@@ -339,7 +343,11 @@ export default function AdminReports() {
             {growth[growth.length - 1]?.fullLabel}
           </Text>
         </View>
-        <MiniBarChart values={growth.map((b) => b.total)} baseline="zero" />
+        <MiniBarChart
+          values={growth.map((b) => b.total)}
+          baseline="zero"
+          label={`Aylık yeni üye: ${growth.map((b) => `${b.fullLabel} ${b.total}`).join(', ')}`}
+        />
         <View style={{ flexDirection: 'row' }}>
           {growth.map((b) => (
             <Text key={b.fullLabel} variant="label" tone="sub" style={{ flex: 1, textAlign: 'center' }}>

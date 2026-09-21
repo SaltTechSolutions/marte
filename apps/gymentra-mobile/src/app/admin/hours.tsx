@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
@@ -153,7 +153,7 @@ function HoursForm({ tenantId, tenant }: { tenantId: string; tenant: Tenant }) {
                       KAPANIŞ
                     </Text>
                     <TimeStepper value={value.close} onChange={(close) => setDay(d.key, { ...value, close })} step={30} />
-                    <Pressable onPress={() => applyToAll(value)} accessibilityRole="button">
+                    <Pressable onPress={() => applyToAll(value)} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
                       <Text variant="helper" weight="700" style={{ color: colors.pText, textAlign: 'center' }}>
                         Bu saatleri tüm açık günlere uygula
                       </Text>
