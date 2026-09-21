@@ -31,9 +31,21 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
-## 2026-09-21 — DEN-6: antrenörlük yapan yöneticinin takvimi
+## 2026-09-21 — DEN-6: antrenörlük yapan yöneticinin takvimi; DEN-11: paket boyutu
 
-**Yapıldı.** İstemci: `trainer/calendar.tsx` antrenör yüzeyinde artık hangi rolle
+**DEN-11 (paket ve font boyutu) kısmen yapıldı, ölçüldü.** Inter kesim başına
+alt yoldan, Ionicons tek aile yolundan alınıyor, `getStorage` ve
+`tracesSampleRate: 0` kalktı. Önce/sonra `expo export` ile: asset 10.076 KB →
+1.746 KB (**−8.330 KB, −%83**), Hermes bytecode 8,54 → 8,16 MiB (−389 KB),
+minify JS −478 KB. `tsc`, lint, 411 test temiz. **Yeni build ister** (fontlar
+ikilinin içinde, OTA boyutu düşürmez) ve ekranda doğru çıktığı cihazda
+görülmedi. **Bilerek yapılmadı:** RevenueCat/Sentry/qrcode için `metro.config.js`
+boş modül çözümü (~1,6 MB JS): modül düzeyinde bir başvuru varsa uygulama
+açılışta çöker, cihazsız doğrulanamıyor, kazanç fontların yanında küçük;
+Reanimated (`SwipeableRow` yeniden yazımı, native bağımlılık). Ayrıntı `plan.md`
+DEN-11'de.
+
+**Yapıldı (DEN-6).** İstemci: `trainer/calendar.tsx` antrenör yüzeyinde artık hangi rolle
 girilirse girilsin yalnızca kişinin kendi takvimini gösteriyor ve randevu
 ekletiyor (admin+antrenör hesabı tüm salonu görüyor, randevu ekleyemiyordu);
 `admin/calendar` "Tüm salon" özetiyle açılmaya devam ediyor, yanına "Benim
@@ -66,7 +78,9 @@ functions:refundOnClassCancelled,functions:createPtSessionByStaff`).
 **Nerede.** `apps/gymentra-mobile/src/app/trainer/calendar.tsx`,
 `backend/functions/src/sessions.ts`,
 `backend/functions/tests/sessions.canCoach.test.ts`, `docs/SCHEMA.md`,
-`docs/plan.md` (DEN).
+`docs/plan.md` (DEN). DEN-11: `apps/gymentra-mobile/src/app/_layout.tsx`,
+`apps/gymentra-mobile/src/services/firebase.ts` ve `@expo/vector-icons`
+importu değişen 31 dosya.
 
 ---
 

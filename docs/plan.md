@@ -5143,7 +5143,7 @@ türden değil.
 | [~] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor; sunucuda `cancelClassByStaff` gerekir, **deploy onayı ister** | m | CX-03 |
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
-| [ ] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
+| [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
 | [ ] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket), 44pt altı dokunma hedefleri, semantik renk kontrastı. Bileşen düzeyinde tek iş, ekran ekran değil | m | designplan D3-1, D2-4 |
 | [ ] DEN-13 | 69 `watch*` çağrısında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. En yoğunlar: `member/index`, `admin/index`, `admin/classes`, `trainer/member` | m | P2-1 "Kalan" |
 
@@ -5395,6 +5395,55 @@ listesinde, (b) sınıf formunun antrenör seçicisinde ve (c) ekip ekranında
 görünmüyor (denetimin "sahip kendi dersini kendine atayamıyor" maddesi). Üye
 tarafındaki `bookPtSessions` da aynı `trainer` şartını koşuyor. Bunlar ayrı iş:
 sorgu `array-contains-any` ister ve üye tarafı sunucu değişikliği demek.
+
+**DEN-11 kısmen kapandı — 21 Eylül 2026 (güvenli kısım yapıldı ve ÖLÇÜLDÜ;
+riskli kısım bilerek bırakıldı).** Yapılanlar: (1) `@expo-google-fonts/inter`
+kök girişi yerine kesim başına alt yol (`/500Medium`, `/600SemiBold`, `/700Bold`,
+`/900Black`) ve `useFonts` için `/useFonts` (paketin kökün yeniden dışa
+verdiği aynı hook; davranış aynı). Kök giriş 18 TTF'i eager `require` ediyor,
+4'ü kullanılıyordu. (2) 31 dosyada `import { Ionicons } from '@expo/vector-icons'`
+→ `import Ionicons from '@expo/vector-icons/Ionicons'`: kök giriş 15 ailenin
+fontunu ve glyph haritasını paketliyordu; tek aile yolu aynı `build/Ionicons`
+modülünü veriyor, yani bileşen aynı. (3) `services/firebase.ts`'ten hiçbir yerde
+kullanılmayan `getStorage` kalktı (yüklemeler `uploadTenantLogo` /
+`uploadMemberPhoto` callable'larından gidiyor). (4) `tracesSampleRate: 0` satırı
+kalktı: RN SDK izlemeyi herhangi bir SAYI için açıyor
+(`integrations/default.js`: `typeof options.tracesSampleRate === 'number'`),
+0 da sayı; app-start, native-frames, stall, user-interaction ve time-to-display
+entegrasyonları hiçbir zaman gönderilmeyecek izler için kuruluyordu.
+
+*Ölçüm* (`npx expo export --platform ios`, aynı makine, değişiklikten önce ve
+sonra; ölçüm betiği depoda değil):
+
+| | önce | sonra | fark |
+|---|---|---|---|
+| Asset dosyası | 60 | 28 | −32 |
+| Asset boyutu | 10.076 KB | 1.746 KB | **−8.330 KB (−%83)** |
+| `.ttf` | 37 dosya, 10.053 KB | 5 dosya, 1.724 KB (4 Inter + Ionicons) | −8.329 KB |
+| Hermes bytecode | 8.953.004 B (8,54 MiB) | 8.554.684 B (8,16 MiB) | −389 KB (−%4,4) |
+| Minify JS | 7.549.717 B | 7.060.040 B | −478 KB (−%6,5) |
+
+Kalan 5 `.ttf` beklenenle birebir: 4 Inter kesimi 1.343 KB + Ionicons 381 KB.
+`tsc`, lint temiz, mobil 411 test geçiyor. Kaldırılan kesimlere kodda atıf yok
+(`fontFamily` yalnızca `'Inter'`, o da `Inter_500Medium` takma adı).
+
+**Yeni build ister, OTA ile küçülmez:** fontlar ikilinin (`.ipa` / `.aab`)
+içinde; import yolları JS değişikliği ama kurulu uygulamanın boyutu ancak yeni
+native build'le düşer. R8 ve SDK 57 yamalarıyla aynı build'e biner. **Cihazda
+görülmedi:** simgelerin ve Inter'in ekranda doğru çıktığı, bir preview
+build'de bir kez gözle kontrol edilmeli (bileşenler aynı olduğu için risk
+düşük, ama ölçtüğüm şey paket, ekran değil).
+
+*Bilerek YAPILMAYAN (metro/native, açılışta çökme riski):* `metro.config.js`
+ile RevenueCat web eşlemeleri (941 KB JS, %13,7), Sentry replay/feedback
+(~196 KB) ve `react-native-qrcode-svg`'nin çektiği `css-tree`/`entities`
+(~490 KB) yerel platformda boş modüle çözülebilir; ama boş modül
+`react-native-purchases` ve Sentry içinde modül düzeyinde bir başvuru varsa
+**uygulama açılışta çöker**, ve bunu cihazsız (simülatör kullanmıyoruz)
+doğrulayamam. Kazanç (~1,6 MB JS) fontların yanında küçük. Yapılacaksa önce bir
+preview build'de denenmeli. Reanimated + worklets (828 KB) `SwipeableRow`'un
+yeniden yazımını ve native bağımlılık değişikliğini ister (`designplan` D2-6 ile
+birlikte karar).
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,
