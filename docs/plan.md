@@ -5144,7 +5144,7 @@ türden değil.
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
-| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket) yapıldı; **yapılmadı:** 44pt altı dokunma hedefleri (ekranlarda ~68 yer), semantik renk/sınır kontrastı (token kararı), 11pt `label` metni, grafik metin karşılığı | m | designplan D3-1, D2-4 |
+| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik: rol/durum/etiket, 44pt hedefler (tarama bulduğu her yer), grafik metin karşılığı, alan sınırı kontrastı yapıldı. **Kalan:** 11pt `label` metninin kullanımı (görsel karar), kas haritası ölçeği/metni, kalan ~30 kart sarmalayıcı `Pressable`'ın elle doğrulanması | m | designplan D3-1, D2-4 |
 | [x] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. Ölçülen eksik 70 → 3 (102 çağrı yeri); kalan 3 bilerek dışarıda (aşağıdaki not) | m | P2-1 "Kalan" |
 
 **DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
@@ -5473,6 +5473,29 @@ gösteriyordu; `pending` dinleyicisi düşerse onaylanan üye ekranda kalıyordu
 `watchTenant` (oturum akışının kalbi; hata davranışı ayrı ve dikkatli bir iş,
 bir ekran bandı değil) ve `RenewalRequestRow` (hata halinde satır zaten hiç
 çizilmiyor, yanıltıcı bir iddia yok). Cihazda görülmedi.
+
+**DEN-12 ikinci tur — 21 Eylül 2026.** (a) **44pt hedefler:** TypeScript
+ağacını tarayan bir betikle (`Pressable` stil değişmezleri + `hitSlop`) 54 aday
+çıktı; 5'i açıkça küçük, 49'u "boyutsuz". Boyutsuzları tek tek okudum: 30'u
+kart/satır sarmalayıcı (içerik zaten ≥44), 19'u çıplak metin/ikon bağlantıydı;
+beşi açıkça küçükle birlikte 24 `Pressable` (ve iki bileşen satırı) düzeltildi.
+Hepsi gerçek `minHeight: 44` aldı (yönetici paneli "Tümünü onayla", "Dondur",
+"Sonlandır", ödeme düzelt ikonu, geri okları, program kurucudaki dört bağlantı,
+"Tümü ›", profil fotoğraf bağlantıları, paywall "geri yükle", ay okları, gün
+hücreleri 42→44, marka rengi örnekleri 34→44, yoklama çipleri 34→44, Ön/Arka
+anahtarı 32→44…). `hitSlop` tek başına sayılmadı: Android ebeveyn sınırının
+dışına dokunuş iletmiyor. Betik tekrar koşulunca kalan aday 30 (hepsi
+sarmalayıcı). (b) `Button` `height` → `minHeight` + dikey dolgu: büyük yazıda iki
+satıra inen etiket kırpılmıyor; varsayılan boyutta piksel farkı yok. `TabBar`
+etiketi `maxFontSizeMultiplier={1.2}`. (c) `MiniBarChart` `label` prop'u;
+ilerleme ve gelir/üye grafikleri sözle özetleniyor, etiketsiz grafik ekran
+okuyucudan gizleniyor. (d) **Kontrast — ölçüm:** denetimin "semantik renkler AA
+altında" iddiası **çürük**: varsayılan palette danger/warn/ok/sub dört yüzeyde
+4,8–11,5:1 ve `contrast.test.ts` bunu tüm gönderilen ve türetilen paletlerde
+zaten sınıyor. Gerçekten eksik olan tek şey `TextField` sınırı: `line` `surf`'e
+karşı 1,26:1 (hedef 3:1). `theme/fieldBorder.ts` (`surf` ile `txt` arasında
+%55 karışım) ve 2 test (tüm paletler + 360° marka taraması; oranı %30'a çekince
+kırılıyor). Yeni palet tokenı gerekmedi.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

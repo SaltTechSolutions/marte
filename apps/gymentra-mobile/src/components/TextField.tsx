@@ -1,6 +1,7 @@
 import React from 'react';
 import { TextInput, TextInputProps } from 'react-native';
 
+import { fieldBorderColor } from '@/theme/fieldBorder';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 export function TextField(props: TextInputProps) {
@@ -13,7 +14,8 @@ export function TextField(props: TextInputProps) {
         {
           backgroundColor: colors.surf,
           borderWidth: 1,
-          borderColor: colors.line,
+          // `line` is a divider hairline (~1.3:1); an input outline owes 3:1.
+          borderColor: fieldBorderColor(colors),
           borderRadius: radius.md,
           paddingHorizontal: 14,
           paddingVertical: 13,

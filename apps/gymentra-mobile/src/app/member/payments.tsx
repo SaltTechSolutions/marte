@@ -122,7 +122,11 @@ export default function MemberPayments() {
   return (
       <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable onPress={() => safeBack(router, '/member')}>
+          <Pressable
+            onPress={() => safeBack(router, '/member')}
+            accessibilityRole="button"
+            accessibilityLabel="Geri"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: 'center' }}>
             <Text style={{ fontSize: 20, color: colors.txt }}>‹</Text>
           </Pressable>
           <Text variant="h3">Ödemelerim</Text>

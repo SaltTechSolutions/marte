@@ -254,7 +254,7 @@ function ProgramBuilderForm({ program }: { program: Program }) {
       </ScrollView>
 
       {days.length > 1 && (
-        <Pressable onPress={removeDay} accessibilityRole="button">
+        <Pressable onPress={removeDay} accessibilityRole="button" style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text variant="label" style={{ color: colors.danger }}>
             {activeDay.name} gününü kaldır
           </Text>
@@ -291,7 +291,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     }
                     hitSlop={8}
                     accessibilityRole="button"
-                    accessibilityLabel={`${ex.name} nasıl yapılır`}>
+                    accessibilityLabel={`${ex.name} nasıl yapılır`}
+                    style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons name="information-circle-outline" size={19} color={colors.sub} />
                   </Pressable>
                 )}
@@ -318,7 +319,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                     </Text>
                     <Stepper value={ex.targetWeightKg} unit="kg" step={2.5} onChange={(v) => updateExercise(ex.id, { targetWeightKg: v })} />
                   </View>
-                  <Pressable onPress={() => removeExercise(ex.id)}>
+                  <Pressable
+                    onPress={() => removeExercise(ex.id)}
+                    accessibilityRole="button"
+                    style={{ minHeight: 44, justifyContent: 'center' }}>
                     <Text variant="helper" weight="700" style={{ color: colors.danger, textAlign: 'center' }}>
                       Egzersizi kaldır
                     </Text>
@@ -385,7 +389,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
               <Text variant="label" tone="sub">
                 Şablon kopyalanır, atanmaz — kopyaladıktan sonra üyeye göre serbestçe düzenle.
               </Text>
-              <Pressable onPress={() => setPickingTemplate(false)}>
+              <Pressable
+                onPress={() => setPickingTemplate(false)}
+                accessibilityRole="button"
+                style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                   Vazgeç
                 </Text>
@@ -421,7 +428,10 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                 </View>
               </View>
             ))}
-            <Pressable onPress={() => setPickingFromLibrary(false)}>
+            <Pressable
+              onPress={() => setPickingFromLibrary(false)}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
                 Vazgeç
               </Text>

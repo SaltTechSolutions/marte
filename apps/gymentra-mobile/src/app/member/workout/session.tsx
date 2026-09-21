@@ -243,7 +243,7 @@ export default function WorkoutSession() {
                 onPress={() => router.push({ pathname: '/exercise-detail', params: guideParams })}
                 hitSlop={6}
                 accessibilityRole="button"
-                style={{ minHeight: 22, justifyContent: 'center' }}>
+                style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text variant="label" weight="700" style={{ color: colors.pText }}>
                   Nasıl yapılır? ›
                 </Text>

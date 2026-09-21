@@ -152,7 +152,12 @@ export default function AdminCheckin() {
           {/* Falls back to '/', which re-routes to whichever home this
               person's role gives them — the screen is now reachable by both
               admins and delegated trainers. */}
-          <Pressable onPress={() => safeBack(router, '/')} hitSlop={10}>
+          <Pressable
+            onPress={() => safeBack(router, '/')}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Geri"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: 'center' }}>
             <Text style={{ fontSize: 20, color: colors.txt }}>‹</Text>
           </Pressable>
           <Text variant="h3">Giriş kabul et</Text>

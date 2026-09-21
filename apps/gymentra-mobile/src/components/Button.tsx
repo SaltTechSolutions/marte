@@ -47,7 +47,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
           colors={[colors.g1, colors.g2, colors.g3]}
           start={{ x: 0, y: 1 }}
           end={{ x: 1, y: 0 }}
-          style={[styles.base, { height, borderRadius: radius.md }]}>
+          style={[styles.base, { minHeight: height, borderRadius: radius.md }]}>
           <Text variant="body" weight="900" tone="onp">
             {icon ? `${icon} ` : ''}
             {label}
@@ -73,7 +73,7 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
       style={[
         styles.base,
         {
-          height,
+          minHeight: height,
           borderRadius: radius.md,
           backgroundColor: bg,
           borderWidth: variant === 'primary' ? 0 : 1.5,
@@ -94,6 +94,8 @@ export function Button({ label, onPress, variant = 'primary', disabled, icon, le
 }
 
 const styles = StyleSheet.create({
-  base: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  // paddingVertical only matters once a long label wraps at large text sizes; a
+  // one-line label is still `minHeight` tall.
+  base: { alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 8 },
   content: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

@@ -258,7 +258,11 @@ export default function AdminMembers() {
           İstekler <Text variant="h3" style={{ color: colors.pText }}>{requests.length}</Text>
         </Text>
         {requests.length > 0 && (
-          <Pressable onPress={() => void approveAll()} disabled={bulkBusy} accessibilityRole="button">
+          <Pressable
+            onPress={() => void approveAll()}
+            disabled={bulkBusy}
+            accessibilityRole="button"
+            style={{ minHeight: 44, justifyContent: 'center' }}>
             <Text variant="helper" weight="700" style={{ color: bulkBusy ? colors.sub : colors.pText }}>
               {bulkBusy ? 'Onaylanıyor…' : 'Tümünü onayla'}
             </Text>

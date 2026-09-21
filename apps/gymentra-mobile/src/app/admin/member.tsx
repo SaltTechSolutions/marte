@@ -475,7 +475,8 @@ export default function AdminMemberDetail() {
                           onPress={() => askFreeze(p)}
                           hitSlop={8}
                           accessibilityRole="button"
-                          accessibilityLabel="Bu üyeliği dondur">
+                          accessibilityLabel="Bu üyeliği dondur"
+                          style={{ minHeight: 44, justifyContent: 'center' }}>
                           <Text variant="label" style={{ color: colors.warn }}>
                             Dondur
                           </Text>
@@ -485,7 +486,8 @@ export default function AdminMemberDetail() {
                         onPress={() => askCancelReason(p)}
                         hitSlop={8}
                         accessibilityRole="button"
-                        accessibilityLabel="Bu paket atamasını geri al">
+                        accessibilityLabel="Bu paket atamasını geri al"
+                        style={{ minHeight: 44, justifyContent: 'center' }}>
                         <Text variant="label" style={{ color: colors.danger }}>
                           Sonlandır
                         </Text>

@@ -220,7 +220,7 @@ function MyClasses({ tenantId, trainerId }: { tenantId: string; trainerId: strin
                               accessibilityRole="button"
                               accessibilityState={{ selected: on }}
                               style={{
-                                minHeight: 34,
+                                minHeight: 44,
                                 paddingHorizontal: 12,
                                 justifyContent: 'center',
                                 borderRadius: radius.pill,

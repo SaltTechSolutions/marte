@@ -211,7 +211,10 @@ export default function MemberProgress() {
             </View>
             {trend.length > 1 ? (
               <>
-                <MiniBarChart values={trend} />
+                <MiniBarChart
+                  values={trend}
+                  label={`Son ${trend.length} ölçüm: ${formatNumber(trend[0])} kilodan ${formatNumber(trend[trend.length - 1])} kiloya`}
+                />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text variant="label" tone="sub">
                     {formatDate(entries[Math.min(entries.length, 8) - 1].recordedAt)}

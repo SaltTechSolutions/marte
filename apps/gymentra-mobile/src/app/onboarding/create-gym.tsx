@@ -126,9 +126,9 @@ export default function CreateGymScreen() {
               key={sw}
               onPress={() => setColor(sw)}
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 17,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
                 backgroundColor: sw,
                 borderWidth: color === sw ? 2 : 0,
                 borderColor: colors.bg0,

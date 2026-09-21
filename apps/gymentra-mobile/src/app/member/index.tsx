@@ -297,7 +297,11 @@ export default function MemberHome() {
         {/* This card shows only the NEXT one; everything else lives on the
             bookings screen. Without a way in, a member with a class on
             Thursday and a session on Friday has no place that shows both. */}
-        <Pressable onPress={() => router.push('/member/bookings')} hitSlop={8}>
+        <Pressable
+          onPress={() => router.push('/member/bookings')}
+          hitSlop={8}
+          accessibilityRole="button"
+          style={{ minHeight: 44, justifyContent: 'center' }}>
           <Text variant="label" weight="700" style={{ color: colors.pText }}>
             Tümü ›
           </Text>
@@ -318,6 +322,8 @@ export default function MemberHome() {
           </View>
           <Pressable
             hitSlop={8}
+            accessibilityRole="button"
+            style={{ minHeight: 44, justifyContent: 'center' }}
             disabled={cancellingId === nextSession.id}
             onPress={() => {
               const session = nextSession;

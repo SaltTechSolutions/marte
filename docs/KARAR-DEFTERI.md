@@ -31,6 +31,43 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-12 ikinci tur: 44pt hedefler, grafik metni, alan sınırı kontrastı
+
+**Yapıldı.** 44pt altı dokunma hedefleri tarayıcıyla bulundu ve düzeltildi
+(19 çıplak bağlantı/ikon + 5 açıkça küçük `Pressable`; 30 kart sarmalayıcı zaten
+yeterliydi; ayrıntı `plan.md` DEN-12).
+`Button` sabit `height` yerine `minHeight`; `TabBar` etiketi 1,2 ile sınırlı;
+`MiniBarChart` sözlü `label` alıyor (etiketsiz grafik erişilebilirlik ağacından
+çıkıyor); `TextField` sınırı 1,26:1'den 3:1 üstüne (`theme/fieldBorder.ts`).
+`tsc`, lint, 421 test temiz. **Ekranda ve ekran okuyucuyla görülmedi**; özellikle
+büyüyen satırların (ör. yönetici üye kartındaki Dondur/Sonlandır, ana ekrandaki
+"Tümü ›") yerleşimi cihazda bakılacak.
+
+**Karar.** Küçük dokunma hedefinde gerçek boyut, `hitSlop` değil: Android ebeveyn
+sınırı dışındaki dokunuşu iletmiyor. Kontrast için **ölçüm önce geldi**: denetimin
+"semantik renkler AA altında" iddiası varsayılan palette ve mevcut testlerle
+çürüdü (4,8–11,5:1), bu yüzden renk değiştirilmedi. Alan sınırı yeni palet
+tokenı değil, `surf`→`txt` karışımı: her marka paletinde kendiliğinden
+ölçekleniyor, testle korunuyor.
+
+**Bilerek yapılmadı.** Küresel `maxFontSizeMultiplier` (denetim 1,3 önerdi):
+büyük yazıyı kesmek, kırpılmayı çözerken düşük görüşlü kullanıcının seçtiği
+boyutu geri alır; bunun yerine sabit yükseklikler esnetildi, sınır yalnızca
+sekme çubuğuna kondu. 11pt `label` stilinin cümle metninde kullanımı: yüzlerce
+çağrı yeri ve görsel yoğunluk kararı, aracı yok. Ghost `Button` kenarlığı:
+etiket metni 6,65:1, kenarlık dekoratif.
+
+**Açık.** Kas haritası ölçeği/metni (O34), `label` kullanımı (O32), kalan 30
+sarmalayıcı `Pressable`'ın cihazda doğrulanması, `designplan.md` D3-1 ve D2-4
+metinleri bayat (düzeltilmedi). Alan sınırı görünümü koyu ve açık temada gözle
+onaylanmalı: `FIELD_BORDER_MIX` tek sayı.
+
+**Nerede.** `apps/gymentra-mobile/src/theme/fieldBorder.{ts,test.ts}`,
+`src/components/{Button,TabBar,MiniBarChart,TextField,MonthCalendar,GymInfoCard}.tsx`,
+44pt için 16 ekran dosyası, `docs/plan.md` (DEN-12).
+
+---
+
 ## 2026-09-21 — DEN-13 ikinci tur: kalan ekranlar, dinleyici hatası artık her yerde görünüyor
 
 **Yapıldı.** Ölçülen `onError` eksiği 49 → **3** (toplam 102). 25 ekran ve bileşen

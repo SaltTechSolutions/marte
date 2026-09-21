@@ -128,7 +128,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
         accessibilityRole="button"
         accessibilityState={{ selected: on }}
         style={{
-          height: 32,
+          height: 44,
           minWidth: 60,
           alignItems: 'center',
           justifyContent: 'center',

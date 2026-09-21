@@ -76,7 +76,7 @@ export function MonthCalendar({
         padding: 10,
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <Pressable onPress={() => shiftMonth(-1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Önceki ay" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => shiftMonth(-1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Önceki ay" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" weight="900" tone="sub">
             ‹
           </Text>
@@ -84,7 +84,7 @@ export function MonthCalendar({
         <Text variant="helper" weight="700">
           {monthAnchor.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })}
         </Text>
-        <Pressable onPress={() => shiftMonth(1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Sonraki ay" style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => shiftMonth(1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Sonraki ay" style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
           <Text variant="body" weight="900" tone="sub">
             ›
           </Text>
@@ -104,7 +104,7 @@ export function MonthCalendar({
       {Array.from({ length: cells.length / 7 }, (_, row) => (
         <View key={row} style={{ flexDirection: 'row' }}>
           {cells.slice(row * 7, row * 7 + 7).map((d, i) => {
-            if (!d) return <View key={`empty-${i}`} style={{ flex: 1, height: 42 }} />;
+            if (!d) return <View key={`empty-${i}`} style={{ flex: 1, height: 44 }} />;
             const selected = isSameDay(d, selectedDate);
             const isToday = isSameDay(d, today);
             const count = countsByDay.get(dayKey(d)) ?? 0;
@@ -117,7 +117,7 @@ export function MonthCalendar({
                   count > 0 ? `, ${count} etkinlik` : ''
                 }${isToday ? ', bugün' : ''}`}
                 accessibilityState={{ selected }}
-                style={{ flex: 1, height: 42, alignItems: 'center', justifyContent: 'center' }}>
+                style={{ flex: 1, height: 44, alignItems: 'center', justifyContent: 'center' }}>
                 <View
                   style={{
                     width: 34,

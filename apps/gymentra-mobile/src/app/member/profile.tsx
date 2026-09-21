@@ -148,13 +148,23 @@ export default function MemberProfile() {
         <Text variant="h3">{displayName}</Text>
         {activeMembership ? (
           <View style={{ flexDirection: 'row', gap: 14 }}>
-            <Pressable onPress={pickPhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+            <Pressable
+              onPress={pickPhoto}
+              disabled={photoBusy}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center' }}>
               <Text variant="label" weight="700" style={{ color: colors.pText }}>
                 {photoBusy ? '…' : activeMembership.photoUrl ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
               </Text>
             </Pressable>
             {activeMembership.photoUrl ? (
-              <Pressable onPress={removePhoto} disabled={photoBusy} hitSlop={8} accessibilityRole="button">
+              <Pressable
+                onPress={removePhoto}
+                disabled={photoBusy}
+                hitSlop={8}
+                accessibilityRole="button"
+                style={{ minHeight: 44, justifyContent: 'center' }}>
                 <Text variant="label" weight="700" tone="sub">
                   Kaldır
                 </Text>

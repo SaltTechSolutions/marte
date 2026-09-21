@@ -316,7 +316,11 @@ export default function AdminReports() {
             </Text>
           </View>
         </View>
-        <MiniBarChart values={revenue.map((b) => b.total)} baseline="zero" />
+        <MiniBarChart
+          values={revenue.map((b) => b.total)}
+          baseline="zero"
+          label={`Aylık gelir: ${revenue.map((b) => `${b.fullLabel} ${money(b.total)}`).join(', ')}`}
+        />
         <View style={{ flexDirection: 'row' }}>
           {revenue.map((b) => (
             <Text key={b.fullLabel} variant="label" tone="sub" style={{ flex: 1, textAlign: 'center' }}>
@@ -339,7 +343,11 @@ export default function AdminReports() {
             {growth[growth.length - 1]?.fullLabel}
           </Text>
         </View>
-        <MiniBarChart values={growth.map((b) => b.total)} baseline="zero" />
+        <MiniBarChart
+          values={growth.map((b) => b.total)}
+          baseline="zero"
+          label={`Aylık yeni üye: ${growth.map((b) => `${b.fullLabel} ${b.total}`).join(', ')}`}
+        />
         <View style={{ flexDirection: 'row' }}>
           {growth.map((b) => (
             <Text key={b.fullLabel} variant="label" tone="sub" style={{ flex: 1, textAlign: 'center' }}>

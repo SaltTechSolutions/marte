@@ -359,7 +359,8 @@ export default function AdminPayments() {
                   onPress={() => askReversalReason(p)}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityLabel="Bu ödemeyi düzelt">
+                  accessibilityLabel="Bu ödemeyi düzelt"
+                  style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name="create-outline" size={17} color={colors.sub} />
                 </Pressable>
               )}
