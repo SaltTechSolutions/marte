@@ -6,6 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { GymLogo } from '@/components/GymLogo';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { GymSwitchTarget } from '@/components/GymSwitcher';
 import { MyPackageCard } from '@/components/MyPackageCard';
 import { RenewalRequestRow } from '@/components/RenewalRequestRow';
@@ -70,6 +71,15 @@ export default function MemberHome() {
   const [retryKey, setRetryKey] = useState(0);
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
+  // Any of the ten listeners below dropping. One banner is enough: the cards
+  // that never got their data say so themselves (DEN-13). Cleared by the tap,
+  // not by an effect (AGENTS §4: no synchronising setState).
+  const [failed, setFailed] = useState(false);
+  const retry = () => {
+    setFailed(false);
+    setRetryKey((k) => k + 1);
+  };
+
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const { user, activeMembership, activeTenant } = useAuth();
   const uid = user?.uid;
@@ -77,20 +87,25 @@ export default function MemberHome() {
   const displayName = user?.displayName?.split(' ')[0] || 'Üye';
 
   const [todayClass, setTodayClass] = useState<GymClass | null | undefined>(undefined);
-  const [completedThisWeek, setCompletedThisWeek] = useState(0);
+  // `undefined` = not here yet. These used to start at 0 / [], so before the
+  // first snapshot the home screen claimed "Aktif paketin yok", "bu hafta
+  // henüz gelmedin" and "Henüz ödeme kaydın yok" about a member who has all
+  // three (DEN-13). Lists that only ever ADD a card when non-empty (sessions,
+  // offers, announcements, credits) keep [] because empty already draws nothing.
+  const [completedThisWeek, setCompletedThisWeek] = useState<number | undefined>(undefined);
   const [sessions, setSessions] = useState<PtSession[]>([]);
   const [payments, setPayments] = useState<Payment[] | undefined>(undefined);
-  const [visits, setVisits] = useState<Date[]>([]);
+  const [visits, setVisits] = useState<Date[] | undefined>(undefined);
   const [packageOffers, setPackageOffers] = useState<PackageChangeRequest[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [packages, setPackages] = useState<MemberPackage[]>([]);
+  const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
   const [groupCredits, setGroupCredits] = useState<MemberCredit[]>([]);
   const [ptCredits, setPtCredits] = useState<MemberCredit[]>([]);
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchAnnouncements(tenantId, setAnnouncements, undefined, 5);
-  }, [tenantId]);
+    return watchAnnouncements(tenantId, setAnnouncements, () => setFailed(true), 5);
+  }, [tenantId, retryKey]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -105,51 +120,53 @@ export default function MemberHome() {
       const bookedToday = todaySessions.find((s) => uid && s.bookedUserIds.includes(uid));
       const pick = bookedToday ?? todaySessions[0] ?? null;
       setTodayClass(pick ? toGymClass(pick, uid) : null);
-    });
+    }, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchCompletedThisWeek(tenantId, uid, setCompletedThisWeek);
+    return watchCompletedThisWeek(tenantId, uid, setCompletedThisWeek, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchUpcomingSessionsForMember(tenantId, uid, setSessions);
+    return watchUpcomingSessionsForMember(tenantId, uid, setSessions, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchPaymentsForMember(tenantId, uid, setPayments);
+    return watchPaymentsForMember(tenantId, uid, setPayments, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchPendingPackageChangeRequests(tenantId, uid, setPackageOffers);
+    return watchPendingPackageChangeRequests(tenantId, uid, setPackageOffers, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMemberPackages(tenantId, uid, setPackages);
+    return watchMemberPackages(tenantId, uid, setPackages, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMemberCredits(tenantId, uid, 'groupClass', setGroupCredits);
+    return watchMemberCredits(tenantId, uid, 'groupClass', setGroupCredits, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMemberCredits(tenantId, uid, 'ptLesson', setPtCredits);
+    return watchMemberCredits(tenantId, uid, 'ptLesson', setPtCredits, () => setFailed(true));
   }, [tenantId, uid, retryKey]);
 
   const weekStart = useMemo(() => startOfWeek(), []);
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMyCheckins(tenantId, uid, weekStart, setVisits);
-  }, [tenantId, uid, weekStart]);
+    return watchMyCheckins(tenantId, uid, weekStart, setVisits, () => setFailed(true));
+  }, [tenantId, uid, weekStart, retryKey]);
 
-  const percent = Math.min(100, Math.round((completedThisWeek / WEEKLY_TARGET) * 100));
+  const statusReady = completedThisWeek !== undefined && visits !== undefined;
+  const done = completedThisWeek ?? 0;
+  const percent = Math.min(100, Math.round((done / WEEKLY_TARGET) * 100));
   const nextSession = sessions[0];
   const pendingPayment = payments?.find((p) => p.status === 'pending');
   const lastConfirmed = payments?.find((p) => p.status === 'confirmed');
@@ -181,6 +198,10 @@ export default function MemberHome() {
           <Ionicons name="person-outline" size={19} color={colors.txt} />
         </Pressable>
       </View>
+
+      {failed ? (
+        <ErrorNotice message="Bazı bilgiler yüklenemedi; aşağıdaki kartlar eksik olabilir." onRetry={retry} />
+      ) : null}
 
       {/* A pending offer outranks even today's action — it's the one thing
           on this screen with a real deadline (expiresAt) and a decision only
@@ -251,17 +272,19 @@ export default function MemberHome() {
           // dondurulmuş üye "aktif paketin yok" görüyordu, ki bu paketini
           // kaybettiği anlamına geliyor — kart donmuş hâli kendi anlatıyor.
           activePackage={
-            packages.find((p) => p.status === 'active') ??
-            packages.find((p) => p.status === 'frozen') ??
+            packages?.find((p) => p.status === 'active') ??
+            packages?.find((p) => p.status === 'frozen') ??
             null
           }
+          // Until the packages arrive the card must not say there is none.
+          status={packages === undefined ? (failed ? 'failed' : 'loading') : undefined}
           groupCredits={groupCredits}
           ptCredits={ptCredits}
         />
         {tenantId ? (
           <RenewalRequestRow
             tenantId={tenantId}
-            endsAt={packages.find((p) => p.status === 'active' || p.status === 'frozen')?.endsAt ?? null}
+            endsAt={packages?.find((p) => p.status === 'active' || p.status === 'frozen')?.endsAt ?? null}
           />
         ) : null}
       </View>
@@ -350,14 +373,18 @@ export default function MemberHome() {
       {/* The ring is a genuinely different leading visual, so it goes through
           `lead` rather than being hand-built alongside a second layout. */}
       <InfoCard
-        lead={<ProgressRing percent={percent} label={`%${percent}`} sublabel="hedef" />}
-        title={`Haftada ${completedThisWeek}/${WEEKLY_TARGET} antrenman`}
+        lead={<ProgressRing percent={percent} label={statusReady ? `%${percent}` : '–'} sublabel="hedef" />}
+        title={statusReady ? `Haftada ${done}/${WEEKLY_TARGET} antrenman` : 'Haftalık hedefin'}
         subtitle={
-          completedThisWeek >= WEEKLY_TARGET
-            ? 'Bu haftaki hedefini tamamladın 🎉'
-            : `Hedefe ${WEEKLY_TARGET - completedThisWeek} antrenman kaldı · ${
-                visits.length > 0 ? `bu hafta ${visits.length} kez geldin` : 'bu hafta henüz gelmedin'
-              }`
+          !statusReady
+            ? failed
+              ? 'Şu an alınamadı'
+              : 'Yükleniyor…'
+            : done >= WEEKLY_TARGET
+              ? 'Bu haftaki hedefini tamamladın 🎉'
+              : `Hedefe ${WEEKLY_TARGET - done} antrenman kaldı · ${
+                  visits.length > 0 ? `bu hafta ${visits.length} kez geldin` : 'bu hafta henüz gelmedin'
+                }`
         }
       />
 
@@ -369,7 +396,9 @@ export default function MemberHome() {
             ? `${pendingPayment.amount} ₺ bildirimin onay bekliyor`
             : lastConfirmed
               ? `Son ödeme: ${lastConfirmed.amount} ₺ · ${lastConfirmed.createdAt.toLocaleDateString('tr-TR')}`
-              : 'Henüz ödeme kaydın yok'
+              : payments === undefined
+                ? 'Ödemelerini gör'
+                : 'Henüz ödeme kaydın yok'
         }
         // A pending notice is the one state the member may need to act on.
         subtitleTone={pendingPayment ? 'warn' : 'sub'}

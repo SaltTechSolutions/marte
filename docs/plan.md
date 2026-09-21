@@ -5145,7 +5145,7 @@ türden değil.
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
 | [ ] DEN-12 | Ortak bileşenlerde erişilebilirlik (Button, Stepper, Chip, Toast: rol/durum/etiket), 44pt altı dokunma hedefleri, semantik renk kontrastı. Bileşen düzeyinde tek iş, ekran ekran değil | m | designplan D3-1, D2-4 |
-| [ ] DEN-13 | 69 `watch*` çağrısında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. En yoğunlar: `member/index`, `admin/index`, `admin/classes`, `trainer/member` | m | P2-1 "Kalan" |
+| [~] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. En yoğun dört ekran (`member/index`, `admin/index`, `admin/classes`, `trainer/member`) yapıldı; ölçülen eksik 70 → 49 (102 çağrı yeri). Kalan: ikinci kademe ekranlar | m | P2-1 "Kalan" |
 
 **DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
 (paketi bitenler ve paketi olmayanlar) artık `memberId` ve `memberName`
@@ -5451,6 +5451,19 @@ doğrulayamam. Kazanç (~1,6 MB JS) fontların yanında küçük. Yapılacaksa �
 preview build'de denenmeli. Reanimated + worklets (828 KB) `SwipeableRow`'un
 yeniden yazımını ve native bağımlılık değişikliğini ister (`designplan` D2-6 ile
 birlikte karar).
+
+**DEN-13 kısmen kapandı — 21 Eylül 2026.** Dört ekranda düşen dinleyici
+artık kullanıcıya görünüyor: `ErrorNotice` + "Tekrar dene", kartlarda
+"Alınamadı", ve ilk veri gelmeden "boş" iddiası yok (`member/index` paket,
+ziyaret, haftalık hedef; `admin/index` bekleyen istek "–"; `admin/classes`
+"Henüz ders eklenmedi" ve "Eğitmen adı" geri düşüşü; `trainer/member` ölçüm ve
+antrenman kartları). Ortak kanca yazılmadı (istenmemiş refactor); ekran başına
+`failed` + `retryKey`. Bu sırada `sharedWatch`'ın düşmüş dinleyiciyi yeniden
+başlatmadığı bulundu ve düzeltildi (8 test). Ölçüm: tip denetleyicisiyle sayılan
+102 `watch*` çağrı yerinden `onError` geçmeyen 70 → 49. **Kalan 49:** `trainer/profile`
+(6), `admin/member` (4), `member/book-session`, `child`, `profile`, `progress`
+(3'er), `AuthContext` ve `RenewalRequestRow` bilerek atlandı (bkz. karar defteri
+21 Eylül), gerisi 1–2'şer. Cihazda görülmedi.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,

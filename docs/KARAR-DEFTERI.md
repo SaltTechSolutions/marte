@@ -31,6 +31,48 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — DEN-13: düşen dinleyici artık "boş" ya da "yükleniyor" gibi görünmüyor (kısmen)
+
+**Yapıldı.** Dört ekranda (`member/index`, `admin/index`, `admin/classes`,
+`trainer/member`) `watch*` çağrılarına `onError` bağlandı; ekranda tek bir
+`ErrorNotice` + "Tekrar dene" var, kartlar hata halinde "Alınamadı" diyor.
+"Yükleniyor ≠ boş" düzeltmeleri: üye ana ekranında paket/ziyaret/haftalık
+hedef, yönetici panelinde bekleyen istek sayacı ("0" yerine "–"), antrenörün
+üye ekranında ölçüm ve antrenman kartları ilk veri gelene dek boş iddiası
+yapmıyor; `admin/classes` dinleyici hatasında "Henüz ders eklenmedi / İlk
+dersi ekle" yerine hata gösteriyor, antrenör listesi düşerse sessizce "Eğitmen
+adı" kutusuna düşmek yerine uyarıyor. **Ek kusur:** `sharedWatch` düşmüş bir
+dinleyiciyi hiç yeniden başlatmıyordu (`stop` dolu kaldığı için "Tekrar dene"
+aynı ölü aboneliğe bağlanırdı); artık `failed` bayrağıyla yeniden başlatıyor,
+8 testle. Ölçüm (`onerror-count.cjs`, tsc tip denetleyicisiyle): `data/firebase`
+`watch*` çağrı yeri 102, `onError` geçmeyen **70 → 49**. `tsc`, lint, 419 test
+temiz. **Cihazda görülmedi.**
+
+**Karar.** Ortak `useLiveQuery` kancası yazılmadı; ekran başına `failed` +
+`retryKey` (`guardian-requests.tsx` kalıbı). Denetim "toplu refactor değil,
+ekran ekran" dedi ve bu depoda istenmemiş refactor yasak. `failed` bayrağını
+dinleyici değil "Tekrar dene" dokunuşu temizliyor (AGENTS §4: efektte
+senkronlayan `setState` yok).
+
+**Bilerek yapılmadı.** `AuthContext`'teki iki dinleyici (oturum/üyelik akışını
+bozmamak için ayrı iş) ve `RenewalRequestRow` atlandı. Kalan 49 çağrı yeri
+ikinci kademe ekranlarda: `trainer/profile` (6), `admin/member` (4),
+`member/book-session`, `child`, `profile`, `progress` (3'er) ve daha
+küçükleri; hepsi aynı kalıpla kapanır. Plan satırındaki "69" sayısı ilk denetimin
+sayımıydı; kendi ölçümüm 102 çağrı yeri / 70 eksik, iki sayı aynı şeyi aynı
+yöntemle saymıyor, karşılaştırma yalnızca benim iki ölçümüm arasında geçerli.
+
+**Açık.** Kalan 49 çağrı yeri (DEN-13 `[~]`). Ekranlar cihazda ya da simülatörde
+görülmedi (kullanıcının kuralı: simülatör yok). Önceki kayıtlardaki açıklar
+(DEN-8 emülatör testleri, deploy onayı) olduğu gibi duruyor.
+
+**Nerede.** `apps/gymentra-mobile/src/data/firebase/sharedWatch.ts` (+ `.test.ts`),
+`src/app/member/index.tsx`, `src/components/MyPackageCard.tsx`,
+`src/app/admin/index.tsx`, `src/app/admin/classes.tsx`,
+`src/app/trainer/member.tsx`, `docs/plan.md` (DEN-13).
+
+---
+
 ## 2026-09-21 — DEN-6: antrenörlük yapan yöneticinin takvimi; DEN-11: paket boyutu
 
 **DEN-11 (paket ve font boyutu) kısmen yapıldı, ölçüldü.** Inter kesim başına

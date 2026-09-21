@@ -6,6 +6,7 @@ import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Chip } from '@/components/Chip';
 import { DateStepper } from '@/components/DateStepper';
@@ -58,6 +59,14 @@ export default function AdminClasses() {
   const [sessions, setSessions] = useState<ClassSession[]>([]);
   const [trainers, setTrainers] = useState<TenantMembership[]>([]);
   const [loading, setLoading] = useState(!!tenantId);
+  // A failed class listener used to end the loading state and leave `sessions`
+  // at [], which drew "Henüz ders eklenmedi" and an "İlk dersi ekle" button in
+  // front of a gym that HAS classes (DEN-13). Failure is its own state now.
+  const [failed, setFailed] = useState(false);
+  // Same for the trainer list: falling back to the free-text field silently
+  // makes classes that no trainer can see in their own list.
+  const [trainersFailed, setTrainersFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [trainer, setTrainer] = useState('');
@@ -96,9 +105,21 @@ export default function AdminClasses() {
         setSessions(s);
         setLoading(false);
       },
-      () => setLoading(false),
+      () => {
+        setFailed(true);
+        setLoading(false);
+      },
     );
-  }, [tenantId, listWindow]);
+  }, [tenantId, listWindow, retryKey]);
+
+  // The tap clears the flags and shows the skeleton again; doing it in the
+  // effect would be a synchronising setState (AGENTS §4).
+  const retry = () => {
+    setFailed(false);
+    setTrainersFailed(false);
+    setLoading(true);
+    setRetryKey((k) => k + 1);
+  };
 
   const closeForm = () => {
     setShowForm(false);
@@ -164,8 +185,8 @@ export default function AdminClasses() {
 
   useEffect(() => {
     if (!tenantId) return;
-    return watchActiveTrainers(tenantId, setTrainers);
-  }, [tenantId]);
+    return watchActiveTrainers(tenantId, setTrainers, () => setTrainersFailed(true));
+  }, [tenantId, retryKey]);
 
   const submit = async () => {
     if (!tenantId || !name.trim() || !trainer.trim() || gymClosedThatDay) return;
@@ -318,14 +339,22 @@ export default function AdminClasses() {
               })}
             </View>
           ) : (
-            <TextField
-              placeholder="Eğitmen adı"
-              value={trainer}
-              onChangeText={(v) => {
-                setTrainer(v);
-                setTrainerId('');
-              }}
-            />
+            <>
+              {trainersFailed ? (
+                <ErrorNotice
+                  message="Antrenör listesi alınamadı. Elle yazdığın ad derse bağlanmaz; antrenör onu kendi listesinde göremez."
+                  onRetry={retry}
+                />
+              ) : null}
+              <TextField
+                placeholder="Eğitmen adı"
+                value={trainer}
+                onChangeText={(v) => {
+                  setTrainer(v);
+                  setTrainerId('');
+                }}
+              />
+            </>
           )}
 
           <Text variant="label" tone="sub">
@@ -411,6 +440,8 @@ export default function AdminClasses() {
 
       {loading ? (
         <ListSkeleton rows={3} avatar={false} />
+      ) : failed ? (
+        <ErrorNotice message="Ders programı alınamadı. Bağlantını kontrol edip tekrar dene." onRetry={retry} />
       ) : sessions.length === 0 ? (
         <EmptyState
           icon="calendar-outline"
