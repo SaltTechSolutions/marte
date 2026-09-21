@@ -31,6 +31,28 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — backend/functions/lib git'ten çıkarıldı
+
+**Yapıldı.** Derlenmiş çıktı `backend/functions/lib/` (34 dosya) yanlışlıkla izleniyordu:
+tarihçesinde yalnızca iki commit (subtree içe aktarımı ve PER-6) vardı ve kaynakla
+sapmıştı; `deploy` her seferinde `npm run build` çalıştırıp dosyaları yeniden
+yazdığı için çalışma dizini sürekli kirli görünüyordu. `git rm --cached` ile
+izlemeden çıkarıldı, `backend/.gitignore`'a `/functions/lib` eklendi; dosyalar
+diskte duruyor.
+
+**Karar.** Kaynağın gerçeği `src/`; `lib/` bir yapı çıktısı. Deploy'un `predeploy`'u
+ve CI'ın "Build" adımı zaten kaynaktan derliyor; hiçbir kod `lib/`'e commit'li
+haliyle dayanmıyor (`package.json` `main` yalnızca derlenmiş yolu gösteriyor).
+
+**Bilerek yapılmadı.** `firebase-functions` sürüm yükseltmesi (CLI eski olduğunu
+uyarıyor): ayrı, riskli bir iş.
+
+**Açık.** —
+
+**Nerede.** `backend/.gitignore`, `backend/functions/lib/` (izlemeden çıktı).
+
+---
+
 ## 2026-09-21 — DEN-8 ve DEN-6 sunucu kısmı üretime deploy edildi
 
 **Yapıldı.** `refundOnClassCancelled` (yeni) ve `createPtSessionByStaff`
