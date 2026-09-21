@@ -57,8 +57,9 @@ sekme çubuğuna kondu. 11pt `label` stilinin cümle metninde kullanımı: yüzl
 çağrı yeri ve görsel yoğunluk kararı, aracı yok. Ghost `Button` kenarlığı:
 etiket metni 6,65:1, kenarlık dekoratif.
 
-**Açık.** Kas haritası ölçeği/metni (O34), `label` kullanımı (O32), kalan 30
-sarmalayıcı `Pressable`'ın cihazda doğrulanması, `designplan.md` D3-1 ve D2-4
+**Açık.** `label` kullanımı (O32), kalan 30 sarmalayıcı `Pressable`'ın ve kas
+haritası yerleşiminin (O34, sonradan yapıldı: kutu çizimi izliyor, başlık SVG dışı,
+sözlü etiket) cihazda doğrulanması, `designplan.md` D3-1 ve D2-4
 metinleri bayat (düzeltilmedi). Alan sınırı görünümü koyu ve açık temada gözle
 onaylanmalı: `FIELD_BORDER_MIX` tek sayı.
 

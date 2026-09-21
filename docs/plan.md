@@ -5144,7 +5144,7 @@ türden değil.
 | [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
 | [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
 | [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
-| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik: rol/durum/etiket, 44pt hedefler (tarama bulduğu her yer), grafik metin karşılığı, alan sınırı kontrastı yapıldı. **Kalan:** 11pt `label` metninin kullanımı (görsel karar), kas haritası ölçeği/metni, kalan ~30 kart sarmalayıcı `Pressable`'ın elle doğrulanması | m | designplan D3-1, D2-4 |
+| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik: rol/durum/etiket, 44pt hedefler (tarama bulduğu her yer), grafik metin karşılığı, alan sınırı kontrastı yapıldı. **Kalan:** 11pt `label` metninin cümle metninde kullanımı (görsel/yoğunluk kararı), cihazda doğrulama (kas haritası yerleşimi dahil) | m | designplan D3-1, D2-4 |
 | [x] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. Ölçülen eksik 70 → 3 (102 çağrı yeri); kalan 3 bilerek dışarıda (aşağıdaki not) | m | P2-1 "Kalan" |
 
 **DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
@@ -5496,6 +5496,14 @@ zaten sınıyor. Gerçekten eksik olan tek şey `TextField` sınırı: `line` `s
 karşı 1,26:1 (hedef 3:1). `theme/fieldBorder.ts` (`surf` ile `txt` arasında
 %55 karışım) ve 2 test (tüm paletler + 360° marka taraması; oranı %30'a çekince
 kırılıyor). Yeni palet tokenı gerekmedi.
+
+**DEN-12, kas haritası (O34) — 21 Eylül 2026.** `MuscleMap` kutusu `size` ×
+`size*1,68` idi, `meet` çizimi %72'ye küçültüp yanlara boş pay bırakıyordu ve
+SVG içindeki 11pt başlık ~8pt çiziliyordu. Kutu artık çizimi izliyor (aynı çizim
+ölçeği), başlık SVG dışında normal `Text` (`label`), ve bileşen ekran okuyucuya
+"Ön görünüm. Ana çalışan kaslar: …; yardımcı kaslar: …" diyor. viewBox yüksekliği
+460 bırakıldı: alt ~20 birim eski başlığın şeridi, ayak kırpılmasın diye cihazsız
+kesmedim. Cihazda görülmedi.
 
 **Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
 ~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,
