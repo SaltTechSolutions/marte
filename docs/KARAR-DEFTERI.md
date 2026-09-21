@@ -36,7 +36,8 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 **DEN-11 (paket ve font boyutu) kısmen yapıldı, ölçüldü.** Inter kesim başına
 alt yoldan, Ionicons tek aile yolundan alınıyor, `getStorage` ve
 `tracesSampleRate: 0` kalktı. Önce/sonra `expo export` ile: asset 10.076 KB →
-1.746 KB (**−8.330 KB, −%83**), Hermes bytecode 8,54 → 8,16 MiB (−389 KB),
+1.746 KB (**−8.330 KB, −%83**), Hermes bytecode −389 KB (bayraklı) / −410 KB
+(bayraksız; mutlak boyut ölçüm bayrağına göre ~2 MB oynuyor, bkz. plan.md),
 minify JS −478 KB. `tsc`, lint, 411 test temiz. **Yeni build ister** (fontlar
 ikilinin içinde, OTA boyutu düşürmez) ve ekranda doğru çıktığı cihazda
 görülmedi. **Bilerek yapılmadı:** RevenueCat/Sentry/qrcode için `metro.config.js`

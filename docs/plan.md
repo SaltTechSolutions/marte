@@ -5420,10 +5420,17 @@ sonra; ölçüm betiği depoda değil):
 | Asset dosyası | 60 | 28 | −32 |
 | Asset boyutu | 10.076 KB | 1.746 KB | **−8.330 KB (−%83)** |
 | `.ttf` | 37 dosya, 10.053 KB | 5 dosya, 1.724 KB (4 Inter + Ionicons) | −8.329 KB |
-| Hermes bytecode | 8.953.004 B (8,54 MiB) | 8.554.684 B (8,16 MiB) | −389 KB (−%4,4) |
+| Hermes bytecode (`--source-maps true`) | 8.953.004 B (8,54 MiB) | 8.554.684 B (8,16 MiB) | −389 KB (−%4,4) |
+| Hermes bytecode (bayraksız) | 10.789.075 B (10,29 MiB) | 10.369.488 B (9,89 MiB) | −410 KB (−%3,9) |
 | Minify JS | 7.549.717 B | 7.060.040 B | −478 KB (−%6,5) |
 
 Kalan 5 `.ttf` beklenenle birebir: 4 Inter kesimi 1.343 KB + Ionicons 381 KB.
+⚠ **Mutlak bytecode boyutu ölçüm bayrağına bağlı:** `expo export`'a
+`--source-maps true` verilince aynı ağaçta `.hbc` 8,55 MB, verilmeden 10,37 MB
+çıkıyor (~1,8 MB fark). İlk ölçümüm yalnızca bayraklıydı; mağazaya giden yapıya
+bayraksız olan daha yakın olabilir (hangisinin gittiğini doğrulamadım). Fark
+(kazanç) iki yapıda da ~390–410 KB, yani sonuç değişmiyor; mutlak rakamlar
+"uygulama X MB" diye alıntılanmamalı. Asset boyutu bayraktan etkilenmiyor.
 `tsc`, lint temiz, mobil 411 test geçiyor. Kaldırılan kesimlere kodda atıf yok
 (`fontFamily` yalnızca `'Inter'`, o da `Inter_500Medium` takma adı).
 
