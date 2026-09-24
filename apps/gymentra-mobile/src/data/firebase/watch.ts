@@ -61,3 +61,35 @@ export function watchDoc<T>(
     (error) => report(context, error, onError),
   );
 }
+
+/**
+ * A document listener that only reports ANSWERS.
+ *
+ * Offline and with nothing cached, a document listener still fires once with
+ * `exists() === false, fromCache === true`. On React Native that is every cold
+ * start without signal, because the JS SDK's cache lives in memory. It is the
+ * absence of an answer, not "the document does not exist"; forwarded as `null`
+ * it made AuthProvider drop the membership and write that null over the
+ * on-disk card (DEN-2, pinned by `firestoreOffline.contract.test.ts`).
+ *
+ * So `onChange(null)` here means the SERVER says the document is gone. A
+ * cache-only miss is dropped, and a document that exists is forwarded even
+ * when it comes from the cache. Use this, not `watchDoc`, for a document the
+ * app already holds a cached copy of and would otherwise overwrite.
+ */
+export function watchConfirmedDoc<T>(
+  context: string,
+  ref: DocumentReference,
+  map: (snapshot: DocumentSnapshot) => T,
+  onChange: (value: T | null) => void,
+  onError?: WatchErrorHandler,
+) {
+  return onSnapshot(
+    ref,
+    (snapshot) => {
+      if (snapshot.exists()) onChange(map(snapshot));
+      else if (!snapshot.metadata.fromCache) onChange(null);
+    },
+    (error) => report(context, error, onError),
+  );
+}

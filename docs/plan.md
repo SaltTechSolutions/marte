@@ -38,6 +38,10 @@ Sıra değerle değil, **bağımlılık ve risk** ile belirlendi: yayını engel
 "Kuşak 1.5" ekledi ve Kuşak 2–3'ü yeniden dizdi. Kuşak 1'e dokunulmadı:
 mağaza engeli olmayan hiçbir şey mağaza engelinin önüne geçmez.
 
+*20 Eylül 2026:* UI/UX/performans denetiminden çıkan işler bu listeye
+karıştırılmadı, dosyanın sonundaki **DEN** bölümünde duruyor. Sıraya
+girmeden önce oradaki tabloya bakılır.
+
 ### Denetim — 8 Eylül 2026 · yayın altyapısı
 
 Bu altı madde planın *açık işleri* değil, planın **hiç konuşmadığı**
@@ -4510,7 +4514,9 @@ erişilebilirlikti. Özellik uçtan uca hiç test edilememişti.
 - Antrenörün ana ekranına (`trainer/index`) **yalnızca `canCheckIn` doğruysa**
   görünen "Giriş kabul et" kartı eklendi. Kapıda çalışan biri için sık ve
   zaman kritik bir eylem olduğundan profil sekmesine gömülmedi.
-- Admin panelindeki kart yeni yola bağlandı.
+- Admin panelindeki kart yeni yola bağlandı. *(20 Eylül 2026 denetimi: kodda
+  admin panelinde `/checkin`'e giden hiçbir bağlantı yoktu; bu satır
+  gerçekle uyuşmuyordu. Aynı gün bağlandı, bkz. **DEN-10**.)*
 - Geri butonu `safeBack(router, '/')` — doğrudan deep-link ile açıldığında da
   kullanıcıyı kendi rolünün ana ekranına götürüyor.
 
@@ -5100,6 +5106,447 @@ zaten PKG-12'nin içindeydi, yeni madde açılmadı.
 
 Kuyruğa yazılanlar (P2/P3) "KALAN İŞLER → Kuyruk" altında; ayrı madde
 açılmadı, karar verildiğinde açılır.
+
+---
+
+## DEN — UI/UX/performans denetimi (20 Eylül 2026)
+
+Uygulamanın tamamı UI, UX ve performans açısından salt okunur denetlendi:
+19 ajan (8 ekran alanı, 2 bileşen alanı, 3 performans taraması, 2 sistem
+taraması, 4 kullanıcı yolculuğu), her rapor kodu yeniden açıp çürütmeye
+çalışan bağımsız bir doğrulayıcıdan geçti. 456 ham bulgudan 4'ü çürütüldü,
+kalanlar **132 kök soruna** indi: **10 yüksek, 82 orta, 40 düşük**. Kanıtlar,
+yerler, düzeltme önerileri ve orta/düşük maddelerin tamamı:
+**`denetim-2026-09-20.md`**. Aşağıdakiler o rapordan plana alınanlar (10
+yüksek + paket boyutu + iki toplu iş); orta ve düşükler karar verildiğinde
+buraya açılır, ayrı madde açılmadı.
+
+**Yöntem sınırı:** statik kod incelemesi ve paket ölçümü; cihazda ya da
+simülatörde çalıştırılmadı. Açılış süresi, bellek, kare hızı, VoiceOver,
+büyük yazı boyutu ve çevrimdışı akışlar **ölçülmedi**. En ağır beş bulgu
+(Y1, Y5, Y7, Y9, Y10) ayrıca koda bakılarak yeniden doğrulandı.
+
+**Ana sonuç:** uygulamanın borcu görsel değil, akış ve durum yönetiminde
+(96 UX / 20 UI / 16 performans kümesi). `tsc`, `expo lint` ve 385 testin
+temiz olması bunu değiştirmiyor: bulguların hiçbiri derleyicinin yakalayacağı
+türden değil.
+
+| # | Madde | İş | Kayıt |
+|---|---|---|---|
+| [x] DEN-1 (Y1) | Onaylanan yeni üye boş ekrana düşüyor: `pending.tsx` ve `approved.tsx` `refreshMembership` çağırmıyor, canlı dinleyici üyelik yokken kurulmuyor | s | — |
+| [x] DEN-2 (Y2) | Çevrimdışı soğuk açılışta `getActiveMemberships` (`getDocs`) hata değil boş sonuç dönüyor, üyelik önbelleği siliniyor, kapıdaki üye QR yerine "Salonuna katıl" görüyor. P2-2'nin "çevrimdışıyken hata fırlatır" varsayımı yanlış. Önce uçak modunda sahada dene | s | P2-2 |
+| [x] DEN-3 (Y3) | Salon belgesi (`activeTenant`) oturumda bir kez yükleniyor: saat/iptal süresi/marka değişince ekranlar bayat veri gösteriyor ve eskiyi geri yazabiliyor; `ThemeSync` marka güncellemesini bir açılış geç uyguluyor | m | — |
+| [x] DEN-4 (Y4) | Ölçüm formu dokunulmamış 75 kg / 100 / 85 / 35 varsayılanlarını gerçek ölçü diye kaydediyor; kayıtlar yalnızca eklenebilir | s | personatalepleri Z-10 |
+| [x] DEN-5 (Y5) | Program kurucuda "Şablondan başla" çok günlü programın **tüm** günlerini onaysız eziyor (koşul yalnızca aktif günün listesine bakıyor) | xs | — |
+| [~] DEN-6 (Y6) | Yönetici+antrenör antrenör yüzeyinde randevu oluşturamıyor, kendi takvimi yerine tüm salonu görüyor (`canCreate = !isAdmin`) | m | CX-08 — **sunucu kısmı (`createPtSessionByStaff`) 21 Eylül'de deploy edildi; istemci henüz yayında değil** |
+| [x] DEN-7 (Y7) | `watchUpcomingSessionsForMember` durum filtresiz `limit(3)`: ana ekran iptal edileni "yaklaşan" gösteriyor, Rezervasyonlarım en çok 3 özel ders listeliyor | s | — |
+| [x] DEN-8 (Y8) | Salon dersi iptalinde (belge silinince) kotalı üyenin hakkı iade edilmiyor. `refundOnClassCancelled` tetikleyicisi yazıldı, 12 emülatör testi geçti, **21 Eylül'de `tarabyamarte`'ye deploy edildi**; canlıda gerçek bir ders silinerek denenmedi | m | CX-03 |
+| [x] DEN-9 (Y9) | Raporlardan üye detayına gidilemiyor: `reports.tsx` `id` gönderiyor, `member.tsx` `memberId` okuyor | xs | — |
+| [x] DEN-10 (Y10) | Yönetici panelinden `/checkin`'e giden yol yok (yalnız `trainer/index.tsx:137` push ediyor) | xs | RM-11 |
+| [~] DEN-11 | Paket ve font boyutu: Inter ve `@expo/vector-icons` kök importları (~8 MB kullanılmayan font), RevenueCat/Sentry/qrcode için `metro.config.js`, kullanılmayan `getStorage`, `tracesSampleRate: 0`. **Yeni build ister**; R8 ve SDK 57 yamalarıyla aynı build'e biner | xs–s | — |
+| [~] DEN-12 | Ortak bileşenlerde erişilebilirlik: rol/durum/etiket, 44pt hedefler (tarama bulduğu her yer), grafik metin karşılığı, alan sınırı kontrastı yapıldı. **Kalan:** 11pt `label` metninin cümle metninde kullanımı (görsel/yoğunluk kararı), cihazda doğrulama (kas haritası yerleşimi dahil) | m | designplan D3-1, D2-4 |
+| [x] DEN-13 | `watch*` çağrılarında `onError` yok: sonsuz iskelet ya da sahte boş ekran. `ErrorNotice` + "Tekrar dene"; yükleniyor ≠ boş. Ölçülen eksik 70 → 3 (102 çağrı yeri); kalan 3 bilerek dışarıda (aşağıdaki not) | m | P2-1 "Kalan" |
+
+**DEN-9 kapandı — 20 Eylül 2026.** `reports.tsx`'teki iki `router.push`
+(paketi bitenler ve paketi olmayanlar) artık `memberId` ve `memberName`
+gönderiyor; `members.tsx` zaten böyle çağırıyordu. Kök sebep ad uyuşmazlığıydı:
+`/admin/member` `memberId` bulamayınca `AccessGuard`'ı ("Salon yönetici oturumu
+gerekli") basıyor, yani hata bir yetki sorunu gibi görünüyordu. `tsc`, lint ve
+385 test temiz. **Cihazda görülmedi.**
+*Açık kalan:* `memberId` yoksa yanıltıcı "oturum gerekli" kilit ekranı hâlâ
+çıkıyor; sebep gizlendiği için bu sınıf hata fark edilmedi. Ayrı bir "üye
+bulunamadı" durumu istenirse ayrı iş.
+
+**DEN-10 kapandı — 20 Eylül 2026.** `admin/index.tsx`'e "Giriş kabul et"
+kartı eklendi (`InfoCard`, `/checkin`'e gider; metin antrenör ana ekranındakiyle
+aynı). `canCheckIn` koşulu konmadı: admin paneli yönetici yüzeyi ve yönetici
+kapıyı her zaman açabiliyor (`membership.ts`). Kart "Bugün içeri giren"
+kartının üstünde, çünkü kapıda sık ve zaman kritik bir eylem. RM-11'in
+"admin panelindeki kart yeni yola bağlandı" satırı gerçeği yansıtmıyordu
+(kodda bağlantı yoktu); o satıra düzeltme notu düşüldü. `tsc`, lint ve 385
+test temiz. **Cihazda görülmedi:** kartın yerleşimi ve `/checkin`'den geri
+dönüşün admin paneline inmesi (`safeBack('/')` → Launcher → aktif rol)
+simülatörde denenmedi.
+
+**DEN-5 kapandı — 20 Eylül 2026.** "Şablondan başla" kartının koşulu artık
+**tüm günlere** bakıyor (`hasNoExercises(days)`, `data/program.ts`); eskiden
+yalnızca açık günün listesine bakıyordu, "+ Gün" ile eklenen boş günde kart
+çıkıyor ve `startFromTemplate` dolu günleri onaysız eziyordu. Karar ekrandan
+çıkarılıp saf fonksiyona alındı ve 3 birim testle korunuyor (`program.test.ts`;
+mobil 385 → 388). `tsc` ve lint temiz. **Ekran bağlantısı testle değil koda
+bakılarak doğrulandı, cihazda görülmedi.** Şablon seçici artık çok günlü
+programda hiç görünmüyor; bilinçli: kopya günlerin yerine geçtiği için dolu
+programa asla uygun değil.
+
+**DEN-7 kapandı — 20 Eylül 2026.** `watchUpcomingSessionsForMember` artık
+yalnızca `scheduled` randevuları döndürüyor (`upcomingScheduled`,
+`data/ptSession.ts`, 4 birim test; mobil 388 → 392). Sebep: iptal belgeyi
+silmiyor, `status: 'cancelled'` yazıyor; tarihi ileride olan iptal tarih
+sorgusunda kalıyordu ve `limit(3)` onları da sayıyordu. Ana ekran
+`sessions[0]`'ı iptal edilmiş olsa da basıyordu (üye "İptal et"e basınca sunucu
+"zaten iptal edilmiş" diyordu), Rezervasyonlarım en çok 3 özel ders gösteriyordu,
+`child.tsx` "yaklaşan randevu" sayısına iptalleri katıyordu. Üç ekran da tek
+düzeltmeden yararlanıyor; `bookings.tsx`'teki artık gereksiz `!== 'cancelled'`
+süzgeci kaldırıldı. Pencere 3 → 20 (12 derslik paket + iptalleri).
+**Durum sunucuda süzülmedi:** `where('status','==','scheduled')`
+`(tenantId, memberId, status, date)` index'i ister (mevcut index yalnızca
+`(tenantId, memberId, date)`), yani deploy onayı. İstemci süzgeci index
+istemiyor; maliyeti dinleyici başına ≤3 yerine ≤20 belge okuması. `tsc`, lint
+ve 392 test temiz. **Cihazda görülmedi.**
+
+**DEN-4 kapandı — 20 Eylül 2026.** Ölçüm formu artık boş açılıyor: kilo,
+göğüs, bel ve kol `null` başlıyor ve yalnızca üyenin eklediği alan kaydediliyor
+(`data/measurement.ts`: `draftFromEntries`, `startValue`; 6 birim test, mobil
+392 → 398). Kilo zorunlu: ilk ölçümde "Kilonu gir" düğmesi var ve Kaydet o
+zamana kadar pasif, nedeni ekranda yazıyor. Göğüs/bel/kol "isteğe bağlı":
+"+ Ekle" ile stepper açılıyor (başlangıç değeri üyenin son girdiği, yoksa
+100/85/35), "Kaldır" ile geri alınıyor. Önceki kayıttan gelen değerler
+görünür olarak dolu açılıyor (yalnızca en yeni kayıt; bırakılmış bir ölçü
+kendiliğinden geri gelmiyor). Okuyan taraf zaten isteğe bağlıya hazırdı
+(`addMeasurement`, karşılaştırma kartı, `trainer/member.tsx`). `tsc`, lint ve
+398 test temiz. **Cihazda görülmedi.**
+*Açık kalan:* (1) **Eski kayıtlar düzelmedi.** `measurements` kuralı
+`update, delete: if false`; daha önce yalnızca kilosunu kaydeden üyelerin
+göğüs 100 / bel 85 / kol 35 kayıtları duruyor ve gerçek değerden ayırt
+edilemiyor. Temizlemek Admin SDK ile veri silmek demek, onay ister ve hangi
+kaydın uydurma olduğu bilinmiyor; yapılmadı. (2) `save` hâlâ `try/finally`,
+`catch`siz (AGENTS §2 ihlali; denetimin "catch'siz yazma" maddesi, DEN'de ayrı
+iş değil). (3) Kilo stepper'ı 0,5 adımla 75'ten başlıyor: 105 kg için 60
+dokunuş; bu Z-10'un dokunuş sayısı kısmı, dokunulmadı.
+
+**DEN-1 kapandı — 20 Eylül 2026.** `pending.tsx` üyelik `active` olunca
+`approved`'a geçmeden önce `refreshMembership()` çağırıyor (`create-gym.tsx`'in
+zaten yaptığı desen). Sebep: `AuthProvider` üyeliği yalnızca girişte ve
+`refreshMembership` ile okuyor, canlı dinleyicisi ise ancak zaten aktif bir
+üyelik biliniyorsa kuruluyor; bekleyen üyede o yok, onay uygulamaya hiç
+ulaşmıyordu. Onaylanan yeni üye "Salonu keşfet"e basınca `activeMembership`
+`null` kalıyor, ana ekran paketsiz/markasız/"pending" QR'lı açılıyor ve
+bildirim izni hiç istenmiyordu (`PushNotificationSync` aktif üyelik bekliyor);
+uygulama yeniden başlatılana kadar düzelmiyordu. Dinleyicinin iki kez
+tetiklenmesine karşı `handled` bayrağı, ekrandan çıkıldıysa gezinmemek için
+`alive` bayrağı var; yenileme başarısız olursa eskisi gibi devam ediyor.
+`refreshMembership` her render'da yeni fonksiyon olduğu için `ref` içinde
+tutuluyor, yoksa dinleyici sürekli yeniden kurulurdu. `tsc`, lint ve 398 test
+temiz. **Ekran akışı testle örtülü değil (bileşen test altyapısı yok) ve
+cihazda görülmedi.** Sahada denemek: ikinci bir hesapla salona katıl, yönetici
+cihazından onayla; "Salonu keşfet"ten sonra ana ekran paket/marka/QR ile
+açılmalı.
+**Çok salon.** `GymSwitcher`'ın "Başka bir salona katıl" yolu var (ilk
+yazdığım "böyle bir yol yok" notu yanlıştı, kod okunarak düzeltildi).
+Yenileme yeni salonu `memberships`'e ekliyor ama `selectMembership` kayıtlı
+seçimi tuttuğu için aktif salon eskisi kalıyordu: onay ekranı yeni salonun
+QR'ını gösterip eski salonun ana ekranına götürürdü. `approved.tsx`
+"Salonu keşfet"te, aktif salon onaylanan salon değilse `switchTenant(tenantId)`
+çağırıyor (switcher'ın yaptığı), sonra `/member`'a gidiyor; ilk kez katılan
+üyede aktif salon zaten odur, bir şey değişmiyor. `AuthContext` değişmedi.
+*Açık kalan:* (1) Yenileme çevrimdışıyken boş sonuç dönerse (DEN-2) aynı
+hata geri gelir (DEN-2 bunu kapattı, aşağıda). (2) İkinci salon senaryosu hiç
+denenmedi. (3) "Salonu keşfet" `/member`'a gidiyor, `Launcher`'a değil:
+katılma her zaman `['member']` rolü yaratıyor.
+
+**DEN-2 kapandı — 20 Eylül 2026.** Çevrimdışı soğuk açılışta kapıdaki üyenin
+kartı artık silinmiyor. **İki yol vardı, denetim yalnızca birini söylemişti**
+ve ikisi de kurulu SDK (firestore 4.16.0) ile, ağ kapalıyken **denendi**:
+(1) `getActiveMemberships` `getDocs` kullanıyordu; çevrimdışıyken hata atmıyor,
+boş ve `fromCache` sonuçla çözülüyor, `AuthProvider.loadMembership` bunu "hiçbir
+salonda üyeliğin yok" sayıp diskteki kartı `null` ile eziyor ve kişiyi "Salonuna
+katıl"a atıyordu. Artık `getDocsFromServer` (ulaşılamayınca `unavailable` ile
+reddediyor, `loadMembership`'in var olan `catch`i önbellekle devam ediyor: o
+`catch` P2-2'de tam bunun için yazılmıştı ama hiç çalışmamıştı). (2) **Yalnızca
+(1) düzeltilseydi yetmezdi:** `AuthProvider`'ın canlı `watchMembership`
+dinleyicisi önbellekteki üyelik uygulanır uygulanmaz başlıyor ve çevrimdışı,
+önbellekte belge yokken (RN'de önbellek yalnızca bellekte, her soğuk açılış
+boş) `exists=false, fromCache=true` olayı veriyor; bu `null` olarak iletilince
+üyelik yine düşüp kart yine siliniyordu. `watchMembership` artık önbellekten
+gelen "belge yok"u iletmiyor; sunucunun doğruladığı "yok" (üyelik gerçekten
+silinmiş) iletilmeye devam ediyor. Ağ dönünce sunucu olayı gelip önbelleği
+tazeliyor. Testler (mobil 398 → 406): `membershipRepo.test.ts` (5: sunucudan
+okuma, hatayı iletme, üç anlık görüntü durumu) ve
+`firestoreOffline.contract.test.ts` (3: gerçek SDK, ağ hiç açılmadan, sahte
+proje kimliği; kod bu üç SDK davranışına dayanıyor, Firebase yükseltmesi biri
+değişirse burası kırılır). `tsc`, lint temiz. **Uygulama cihazda uçak
+modunda denenmedi;** SDK davranışı denendi, ekran akışı değil.
+*Açık kalan:* (1) `tenantRepo.findTenantByCode` hâlâ `getDocs`: çevrimdışıyken
+`gym-code` "salon bulunamadı" diyor (yıkıcı değil, yanıltıcı; denetimin
+"İnternet bağlantını kontrol et" önerisi yapılmadı). (2) `register.tsx`
+`routeAfterAuth` aynı okumayı yapıyor: giriş başarılı olup hemen ardından ağ
+düşerse artık boş listeyle `gym-code`'a değil hata metnine ("Bir şeyler ters
+gitti") düşer ve kişi oturumlu olarak kayıt ekranında kalır; nadir, dokunulmadı.
+(3) Ağ hiç yanıt vermiyorsa (kapalı değil, takılı) SDK 10 sn sonra çevrimdışı
+sayıyor; o sürede `Launcher` boş kalıyor. Bu da "açılış yönlendirmesi ağ
+zincirini bekliyor" maddesinin konusu, bu düzeltmeyle değişmedi.
+
+**DEN-3 kapandı — 20 Eylül 2026.** Salon belgesi (`activeTenant`) artık canlı.
+`AuthProvider` belgeyi yalnızca girişte okuyordu; yönetici çalışma saatini,
+iptal süresini, aboneliği ya da markayı değiştirince ekranlar yeniden başlatmaya
+kadar eski değeri gösteriyordu, üyeler eski kuralı görüyordu ve eski kopyadan
+tohumlanan bir ekran yeni değerin üstüne eskiyi yazabiliyordu. Yapılan:
+(1) `watch.ts`'e `watchConfirmedDoc`: DEN-2'de `watchMembership` için yazdığım
+"önbellekten gelen 'belge yok' bir cevap değildir" mantığı tek yardımcıya alındı;
+`watchMembership` ve yeni `watchTenant` ikisi de onu kullanıyor (aynı çevrimdışı
+tuzak salon belgesinde de vardı: önbellekteki salon `null` ile ezilirdi).
+(2) `AuthContext`'te üyelik dinleyicisinin yanına salon dinleyicisi; gym
+değişiminde eski salonun geç gelen anlık görüntüsü yenisinin üstüne yazmasın
+diye `alive` bayrağı, her değişiklikte disk önbelleği de tazeleniyor.
+(3) `ThemeSync` yalnızca salon kimliğine değil **marka değerlerine**
+(renk, mod, logo, ad) bağlandı; nesneye bağlansaydı ilgisiz bir belge
+değişikliği (ör. sunucunun tuttuğu `activeMemberCount`) ayarlar ekranındaki
+kaydedilmemiş renk önizlemesini ezerdi. Yan kazanç: `paywall`'un okuduğu
+`subscription` de canlı (satın alma sonrası mağaza webhook'u yazınca istemci
+duyuyor; o ekrandaki "bekle" akışı ayrı iş), üyenin gördüğü iptal süresi,
+çalışma saati, logo ve ad anında güncelleniyor. Kural değişikliği gerekmedi
+(`tenants` okuması zaten `isSignedIn()`; dinleyici de aynı kuralla okuyor).
+Testler (mobil 406 → 411): `watch.test.ts` (5). `tsc`, lint temiz.
+**`AuthContext` ve `ThemeSync` testle örtülü değil (bileşen test altyapısı yok)
+ve cihazda görülmedi.** Sahada denemek: iki cihaz, birinde yönetici; çalışma
+saatini ya da marka rengini değiştir, diğerinde uygulama açıkken yansımalı.
+*Maliyet:* oturum başına bir dinleyici daha; salon belgesi her değiştiğinde
+(sunucunun tuttuğu sayaçlar dahil) `useAuth()` tüketicileri yeniden çiziliyor
+ve önbellek yazılıyor. Belge küçük ve nadir değişiyor.
+*Açık kalan:* (1) `hours.tsx` hâlâ tüm `openingHours` haritasını yazıyor
+(`updateTenantOpeningHours`); iki yönetici aynı anda düzenlerse sonuncusu
+öncekinin gününü ezer. Denetimin `openingHours.<gün>` alan yolu önerisi yapılmadı.
+(2) `settings.tsx` renk/mod önizlemesi ekrandan kaydetmeden çıkınca hâlâ geri
+alınmıyor (denetimin ayrı orta maddesi). (3) Aynı çevrimdışı tuzağa açık başka
+`watchDoc` kullananlar var (`availabilityRepo`, `memberNoteRepo`,
+`renewalRequestRepo`, `workoutLogRepo`, `userSettingsRepo`, `packageChangeRepo`,
+`programRepo`, `memberPackageRepo`): çevrimdışıyken "belge yok" alıyorlar.
+Sonuçlarını tek tek incelemedim; disk önbelleğine yazan yalnızca `AuthProvider`
+(grep ile doğrulandı), yani bunlarda en kötü ihtimal geçici yanlış boş durum,
+kalıcı kayıp değil. Dokunulmadı.
+
+**DEN-8 yarım — kod ve testler yazıldı, DEPLOY EDİLMEDİ, emülatör testleri
+KOŞULMADI (20 Eylül 2026).** Salon grup dersini silince kotalı üyenin hakkı
+iade edilmiyordu (`classRepo.deleteClass` / `deleteClassSeriesFrom` belgeyi
+doğrudan siliyor, `cancelGroupClassBooking` yalnızca tek üyenin iptalini
+karşılıyordu). **Plandaki "`cancelClassByStaff` callable'ı" yerine silme
+tetikleyicisi seçildi:** `backend/functions/src/classCancellation.ts`,
+`refundOnClassCancelled` (`classes` silme, `retry: true`). Sebep: yayındaki
+istemciler (iOS build 27, Android 8) belgeyi doğrudan siliyor; callable bir
+istemci güncellemesi ve doğrudan silmeyi kapatan bir kural değişikliği isterdi,
+ve o iki yayın dersi hiç iptal edemez hale gelirdi. Tetikleyici her istemciyi
+kapsıyor, kural ve istemci değişikliği gerektirmiyor.
+*Kurallar:* yalnızca `bookedUserIds`'te hâlâ olan ve `bookingCredits` kaydı
+bulunan üye (üye kuralla kendini diziden çıkarabiliyor, haritadaki kaydı
+kalıyor; o kişiye iade yok); **ders başlamışsa iade yok** (yapılan dersin
+iadesi bedava ders olurdu; bilerek başlangıç anına göre, bitişe göre değil);
+kredi o üyeye, aynı salona ve `groupClass` türüne ait olmalı (personel
+`bookingCredits`'e istediği kimliği yazabilir, kredi doğrulanıyor); bekleme
+listesine ve sınırsız hakla rezerve edene dokunulmuyor; her (ders, üye) için
+bir kez: tetikleyiciler en az bir kez çalıştığı için deterministik kimlikli
+`class_cancellation_refunds/{classId}_{memberId}` kaydı iadeyle aynı
+transaction'da yazılıyor, ikinci çalışma onu görüp duruyor; kayıt aynı zamanda
+iade geçmişi (ders belgesi silindi). Ders silme ile eşzamanlı rezervasyon/iptal:
+Firestore transaction'ları sıralandığı için ya rezervasyon önce commit olur
+(silme verisi onu içerir, tetikleyici iade eder) ya silme önce olur (rezervasyon
+"ders bulunamadı" alır, hiçbir şey harcanmaz).
+*Testler:* `tests/classCancellation.decision.test.ts` (14, **koşuldu**: kime ve
+neyin iade edileceği, Firestore'suz; kararı bilerek bozan 4 mutasyonun hepsi
+testi kırdı) ve `tests/classCancellation.refund.test.ts` (12, emülatörlü;
+**yazıldı, koşulmadı**): transaction, tekrar işlemede çift iade olmaması ve
+eşzamanlı iki işleme tek iade. `tsc` (kaynak ve test) temiz. Emülatör jar'ı
+(`cloud-firestore-emulator-v1.19.8.jar`, 63,6 MB, Google'ın deposundan) bu
+makinede yok ve kullanıcı indirmeye izin vermedi; **transaction/işaretçi/
+eşzamanlılık kısmı kanıtlanmış değil.** Koşmak için `backend/`'de
+`npm run test:functions` (JDK 21 hazır: `openjdk@21`).
+*Deploy:* `firebase deploy --only functions:refundOnClassCancelled`, **açık
+onay ister**; kural/index değişikliği yok (`class_cancellation_refunds` kuralda
+tanımsız = istemciye kapalı). `docs/SCHEMA.md` güncellendi.
+*Açık kalan:* (1) Deploy'dan ÖNCE silinmiş derslerin iadeleri geri
+getirilemez (belge yok); etkilenen üyeye yönetici yeni kredi tanımlayarak
+telafi edebilir (`member_credits` create admin'e açık). (2) Yönetici ekranı
+"iptal edince ders programlarından kalkacak" diyor, kotalı hakkın iade
+edileceğini söylemiyor; metin deploy'dan sonra eklenmeli (önce deploy, sonra
+OTA, yoksa metin yalan söyler). (3) Bildirim metni değişmedi: üye "Ders iptal
+edildi" alıyor, iadeyi paket kartında görüyor. (4) Sunucu tarafında
+`notifyOnClassCancelled` ile aynı silmeye bağlı iki tetikleyici çalışacak; ikisi
+birbirinden bağımsız.
+
+**DEN-6 kısmen kapandı — 21 Eylül 2026 (istemci + sunucu kodu yazıldı; sunucu
+kısmı DEPLOY EDİLMEDİ).** Kullanıcı tasarım sorusuna (hangi yüzey) yanıt
+vermeden "devam et" dedi; ben karar vermedim, projenin zaten verdiği karara
+uydum: `AGENTS.md` §4b ("yönetici her zaman antrenördür, ama yetenek ile yüzey
+ayrı") ve `CX-08` ("antrenörlük yapan yönetici kendi takviminde randevu
+oluşturabilmeli, çalıştırmayan yöneticiye zorunlu antrenör navigasyonu ekleme").
+*İstemci* (`trainer/calendar.tsx`): (1) **Antrenör yüzeyi** artık hangi rolle
+girilirse girilsin yalnızca kişinin kendi takvimini (+ paylaşılanları) gösteriyor
+ve randevu ekletiyor; eskiden `isAdmin={canOverseeCalendars(...)}` yüzünden
+admin+antrenör hesabı tüm salonun oturumlarını görüyor, randevu ekleyemiyordu.
+(2) **Admin yüzeyi** (`admin/calendar`) hâlâ "Tüm salon" özetiyle açılıyor ve
+yanına **"Benim takvimim"** çipi geldi; orada kendi takvimine randevu ekleniyor
+(antrenör sekme çubuğu eklenmedi, çalıştırmayan sahip için hiçbir şey değişmedi).
+*Sunucu* (`sessions.ts`): `createPtSessionByStaff` takvim sahibi olarak yalnızca
+açık `trainer` rolünü kabul ediyordu; artık `canHoldPtSessions` (`trainer` ya da
+`admin`) kabul ediyor, böylece **yalnızca admin rolü olan** sahip de kendi
+takvimine yazabiliyor. `tests/sessions.canCoach.test.ts` (4, **koşuldu**, iki
+mutasyon testi kırdı; `docs/SCHEMA.md` fonksiyon tablosu güncellendi). `tsc` ve
+lint temiz, mobil 411 test geçiyor.
+*Sıra önemli:* roller `admin + trainer` olan hesaplar için istemci değişikliği tek
+başına yetiyor (sunucu zaten `trainer` rolünü kabul ediyor). **Yalnızca admin
+rolü olan** hesapta "Benim takvimim"den randevu eklemek, `createPtSessionByStaff`
+deploy edilene kadar "Bu antrenör artık salonda çalışmıyor" hatası verir; **önce
+fonksiyon deploy, sonra OTA.** **Cihazda görülmedi; sunucudaki çağrı yolu
+(`createPtSessionByStaff` callable'ının kendisi) emülatörde koşulmadı**, yalnızca
+karar fonksiyonu test edildi.
+*Açık kalan (DEN-6'nın parçası olmayan ama CX-08'in "uygun biçimde
+seçilebilmeli" dediği kısım):* `watchActiveTrainers` yalnızca `trainer` rolünü
+listeliyor; bu yüzden yalnızca admin olan sahip (a) üyenin "Antrenör seç"
+listesinde, (b) sınıf formunun antrenör seçicisinde ve (c) ekip ekranında
+görünmüyor (denetimin "sahip kendi dersini kendine atayamıyor" maddesi). Üye
+tarafındaki `bookPtSessions` da aynı `trainer` şartını koşuyor. Bunlar ayrı iş:
+sorgu `array-contains-any` ister ve üye tarafı sunucu değişikliği demek.
+
+**DEN-11 kısmen kapandı — 21 Eylül 2026 (güvenli kısım yapıldı ve ÖLÇÜLDÜ;
+riskli kısım bilerek bırakıldı).** Yapılanlar: (1) `@expo-google-fonts/inter`
+kök girişi yerine kesim başına alt yol (`/500Medium`, `/600SemiBold`, `/700Bold`,
+`/900Black`) ve `useFonts` için `/useFonts` (paketin kökün yeniden dışa
+verdiği aynı hook; davranış aynı). Kök giriş 18 TTF'i eager `require` ediyor,
+4'ü kullanılıyordu. (2) 31 dosyada `import { Ionicons } from '@expo/vector-icons'`
+→ `import Ionicons from '@expo/vector-icons/Ionicons'`: kök giriş 15 ailenin
+fontunu ve glyph haritasını paketliyordu; tek aile yolu aynı `build/Ionicons`
+modülünü veriyor, yani bileşen aynı. (3) `services/firebase.ts`'ten hiçbir yerde
+kullanılmayan `getStorage` kalktı (yüklemeler `uploadTenantLogo` /
+`uploadMemberPhoto` callable'larından gidiyor). (4) `tracesSampleRate: 0` satırı
+kalktı: RN SDK izlemeyi herhangi bir SAYI için açıyor
+(`integrations/default.js`: `typeof options.tracesSampleRate === 'number'`),
+0 da sayı; app-start, native-frames, stall, user-interaction ve time-to-display
+entegrasyonları hiçbir zaman gönderilmeyecek izler için kuruluyordu.
+
+*Ölçüm* (`npx expo export --platform ios`, aynı makine, değişiklikten önce ve
+sonra; ölçüm betiği depoda değil):
+
+| | önce | sonra | fark |
+|---|---|---|---|
+| Asset dosyası | 60 | 28 | −32 |
+| Asset boyutu | 10.076 KB | 1.746 KB | **−8.330 KB (−%83)** |
+| `.ttf` | 37 dosya, 10.053 KB | 5 dosya, 1.724 KB (4 Inter + Ionicons) | −8.329 KB |
+| Hermes bytecode (`--source-maps true`) | 8.953.004 B (8,54 MiB) | 8.554.684 B (8,16 MiB) | −389 KB (−%4,4) |
+| Hermes bytecode (bayraksız) | 10.789.075 B (10,29 MiB) | 10.369.488 B (9,89 MiB) | −410 KB (−%3,9) |
+| Minify JS | 7.549.717 B | 7.060.040 B | −478 KB (−%6,5) |
+
+Kalan 5 `.ttf` beklenenle birebir: 4 Inter kesimi 1.343 KB + Ionicons 381 KB.
+⚠ **Mutlak bytecode boyutu ölçüm bayrağına bağlı:** `expo export`'a
+`--source-maps true` verilince aynı ağaçta `.hbc` 8,55 MB, verilmeden 10,37 MB
+çıkıyor (~1,8 MB fark). İlk ölçümüm yalnızca bayraklıydı; mağazaya giden yapıya
+bayraksız olan daha yakın olabilir (hangisinin gittiğini doğrulamadım). Fark
+(kazanç) iki yapıda da ~390–410 KB, yani sonuç değişmiyor; mutlak rakamlar
+"uygulama X MB" diye alıntılanmamalı. Asset boyutu bayraktan etkilenmiyor.
+`tsc`, lint temiz, mobil 411 test geçiyor. Kaldırılan kesimlere kodda atıf yok
+(`fontFamily` yalnızca `'Inter'`, o da `Inter_500Medium` takma adı).
+
+**Yeni build ister, OTA ile küçülmez:** fontlar ikilinin (`.ipa` / `.aab`)
+içinde; import yolları JS değişikliği ama kurulu uygulamanın boyutu ancak yeni
+native build'le düşer. R8 ve SDK 57 yamalarıyla aynı build'e biner. **Cihazda
+görülmedi:** simgelerin ve Inter'in ekranda doğru çıktığı, bir preview
+build'de bir kez gözle kontrol edilmeli (bileşenler aynı olduğu için risk
+düşük, ama ölçtüğüm şey paket, ekran değil).
+
+*Bilerek YAPILMAYAN (metro/native, açılışta çökme riski):* `metro.config.js`
+ile RevenueCat web eşlemeleri (941 KB JS, %13,7), Sentry replay/feedback
+(~196 KB) ve `react-native-qrcode-svg`'nin çektiği `css-tree`/`entities`
+(~490 KB) yerel platformda boş modüle çözülebilir; ama boş modül
+`react-native-purchases` ve Sentry içinde modül düzeyinde bir başvuru varsa
+**uygulama açılışta çöker**, ve bunu cihazsız (simülatör kullanmıyoruz)
+doğrulayamam. Kazanç (~1,6 MB JS) fontların yanında küçük. Yapılacaksa önce bir
+preview build'de denenmeli. Reanimated + worklets (828 KB) `SwipeableRow`'un
+yeniden yazımını ve native bağımlılık değişikliğini ister (`designplan` D2-6 ile
+birlikte karar).
+
+**DEN-13 kapandı — 21 Eylül 2026.** `watch*` çağrılarında `onError` geçmeyen
+yer 70 → **3** (tip denetleyicisiyle sayılan 102 çağrı yeri). İlk tur: `member/index`,
+`admin/index`, `admin/classes`, `trainer/member`. İkinci tur: `trainer/profile`,
+`admin/member`, `book-session`, `child`, `member/profile`, `progress`,
+`assign-package`, `propose-package-change`, `promotion-form`, `members`,
+`trainer/classes`, `trainer/availability`, `trainer/builder`, `trainer/calendar`,
+`member/classes`, `exercise-library`, `card`, `goals`, `package-offer`,
+`payments`, `workout/{index,session,warmup}`, `NotificationPreferences`,
+`onboarding/pending`. Kalıp her yerde aynı: ekran başına `failed` + `retryKey`,
+`ErrorNotice` + "Tekrar dene", `failed` bayrağını efekt değil dokunuş temizliyor
+(AGENTS §4); ortak kanca yazılmadı. Ek olarak `sharedWatch` düşmüş dinleyiciyi
+yeniden başlatmıyordu, düzeltildi (8 test). **Yolda bulunan gerçek kusurlar:**
+`trainer/availability` "Kaydet" veriler gelmeden açıktı, yavaş ya da düşmüş
+yüklemede antrenörün gerçek haftasını varsayılanla ezebilirdi (artık `loaded`
+ister); `book-session` düşmüş "meşgul saat" dinleyicisiyle dolu saatleri boş
+gösteriyordu; `pending` dinleyicisi düşerse onaylanan üye ekranda kalıyordu;
+`NotificationPreferences` düşünce anahtarlar sessizce kapalı kalıyordu.
+**Bilerek dışarıda kalan 3:** `AuthContext.tsx` içindeki `watchMembership` ve
+`watchTenant` (oturum akışının kalbi; hata davranışı ayrı ve dikkatli bir iş,
+bir ekran bandı değil) ve `RenewalRequestRow` (hata halinde satır zaten hiç
+çizilmiyor, yanıltıcı bir iddia yok). Cihazda görülmedi.
+
+**DEN-12 ikinci tur — 21 Eylül 2026.** (a) **44pt hedefler:** TypeScript
+ağacını tarayan bir betikle (`Pressable` stil değişmezleri + `hitSlop`) 54 aday
+çıktı; 5'i açıkça küçük, 49'u "boyutsuz". Boyutsuzları tek tek okudum: 30'u
+kart/satır sarmalayıcı (içerik zaten ≥44), 19'u çıplak metin/ikon bağlantıydı;
+beşi açıkça küçükle birlikte 24 `Pressable` (ve iki bileşen satırı) düzeltildi.
+Hepsi gerçek `minHeight: 44` aldı (yönetici paneli "Tümünü onayla", "Dondur",
+"Sonlandır", ödeme düzelt ikonu, geri okları, program kurucudaki dört bağlantı,
+"Tümü ›", profil fotoğraf bağlantıları, paywall "geri yükle", ay okları, gün
+hücreleri 42→44, marka rengi örnekleri 34→44, yoklama çipleri 34→44, Ön/Arka
+anahtarı 32→44…). `hitSlop` tek başına sayılmadı: Android ebeveyn sınırının
+dışına dokunuş iletmiyor. Betik tekrar koşulunca kalan aday 30 (hepsi
+sarmalayıcı). (b) `Button` `height` → `minHeight` + dikey dolgu: büyük yazıda iki
+satıra inen etiket kırpılmıyor; varsayılan boyutta piksel farkı yok. `TabBar`
+etiketi `maxFontSizeMultiplier={1.2}`. (c) `MiniBarChart` `label` prop'u;
+ilerleme ve gelir/üye grafikleri sözle özetleniyor, etiketsiz grafik ekran
+okuyucudan gizleniyor. (d) **Kontrast — ölçüm:** denetimin "semantik renkler AA
+altında" iddiası **çürük**: varsayılan palette danger/warn/ok/sub dört yüzeyde
+4,8–11,5:1 ve `contrast.test.ts` bunu tüm gönderilen ve türetilen paletlerde
+zaten sınıyor. Gerçekten eksik olan tek şey `TextField` sınırı: `line` `surf`'e
+karşı 1,26:1 (hedef 3:1). `theme/fieldBorder.ts` (`surf` ile `txt` arasında
+%55 karışım) ve 2 test (tüm paletler + 360° marka taraması; oranı %30'a çekince
+kırılıyor). Yeni palet tokenı gerekmedi.
+
+**DEN-12, kas haritası (O34) — 21 Eylül 2026.** `MuscleMap` kutusu `size` ×
+`size*1,68` idi, `meet` çizimi %72'ye küçültüp yanlara boş pay bırakıyordu ve
+SVG içindeki 11pt başlık ~8pt çiziliyordu. Kutu artık çizimi izliyor (aynı çizim
+ölçeği), başlık SVG dışında normal `Text` (`label`), ve bileşen ekran okuyucuya
+"Ön görünüm. Ana çalışan kaslar: …; yardımcı kaslar: …" diyor. viewBox yüksekliği
+460 bırakıldı: alt ~20 birim eski başlığın şeridi, ayak kırpılmasın diye cihazsız
+kesmedim. Cihazda görülmedi.
+
+**DEN-8 emülatör testleri geçti — 21 Eylül 2026.** Kullanıcı
+`cd backend && npm run test:functions`'ı kendi makinesinde koştu (emülatör
+jar'ını ben indirmemiştim, izin verilmemişti): **13 dosya, 118 test geçti**;
+`tests/` altındaki 13 test dosyasının tamamı, `classCancellation.refund.test.ts`
+(12 emülatör testi: transaction, çift iade engeli, eşzamanlılık) dahil. Çıktının
+yalnızca son kısmını gördüm (dosya listesi ve özet), dosya sayısı `tests/`
+ile birebir tutuyor. **Hâlâ kanıtlanmayan:** `createPtSessionByStaff`
+callable'ının kendisi (yalnızca `canHoldPtSessions` karar fonksiyonu testli) ve
+ikisinin de canlıdaki davranışı: **deploy edilmedi.**
+
+**Sunucu deploy edildi — 21 Eylül 2026, ~11:25.** Kullanıcı
+`cd backend && firebase deploy --only functions:refundOnClassCancelled,functions:createPtSessionByStaff --project tarabyamarte`
+komutunu kendisi çalıştırdı ve onayladı. Sonuç: `refundOnClassCancelled`
+**oluşturuldu** (Firestore `classes/{classId}` silinme tetikleyicisi, 2. nesil,
+`europe-west1`, tetik bölgesi `europe-north1`, **yeniden deneme açık**),
+`createPtSessionByStaff` **güncellendi** (revizyon 00002 → 00003).
+`functions:list` ikisini `ACTIVE` gösteriyor; yeni örnekler başladı ve günlükte
+hata yok. **Canlıda uçtan uca denenmedi:** gerçek bir salon dersi silinip iadenin
+oluştuğu gözlenmedi (bu, gerçek üyenin hakkını oynatır). Yeniden deneme uyarısı
+için: tetikleyici işaretçi belge + transaction ile idempotent, çift iade engeli
+emülatör testli. **Bir önceki denemenin hatası:** CLI aktif projeyi
+`tarabyamartefighting`'e çözdü (`Marte` dizini için eski bir `firebase use`
+kaydı); Blaze planı olmadığından hiçbir şey yazılmadan durdu. Komuta artık
+`--project tarabyamarte` veriliyor. **Sıra bozulmasın: fonksiyonlar yayında, iOS
+OTA artık gönderilebilir** (DEN-6 istemcisi ve DEN-8'in kapsadığı ekranlar).
+
+**Önerilen sıra:** (1) küçük JS düzeltmeleri: ~~DEN-5~~, ~~DEN-7~~, ~~DEN-4~~,
+~~DEN-1~~, ~~DEN-2~~, ~~DEN-3~~ (hepsi tamam; DEN-3'ü önce sunucu işi sanmıştım,
+istemci işiymiş). **Android'e güncelleme gönderilmeyecek** (kullanıcı, 20 Eylül
+2026: Play Store'da bir ilerleme olmadıkça); düzeltmeler `main`'e girer, OTA
+yalnızca iOS'a gider (build 27, kendi build commit'inden açılan dal; karar
+defteri 16 Eylül). (2) Sunucu gerektirenler: DEN-8, ödeme penceresi (CX-07);
+deploy onayı ister. (3) DEN-11 bir sonraki native build'e. (4) DEN-12 ve
+DEN-13 toplu işler. DEN-6 tasarım kararı ister.
+
+**Bu denetimin çeliştiği eski kayıtlar** (düzeltilmedi, burada işaretli):
+`designplan.md` D3-1 ("hiçbir bileşende `accessibilityRole` yok": 54 kullanım
+var), D3-2 ("yazı hiç ölçeklenmiyor": RN ölçekliyor, asıl risk sabit yükseklik),
+D2-2 ("logo hiç görünmüyor": Launcher, `gym-code` ve üye ana ekranında
+görünüyor); P2-2 (yukarıda DEN-2); "29 dinleyici" (`plan.md:232`; güncel sayı 44
+fonksiyon / 101 çağrı yeri); P3-4'ün "aynı sorgu üç kez okunur" gerekçesi fatura
+açısından abartılı (Firestore istemcisi aynı sorguyu tek hedefe birleştiriyor).
 
 ---
 

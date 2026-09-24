@@ -1,9 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { GymLogo } from '@/components/GymLogo';
 import { GymSwitchTarget } from '@/components/GymSwitcher';
 import { InfoCard } from '@/components/InfoCard';
@@ -31,28 +32,44 @@ export default function AdminPanel() {
   const [retryKey, setRetryKey] = useState(0);
   const refreshControl = useRefreshControl(() => setRetryKey((k) => k + 1));
 
+  // A dropped listener used to leave the counters on their first value: "0
+  // bekleyen istek" while requests were waiting, "–" forever otherwise, with no
+  // sign anything was wrong (DEN-13). One banner + retry; the tap clears the
+  // flag (AGENTS §4: no synchronising setState in the effect).
+  const [failed, setFailed] = useState(false);
+  const retry = () => {
+    setFailed(false);
+    setRetryKey((k) => k + 1);
+  };
+
   const [checkinCount, setCheckinCount] = useState<number | null>(null);
   const [activeMembers, setActiveMembers] = useState<number | null>(null);
-  const [requests, setRequests] = useState<TenantMembership[]>([]);
+  // `null` = not here yet, so the counter shows "–" instead of a made-up 0.
+  const [requests, setRequests] = useState<TenantMembership[] | null>(null);
   const [renewals, setRenewals] = useState<RenewalRequest[]>([]);
   const [monthRevenue, setMonthRevenue] = useState<number | null>(null);
 
   useEffect(() => {
     if (!tenantId) return;
-    const unsubCheckins = watchTodayCheckinCount(tenantId, setCheckinCount);
-    const unsubRequests = watchPendingRequests(tenantId, setRequests);
-    const unsubRenewals = watchPendingRenewals(tenantId, setRenewals);
-    countActiveMembers(tenantId).then(setActiveMembers);
+    const onError = () => setFailed(true);
+    const unsubCheckins = watchTodayCheckinCount(tenantId, setCheckinCount, onError);
+    const unsubRequests = watchPendingRequests(tenantId, setRequests, onError);
+    const unsubRenewals = watchPendingRenewals(tenantId, setRenewals, onError);
+    countActiveMembers(tenantId).then(setActiveMembers, onError);
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const unsubPayments = watchPaymentsForTenant(tenantId, (payments) => {
-      // Signed: a reversal or refund has to come OFF the month, not add to
-      // it. Summing raw amounts made correcting a mistake look like income.
-      setMonthRevenue(
-        sumPayments(payments.filter((p) => p.status === 'confirmed' && p.createdAt >= monthStart)),
-      );
-    });
+    const unsubPayments = watchPaymentsForTenant(
+      tenantId,
+      (payments) => {
+        // Signed: a reversal or refund has to come OFF the month, not add to
+        // it. Summing raw amounts made correcting a mistake look like income.
+        setMonthRevenue(
+          sumPayments(payments.filter((p) => p.status === 'confirmed' && p.createdAt >= monthStart)),
+        );
+      },
+      onError,
+    );
     return () => {
       unsubCheckins();
       unsubRequests();
@@ -72,6 +89,23 @@ export default function AdminPanel() {
           </Text>
         </GymSwitchTarget>
       </View>
+
+      {failed ? (
+        <ErrorNotice message="Bazı sayılar yüklenemedi; aşağıdakiler eksik ya da eski olabilir." onRetry={retry} />
+      ) : null}
+
+      {/* Front-desk check-in is frequent and time-critical, so it sits on the
+          landing screen like it does on the trainer's. No canCheckIn guard: this
+          is the admin surface and an admin can always take the door
+          (membership.ts). It had no entry point here until 20 Sep 2026. */}
+      <InfoCard
+        outlined
+        onPress={() => router.push('/checkin')}
+        icon="qr-code-outline"
+        title="Giriş kabul et"
+        subtitle="Üyenin QR kodunu okut veya 6 haneli kodu gir"
+        trailing
+      />
 
       <Pressable onPress={() => router.push('/admin/today')}>
         <Card style={{ alignItems: 'center' }} outlineColor={colors.p}>
@@ -100,8 +134,8 @@ export default function AdminPanel() {
         </Pressable>
         <Pressable style={{ flex: 1 }} onPress={() => router.push('/admin/members')}>
           <Card style={{ alignItems: 'center' }}>
-            <Text variant="body" weight="900" style={{ color: requests.length > 0 ? colors.warn : colors.txt }}>
-              {requests.length}
+            <Text variant="body" weight="900" style={{ color: requests && requests.length > 0 ? colors.warn : colors.txt }}>
+              {requests?.length ?? '–'}
             </Text>
             <Text variant="label" tone="sub">
               bekleyen istek
@@ -147,7 +181,7 @@ export default function AdminPanel() {
         />
       )}
 
-      {requests.length > 0 && (
+      {requests && requests.length > 0 && (
         <InfoCard
           outlined
           onPress={() => router.push('/admin/members')}

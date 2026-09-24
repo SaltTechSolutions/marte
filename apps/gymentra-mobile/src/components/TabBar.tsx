@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Href, usePathname, useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -97,6 +97,9 @@ export function TabBar({ items }: { items: TabItem[] }) {
             </View>
             <Text
               variant="label"
+              // The bar has no room to grow: five labels side by side overlap
+              // at large text sizes. Capped like the system's own tab bars.
+              maxFontSizeMultiplier={1.2}
               weight={!isIOS && active ? '700' : undefined}
               // The iOS branch must not carry a `fontSize` key at all: style
               // flattening copies `undefined` over the label variant's 11pt,

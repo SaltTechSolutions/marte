@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
 
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -13,9 +13,17 @@ import { Text } from './Text';
  */
 export function ErrorNotice({ message, onRetry }: { message?: string; onRetry?: () => void }) {
   const { colors, spacing, radius } = useAppTheme();
+  const text = message ?? 'Bağlantını kontrol edip tekrar dene.';
+
+  // The banner appears on its own when a listener drops; nothing moves focus
+  // to it, so without this a screen-reader user never learns the data is stale.
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(`Veriler yüklenemedi. ${text}`);
+  }, [text]);
 
   return (
     <View
+      accessibilityLiveRegion="polite"
       style={{
         alignItems: 'center',
         gap: 8,
@@ -29,7 +37,7 @@ export function ErrorNotice({ message, onRetry }: { message?: string; onRetry?: 
         Veriler yüklenemedi
       </Text>
       <Text variant="helper" tone="sub" style={{ textAlign: 'center' }}>
-        {message ?? 'Bağlantını kontrol edip tekrar dene.'}
+        {text}
       </Text>
       {onRetry && <Button label="Tekrar dene" variant="secondary" compact onPress={onRetry} />}
     </View>

@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import Svg, { G, Path, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Path } from 'react-native-svg';
 
-import { Activation, BACK_PATHS, FRONT_PATHS, MuscleId } from '@/data/exerciseLibrary';
+import { Activation, BACK_PATHS, FRONT_PATHS, MUSCLE_LABELS, MuscleId } from '@/data/exerciseLibrary';
 import { mix } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
 
@@ -55,21 +55,37 @@ export function MuscleMap({
     <Path key={i} d={p.d} fill={fillFor(p.muscle)} stroke={outline} strokeWidth={0.7} />
   ));
 
+  // The drawing is 200 wide by up to 460 tall (the bottom ~20 units are the old
+  // caption's strip, kept so no limb is cropped without a device to check). It used to be laid out in a
+  // size x size*1.68 box, which `meet` shrank to 72% and left empty margins to
+  // either side; the box now follows the drawing, at the same drawn scale. The
+  // caption moved out of the SVG: at that scale its 11pt text drew at ~8pt.
+  const scale = (size * 1.68) / 460;
+
+  // The picture carries nothing a screen reader can use, so say which muscles
+  // are shaded (the same words the "Kaslar" page lists).
+  const named = (level: Activation) =>
+    (Object.keys(activation) as MuscleId[])
+      .filter((m) => activation[m] === level)
+      .map((m) => MUSCLE_LABELS[m] ?? m)
+      .join(', ');
+  const primary = named('primary');
+  const secondary = named('secondary');
+  const caption = view === 'front' ? 'ÖN · ANTERIOR' : 'ARKA · POSTERIOR';
+  const spoken = `${view === 'front' ? 'Ön' : 'Arka'} görünüm. ${
+    primary ? `Ana çalışan kaslar: ${primary}. ` : ''
+  }${secondary ? `Yardımcı kaslar: ${secondary}.` : ''}`.trim();
+
   return (
-    <Svg viewBox="0 0 200 460" width={size} height={size * 1.68}>
-      <G>{half}</G>
-      <G transform="translate(200,0) scale(-1,1)">{half}</G>
-      <SvgText
-        x={100}
-        y={452}
-        textAnchor="middle"
-        fill={colors.sub}
-        fontSize={11}
-        fontFamily="Inter"
-        fontWeight="700">
-        {view === 'front' ? 'ÖN · ANTERIOR' : 'ARKA · POSTERIOR'}
-      </SvgText>
-    </Svg>
+    <View accessible accessibilityRole="image" accessibilityLabel={spoken} style={{ alignItems: 'center', gap: 4 }}>
+      <Svg viewBox="0 0 200 460" width={200 * scale} height={460 * scale}>
+        <G>{half}</G>
+        <G transform="translate(200,0) scale(-1,1)">{half}</G>
+      </Svg>
+      <Text variant="label" weight="700" tone="sub">
+        {caption}
+      </Text>
+    </View>
   );
 }
 

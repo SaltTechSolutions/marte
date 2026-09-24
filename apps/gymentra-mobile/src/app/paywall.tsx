@@ -223,7 +223,11 @@ export default function Paywall() {
             {/* Required by App Store review, and genuinely needed: a gym owner
                 on a new phone has a valid subscription this install knows
                 nothing about. */}
-            <Pressable onPress={restore} disabled={busy} accessibilityRole="button">
+            <Pressable
+              onPress={restore}
+              disabled={busy}
+              accessibilityRole="button"
+              style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
               <Text variant="label" tone="sub" style={{ textAlign: 'center' }}>
                 Satın alımlarımı geri yükle
               </Text>

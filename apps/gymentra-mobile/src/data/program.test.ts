@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allProgramExercises,
   formatLastTime,
+  hasNoExercises,
   lastCompletedDayId,
   lastTimeFor,
   programDays,
@@ -164,5 +165,25 @@ describe('allProgramExercises', () => {
   it('günlerin egzersizlerini sırayla düzleştirir', () => {
     const p = program({ days: [day('d1', 'Push'), day('d2', 'Pull')] });
     expect(allProgramExercises(p).map((e) => e.name)).toEqual(['Push hareketi', 'Pull hareketi']);
+  });
+});
+
+describe('hasNoExercises', () => {
+  const empty = (id: string): ProgramDay => ({ id, name: id, exercises: [] });
+
+  it('her gün boşsa true', () => {
+    expect(hasNoExercises([empty('d1'), empty('d2')])).toBe(true);
+  });
+
+  it('gün listesi boşsa true', () => {
+    expect(hasNoExercises([])).toBe(true);
+  });
+
+  it('dolu günü olan çok günlü programda false, boş gün açık olsa bile', () => {
+    // DEN-5: "+ Gün" boş bir gün ekleyip onu açıyor; karar yalnızca o güne
+    // bakınca "program boş" çıkıyor ve şablon Push günündeki hareketleri eziyordu.
+    const days = [day('d1', 'Push'), empty('d2')];
+    expect(days[1].exercises).toHaveLength(0);
+    expect(hasNoExercises(days)).toBe(false);
   });
 });

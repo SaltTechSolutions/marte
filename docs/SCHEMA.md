@@ -296,6 +296,17 @@ bakiyesine bakıp tahmin etmez. Kotalı rezervasyon ve iptal `bookGroupClass` /
 almak tek atomik adım olmalı ve kurallar aritmetik yapamaz. **Sınırsız**
 haklar mevcut doğrudan istemci yazımında kalır (bkz. `classes` kuralları).
 
+**Salonun dersi iptal etmesi (DEN-8 / CX-03).** İptal, istemciden doğrudan
+belge silme (`deleteClass`, `deleteClassSeriesFrom`); `cancelGroupClassBooking`
+yalnızca TEK üyenin iptalini karşılıyordu, yani salon dersi silince kotalı
+üyenin hakkı harcanmış kalıyordu. `refundOnClassCancelled` (silme tetikleyicisi)
+`bookedUserIds`'te hâlâ olan ve `bookingCredits` kaydı bulunan her üyenin
+kredisini iade eder; sonuç `class_cancellation_refunds`'a yazılır. Kurallar:
+ders başlamışsa iade yok; kredi o üyeye, aynı salona ve `groupClass` türüne ait
+olmalı (personel `bookingCredits`'e istediği kimliği yazabilir, kredi
+doğrulanır); bekleme listesindekine ve sınırsız hakla rezerve edene dokunulmaz.
+Callable yerine tetikleyici, çünkü yayındaki istemciler belgeyi doğrudan siliyor.
+
 ---
 
 ### `checkins` — salona giriş kaydı (değiştirilemez)
@@ -932,6 +943,32 @@ spam hedefi yapar.
 
 ---
 
+### `class_cancellation_refunds` — salon iptalinde iade kaydı (DEN-8)
+**Doküman kimliği: `{classId}_{memberId}`**
+
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` | string | |
+| `classId` | string | Silinmiş dersin kimliği; belge artık yok |
+| `className` | string? | Denormalize: silinen dersin adı |
+| `classDate` | Timestamp | Silinen dersin tarihi |
+| `memberId` | string | Rezerve eden üye |
+| `creditId` | string | `bookingCredits`'te yazan kredi |
+| `outcome` | `'refunded' \| 'nothing-to-refund' \| 'credit-missing' \| 'credit-mismatch'` | Ne olduğu; yalnızca `refunded` krediyi değiştirir |
+| `createdAt` | Timestamp | Sunucu zamanı |
+
+**Kurallar:** kuralda **tanımlı değil** = istemciye tamamen kapalı (okuma da
+yazma da); yalnızca `refundOnClassCancelled` yazar (Admin SDK).
+
+**Neden var:** (1) **Tekrar işlemeye karşı kilit.** Firestore tetikleyicileri en
+az bir kez çalışır; kimlik `{classId}_{memberId}` olduğu için aynı iptal ikinci
+kez işlenirse kayıt zaten vardır ve iade tekrarlanmaz. Kayıt, krediyi
+güncelleyen transaction'ın içinde yazılır. (2) **İade geçmişi.** Ders belgesi
+silindiği için "kim hangi ders için ne zaman iade aldı" başka yerde durmaz.
+Ders başlamışsa iade yapılmadığı için kayıt da yazılmaz.
+
+---
+
 ## Legacy koleksiyonlar (marte06 web uygulaması)
 
 GymEntra bunları **kullanmaz**; aynı projede yaşarlar ve kurallar dosyasını
@@ -963,6 +1000,8 @@ ve `payments` için ikinci (legacy) match bloğu.
 | `reconcileMirrors` | zamanlanmış (haftalık, pazartesi 03:00) | 5 aynayı (`tenants.activeMemberCount`, `tenants.activeAdminCount`, `gym_packages.activeAssignmentCount`, `member_entitlements`, `trainer_busy_slots`) kaynağından yeniden türetip sapmayı düzeltir — trigger'lar hiç tetiklenmezse tek güvence budur (Faz 2.3) |
 | `bookPtSessions` | onCall | Üyenin kendi randevusunu alması: müsaitlik + çakışma + kredi yeterliliğini tek transaction'da doğrular, en erken bitecek krediden başlayarak düşer, `pt_sessions` dokümanlarını `creditId` ile yazar (PKG-8) |
 | `cancelPtSession` | onCall | Randevu iptali + kredi iade kararı: antrenör/admin her zaman iade, üye yalnızca `cancellationHours` öncesinde iade (PKG-11, Faz 1.9) |
+| `createPtSessionByStaff` | onCall | Personelin (antrenör kendi takvimine, yönetici herhangi birine) randevu yazması: çakışma, üyelik ve tarih kontrolü tek transaction'da. Takvim sahibi `trainer` **ya da `admin`** rolü taşımalı: yönetici ayrıca antrenör rolü almadan çalıştırabilir (DEN-6 / CX-08, `canHoldPtSessions`) |
+| `refundOnClassCancelled` | `classes` silme, `retry: true` | Salon grup dersini silince, henüz başlamamış derste `bookedUserIds`'te olan ve `bookingCredits` kaydı bulunan her üyenin kotalı hakkını bir kez iade eder; her (ders, üye) için `class_cancellation_refunds` kaydı aynı transaction'da yazılır (DEN-8 / CX-03) |
 
 > Bu tablo eksik: `deleteMyAccount`, `assignMembershipShortCode`,
 > `promoteFromClassWaitlist`, `syncActiveMemberCount` RM fazında eklendi ama

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
+import { ErrorNotice } from '@/components/ErrorNotice';
+
 import { useAuth } from '@/context/AuthContext';
 import { setNotificationPreference, watchUserSettings } from '@/data/firebase/userSettingsRepo';
 import { reportError } from '@/data/errors';
@@ -52,11 +54,16 @@ export function NotificationPreferences() {
   const toast = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean> | null>(null);
   const [busy, setBusy] = useState<NotificationCategory | null>(null);
+  // Until the settings arrive every switch is disabled and drawn "on" (the
+  // default). A failed listener left them that way for good, with no reason
+  // (DEN-13). The tap clears the flag (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
-    return watchUserSettings(user.uid, (s) => setPrefs(s.push));
-  }, [user]);
+    return watchUserSettings(user.uid, (s) => setPrefs(s.push), () => setFailed(true));
+  }, [user, retryKey]);
 
   if (!user) return null;
 
@@ -81,6 +88,15 @@ export function NotificationPreferences() {
       <Text variant="label" tone="sub">
         BİLDİRİMLER
       </Text>
+      {failed && prefs === null ? (
+        <ErrorNotice
+          message="Bildirim tercihlerin yüklenemedi; şimdilik değiştiremezsin."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      ) : null}
       <Card style={{ gap: 0, paddingVertical: 4 }}>
         {NOTIFICATION_CATEGORIES.map((c, i) => (
           <Pressable

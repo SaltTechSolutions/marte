@@ -4,7 +4,7 @@ import {
   doc,
   getCountFromServer,
   getDoc,
-  getDocs,
+  getDocsFromServer,
   query,
   serverTimestamp,
   setDoc,
@@ -18,7 +18,7 @@ import { app, db } from '@/services/firebase';
 import { MembershipPermission, MembershipRole, TenantMembership } from '../types';
 import { membershipFromDoc } from './convert';
 import { sharedWatch } from './sharedWatch';
-import { WatchErrorHandler, watchDoc, watchQuery } from './watch';
+import { WatchErrorHandler, watchConfirmedDoc, watchQuery } from './watch';
 
 // Functions are deployed to europe-west1, same as the rest of the project.
 const functions = getFunctions(app, 'europe-west1');
@@ -46,20 +46,21 @@ export async function getMembershipById(id: string): Promise<TenantMembership | 
   return membershipFromDoc(snap);
 }
 
-/** Live updates for the onboarding "pending approval" screen. */
+/**
+ * Live updates for one membership: the onboarding "pending approval" screen and
+ * AuthProvider's role/suspension watcher.
+ *
+ * `null` means the server says the membership is gone; a cache-only "does not
+ * exist" (offline cold start) is not forwarded, or a member at the door with no
+ * signal lost the QR (DEN-2). See `watchConfirmedDoc`.
+ */
 export function watchMembership(
   tenantId: string,
   userId: string,
   onChange: (membership: TenantMembership | null) => void,
   onError?: WatchErrorHandler,
 ) {
-  return watchDoc(
-    'Üyelik',
-    doc(db, 'tenant_memberships', membershipId(tenantId, userId)),
-    (snap) => (snap.exists() ? membershipFromDoc(snap) : null),
-    onChange,
-    onError,
-  );
+  return watchConfirmedDoc('Üyelik', doc(db, 'tenant_memberships', membershipId(tenantId, userId)), membershipFromDoc, onChange, onError);
 }
 
 export async function requestJoin(params: {
@@ -119,9 +120,16 @@ export async function requestJoin(params: {
  * hiç erişemiyordu ve hangisini göreceği Firestore'un döndürme sırasına
  * kalıyordu — aynı hesap iki açılışta iki farklı salonu açabiliyordu.
  * Sıralama burada belirli: önce katılım tarihi, sonra salon kimliği.
+ *
+ * SUNUCUDAN okur (DEN-2). Varsayılan `getDocs` çevrimdışıyken hata atmıyor,
+ * boş ve `fromCache` bir sonuçla çözülüyor; çağıran bunu "hiçbir salonda
+ * üyeliğin yok" diye okuyup diskteki kartı silip kişiyi "Salonuna katıl"a
+ * atıyordu. `getDocsFromServer` ulaşılamayınca `unavailable` ile reddediyor:
+ * `AuthProvider.loadMembership`'in mevcut `catch`i tam bunun için yazılmıştı
+ * ("çevrimdışıysa önbellekle devam") ama hiç çalışmıyordu.
  */
 export async function getActiveMemberships(userId: string): Promise<TenantMembership[]> {
-  const snap = await getDocs(
+  const snap = await getDocsFromServer(
     query(collection(db, 'tenant_memberships'), where('userId', '==', userId), where('status', '==', 'active')),
   );
   return snap.docs

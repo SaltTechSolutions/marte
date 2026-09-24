@@ -1,6 +1,6 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable } from 'react-native';
+import { AccessibilityInfo, Animated, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -91,6 +91,10 @@ function ToastView({
   const [anim] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
+    // The toast is visual and self-dismissing, so a screen-reader user would
+    // never hear "Kaydedildi" or an error. iOS ignores `alert` on a plain
+    // element and Android only reads live regions that change, so announce.
+    AccessibilityInfo.announceForAccessibility(message);
     Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 9, tension: 70 }).start();
     const timer = setTimeout(() => {
       Animated.timing(anim, { toValue: 0, duration: 180, useNativeDriver: true }).start(onDone);
@@ -118,8 +122,13 @@ function ToastView({
       }}>
       <Pressable
         onPress={onDone}
-        accessibilityRole="alert"
-        accessibilityLabel={message}
+        // With an action the toast must not be one accessible element: a
+        // labelled Pressable hides its children from VoiceOver, and the
+        // "Geri al" button would be unreachable.
+        accessible={!action}
+        accessibilityRole={action ? undefined : 'alert'}
+        accessibilityLabel={action ? undefined : message}
+        accessibilityLiveRegion="polite"
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -147,7 +156,9 @@ function ToastView({
               action.onPress();
               onDone();
             }}
-            hitSlop={8}>
+            accessibilityRole="button"
+            hitSlop={8}
+            style={{ minHeight: 44, justifyContent: 'center' }}>
             <Text variant="helper" weight="900" style={{ color: colors.pText }}>
               {action.label}
             </Text>

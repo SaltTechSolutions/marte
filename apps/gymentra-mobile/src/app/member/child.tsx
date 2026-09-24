@@ -6,6 +6,7 @@ import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { InfoCard } from '@/components/InfoCard';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { StatCard } from '@/components/StatCard';
@@ -49,16 +50,23 @@ function ChildView({ tenantId, childId, childName }: { tenantId: string; childId
   const toast = useToast();
 
   const [packages, setPackages] = useState<MemberPackage[] | undefined>(undefined);
-  const [credits, setCredits] = useState<MemberCredit[]>([]);
-  const [sessions, setSessions] = useState<PtSession[]>([]);
+  // `undefined` = not here yet: [] used to draw "Yok / 0 / 0" in the summary and
+  // "Yaklaşan randevusu yok" for a child who has all three (DEN-13).
+  const [credits, setCredits] = useState<MemberCredit[] | undefined>(undefined);
+  const [sessions, setSessions] = useState<PtSession[] | undefined>(undefined);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // The tap clears the flag; doing it in the effect would be a synchronising
+  // setState (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const onError = () => setFailed(true);
 
-  useEffect(() => watchMemberPackages(tenantId, childId, setPackages), [tenantId, childId]);
-  useEffect(() => watchMemberCredits(tenantId, childId, 'ptLesson', setCredits), [tenantId, childId]);
-  useEffect(() => watchUpcomingSessionsForMember(tenantId, childId, setSessions), [tenantId, childId]);
+  useEffect(() => watchMemberPackages(tenantId, childId, setPackages, onError), [tenantId, childId, retryKey]);
+  useEffect(() => watchMemberCredits(tenantId, childId, 'ptLesson', setCredits, onError), [tenantId, childId, retryKey]);
+  useEffect(() => watchUpcomingSessionsForMember(tenantId, childId, setSessions, onError), [tenantId, childId, retryKey]);
 
   const activePackage = packages?.find((p) => p.status === 'active');
-  const remaining = credits.reduce((sum, c) => sum + Math.max(0, c.total - c.used), 0);
+  const remaining = (credits ?? []).reduce((sum, c) => sum + Math.max(0, c.total - c.used), 0);
 
   const confirmCancel = (session: PtSession) =>
     confirmDestructive({
@@ -90,17 +98,27 @@ function ChildView({ tenantId, childId, childName }: { tenantId: string; childId
   return (
     <ScrollView
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
+      {failed ? (
+        <ErrorNotice
+          message="Bazı bilgiler yüklenemedi; aşağıdakiler eksik olabilir."
+          onRetry={() => {
+            setFailed(false);
+            setRetryKey((k) => k + 1);
+          }}
+        />
+      ) : null}
+
       <StatCard
         label={childName.toUpperCase()}
         stats={[
-          { value: activePackage ? 'Var' : 'Yok', label: 'aktif paket' },
-          { value: remaining, label: 'kalan ders hakkı' },
-          { value: sessions.length, label: 'yaklaşan randevu' },
+          { value: packages ? (activePackage ? 'Var' : 'Yok') : '–', label: 'aktif paket' },
+          { value: credits ? remaining : '–', label: 'kalan ders hakkı' },
+          { value: sessions?.length ?? '–', label: 'yaklaşan randevu' },
         ]}
       />
 
       {packages === undefined ? (
-        <ListSkeleton rows={2} />
+        failed ? null : <ListSkeleton rows={2} />
       ) : activePackage ? (
         <InfoCard
           icon="cube-outline"
@@ -129,7 +147,11 @@ function ChildView({ tenantId, childId, childName }: { tenantId: string; childId
       <Text variant="label" tone="sub" style={{ marginTop: spacing.sm }}>
         YAKLAŞAN RANDEVULARI
       </Text>
-      {sessions.length === 0 ? (
+      {sessions === undefined ? (
+        <Text variant="helper" tone="sub">
+          {failed ? 'Alınamadı' : 'Yükleniyor…'}
+        </Text>
+      ) : sessions.length === 0 ? (
         <Text variant="helper" tone="sub">
           Yaklaşan randevusu yok.
         </Text>

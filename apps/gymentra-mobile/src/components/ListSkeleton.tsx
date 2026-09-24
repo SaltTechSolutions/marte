@@ -17,6 +17,11 @@ export function ListSkeleton({ rows = 4, avatar = true }: { rows?: number; avata
 
   return (
     <View
+      // One "loading" element instead of a dozen unlabeled grey bars to swipe
+      // through.
+      accessible
+      accessibilityLabel="Yükleniyor"
+      accessibilityState={{ busy: true }}
       style={{
         backgroundColor: colors.surf,
         borderWidth: 1,

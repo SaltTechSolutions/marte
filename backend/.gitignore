@@ -8,6 +8,9 @@
 /.vscode
 /functions/node_modules
 /functions/dist
+# Derleme çıktısı: `npm run build` (CI ve firebase deploy'un predeploy'u) her seferinde
+# kaynaktan üretiyor. Daha önce yanlışlıkla izleniyordu ve kaynakla sapıyordu.
+/functions/lib
 /functions/.idx
 /functions/.vscode
 /functions/.git

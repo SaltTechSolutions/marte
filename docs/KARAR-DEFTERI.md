@@ -31,6 +31,484 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-09-21 — iOS build 27 için OTA dalı hazırlandı (yayınlanmadı)
+
+**Yapıldı.** `ota/ios-27-denetim` (yerel, `6ac705f4`): build 27'nin commit'i
+`1b74932e` üzerine `denetim-2026-09-20`'nin `apps/gymentra-mobile/src` ağacı ve
+`vitest.setup.mts` alındı (1b74932e'den beri `src`'ye dokunan 15 commit, 87 dosya).
+`app.json`, `package.json`, `package-lock.json` build 27'nin haliyle kaldı.
+**Ölçüm:** build 27'nin `.xcarchive`'ındaki `EXUpdates.bundle/fingerprint`
+(23, 24 ve 27'de aynı) = `8de843714b45a333f7daa619ed47ab076daf3e1d`; `1b74932e`'den
+`expo-updates fingerprint:generate` ile hesaplanan ve bu dalda hesaplanan değer de
+aynı. `main`/`denetim` dalının parmak izi `698caebc62c2…`, yani oradan giden OTA
+build 27'ye inmez. **Doğrulama (build 27'nin bağımlılıklarıyla, `npm ci`):** `tsc`,
+lint, 421 test temiz, `expo export --platform ios` derlendi. Cihazda görülmedi.
+
+**Karar.** Parmak izini bozanlar ölçülerek ayrıldı: build 27'den sonra native modül
+yükseltmeleri (`expo` 57.0.13→57.0.22, `react-native` 0.86.3 ve 14 modül), ayrıca
+`app.json`'dan `web` bloğunun ve `package.json`'dan `web` script'inin kaldırılması
+(her biri tek başına). `android`/`ios` script değişikliği ve `react-dom`/
+`react-native-web` bildirimleri parmak izini değiştirmiyor. Bu yüzden OTA dalı
+yalnızca JS taşıyor; `main` web temizliği ve native yükseltmelerle yeni build 28'e
+kalıyor. AGENTS.md'deki "yerel build'e `eas update` ulaşmıyor" uyarısı bu build için
+doğrulanmadı: yerelde alınmış build 27'nin gömülü değeri, çalışma dizininde hesaplanan
+değerle birebir aynı.
+
+**Bilerek yapılmadı.** Yayınlanmadı ve push edilmedi. Yalnızca DEN işleri
+seçilmedi: 15 commit'in hepsi gider (iOS'ta olmayan kayıt ekranı düzeltmesi dahil).
+Android'e bir şey gitmedi (güncelleme durdurulu).
+
+**Açık.** (1) JS, build 27'nin native modül sürümleri (57.0.13) üzerinde *cihazda*
+çalıştırılmadı; tip ve test düzeyinde uyumlu. (2) Yayın, `EXPO_PUBLIC_*` değerlerinin
+pakete girdiğini doğrulamadan yapılırsa Firebase anahtarsız bir paket gidebilir;
+yayından önce pakette `tarabyamarte` aranmalı. (3) `production` kanalı EAS'ta `production`
+dalını gösteriyor; oradaki son grup Android'e ait (`cb271b9b…`), iOS güncellemesi farklı
+runtime olduğundan onunla çakışmaz.
+
+**Nerede.** Dal `ota/ios-27-denetim` (`6ac705f4`), `docs/KARAR-DEFTERI.md`.
+
+---
+
+## 2026-09-21 — backend/functions/lib git'ten çıkarıldı
+
+**Yapıldı.** Derlenmiş çıktı `backend/functions/lib/` (34 dosya) yanlışlıkla izleniyordu:
+tarihçesinde yalnızca iki commit (subtree içe aktarımı ve PER-6) vardı ve kaynakla
+sapmıştı; `deploy` her seferinde `npm run build` çalıştırıp dosyaları yeniden
+yazdığı için çalışma dizini sürekli kirli görünüyordu. `git rm --cached` ile
+izlemeden çıkarıldı, `backend/.gitignore`'a `/functions/lib` eklendi; dosyalar
+diskte duruyor.
+
+**Karar.** Kaynağın gerçeği `src/`; `lib/` bir yapı çıktısı. Deploy'un `predeploy`'u
+ve CI'ın "Build" adımı zaten kaynaktan derliyor; hiçbir kod `lib/`'e commit'li
+haliyle dayanmıyor (`package.json` `main` yalnızca derlenmiş yolu gösteriyor).
+
+**Bilerek yapılmadı.** `firebase-functions` sürüm yükseltmesi (CLI eski olduğunu
+uyarıyor): ayrı, riskli bir iş.
+
+**Açık.** —
+
+**Nerede.** `backend/.gitignore`, `backend/functions/lib/` (izlemeden çıktı).
+
+---
+
+## 2026-09-21 — DEN-8 ve DEN-6 sunucu kısmı üretime deploy edildi
+
+**Yapıldı.** `refundOnClassCancelled` (yeni) ve `createPtSessionByStaff`
+(güncelleme) `tarabyamarte` projesine deploy edildi; komutu kullanıcı kendisi
+çalıştırdı. `functions:list` ikisi de `ACTIVE`, günlükte hata yok. Kural ve index
+değişmedi.
+
+**Karar.** Deploy komutuna her zaman `--project tarabyamarte` verilir. Kök
+`Marte` dizini için Firebase CLI'de eski bir `firebase use` kaydı
+(`tarabyamartefighting`) var ve `backend/.firebaserc`'yi yeniyor; bir önceki
+deneme yüzünden yanlış projeye yöneldi (Blaze yok, hiçbir şey yazılmadan durdu).
+İlk mesajımdaki "hedef `tarabyamarte`" bilgisi bu yüzden yanlıştı.
+
+**Bilerek yapılmadı.** Canlıda gerçek bir ders silerek iade denenmedi: gerçek
+üyenin hakkı oynar. Kalıcı `firebase use` düzeltmesi yapılmadı (kullanıcının CLI
+yapılandırması).
+
+**Açık.** Tetikleyicinin ilk gerçek çalışması gözlenmedi: ilk gerçek ders silmede
+`functions:log --only refundOnClassCancelled` ve `class_cancellation_refunds`
+belgesine bakılmalı. CLI `firebase-functions` sürümünün eski olduğunu uyarıyor
+(yükseltme ayrı iş, dokunulmadı). iOS OTA (DEN-6 istemcisi) hâlâ gönderilmedi ve
+`denetim-2026-09-20` dalı `main`'e alınmadı (aynı gün `origin`'e push edildi, PR açılmadı).
+
+**Nerede.** `docs/plan.md` (DEN-6, DEN-8), `backend/functions/src/{classCancellation,sessions,index}.ts`.
+
+---
+
+## 2026-09-21 — Web dönemi kalıntıları silindi (yalnızca mobil)
+
+**Yapıldı.** Kullanıcı "yalnızca mobile odaklanıyoruz, eski/web kod ve verileri
+silebiliriz, GitHub'da var" dedi; envanter çıkarıldı, kapsam kullanıcıyla tek tek
+onaylandı, sonra silindi: `backend/archive/marte06-legacy/` (7 JSON), `backend/logs/`,
+`backend/firestore-debug.log`, kökteki `.wrangler/` önbelleği,
+`backend/CHANGELOG.md`, `backend/scripts/purge_legacy_web_collections.cjs`,
+`apps/gymentra-mobile`'de `web` script'i, `app.json` `web` bloğu,
+`assets/images/favicon.png` (yalnızca o blok kullanıyordu), `react-dom` ve
+`react-native-web` bağımlılıkları (lock −141 satır). `tsc`, lint, 421 test temiz;
+`expo export --platform ios` derlendi. Android paketi derlenmedi (güncelleme
+durdurulu), iOS ile aynı çözümleme.
+
+**Karar.** Kapsam dışı bırakılanlar, gerekçeleriyle: `apps/gymentra-site`
+(gizlilik/koşullar/hesap silme sayfaları Cloudflare Pages'ten
+`gymentra.salt-tech-apps.com` olarak yayında, mağaza beyanları bu adreslere
+bağlı: web gibi görünen ama mağaza yükümlülüğü), `packages/rig` (mobil figürlerin
+kaynağı, editörü yerel araç), `backend/secrets` ve `.env` (GitHub'da yok, betikler
+ve deploy ister). `backend/.gitignore`'daki `archive/` satırı kaldı: bir daha oraya
+düz metin şifreli dışa aktarım konursa yanlışlıkla commit'lenmesin.
+
+**Bilerek yapılmadı.** `plan.md`/karar defterindeki WEB-* kayıtları silinmedi
+(defterin kuralı). `.gstack/` ve `.expo/` günlükleri "yerel çöp" onayına dahil
+değildi, dokunulmadı.
+
+**Açık / kalıcı kayıp.** **`archive/marte06-legacy` yedeksiz silindi ve GitHub'da
+hiç yoktu** (gitignore'lu, düz metin şifre içeriyordu): eski web üyelerinin
+(51 üye, 146 ders, ödemeler) tek kopyası gitti. Üretimdeki eski koleksiyonlar 29
+Ağustos'ta zaten silinmişti; 50/51 üye `tenant_memberships`'a taşınmıştı,
+taşınmayan bir kayıt (Baran Demir) da kullanıcının onayıyla arşiv kaydıydı.
+Kullanıcı bunu bilerek seçti (yedekli silme önerilmişti). Ayrıca:
+`denetim-2026-09-20` dalının upstream'i yok, bu oturumdaki tüm commit'ler yalnızca
+yerel diskteydi (aynı gün, kullanıcının `git push -u origin denetim-2026-09-20`'ıyla `origin`'e gitti). `backend/functions/lib/*` git'te izleniyor ve
+kullanıcının deploy denemesindeki `npm run build` onları değiştirdi
+(`classCancellation.js` yeni); commit'lenmedi.
+
+**Nerede.** `apps/gymentra-mobile/{package.json,package-lock.json,app.json}`,
+`backend/`, `docs/KARAR-DEFTERI.md`.
+
+---
+
+## 2026-09-21 — DEN-8 emülatör testleri geçti; admin/member kalıntısı kapandı
+
+**Yapıldı.** Kullanıcı `npm run test:functions`'ı koştu: 13 dosya, 118 test
+geçti, `classCancellation.refund.test.ts` (12 emülatör testi) dahil. Önceki
+kayıtlardaki "emülatör testleri koşulmadı" bununla güncellendi; eski kayıtlar
+silinmedi. `admin/member`'deki `getMembership(...).then(setMembership)`'a ret
+işleyicisi eklendi (aynı `failed` uyarısı), önceki kaydın "Açık" maddesi kapandı.
+
+**Karar.** —
+
+**Bilerek yapılmadı.** Deploy: `refundOnClassCancelled` ve
+`createPtSessionByStaff` üretime gider, açık onay gerekir.
+
+**Açık.** `createPtSessionByStaff` callable'ının kendisi emülatörde testli değil
+(yalnızca `canHoldPtSessions` kararı). Deploy sırası değişmedi: **önce fonksiyon,
+sonra OTA.** Çıktının yalnızca sonunu gördüm; 13 dosya `tests/` ile birebir.
+
+**Nerede.** `docs/plan.md` (DEN-8), `apps/gymentra-mobile/src/app/admin/member.tsx`.
+
+---
+
+## 2026-09-21 — DEN-12 ikinci tur: 44pt hedefler, grafik metni, alan sınırı kontrastı
+
+**Yapıldı.** 44pt altı dokunma hedefleri tarayıcıyla bulundu ve düzeltildi
+(19 çıplak bağlantı/ikon + 5 açıkça küçük `Pressable`; 30 kart sarmalayıcı zaten
+yeterliydi; ayrıntı `plan.md` DEN-12).
+`Button` sabit `height` yerine `minHeight`; `TabBar` etiketi 1,2 ile sınırlı;
+`MiniBarChart` sözlü `label` alıyor (etiketsiz grafik erişilebilirlik ağacından
+çıkıyor); `TextField` sınırı 1,26:1'den 3:1 üstüne (`theme/fieldBorder.ts`).
+`tsc`, lint, 421 test temiz. **Ekranda ve ekran okuyucuyla görülmedi**; özellikle
+büyüyen satırların (ör. yönetici üye kartındaki Dondur/Sonlandır, ana ekrandaki
+"Tümü ›") yerleşimi cihazda bakılacak.
+
+**Karar.** Küçük dokunma hedefinde gerçek boyut, `hitSlop` değil: Android ebeveyn
+sınırı dışındaki dokunuşu iletmiyor. Kontrast için **ölçüm önce geldi**: denetimin
+"semantik renkler AA altında" iddiası varsayılan palette ve mevcut testlerle
+çürüdü (4,8–11,5:1), bu yüzden renk değiştirilmedi. Alan sınırı yeni palet
+tokenı değil, `surf`→`txt` karışımı: her marka paletinde kendiliğinden
+ölçekleniyor, testle korunuyor.
+
+**Bilerek yapılmadı.** Küresel `maxFontSizeMultiplier` (denetim 1,3 önerdi):
+büyük yazıyı kesmek, kırpılmayı çözerken düşük görüşlü kullanıcının seçtiği
+boyutu geri alır; bunun yerine sabit yükseklikler esnetildi, sınır yalnızca
+sekme çubuğuna kondu. 11pt `label` stilinin cümle metninde kullanımı: yüzlerce
+çağrı yeri ve görsel yoğunluk kararı, aracı yok. Ghost `Button` kenarlığı:
+etiket metni 6,65:1, kenarlık dekoratif.
+
+**Açık.** `label` kullanımı (O32), kalan 30 sarmalayıcı `Pressable`'ın ve kas
+haritası yerleşiminin (O34, sonradan yapıldı: kutu çizimi izliyor, başlık SVG dışı,
+sözlü etiket) cihazda doğrulanması, `designplan.md` D3-1 ve D2-4
+metinleri bayat (düzeltilmedi). Alan sınırı görünümü koyu ve açık temada gözle
+onaylanmalı: `FIELD_BORDER_MIX` tek sayı.
+
+**Nerede.** `apps/gymentra-mobile/src/theme/fieldBorder.{ts,test.ts}`,
+`src/components/{Button,TabBar,MiniBarChart,TextField,MonthCalendar,GymInfoCard}.tsx`,
+44pt için 16 ekran dosyası, `docs/plan.md` (DEN-12).
+
+---
+
+## 2026-09-21 — DEN-13 ikinci tur: kalan ekranlar, dinleyici hatası artık her yerde görünüyor
+
+**Yapıldı.** Ölçülen `onError` eksiği 49 → **3** (toplam 102). 25 ekran ve bileşen
+aynı kalıba geçti (liste `plan.md` DEN-13'te). Yolda bulunanlar, her biri gerçek
+kusur: `trainer/availability`'de "Kaydet" veriler gelmeden açıktı; yavaş ya da
+düşmüş yüklemede antrenörün gerçek haftası varsayılanla ezilebilirdi, artık
+`loaded` ister. `book-session` düşmüş meşgul-saat dinleyicisiyle dolu saatleri
+boş gösteriyordu. `onboarding/pending` dinleyicisi düşerse onaylanan üye
+"isteğin salonda" ekranında kalıyordu. `NotificationPreferences` düşünce
+anahtarlar sessizce devre dışı kalıyordu. `trainer/calendar` ve `member/classes`
+zaten `failed` gösteriyordu ama hiç temizlemiyordu ("Tekrar dene" yoktu); eklendi.
+`tsc`, lint, 419 test temiz. **Cihazda görülmedi.**
+
+**Karar.** İlk turdaki kalıp değişmedi: ekran başına `failed` + `retryKey`, ortak
+kanca yok, bayrağı dokunuş temizliyor. Hata halinde ekranın ne yapacağı ekranın
+işine göre seçildi (tam ekran uyarı / kartta "Alınamadı" / banner); tek biçim
+dayatılmadı çünkü örneğin kaydedilebilir bir form ile salt okunur bir özet aynı
+şekilde davranamaz.
+
+**Bilerek yapılmadı.** `AuthContext.tsx`'in `watchMembership` ve `watchTenant`
+çağrıları ve `RenewalRequestRow`: sonuncusu hata halinde zaten çizilmiyor;
+ilk ikisi oturum akışının parçası, hata davranışı (çıkış mı, yeniden deneme mi,
+önbellek mi) bir ürün kararı ve bir ekran bandına sığmaz. **Düzeltme (aynı
+gün):** "hata Sentry'ye gidiyor mu?" sorusu açık değil, cevabı evet:
+`data/firebase/watch.ts` `report()` `onError` verilmese de her düşen aboneliği
+konsola yazıp `Sentry.captureException` ile `watchContext` etiketiyle
+gönderiyor. Yani bu iki çağrıda hata **sessiz değil, yalnızca kullanıcıya
+görünmüyor**; düşünce oturum, son bilinen (önbellekteki) üyelik ve salonla
+devam ediyor. Kaybedilen: canlı rol/askıya alma/tema değişikliği yeniden
+başlatmaya kadar gelmiyor; yetkiyi sunucu kuralları zaten uyguluyor.
+
+**Açık.** Yukarıdaki iki `AuthContext` çağrısı (öneri: olduğu gibi bırak; istenirse
+üstel gecikmeli sessiz yeniden abone olma, kullanıcıya bildirim yok). (`admin/member`'deki `getMembership(...).then` maddesi aynı gün kapandı, üst kayda
+bak.) Ekranların hiçbiri cihazda
+görülmedi, hata yollarını elle tetiklemek için uçak modu ya da kural reddi gerek.
+
+**Nerede.** `apps/gymentra-mobile/src/app/**` (yukarıdaki ekranlar),
+`components/NotificationPreferences.tsx`, `docs/plan.md` (DEN-13).
+
+---
+
+## 2026-09-21 — DEN-12: ortak bileşenlerde ekran okuyucu desteği (kısmen)
+
+**Yapıldı.** `Button`, `Chip`, `Stepper`, `Toast`, `ErrorNotice`, `ListSkeleton`,
+`MonthCalendar` ve `ListRow`'a rol, durum ve etiket eklendi; dokuz `Stepper`
+çağrı yerine `label` verildi. Ayrıntı ve yapılmayanlar `plan.md` DEN-12'de.
+En değerli bulgu: eylemli `Toast`'ta dış `Pressable` `accessibilityLabel`
+taşıdığı için çocuğu olan "Geri al" düğmesi VoiceOver'a görünmüyordu; artık
+eylem varken dış öğe erişilebilir değil. `tsc`, lint, 419 test temiz.
+**Ekran okuyucuyla ve cihazda denenmedi.**
+
+**Karar.** Bileşen düzeyinde kalındı (denetim: "ekran ekran değil"). Toast ve
+ErrorNotice duyuruyu `AccessibilityInfo.announceForAccessibility` ile yapıyor:
+iOS düz öğede `alert` rolünü yok sayıyor, Android yalnızca değişen canlı
+bölgeyi okuyor.
+
+**Bilerek yapılmadı.** Alan sınırı/`onp` kontrastı için yeni palet tokenı:
+görsel karar, kullanıcıya sorulmadan renk değişmez. 44pt altı ~68 ekran hedefi:
+ekran ekran iş. `Button`'un ana dalında haptik hiç çalışmıyor (`press` yerine
+`onPress` bağlı; designplan D0-4 "çözüldü" diyor): davranış değişikliği
+olduğundan bildirildi, düzeltilmedi.
+
+**Açık.** Yukarıdaki yapılmayanlar (DEN-12 `[~]`); `designplan.md` D3-1 metni bayat
+(artık 54 rol var) ve düzeltilmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/components/{Button,Chip,Stepper,Toast,
+ErrorNotice,ListSkeleton,MonthCalendar,ListRow}.tsx`, `Stepper` çağıran
+`member/progress`, `member/workout/session`, `admin/promotion-form`,
+`admin/package-form`, `docs/plan.md`.
+
+---
+
+## 2026-09-21 — DEN-13: düşen dinleyici artık "boş" ya da "yükleniyor" gibi görünmüyor (kısmen)
+
+**Yapıldı.** Dört ekranda (`member/index`, `admin/index`, `admin/classes`,
+`trainer/member`) `watch*` çağrılarına `onError` bağlandı; ekranda tek bir
+`ErrorNotice` + "Tekrar dene" var, kartlar hata halinde "Alınamadı" diyor.
+"Yükleniyor ≠ boş" düzeltmeleri: üye ana ekranında paket/ziyaret/haftalık
+hedef, yönetici panelinde bekleyen istek sayacı ("0" yerine "–"), antrenörün
+üye ekranında ölçüm ve antrenman kartları ilk veri gelene dek boş iddiası
+yapmıyor; `admin/classes` dinleyici hatasında "Henüz ders eklenmedi / İlk
+dersi ekle" yerine hata gösteriyor, antrenör listesi düşerse sessizce "Eğitmen
+adı" kutusuna düşmek yerine uyarıyor. **Ek kusur:** `sharedWatch` düşmüş bir
+dinleyiciyi hiç yeniden başlatmıyordu (`stop` dolu kaldığı için "Tekrar dene"
+aynı ölü aboneliğe bağlanırdı); artık `failed` bayrağıyla yeniden başlatıyor,
+8 testle. Ölçüm (`onerror-count.cjs`, tsc tip denetleyicisiyle): `data/firebase`
+`watch*` çağrı yeri 102, `onError` geçmeyen **70 → 49**. `tsc`, lint, 419 test
+temiz. **Cihazda görülmedi.**
+
+**Karar.** Ortak `useLiveQuery` kancası yazılmadı; ekran başına `failed` +
+`retryKey` (`guardian-requests.tsx` kalıbı). Denetim "toplu refactor değil,
+ekran ekran" dedi ve bu depoda istenmemiş refactor yasak. `failed` bayrağını
+dinleyici değil "Tekrar dene" dokunuşu temizliyor (AGENTS §4: efektte
+senkronlayan `setState` yok).
+
+**Bilerek yapılmadı.** `AuthContext`'teki iki dinleyici (oturum/üyelik akışını
+bozmamak için ayrı iş) ve `RenewalRequestRow` atlandı. Kalan 49 çağrı yeri
+ikinci kademe ekranlarda: `trainer/profile` (6), `admin/member` (4),
+`member/book-session`, `child`, `profile`, `progress` (3'er) ve daha
+küçükleri; hepsi aynı kalıpla kapanır. Plan satırındaki "69" sayısı ilk denetimin
+sayımıydı; kendi ölçümüm 102 çağrı yeri / 70 eksik, iki sayı aynı şeyi aynı
+yöntemle saymıyor, karşılaştırma yalnızca benim iki ölçümüm arasında geçerli.
+
+**Açık.** Kalan 49 çağrı yeri (DEN-13 `[~]`). Ekranlar cihazda ya da simülatörde
+görülmedi (kullanıcının kuralı: simülatör yok). Önceki kayıtlardaki açıklar
+(DEN-8 emülatör testleri, deploy onayı) olduğu gibi duruyor.
+
+**Nerede.** `apps/gymentra-mobile/src/data/firebase/sharedWatch.ts` (+ `.test.ts`),
+`src/app/member/index.tsx`, `src/components/MyPackageCard.tsx`,
+`src/app/admin/index.tsx`, `src/app/admin/classes.tsx`,
+`src/app/trainer/member.tsx`, `docs/plan.md` (DEN-13).
+
+---
+
+## 2026-09-21 — DEN-6: antrenörlük yapan yöneticinin takvimi; DEN-11: paket boyutu
+
+**DEN-11 (paket ve font boyutu) kısmen yapıldı, ölçüldü.** Inter kesim başına
+alt yoldan, Ionicons tek aile yolundan alınıyor, `getStorage` ve
+`tracesSampleRate: 0` kalktı. Önce/sonra `expo export` ile: asset 10.076 KB →
+1.746 KB (**−8.330 KB, −%83**), Hermes bytecode −389 KB (bayraklı) / −410 KB
+(bayraksız; mutlak boyut ölçüm bayrağına göre ~2 MB oynuyor, bkz. plan.md),
+minify JS −478 KB. `tsc`, lint, 411 test temiz. **Yeni build ister** (fontlar
+ikilinin içinde, OTA boyutu düşürmez) ve ekranda doğru çıktığı cihazda
+görülmedi. **Bilerek yapılmadı:** RevenueCat/Sentry/qrcode için `metro.config.js`
+boş modül çözümü (~1,6 MB JS): modül düzeyinde bir başvuru varsa uygulama
+açılışta çöker, cihazsız doğrulanamıyor, kazanç fontların yanında küçük;
+Reanimated (`SwipeableRow` yeniden yazımı, native bağımlılık). Ayrıntı `plan.md`
+DEN-11'de.
+
+**Yapıldı (DEN-6).** İstemci: `trainer/calendar.tsx` antrenör yüzeyinde artık hangi rolle
+girilirse girilsin yalnızca kişinin kendi takvimini gösteriyor ve randevu
+ekletiyor (admin+antrenör hesabı tüm salonu görüyor, randevu ekleyemiyordu);
+`admin/calendar` "Tüm salon" özetiyle açılmaya devam ediyor, yanına "Benim
+takvimim" çipi geldi. Sunucu: `createPtSessionByStaff` takvim sahibi olarak
+`trainer` ya da `admin` rolünü kabul ediyor (`canHoldPtSessions`, 4 test, iki
+mutasyon testi kırdı). `tsc`, lint temiz, mobil 411 test geçiyor. **Cihazda
+görülmedi. Sunucu değişikliği deploy edilmedi.**
+
+**Karar.** Kullanıcı 20 Eylül'de sorduğum tasarım sorusuna (hangi yüzey)
+yanıt vermeden "devam et" dedi; kendi başıma yeni bir karar üretmedim, projenin
+verilmiş kararına uydum: `AGENTS.md` §4b (yetenek ile yüzey ayrı; çalıştırmayan
+sahibe antrenör navigasyonu dayatılmaz) ve `CX-08`. Sıra: **önce fonksiyon
+deploy, sonra OTA.** `admin + trainer` rollü hesaplar için istemci tek başına
+yeter; yalnızca admin rollü sahip deploy'dan önce "Benim takvimim"den randevu
+eklerse "Bu antrenör artık salonda çalışmıyor" hatası alır.
+
+**Bilerek yapılmadı.** Antrenör sekme çubuğu ya da zorunlu navigasyon
+eklenmedi. `bookPtSessions` (üyenin kendi randevusu) ve `watchActiveTrainers`
+yalnızca `trainer` rolünü aramaya devam ediyor: yalnızca admin olan sahip
+üyenin "Antrenör seç" listesinde, sınıf formunun antrenör seçicisinde ve ekip
+ekranında görünmüyor. Bu, CX-08'in "uygun biçimde seçilebilmeli" dediği ayrı
+iş: sorgu `array-contains-any` ister, üye tarafı sunucu değişikliği demek.
+
+**Açık.** Yukarıdaki seçilebilirlik işi. `createPtSessionByStaff` callable'ının
+kendisi emülatörde koşulmadı (yalnızca karar fonksiyonu test edildi; emülatör
+jar'ı indirilmedi). Deploy açık onay ister. Sunucu değişikliği DEN-8'in
+deploy'uyla aynı pakette gidebilir (`firebase deploy --only
+functions:refundOnClassCancelled,functions:createPtSessionByStaff`).
+
+**Nerede.** `apps/gymentra-mobile/src/app/trainer/calendar.tsx`,
+`backend/functions/src/sessions.ts`,
+`backend/functions/tests/sessions.canCoach.test.ts`, `docs/SCHEMA.md`,
+`docs/plan.md` (DEN). DEN-11: `apps/gymentra-mobile/src/app/_layout.tsx`,
+`apps/gymentra-mobile/src/services/firebase.ts` ve `@expo/vector-icons`
+importu değişen 31 dosya.
+
+---
+
+## 2026-09-20 — UI/UX/performans denetimi; DEN-1, 2, 3, 4, 5, 7, 9 ve 10 düzeltildi
+
+**Yapıldı.** Uygulama salt okunur denetlendi (19 ajan, her rapor bağımsız bir
+doğrulayıcıdan geçti): 456 ham bulgu, 4'ü çürütüldü, 132 kök sorun (10 yüksek,
+82 orta, 40 düşük). Rapor `docs/denetim-2026-09-20.md`, plana `DEN` bölümü
+olarak işlendi. Sekiz yüksek bulgu düzeltildi: salon belgesinin oturumda bir
+kez okunması (`AuthProvider` artık canlı dinliyor, `ThemeSync` marka
+değerlerine bağlı; önbellekten gelen "belge yok"u iletmeyen ortak
+`watchConfirmedDoc`, 5 test), çevrimdışı soğuk açılışta
+üyelik kartının silinmesi (`getActiveMemberships` sunucudan okuyor,
+`watchMembership` önbellekten gelen "belge yok"u iletmiyor; 8 test, biri gerçek
+SDK ile ağ kapalıyken), onaylanan yeni üyenin boş
+uygulamaya düşmesi (`pending.tsx` onayda `refreshMembership` çağırıyor,
+`approved.tsx` ikinci salona katılanı yeni salona geçiriyor),
+raporlardan üye detayına giden
+`id` / `memberId` uyuşmazlığı (`admin/reports.tsx`), yönetici paneline "Giriş
+kabul et" kartı (`admin/index.tsx`), program kurucuda "Şablondan başla"nın çok
+günlü programı ezmesi (`hasNoExercises`, `data/program.ts`, 3 birim test),
+üyenin yaklaşan randevu sorgusunun iptalleri de getirip 3'te kesmesi
+(`upcomingScheduled`, `data/ptSession.ts`, 4 birim test) ve ölçüm formunun
+dokunulmamış 75/100/85/35 varsayılanlarını gerçek ölçü diye kaydetmesi
+(`data/measurement.ts`, 6 birim test; form artık boş açılıyor, yalnızca
+üyenin eklediği alan kaydediliyor). `tsc`, lint ve 411 test temiz. DEN-1 ve
+DEN-3'ün ekran/bağlam akışı testle örtülü değil. **Uygulama cihazda görülmedi.**
+
+**Karar.** Denetim işleri `plan.md` **DEN** bölümünde izlenir; yalnızca on
+yüksek madde ve üç toplu iş plana alındı, orta ve düşük maddeler raporda kalır
+ve karar verildiğinde plana açılır (yüzlük bir listeyi plana dökmek planı
+okunmaz yapardı). Küçük JS düzeltmeleri bitti; sıra: deploy onayı
+isteyenler (DEN-8, ödeme penceresi), paket boyutu bir sonraki native build'e;
+DEN-6 tasarım kararı ister. (DEN-3'ü sunucu işi sanmıştım: istemci işiymiş,
+kural değişikliği gerekmedi.)
+**Android'e güncelleme gönderilmeyecek** (kullanıcı): Play Store'da bir
+ilerleme olmadıkça ne build ne OTA gidiyor. Düzeltmeler `main`'e girer, OTA
+yalnızca iOS'a. Kaldırma koşulu: kullanıcının Play'de ilerleme olduğunu
+söylemesi (ilerlemenin ne olduğu söylenmedi, tahmin edilmedi).
+
+**Bilerek yapılmadı.** Y9'da `member.tsx` `memberId` bulamayınca çıkan
+yanıltıcı "Salon yönetici oturumu gerekli" kilit ekranına dokunulmadı; yalnızca
+kök sebep (parametre adı) düzeltildi. Admin check-in kartına `canCheckIn`
+koşulu konmadı: admin kapıyı her zaman açabiliyor. Denetimin çürüttüğü "aynı
+sorgu birden çok ekranda üç kez faturalanır" endişesi için önlem alınmadı;
+Firestore istemcisi aynı sorguyu tek hedefe birleştiriyor. DEN-7'de randevu
+durumu sunucuda süzülmedi: `where('status', ...)` yeni bir composite index ve
+deploy ister; bunun yerine pencere 3 → 20 yapılıp durum istemcide süzüldü
+(dinleyici başına ≤20 belge okuması). DEN-4'te eski ölçüm kayıtları
+temizlenmedi: kural silmeye izin vermiyor, Admin SDK ile silmek onay ister ve
+hangi kaydın uydurma olduğu bilinmiyor. Kilo stepper'ının dokunuş sayısına
+(0,5 adımla 75'ten) dokunulmadı. DEN-1'de `AuthContext` değiştirilmedi:
+`refreshMembership(preferTenantId)` eklenmedi, ikinci salona katılan için
+`approved.tsx` mevcut `switchTenant`'i çağırıyor (`GymSwitcher`'ın yolu).
+Bekleyen üyelikleri de izleyen kalıcı bir dinleyici yerine ekran düzeyinde
+yenileme seçildi; `create-gym.tsx` aynı deseni kullanıyor. (İlk yazdığım
+"ikinci salona katılma yolu yok" savı yanlıştı: `GymSwitcher.tsx:124` böyle
+bir düğme taşıyor; düzeltildi.) DEN-2'de `AuthContext` değişmedi: sorun onu
+besleyen iki okumadaydı (`getActiveMemberships`, `watchMembership`), tüketicinin
+`catch`i zaten önbellekle devam etmek için yazılmıştı. `findTenantByCode` ve
+`register.tsx` `routeAfterAuth` dokunulmadı. Denetim yalnızca `getDocs`
+yolunu söylemişti; canlı dinleyicinin aynı sonucu doğurduğu SDK ile denenerek
+bulundu, yalnız birini kapatmak yetmezdi. DEN-3'te `hours.tsx`'in tüm
+`openingHours` haritasını yazması (`openingHours.<gün>` alan yolu) ve
+`settings.tsx` renk önizlemesinin çıkışta geri alınmaması dokunulmadı; iki
+yönetici aynı anda saat düzenlerse sonuncusu öncekini ezer. Aynı çevrimdışı
+tuzağa açık sekiz başka `watchDoc` kullanıcısı (availability, member note,
+renewal request, workout log, user settings, package change, program, member
+package) `watchConfirmedDoc`'a çevrilmedi: disk önbelleğine yalnızca
+`AuthProvider` yazıyor (grep), bunlarda kalıcı kayıp yok, geçici yanlış boş
+durum olabilir.
+
+**DEN-8 (grup dersi iptalinde kredi iadesi) yarım kaldı: kod yazıldı,
+deploy edilmedi, emülatör testleri koşulmadı.** Plandaki "`cancelClassByStaff`
+callable'ı" yerine silme tetikleyicisi (`refundOnClassCancelled`) seçildi:
+yayındaki iOS build 27 ve Android 8 dersi doğrudan siliyor, callable istemci
+güncellemesi ve doğrudan silmeyi kapatan bir kural değişikliği isterdi, o iki
+yayın dersi iptal edemez hale gelirdi. **Başlamış derste iade yok** (bilerek:
+yapılan dersin iadesi bedava ders olur; başlangıç anına göre, bitişe göre
+değil). Emülatör jar'ının (`cloud-firestore-emulator-v1.19.8.jar`, 63,6 MB)
+indirilmesine kullanıcı izin vermedi; kararı Firestore'suz sınayan 14 test
+koşuldu (kararı bozan 4 mutasyon testi kırdı), transaction / çift iade engeli /
+eşzamanlılığı sınayan 12 emülatör testi yazıldı ama koşulmadı, o kısım
+kanıtlanmış değil. Deploy açık onay ister; kural/index değişikliği yok.
+
+**Açık.** DEN-6, 8 ve DEN-11..13. Daha önce yalnızca kilosunu kaydeden
+üyelerin uydurma göğüs/bel/kol kayıtları veritabanında duruyor (DEN-4).
+DEN-2: Firestore'un çevrimdışı davranışı gerçek SDK ile ağ kapalıyken denendi
+(sözleşme testi), uygulama cihazda uçak modunda denenmedi. `findTenantByCode`
+çevrimdışıyken hâlâ "salon bulunamadı" diyor; ağ takılıysa (kapalı değil)
+`Launcher` 10 sn'ye kadar boş kalıyor. "Android'de kalın Inter kesimleri sistem fontuna düşüyor"
+iddiası yalnızca kaynak okumasıyla çıktı, ekranda görülmedi; Android
+güncellemesi gönderilmeyeceği için düzelse bile kullanıcıya ulaşmaz. Şablon
+seçici artık çok günlü programda hiç görünmüyor (bilinçli, DEN-5). Değişiklikler
+commit'lenmedi ve OTA gönderilmedi; iOS OTA'sı build 27'nin commit'inden açılan
+dal ister.
+
+**Nerede.** `docs/denetim-2026-09-20.md`, `docs/plan.md` (DEN),
+`apps/gymentra-mobile/src/app/admin/reports.tsx`,
+`apps/gymentra-mobile/src/app/admin/index.tsx`,
+`apps/gymentra-mobile/src/app/trainer/builder.tsx`,
+`apps/gymentra-mobile/src/data/program.ts`,
+`apps/gymentra-mobile/src/data/ptSession.ts`,
+`apps/gymentra-mobile/src/data/firebase/ptSessionRepo.ts`,
+`apps/gymentra-mobile/src/app/member/bookings.tsx`,
+`apps/gymentra-mobile/src/data/measurement.ts`,
+`apps/gymentra-mobile/src/app/member/progress.tsx`,
+`apps/gymentra-mobile/src/app/onboarding/pending.tsx`,
+`apps/gymentra-mobile/src/app/onboarding/approved.tsx`,
+`apps/gymentra-mobile/src/data/firebase/membershipRepo.ts`,
+`apps/gymentra-mobile/src/data/firebase/membershipRepo.test.ts`,
+`apps/gymentra-mobile/src/data/firebase/firestoreOffline.contract.test.ts`,
+`apps/gymentra-mobile/vitest.setup.mts`,
+`apps/gymentra-mobile/src/data/firebase/watch.ts`,
+`apps/gymentra-mobile/src/data/firebase/watch.test.ts`,
+`apps/gymentra-mobile/src/data/firebase/tenantRepo.ts`,
+`apps/gymentra-mobile/src/context/AuthContext.tsx`,
+`apps/gymentra-mobile/src/theme/ThemeSync.tsx`,
+`backend/functions/src/classCancellation.ts`,
+`backend/functions/src/index.ts`,
+`backend/functions/tests/classCancellation.decision.test.ts`,
+`backend/functions/tests/classCancellation.refund.test.ts`,
+`docs/SCHEMA.md`.
+
+---
+
 ## 2026-09-16 — GymEntra 1.0 iOS'ta yayında
 
 **Yapıldı.** Sürüm 1.0 (build 27) `READY_FOR_SALE`; GymEntra Pro aylık ve yıllık

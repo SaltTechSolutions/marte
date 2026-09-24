@@ -6,6 +6,7 @@ import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
@@ -90,6 +91,11 @@ function ProposeChangeBody({
 
   const [packages, setPackages] = useState<GymPackage[] | undefined>(undefined);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  // Same as assign-package: a dropped listener must not read as "no packages"
+  // or "no campaigns" (DEN-13). The tap clears the flag.
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+  const onError = () => setFailed(true);
   const [selected, setSelected] = useState<GymPackage | null>(null);
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | null>(null);
   const [kind, setKind] = useState<PackageChangeKind>('upgrade');
@@ -97,11 +103,11 @@ function ProposeChangeBody({
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    return watchPackagesForTenant(tenantId, setPackages);
-  }, [tenantId]);
+    return watchPackagesForTenant(tenantId, setPackages, onError);
+  }, [tenantId, retryKey]);
   useEffect(() => {
-    return watchPromotionsForTenant(tenantId, setPromotions);
-  }, [tenantId]);
+    return watchPromotionsForTenant(tenantId, setPromotions, onError);
+  }, [tenantId, retryKey]);
 
   const choices = (packages ?? []).filter((p) => p.isActive && p.id !== current.packageId).sort((a, b) => a.sortOrder - b.sortOrder);
   const usablePromotions = selected ? promotions.filter((p) => isPromotionUsable(p, selected.id)) : [];
@@ -164,8 +170,17 @@ function ProposeChangeBody({
         <Text variant="label" tone="sub">
           YENİ PAKET
         </Text>
+        {failed ? (
+          <ErrorNotice
+            message="Paketler ya da kampanyalar yüklenemedi; liste eksik olabilir."
+            onRetry={() => {
+              setFailed(false);
+              setRetryKey((k) => k + 1);
+            }}
+          />
+        ) : null}
         {packages === undefined ? (
-          <ListSkeleton rows={2} avatar={false} />
+          failed ? null : <ListSkeleton rows={2} avatar={false} />
         ) : (
           <View style={{ gap: spacing.sm }}>
             {choices.map((pkg) => {

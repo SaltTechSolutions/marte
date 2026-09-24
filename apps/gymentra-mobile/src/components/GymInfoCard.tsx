@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Linking, Pressable, View } from 'react-native';
 
@@ -88,7 +88,7 @@ export function GymInfoCard({
         <Pressable
           onPress={() => Linking.openURL(`tel:${contact.phone!.replace(/\s/g, '')}`)}
           accessibilityRole="button"
-          style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', minHeight: 44 }}>
           <Ionicons name="call-outline" size={15} color={colors.pText} />
           <Text variant="label" weight="700" style={{ color: colors.pText }}>
             {contact.phone}
@@ -100,7 +100,7 @@ export function GymInfoCard({
         <Pressable
           onPress={() => Linking.openURL(`mailto:${contact.email}`)}
           accessibilityRole="button"
-          style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', minHeight: 44 }}>
           <Ionicons name="mail-outline" size={15} color={colors.pText} />
           <Text variant="label" weight="700" style={{ color: colors.pText }}>
             {contact.email}

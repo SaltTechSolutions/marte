@@ -58,8 +58,8 @@ export default function MemberPayments() {
 
   useEffect(() => {
     if (!tenantId || !uid) return;
-    return watchMyChildren(tenantId, uid, setChildren);
-  }, [tenantId, uid]);
+    return watchMyChildren(tenantId, uid, setChildren, () => setFailed(true));
+  }, [tenantId, uid, retryKey]);
 
   if (!tenantId || !user) return <View style={{ flex: 1 }} />;
 
@@ -122,7 +122,11 @@ export default function MemberPayments() {
   return (
       <View style={{ flex: 1, paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Pressable onPress={() => safeBack(router, '/member')}>
+          <Pressable
+            onPress={() => safeBack(router, '/member')}
+            accessibilityRole="button"
+            accessibilityLabel="Geri"
+            style={{ minWidth: 44, minHeight: 44, justifyContent: 'center' }}>
             <Text style={{ fontSize: 20, color: colors.txt }}>‹</Text>
           </Pressable>
           <Text variant="h3">Ödemelerim</Text>
@@ -178,7 +182,7 @@ export default function MemberPayments() {
 
           {failed ? (
             <ErrorNotice
-              message="Ödeme geçmişin alınamadı."
+              message="Ödeme geçmişin ya da bağlı çocukların alınamadı."
               onRetry={() => { setFailed(false); setRetryKey((k) => k + 1); }}
             />
           ) : payments === undefined ? (

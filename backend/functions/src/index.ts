@@ -22,6 +22,7 @@ admin.initializeApp();
 export { setAdminClaim, seedAdminClaims, deleteMyAccount, assignMembershipShortCode, removeMemberFromTenant } from './auth';
 export { notifyOnMembershipApproved, notifyOnPaymentStatusChange, notifyOnProgramAssigned, notifyOnPackageChangeRequested, notifyAdminsOnMemberLeft, notifyAdminsOnJoinRequest, notifyOnClassCancelled, notifyOnPaymentReversed, notifyAdminsOnPaymentNotice, notifyAdminsOnPackageChangeResponse, notifyTrainerOnSessionCancelled, sendClassReminders, notifyAdminsOnRenewalRequest, resolveRenewalOnAssignment, notifyMembersOnAnnouncement } from './notifications';
 export { promoteFromClassWaitlist } from './classes';
+export { refundOnClassCancelled } from './classCancellation';
 export {
   syncActiveMemberCount,
   syncPackageAssignmentCount,

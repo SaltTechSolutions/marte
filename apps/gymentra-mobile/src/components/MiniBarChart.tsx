@@ -15,9 +15,17 @@ export function MiniBarChart({
   values,
   height = 64,
   baseline = 'range',
+  label,
 }: {
   values: number[];
   height?: number;
+  /**
+   * What the bars say, in words ("Son 8 ölçüm: 68 → 65,5 kg"). The chart is a
+   * picture; without this a screen-reader user gets nothing from it. Callers
+   * that omit it leave the chart hidden from assistive tech rather than
+   * announced as an unlabeled image.
+   */
+  label?: string;
   /**
    * Where the bottom of the chart sits.
    *
@@ -39,7 +47,12 @@ export function MiniBarChart({
   const allZero = baseline === 'zero' && max === 0;
 
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 5, height }}>
+    <View
+      accessible={!!label}
+      accessibilityRole={label ? 'image' : undefined}
+      accessibilityLabel={label}
+      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
+      style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 5, height }}>
       {values.map((v, i) => {
         const isLast = i === values.length - 1;
         // A flat series (span 0) would divide by zero — show all bars full instead.

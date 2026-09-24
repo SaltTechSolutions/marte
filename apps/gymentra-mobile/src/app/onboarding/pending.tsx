@@ -1,13 +1,15 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Linking as RNLinking, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
+import { useAuth } from '@/context/AuthContext';
 import { watchMembership } from '@/data/firebase/membershipRepo';
 import { getTenantContact } from '@/data/firebase/tenantRepo';
 import { auth } from '@/services/firebase';
@@ -35,6 +37,12 @@ export default function PendingScreen() {
    * number on file: a control you can never use is noise.
    */
   const [phone, setPhone] = useState<string | null>(null);
+  // This listener is the only thing that moves an approved member off this
+  // screen. If it drops the screen keeps saying "isteğin salonda" for good, so
+  // the failure is shown and retryable (DEN-13). The tap clears the flag
+  // (AGENTS §4).
+  const [failed, setFailed] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     if (!tenantId) return;
     let alive = true;
@@ -46,18 +54,46 @@ export default function PendingScreen() {
     };
   }, [tenantId]);
 
+  // AuthProvider only reads the membership at sign-in and on `refreshMembership`,
+  // and its live listener starts only once an active membership is already
+  // known. A pending member has none, so approval never reached it: the app
+  // went on to a home screen with no package, no branding and a "pending" QR
+  // until it was restarted (DEN-1). Refresh before leaving this screen.
+  // Held in a ref because `refreshMembership` is a new function every render and
+  // must not re-subscribe the listener below.
+  const { refreshMembership } = useAuth();
+  const refreshRef = useRef(refreshMembership);
+  useEffect(() => {
+    refreshRef.current = refreshMembership;
+  }, [refreshMembership]);
+
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid || !tenantId) return;
+    let alive = true;
+    let handled = false;
     const unsubscribe = watchMembership(tenantId, uid, (membership) => {
+      if (handled) return;
       if (membership?.status === 'active') {
-        router.replace({ pathname: '/onboarding/approved', params: { tenantId, tenantName } });
+        // The document can snapshot again while the refresh is in flight.
+        handled = true;
+        // A failed refresh must not strand an approved member on this screen:
+        // continue either way, as before.
+        refreshRef
+          .current()
+          .catch(() => {})
+          .then(() => {
+            if (alive) router.replace({ pathname: '/onboarding/approved', params: { tenantId, tenantName } });
+          });
       } else if (membership?.status === 'rejected') {
         router.replace('/onboarding/gym-code');
       }
-    });
-    return unsubscribe;
-  }, [tenantId, tenantName, router]);
+    }, () => setFailed(true));
+    return () => {
+      alive = false;
+      unsubscribe();
+    };
+  }, [tenantId, tenantName, router, retryKey]);
 
   return (
     <Screen>
@@ -87,6 +123,18 @@ export default function PendingScreen() {
           </Text>{' '}
           sürer.
         </Text>
+
+        {failed ? (
+          <View style={{ alignSelf: 'stretch' }}>
+            <ErrorNotice
+              message="Onay durumun kontrol edilemedi; onaylandığında bu ekran kendiliğinden ilerlemeyebilir."
+              onRetry={() => {
+                setFailed(false);
+                setRetryKey((k) => k + 1);
+              }}
+            />
+          </View>
+        ) : null}
 
         <Card style={{ alignSelf: 'stretch', marginTop: spacing.md }}>
           <Text variant="helper" weight="700" style={{ marginBottom: 6 }}>
