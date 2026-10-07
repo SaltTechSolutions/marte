@@ -236,7 +236,8 @@ const chain = (specs, fill, edge, tints, far) => {
   };
   const list = specs.filter(Boolean);
   return [
-    el('g', {}, list.map((q) => paint(q, true))),
+    // `fillOnly` parçanın hattı yok — `RigFigure`'daki `fillOnly` ile aynı.
+    el('g', {}, list.filter((q) => !q.fillOnly).map((q) => paint(q, true))),
     el('g', {}, list.map((q) => paint(q, false))),
     el('g', {}, tintNodes(list, tints, far)),
   ];
@@ -721,11 +722,13 @@ function drawPose(svg, e, p) {
   // KATMAN yan: torso
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
-    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
+    ? [{ d: pelvisMass(S.pelvis, S.lumbar, S.knee) }, ...trunk, ball(S.sh, 16)]
     : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
        { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
   // KATMAN yan: nleg
   near([
+    // Kalça zarfı bacak zincirinde de, yalnızca dolgu — `RigFigure` ile aynı gerekçe.
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee), fillOnly: true },
     { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
@@ -925,7 +928,7 @@ function draw() {
     // ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin — kütleler uç uca
     // gelmez, geçer. Blok yokken bel ve uyluk parçaları tek noktada değiyor,
     // kalça gövdeden kopuk görünüyordu.
-    { d: pelvisMass(S.pelvis, S.lumbar) },
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee) },
     trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax),
     ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
     ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),
@@ -936,6 +939,8 @@ function draw() {
   // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
   // KATMAN yan: nleg
   near([
+    // Kalça zarfı bacak zincirinde de, yalnızca dolgu — `RigFigure` ile aynı gerekçe.
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee), fillOnly: true },
     { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),

@@ -58,7 +58,12 @@ const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 const EDGE_W = 1.6;
 
 /** Zincirin tek bir parçası: ya dönüştürülmüş bir yol ya da bir eklem topu. */
-type Piece = { key: string; d: string; tf?: string; part?: string; len?: number } | { key: string; c: Vec; r: number };
+/**
+ * `fillOnly`: dış hat geçişinde atlanır, yalnızca dolgu çizilir. Başka bir
+ * zincirin zaten çizdiği bir kütlenin altında kalan iç hatları örtmek için
+ * (bkz. kalça zarfı).
+ */
+type Piece = { key: string; d: string; tf?: string; part?: string; len?: number; fillOnly?: boolean } | { key: string; c: Vec; r: number };
 
 /** Kas bantlarının iki tonu — uzvun kendi dolgusundan accent'e karışım. */
 type TintFill = Record<FigureTint['level'], string>;
@@ -140,7 +145,7 @@ function Chain({
       : [];
   return (
     <G key={id}>
-      <G>{list.map((q) => draw(q, 'alt'))}</G>
+      <G>{list.filter((q) => !('fillOnly' in q && q.fillOnly)).map((q) => draw(q, 'alt'))}</G>
       <G>{list.map((q) => draw(q, 'ust'))}</G>
       {bands.length > 0 && <G>{bands}</G>}
     </G>
@@ -600,7 +605,7 @@ export function RigFigure({
           // kütleler uç uca gelmez, geçer. Bu blok yokken bel parçası ile
           // uyluk parçası tek noktada değiyordu ve kalça gövdeden kopuk
           // görünüyordu.
-          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar) },
+          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar, S.knee) },
           part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
           part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
           part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
@@ -614,6 +619,13 @@ export function RigFigure({
             yerde hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor. */}
         {/* KATMAN yan: nleg */}
         {near('nleg', [
+          // Kalça zarfı bacak zincirinde DE, yalnızca dolgu olarak: zincir önce
+          // bütün hatları, sonra dolguları çizdiği için uyluk topuzunun kalçanın
+          // içinde kalan hattı bu dolgunun altında kayboluyor (yoksa kalçanın
+          // ortasından geçip iki kütle gibi okunuyordu — çift tümsek). Kendi
+          // hattı yok: olsaydı ayakta kalçanın üstünde şort kenarı çizerdi.
+          // Kalçanın dış silüetini gövde zincirindeki kopya çiziyor.
+          { key: 'nglute', d: pelvisMass(S.pelvis, S.lumbar, S.knee), fillOnly: true },
           { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
           ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
           ...limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, 'shin'),

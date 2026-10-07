@@ -31,6 +31,33 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Kalçadaki çift tümsek giderildi
+
+**Yapıldı.** Kullanıcı "kalçadaki çift tümseği düzelt" dedi. Sebep ölçüldü: MakeHuman
+uyluğunun üst ucu kalça ekleminin çevresinde kendi gluteal kıvrımıyla yuvarlanıyor; rig'in
+leğen bloğu (`pelvisMass`) gövdeyle, uyluk bacakla dönünce hinge/squat'ta ikisi ayrışıp
+arada çukur bırakıyordu. `pelvisMass(pelvis, lumbar, knee?)`: diz verilirse blok, uyluğun
+üst-arka kenarından üç noktayla birlikte dışbükey zarfa alınıyor ve Catmull-Rom ile
+yumuşatılıyor (düz zarf ayakta kalçanın altında kama yapıyordu). Zarf iki yerde çiziliyor:
+gövde zincirinde (silüet) ve yakın bacak zincirinde YALNIZCA DOLGU olarak (`fillOnly`,
+uygulama ve editör) — uyluk topuzunun kalçanın içinde kalan hattını örtüyor; hatlı olsaydı
+ayakta kalçanın üstünde şort kenarı çiziyordu. Rig 200, uygulama 432 test; devredildi.
+Hinge, squat, hip thrust, hamle Node'da göz ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Kalça kütlesinin tek sahibi zarf; uyluk verisi kırpılmıyor.
+
+**Bilerek yapılmadı.** Uyluğun arka yüzünü üstte kırpmak (`trimGlute`) denendi, görünür
+etkisi olmadı ve kırpma köşesi küçük bir çentik bıraktı — geri alındı. Uzak bacak zincirine
+zarf eklenmedi (uzak kalça gövdenin arkasında).
+
+**Açık.** Hinge'de kalçanın altında 1–2 px'lik küçük bir kanca kalabilir (uyluk topuzu
+zarfın kenarına çok yakın). Önden görünüm değişmedi.
+
+**Nerede.** `packages/rig/src/rig.ts` (`pelvisMass`, `convexHull`), `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
+---
+
 ## 2026-10-07 — Kafa modelden, boyun 44, eklem topları küçüldü
 
 **Yapıldı.** Kafa silüeti de MakeHuman'dan (`bodyParts.json` → `head`, 1.5 mm ızgara; burun,

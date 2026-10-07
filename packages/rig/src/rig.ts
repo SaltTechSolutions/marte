@@ -832,7 +832,7 @@ export function frontTorsoPath(F: FrontPoints): string {
  * GEÇER ("morticed"). Blok kalça ekleminin altına taşıyor ki uyluk onun
  * üstüne binsin.
  */
-export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
+export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
   const dx = lumbar[0] - pelvis[0];
   const dy = lumbar[1] - pelvis[1];
   const l = Math.hypot(dx, dy) || 1;
@@ -862,7 +862,66 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
     const py = s2 * RY * k;
     pts.push([cx + ux[0] * px + uy[0] * py, cy + ux[1] * px + uy[1] * py]);
   }
-  return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
+  /*
+   * Kalça TEK kütle: blok + uyluğun üst-arka kenarının dışbükey zarfı.
+   *
+   * Uyluk parçası MakeHuman modelinden geliyor ve üst ucu kalça ekleminin
+   * çevresinde kendi gluteal kıvrımıyla yuvarlanıyor. Blok gövdeyle, uyluk
+   * bacakla dönüyor; hinge ve squat'ta ikisi ayrışıp arada bir çukur, yani
+   * kalçada ÇİFT TÜMSEK bırakıyordu (kullanıcı, 2026-10-07). Zarf aradaki
+   * çukuru dolduruyor: kalça hangi açıda olursa olsun tek yuvarlak.
+   *
+   * Uyluk arkası kemiğin −X'i (parça yerel uzayı: +X ön). Genişlikler
+   * `bodyParts.json`'daki uyluğun arka yarı genişliğinden, biraz içeride —
+   * zarf uyluğun kendi hattını aşmasın.
+   */
+  if (knee) {
+    const kx = knee[0] - pelvis[0];
+    const ky = knee[1] - pelvis[1];
+    const kl = Math.hypot(kx, ky) || 1;
+    const d: Vec = [kx / kl, ky / kl];
+    const back: Vec = [-d[1], d[0]];
+    [
+      [-0.04, 15],
+      [0.06, 14.5],
+      [0.16, 12.5],
+    ].forEach(([t, w]) => {
+      pts.push([pelvis[0] + d[0] * kl * t + back[0] * w, pelvis[1] + d[1] * kl * t + back[1] * w]);
+    });
+  }
+  if (!knee) return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
+  // Zarf düz kenarlarla birleşince ayakta kalçanın altında kama çıkıyordu;
+  // köşelerin üstünden geçen kapalı Catmull-Rom ile yumuşatılıyor.
+  const h = convexHull(pts);
+  const n = h.length;
+  const at = (i: number) => h[((i % n) + n) % n];
+  let d = `M ${h[0][0].toFixed(1)} ${h[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    d +=
+      ` C ${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)} ${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)}` +
+      ` ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)} ${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)}` +
+      ` ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d + ' Z';
+}
+
+/** Dışbükey zarf (Andrew'un monoton zinciri), saat yönünün tersine. */
+function convexHull(points: Vec[]): Vec[] {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Vec, a: Vec, b: Vec) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: Vec[] = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper: Vec[] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
 }
 
 /**
