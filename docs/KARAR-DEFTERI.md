@@ -31,6 +31,37 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Kaslı model; sırt üstü kiplerde gövde aynalanıyor
+
+**Yapıldı.** Kullanıcı "yan duruşta göğüs kasları düz; gym uygulamasında kassız model hoş
+değil" dedi. Model kaslı ve yağsız: makro kas 0.7→1.0, kilo 0.5→0.4; ayrıca MakeHuman
+bölgesel kas hedefleri (CC0): göğüs 1.0, kanat 0.7, V-gövde 0.4, karın tonu 0.7, kalça 0.3,
+omuz/pazu 0.6, ön kol 0.4, uyluk/baldır 0.5 — iskeletten ÖNCE uygulanıyor ki eklemler yeni
+biçime otursun. Gövde 2 mm ızgarada çıkarılıyor ve daha az yumuşatılıyor (göğüs kasının alt
+kenarı 4 mm + iki tur yumuşatmada siliniyordu). Kolsuz önce/sonra çizimle karşılaştırıldı:
+göğüs öne çıkıp alt kenarında içeri dönüyor, sırt dolgunlaştı.
+
+**Bulunan hata.** Sırt üstü kiplerde (`bench`, `supine`: bench_press, incline_press, dead_bug,
+curl_up) yalnızca kafa aynalanıyordu; gövde ve uzuvlar aynalanmadığı için göğüs sehpaya,
+kalça tavana bakıyordu. Eski ön/arka simetriğe yakın profillerde görünmüyordu. `partTransform`
+ve `pelvisMass` artık `mirror` (= `facingFlip(mode)`) alıyor; `RigFigure` `flip`'i, editör
+modül düzeyindeki `MIRROR`'ı (her çizim başında kipten) geçiriyor. Kas bantları dönüşümü
+izlediği için onlar da doğru yüze geçti. Rig 200, uygulama 432 test; devredildi. Node'da göz
+ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Aynalama tek kural: kafayı aynalayan kip bütün figürü aynalar.
+
+**Bilerek yapılmadı.** Yüzükoyun kip (`quad`) aynalanmadı: orada sırtın yukarıda olması doğru.
+
+**Açık.** Boyun önünde/köprücük hizasında küçük çentikler (gövde bandının üst kesiği ile omuz
+topu); kol çoğu pozda örtüyor.
+
+**Nerede.** `packages/rig/scripts/blender/extract-parts.py` (`MACRO`, `DETAIL`, `RES_TRUNK`),
+`packages/rig/scripts/import-makehuman.mjs`, `packages/rig/src/rig.ts` (`partTransform`,
+`pelvisMass`), `packages/rig/editor/editor.js`, `apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
+---
+
 ## 2026-10-07 — Kalçadaki çift tümsek giderildi
 
 **Yapıldı.** Kullanıcı "kalçadaki çift tümseği düzelt" dedi. Sebep ölçüldü: MakeHuman

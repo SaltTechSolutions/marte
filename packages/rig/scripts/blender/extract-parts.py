@@ -38,8 +38,10 @@ for o in list(bpy.data.objects):
 MACRO = {
     "gender": 1.0,       # erkek
     "age": 0.5,          # ~25 yaş
-    "muscle": 0.7,       # atletik — bir salon uygulamasının figürü
-    "weight": 0.5,
+    # Kaslı ve yağsız: bir salon uygulamasının figürü. 0.7 / 0.5 ile göğüs yandan
+    # dümdüz çıkıyordu (kullanıcı: "kasları olmayan bir model olması hoş değil").
+    "muscle": 1.0,
+    "weight": 0.4,
     "proportions": 1.0,  # ideal oranlar
     "height": 0.5,
     "cupsize": 0.5,
@@ -48,6 +50,31 @@ MACRO = {
 }
 
 basemesh = HumanService.create_human(mask_helpers=True, macro_detail_dict=MACRO)
+
+# Bölgesel kas hedefleri (MakeHuman `data/targets`, CC0). Makro "kas" ayarı vücudu
+# bütün olarak sıkılaştırıyor ama yandan bakışta asıl okunan kütleleri — göğüs,
+# kanat, omuz, pazu, uyluk, baldır — ayrıca belirginleştirmek gerekiyor. İskelet
+# bunlardan SONRA oturtuluyor ki eklemler yeni biçime göre yerleşsin.
+from bl_ext.blender_org.mpfb.services.targetservice import TargetService  # noqa: E402
+from bl_ext.blender_org.mpfb.services.locationservice import LocationService  # noqa: E402
+import os  # noqa: E402
+
+DETAIL = {
+    "torso/torso-muscle-pectoral-incr": 1.0,
+    "torso/torso-muscle-dorsi-incr": 0.7,
+    "torso/torso-vshape-incr": 0.4,
+    "stomach/stomach-tone-incr": 0.7,
+    "buttocks/buttocks-volume-incr": 0.3,
+}
+for side in ("l", "r"):
+    DETAIL[f"arms/{side}-upperarm-shoulder-muscle-incr"] = 0.6
+    DETAIL[f"arms/{side}-upperarm-muscle-incr"] = 0.6
+    DETAIL[f"arms/{side}-lowerarm-muscle-incr"] = 0.4
+    DETAIL[f"legs/{side}-upperleg-muscle-incr"] = 0.5
+    DETAIL[f"legs/{side}-lowerleg-muscle-incr"] = 0.5
+targets_dir = LocationService.get_mpfb_data("targets")
+for name, w in DETAIL.items():
+    TargetService.load_target(basemesh, os.path.join(targets_dir, name + ".target.gz"), weight=w)
 rig = HumanService.add_builtin_rig(basemesh, "game_engine")
 
 # Hedefler ve maske uygulanmış hali: değerlendirilmiş mesh.
@@ -212,7 +239,10 @@ neck_top = bones["head"][0]
 up = Vector((0, 0, 1))
 origin = Vector((0, 0, hipL.z))
 fwd = FORWARD
-grid, (umin, vmin, res) = outline(vsel, origin, up, fwd, RES)
+# Gövde 2 mm'de: göğüs kasının alt kenarı (yandan bakışta tek kas çıkıntısı)
+# 4 mm ızgara + yumuşatmada siliniyordu.
+RES_TRUNK = 0.002
+grid, (umin, vmin, res) = outline(vsel, origin, up, fwd, RES_TRUNK)
 pts = trace(grid)
 poly = [[float(umin + (y + 0.5) * res), float(vmin + (x + 0.5) * res)] for y, x in pts]
 # Eklem yükseklikleri kalça merkezinden yukarı; ön-arka ekseni kalça merkezine göre.

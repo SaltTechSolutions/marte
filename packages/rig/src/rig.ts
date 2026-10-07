@@ -832,13 +832,14 @@ export function frontTorsoPath(F: FrontPoints): string {
  * GEÇER ("morticed"). Blok kalça ekleminin altına taşıyor ki uyluk onun
  * üstüne binsin.
  */
-export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
+export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec, mirror = 1): string {
   const dx = lumbar[0] - pelvis[0];
   const dy = lumbar[1] - pelvis[1];
   const l = Math.hypot(dx, dy) || 1;
   // Omurga ekseni ve ona dik eksen: blok figürle birlikte eğiliyor.
   const uy: Vec = [dx / l, dy / l];
-  const ux: Vec = [-uy[1], uy[0]];
+  // `mirror`: sırt üstü kiplerde ön ve arka yer değiştiriyor (bkz. `partTransform`).
+  const ux: Vec = [-uy[1] * mirror, uy[0] * mirror];
   const cx = pelvis[0] + uy[0] * 8;
   const cy = pelvis[1] + uy[1] * 8;
   // Ön/arka AYRI: ibiğin genişlemesi yanaldır, yandan bakışta leğenin önü
@@ -882,7 +883,7 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
     const ky = knee[1] - pelvis[1];
     const kl = Math.hypot(kx, ky) || 1;
     const d: Vec = [kx / kl, ky / kl];
-    const back: Vec = [-d[1], d[0]];
+    const back: Vec = [-d[1] * mirror, d[0] * mirror];
     const at = (t: number, side: Vec, w: number): Vec => [pelvis[0] + d[0] * kl * t + side[0] * w, pelvis[1] + d[1] * kl * t + side[1] * w];
     [
       [-0.04, 15],
@@ -892,7 +893,7 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
     // ÖN de köprüleniyor: bel bandının önü kalçada 25 birim, uyluğun önü ancak
     // 15–25 birim aşağıda o genişliğe ulaşıyor. Arada bel bandının ön-alt köşesi
     // damla gibi sarkıp kasıkta bir çıkıntı bırakıyordu (kullanıcı, 2026-10-07).
-    const front: Vec = [d[1], -d[0]];
+    const front: Vec = [d[1] * mirror, -d[0] * mirror];
     [
       [0.12, 21],
       [0.2, 23.5],
@@ -1003,13 +1004,18 @@ export function handPath(): string {
  * uzuvlara bölünmüş gerçek anatomik siluet de aynı yere oturuyor; kod aynı
  * kalıyor, yalnızca `data/bodyParts.json` değişiyor.
  */
-export function partTransform(a: Vec, b: Vec): string {
+export function partTransform(a: Vec, b: Vec, mirror = 1): string {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const l = Math.hypot(dx, dy) || 1;
   // Yerel +Y'yi kemik yönüne çeviren açı.
   const deg = (Math.atan2(-dx / l, dy / l) * 180) / Math.PI;
-  return `translate(${a[0]} ${a[1]}) rotate(${deg})`;
+  // `mirror` = `facingFlip(mode)`: sırt üstü kiplerde parça kemik ekseni boyunca
+  // AYNALANIYOR. Kafa zaten aynalanıyordu, gövde ve uzuvlar aynalanmıyordu: bench
+  // ve supine'de sırt yukarıya, göğüs sehpaya bakıyordu. Ön/arka simetriğe yakın
+  // eski profillerde görünmüyordu; kaslı MakeHuman gövdesiyle ortaya çıktı
+  // (2026-10-07, bench_press, incline_press, dead_bug, curl_up).
+  return `translate(${a[0]} ${a[1]}) rotate(${deg})${mirror < 0 ? ' scale(-1 1)' : ''}`;
 }
 
 /**

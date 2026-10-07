@@ -259,7 +259,7 @@ export function RigFigure({
   /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
   const part = (key: string, name: string, a: Vec, b: Vec): Piece | null => {
     const q = PARTS[name];
-    return q ? { key, d: q.d, tf: partTransform(a, b), part: name, len: q.len } : null;
+    return q ? { key, d: q.d, tf: partTransform(a, b, flip), part: name, len: q.len } : null;
   };
   /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
   const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, name?: string): Piece[] => {
@@ -276,7 +276,7 @@ export function RigFigure({
     const dx = wrist[0] - elbow[0];
     const dy = wrist[1] - elbow[1];
     const l = Math.hypot(dx, dy) || 1;
-    return { key, d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
+    return { key, d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18], flip) };
   };
   /** Yakın taraf zinciri. */
   const near = (key: string, pieces: (Piece | null)[]) => (
@@ -605,7 +605,7 @@ export function RigFigure({
           // kütleler uç uca gelmez, geçer. Bu blok yokken bel parçası ile
           // uyluk parçası tek noktada değiyordu ve kalça gövdeden kopuk
           // görünüyordu.
-          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar, S.knee) },
+          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar, S.knee, flip) },
           part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
           part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
           part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
@@ -625,7 +625,7 @@ export function RigFigure({
           // ortasından geçip iki kütle gibi okunuyordu — çift tümsek). Kendi
           // hattı yok: olsaydı ayakta kalçanın üstünde şort kenarı çizerdi.
           // Kalçanın dış silüetini gövde zincirindeki kopya çiziyor.
-          { key: 'nglute', d: pelvisMass(S.pelvis, S.lumbar, S.knee), fillOnly: true },
+          { key: 'nglute', d: pelvisMass(S.pelvis, S.lumbar, S.knee, flip), fillOnly: true },
           { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
           ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
           ...limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, 'shin'),

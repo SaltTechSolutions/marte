@@ -133,7 +133,8 @@ function clipSlab(poly, lo, hi) {
  * kenarlar düz kalmalı; komşu parçayla çakışıyorlar ve zincirin iki geçişli
  * çizimi aradaki dikişi gizliyor.
  */
-const prepare = (poly) => smooth(simplifyClosed(poly.map(([u, v]) => [u * S, v * S]), TOL)).map(([u, v]) => [u / S, v / S]);
+const prepare = (poly, tol = TOL, passes = 2) =>
+  smooth(simplifyClosed(poly.map(([u, v]) => [u * S, v * S]), tol), passes).map(([u, v]) => [u / S, v / S]);
 
 /** Model (u, v) hattını yerel parça yoluna çevirir. */
 function toPart(name, poly, u0, u1, axisV, headward, cap = CAP, capLo = cap, roundLo = false) {
@@ -168,7 +169,9 @@ for (const name of ['thigh', 'shin', 'upper', 'fore']) {
 // okundu (kullanıcı: "göbek saçma oldu"). Ortak eksen: dört eklemin ön-arka
 // ortalaması — gövdenin kendi orta çizgisi.
 const T = mh.trunk;
-const trunk = prepare(T.outline);
+// Gövde daha az yumuşatılıyor (2 mm ızgaradan geliyor): göğüs kasının alt
+// kenarı ve kürek kemiği yandan bakışta okunması gereken kas ayrıntıları.
+const trunk = prepare(T.outline, 0.5, 1);
 /** Gövde bantları birbirine daha çok biniyor: kesik kenar zincirin içinde kalmalı. */
 const TRUNK_CAP = 10;
 const midV = (T.hip[1] + T.waist[1] + T.shoulder[1] + T.neck[1]) / 4;
