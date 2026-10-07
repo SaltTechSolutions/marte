@@ -398,6 +398,16 @@ export function validateBodyParts(data: unknown, bones: Record<string, number>):
   if (!isObj(parts)) return ['uzuv parçaları: parts nesnesi yok'];
   if (Object.keys(parts).length === 0) errs.push('uzuv parçaları: parts boş');
 
+  // Kemiğe bağlı olmayan iki isteğe bağlı silüet: kafa (merkezinden, `headProfile`
+  // ile aynı çerçeve) ve leğen (bel parçasıyla aynı çerçeve). Yoksa rig koddaki
+  // çizime düşüyor.
+  (['head', 'pelvis'] as const).forEach((k) => {
+    const q = data[k];
+    if (q === undefined) return;
+    if (!isObj(q) || typeof q.d !== 'string' || q.d.trim() === '') errs.push(`uzuv parçaları: ${k}.d boş`);
+    else Object.keys(q).forEach((f) => f !== 'd' && errs.push(`uzuv parçaları: ${k} bilinmeyen alan "${f}"`));
+  });
+
   Object.keys(parts).forEach((name) => {
     const bad = (msg: string) => errs.push(`uzuv parçası "${name}": ${msg}`);
     const q = parts[name];

@@ -43,7 +43,7 @@ if (!src) {
 const mh = JSON.parse(readFileSync(src, 'utf8'));
 
 /** Rig kemik boyları — şemanın zorunlu tuttuğu sayılar. */
-const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 24 };
+const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 44 };
 /** Eklem payı: parça kemiğin iki ucundan bu kadar taşabilir. */
 const CAP = 6;
 /** Sadeleştirme toleransı, rig pikseli. Izgara 4 mm ≈ 1 px; altı merdiven. */
@@ -136,14 +136,16 @@ function clipSlab(poly, lo, hi) {
 const prepare = (poly) => smooth(simplifyClosed(poly.map(([u, v]) => [u * S, v * S]), TOL)).map(([u, v]) => [u / S, v / S]);
 
 /** Model (u, v) hattını yerel parça yoluna çevirir. */
-function toPart(name, poly, u0, u1, axisV, headward, cap = CAP) {
+function toPart(name, poly, u0, u1, axisV, headward, cap = CAP, capLo = cap, roundLo = false) {
   const len = BONES[name];
   const ky = len / (u1 - u0);
   // u0..u1 dışına `cap` kadar taşmaya izin ver, sonrası komşu parçanın işi.
-  const slab = clipSlab(poly, u0 - cap / ky, u1 + cap / ky);
+  const lo = u0 - capLo / ky;
+  const slab = clipSlab(poly, lo, u1 + cap / ky);
   const sharp = new Set();
   const local = slab.map(([u, v, cut], i) => {
-    if (cut) sharp.add(i);
+    // `roundLo`: alt kesik açıkta kalıyorsa (bel bandı kalçanın önünde) köşe yuvarlanır.
+    if (cut && !(roundLo && Math.abs(u - lo) < 1e-9)) sharp.add(i);
     const x = (v - axisV(u)) * S;
     return [headward ? -x : x, (u - u0) * ky];
   });
@@ -171,13 +173,36 @@ const trunk = prepare(T.outline);
 const TRUNK_CAP = 10;
 const midV = (T.hip[1] + T.waist[1] + T.shoulder[1] + T.neck[1]) / 4;
 const axis = () => midV;
-parts.lumbar = toPart('lumbar', trunk, T.hip[0], T.waist[0], axis, true, TRUNK_CAP);
+// Bel bandının alt ucu kalça ekleminde biter ve yuvarlanır: aşağı taşan kesik
+// köşe kalçanın önünde açıkta kalıyor, elin altında dişli bir çentik yapıyordu.
+parts.lumbar = toPart('lumbar', trunk, T.hip[0], T.waist[0], axis, true, TRUNK_CAP, 0, true);
 parts.thorax = toPart('thorax', trunk, T.waist[0], T.shoulder[0], axis, true, TRUNK_CAP);
 parts.neck = toPart('neck', trunk, T.shoulder[0], T.neck[0], axis, true, TRUNK_CAP);
+
+// Leğen BİLEREK yok: kalça ekleminin altındaki gövde silüeti denendi ve ince bir
+// şerit çıktı — gluteal kütlenin çoğu modelde uyluk kemiğine bağlı. Squat'ta
+// gövdeyle birlikte dönüp kuyruk gibi geriye uzandı. Rig'in `pelvisMass`'ı kalıyor.
+
+// Kafa: rig çerçevesi `headProfile` ile aynı — merkez (0,0), +X yüz, +Y aşağı —
+// ve rig boyun ucunu merkezin `HEAD_UP` birim altına koyuyor (`skeleton`: head =
+// neck + 28). Modelin kafatası tabanı tam o noktaya oturtuluyor; ölçek enine
+// ölçekle aynı, kafa vücuda göre doğru büyüklükte.
+//
+// Bu çapa ancak boyun gerçek orandayken çalışıyor: rig boynu 24'ken çene göğse
+// gömülüyordu (model: omuz → kafatası tabanı ≈ 47 birim). `B.neck` 44'e çıktı.
+const HEAD_UP = 28;
+const H = mh.head;
+const headPts = smooth(
+  simplifyClosed(H.outline.map(([u, v]) => [(v - H.anchor[1]) * S, -(u - H.anchor[0]) * S + HEAD_UP]), 0.35),
+  1,
+);
+const head = { d: closedSpline(headPts) };
+const headH = Math.max(...headPts.map((q) => q[1])) - Math.min(...headPts.map((q) => q[1]));
 
 const out = {
   _: 'ÜRETİLMİŞTİR — elle düzenleme. Kaynak: scripts/blender/extract-parts.py → scripts/import-makehuman.mjs',
   source: 'MakeHuman temel modeli (CC0, MPFB 2 ile kuruldu: erkek, kas 0.7, ideal oran), yandan izdüşüm',
+  head,
   parts,
 };
 const json = JSON.stringify(out, null, 1) + '\n';
@@ -185,5 +210,5 @@ if (args.includes('--dry')) {
   for (const [k, v] of Object.entries(parts)) console.log(k, v.len, v.d.length, 'karakter');
 } else {
   writeFileSync(join(ROOT, 'data/bodyParts.json'), json);
-  console.log(`✓ data/bodyParts.json  (${Object.keys(parts).length} parça, ${json.length} B, enine ölçek ${S.toFixed(1)} px/m)`);
+  console.log(`✓ data/bodyParts.json  (kafa yüksekliği ${headH.toFixed(1)}, ${Object.keys(parts).length} parça, ${json.length} B, enine ölçek ${S.toFixed(1)} px/m)`);
 }

@@ -44,7 +44,7 @@ import { join } from 'node:path';
 import { ROOT } from './engine-build.mjs';
 
 /** Kemik boyları. Şema bunlarla karşılaştırıyor; uyuşmazsa export duruyor. */
-const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 24 };
+const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 85, neck: 44 };
 
 /**
  * Uçlarda kemiğin dışına taşan pay.

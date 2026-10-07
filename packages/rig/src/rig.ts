@@ -21,13 +21,18 @@
 
 export type Vec = [number, number];
 
+/** Sırttaki barın trapez hizası: göğüs üstünden boyun yönünde (eski boyun boyu). */
+const BAR_TRAP = 24;
+
 /** Segment boyları. Tek doğruluk kaynağı: hiçbir kare boy yazmaz. */
 export const B = {
   shin: 100,
   thigh: 105,
   lumbar: 55,
   thorax: 85,
-  neck: 24,
+  // 24'tü; MakeHuman modelinde omuz → kafatası tabanı ≈ 47. Kısa boyunda
+  // modelden gelen kafa çeneyi göğse gömüyordu.
+  neck: 44,
   upper: 78,
   fore: 68,
   foot: 46,
@@ -569,10 +574,12 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
         // dirseği o kadar katlanmadığı için el barı hiç tutamıyor, hareket
         // "eller arkada tutuluyor" gibi okunuyordu.
         //
-        // Çapa artık BOYUN: bar ensenin 14px arkasında. Omuz-bar 40-43px,
-        // gereken dirsek 146-149°, sınırın altında. Yön gövdeyle döndüğü için
-        // figür öne eğilirken bar trapezde kalıyor.
-        add(neck, D(p.thoraxA + 270), 14)
+        // Çapa TRAPEZ: göğüs üstünden boyun yönünde `BAR_TRAP` ve 14px geride.
+        // Omuz-bar 40-43px, gereken dirsek 146-149°, sınırın altında. Yön
+        // gövdeyle döndüğü için figür öne eğilirken bar trapezde kalıyor.
+        // Eskiden çapa boyun ucuydu; boyun 24 → 44 uzayınca (MakeHuman oranı)
+        // bar enseye tırmandı ve el yetişmedi — trapezin yeri boyun boyuna bağlı değil.
+        add(add(thorax, D(p.neckA), BAR_TRAP), D(p.thoraxA + 270), 14)
       : ex.bar === 'hands'
         ? [hand![0], hand![1]]
         : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte

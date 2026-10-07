@@ -603,3 +603,17 @@ describe('kas → figür bantları', () => {
     expect(tintEllipse({ part: 'thorax', side: 'front', u0: 0, u1: 1 }, 85).cx).toBe(-40);
   });
 });
+
+describe('uzuv parçaları — kafa silueti', () => {
+  it('gerçek veri kafayı taşıyor ve geçiyor', () => {
+    expect((rawParts as { head?: { d: string } }).head?.d).toBeTruthy();
+    expect(validateBodyParts(rawParts, B)).toEqual([]);
+  });
+  it('boş ya da fazla alanlı kafa reddediliyor', () => {
+    const p = JSON.parse(JSON.stringify(rawParts));
+    p.head = { d: ' ' };
+    expect(validateBodyParts(p, B).join(' ')).toContain('head.d boş');
+    p.head = { d: 'M 0 0 Z', renk: 'x' };
+    expect(validateBodyParts(p, B).join(' ')).toContain('bilinmeyen alan');
+  });
+});

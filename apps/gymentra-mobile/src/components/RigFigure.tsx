@@ -46,6 +46,11 @@ import { FigureTint, TINT_MIX, figureTints, tintEllipse } from '@/utils/muscles'
  * anlatamıyordu. Bir parça eksikse çağıran kapsüle düşüyor.
  */
 const PARTS = rigBodyParts.parts as Record<string, { len: number; d: string }>;
+/**
+ * Kafa silueti: MakeHuman modelinden (`head.d`, merkezinden, +X yüz), yoksa
+ * `headProfile()`. Editörde `headD()`; ikisi aynı kalmalı.
+ */
+const HEAD_D = (rigBodyParts as { head?: { d: string } }).head?.d ?? headProfile();
 
 const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 
@@ -239,9 +244,11 @@ export function RigFigure({
    * Eklem topu.
    *
    * İki katı parçanın uç uca eklendiği yerdeki kamayı dolduruyor. Yarıçaplar
-   * siluetin o uçtaki yarı genişliğine göre seçili (diz 13 ↔ uyluk ucu 12 /
-   * baldır başı 15, dirsek 10 ↔ üst kol ucu 9 / ön kol başı 10): büyüğü
-   * silueti dışarı taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor.
+   * siluetin o uçtaki yarı genişliğine göre seçili: büyüğü silueti dışarı
+   * taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor. Parçalar MakeHuman
+   * modelinden gelince (2026-10-07) diz ve dirsek gerçek oranda inceldi ve
+   * eski toplar (diz 13, dirsek 10) yumru yaptı: diz 10, dirsek 7. Uzak taraf
+   * birer/üçer küçük. Editördeki sayılar aynı.
    */
   const ball = (key: string, c: Vec, r: number): Piece => ({ key, c, r });
   /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
@@ -341,7 +348,7 @@ export function RigFigure({
               { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
               ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
               ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
-              ball('fk', S.kneeF, 12),
+              ball('fk', S.kneeF, 9),
             ])}
           {/* KATMAN yan: farm */}
           {!rig.hideFarArm && (
@@ -349,7 +356,7 @@ export function RigFigure({
               {far('farm', [
                 ...limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, 'upper'),
                 ...limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, 'fore'),
-                ball('fe', S.elbowF, 9),
+                ball('fe', S.elbowF, 6),
                 ball('fw', S.handF, 9),
                 hand('fh', S.handF, S.elbowF),
               ])}
@@ -610,7 +617,7 @@ export function RigFigure({
           { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
           ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
           ...limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, 'shin'),
-          ball('k', S.knee, 13),
+          ball('k', S.knee, 10),
           ball('a', S.ankle, 9),
         ])}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
@@ -622,8 +629,8 @@ export function RigFigure({
             görünürdü. Dönüşüm iki geçişi birden sarıyor. */}
         {/* KATMAN yan: head */}
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
-          <Path d={headProfile()} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
-          <Path d={headProfile()} fill={skin} />
+          <Path d={HEAD_D} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
+          <Path d={HEAD_D} fill={skin} />
         </G>
         {/* YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
             arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi
@@ -635,7 +642,7 @@ export function RigFigure({
         {near('narm', [
           ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
           ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
-          ball('e', S.elbow, 10),
+          ball('e', S.elbow, 7),
           hand('h', S.hand, S.elbow),
         ])}
         {/* KATMAN yan: db */}

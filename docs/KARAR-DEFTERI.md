@@ -31,6 +31,36 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Kafa modelden, boyun 44, eklem topları küçüldü
+
+**Yapıldı.** Kafa silüeti de MakeHuman'dan (`bodyParts.json` → `head`, 1.5 mm ızgara; burun,
+dudak, çene hattı var); şema isteğe bağlı `head.d`'yi kabul ediyor, editör (`headD`) ve
+`RigFigure` (`HEAD_D`) varsa onu, yoksa `headProfile()`'ı çiziyor. **`B.neck` 24 → 44**: model
+kafası kafatası tabanından oturtulunca kısa boyunda çene göğse gömülüyordu (model: omuz →
+kafatası tabanı ≈ 47). Sırttaki bar boyun ucuna bağlıydı ve enseye tırmandı (squat tutuş
+kuralı düştü) — artık `BAR_TRAP` (göğüs üstünden 24, eski trapez hizası). Yan görünüm eklem
+topları küçüldü: diz 13→10, dirsek 10→7, uzak diz 12→9, uzak dirsek 9→6 (uygulama ve editör).
+Bel bandı kalçada bitiyor ve alt köşesi yuvarlak (kalçanın önünde dişli çentik vardı). Rig
+200, uygulama 430 test; devredildi. Node'da göz ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Boyun boyu modelin oranına çekildi; pozlar açı olarak saklandığı için yalnızca
+kafa yükseldi, kadraj `boundsFor` ile kendiliğinden genişliyor.
+
+**Bilerek yapılmadı.** Leğen silüeti modelden alınmadı: kalça altı gövde silüeti ince bir
+şerit çıktı (gluteal kütle modelde uyluğa bağlı), squat'ta kuyruk gibi geriye uzadı;
+`pelvisMass` kalıyor. Önden görünüm (`FrontBody`) değişmedi.
+
+**Açık.** (1) Kalça arkasında `pelvisMass` + uyluğun gluteal kıvrımı hâlâ yer yer çift tümsek.
+(2) Önden görünümdeki boyun da 44'e uzadı, göz ile bakılmadı. (3) Uzak uzuvlar, sırt üstü
+kipler (`facingFlip`) ve el/ayak koddaki eski çizim. (4) Yeni kadraj küçük telefonda
+denenmedi.
+
+**Nerede.** `packages/rig/src/rig.ts` (`B.neck`, `BAR_TRAP`), `packages/rig/src/rigSchema.ts`,
+`packages/rig/scripts/{blender/extract-parts.py,import-makehuman.mjs}`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`, `packages/rig/docs/uzuv-parcalari-nasil-uretilir.md`.
+
+---
+
 ## 2026-10-07 — Uzuv siluetleri MakeHuman (CC0) modelinden üretiliyor
 
 **Yapıldı.** Kullanıcı "Blender'ı kur, 1. yolla devam et" dedi. Blender 5.2.2 LTS (Homebrew

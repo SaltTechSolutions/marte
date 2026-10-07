@@ -1,5 +1,20 @@
 # Uzuv parçaları nasıl üretilir
 
+> **2026-10-07: bu hat kuruldu ve otomatikleşti.** Aşağıdaki adımların yerine
+> geçen iki komut:
+>
+> ```bash
+> blender --online-mode -c extension install mpfb --enable   # bir kez
+> blender --background --python scripts/blender/extract-parts.py -- /tmp/mh.json
+> node scripts/import-makehuman.mjs /tmp/mh.json
+> ```
+>
+> Render + Inkscape'te elle çizim yerine siluet doğrudan geometriden çıkıyor
+> (her uzuv kendi kemik ekseninde izdüşürülüp ızgaraya çiziliyor). Kafa da
+> modelden geliyor (`bodyParts.json` → `head`). Ayrıntı ve kararlar
+> betiklerin başında ve `docs/KARAR-DEFTERI.md`'de. Aşağısı ilk plan; tarihçe
+> olarak duruyor.
+
 `data/bodyParts.json`'daki yollar bugün elle çizilmiş kaba bir taslak. Bu belge
 onların yerine gerçek anatomik siluetlerin nasıl konacağını anlatıyor.
 
@@ -25,7 +40,7 @@ Kemik boyları sabit ve şema bunları zorunlu tutuyor:
 | `fore` | 68 | dirsek → el |
 | `lumbar` | 55 | kalça → bel |
 | `thorax` | 85 | bel → göğüs |
-| `neck` | 24 | göğüs → boyun |
+| `neck` | 44 | göğüs → boyun (2026-10-07'ye kadar 24) |
 
 `len` kemik boyuyla uyuşmazsa export durur. Bu kasıtlı: uyuşmazlık figürü
 çizilmez yapmıyor, sadece eklemde boşluk açıyor — yani sessiz bir kusur.

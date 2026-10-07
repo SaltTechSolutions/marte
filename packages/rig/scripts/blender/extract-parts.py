@@ -224,6 +224,17 @@ result["trunk"] = {
     "shoulder": [float(shoulder.z - hipL.z), float((shoulder - origin).dot(fwd))],
     "neck": [float(neck_top.z - hipL.z), float((neck_top - origin).dot(fwd))],
 }
+# Kafa: baskın kemiği `head` olan köşeler, dik eksende. Yüz ayrıntısı (burun,
+# dudak, çene) 4 mm'de kayboluyordu; kafa için ızgara 1.5 mm. Çapa: kafatası
+# tabanı (head kemiğinin başı) — rig kafayı boyun ucundan yerleştiriyor.
+RES_HEAD = 0.0015
+vsel = np.where(dominant == "head")[0]
+grid, (umin, vmin, res) = outline(vsel, Vector((0, 0, 0)), up, fwd, RES_HEAD)
+pts = trace(grid)
+poly = [[float(umin + (y + 0.5) * res), float(vmin + (x + 0.5) * res)] for y, x in pts]
+skull = bones["head"][0]
+result["head"] = {"outline": poly, "anchor": [float(skull.z), float(skull.dot(fwd))]}
+
 result["legLength"] = (bones["thigh_l"][1] - bones["thigh_l"][0]).length + (bones["calf_l"][1] - bones["calf_l"][0]).length
 
 with open(OUT, "w") as fh:
