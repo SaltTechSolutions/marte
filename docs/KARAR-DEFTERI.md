@@ -31,6 +31,47 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Kas haritası MuscleMap'in anatomik yollarına geçti
+
+**Yapıldı.** Kullanıcı kaynak olarak MuscleMap'i seçti. `scripts/import-musclemap.mjs`
+MuscleMap'in (MIT, github.com/melihcolpan/MuscleMap @ 7dc03071) erkek ön/arka Swift
+verisinden `data/anatomy.json`'ı üretiyor: ön 99, arka 72 yol, 55 KB (eskisi 7.6 KB).
+Eşleme grup değil YOL düzeyinde: her slug'ın her yolu bizim 39 kimliğimizden
+birine/birkaçına; numaralı haritayla elle eşlendi. Tek yolun iki kas taşıdığı göğüs
+(pecClav/pecSternal), sırttaki trapez (trapMid/trapLower) ve pazu (biceps/brachialis)
+yatay `clip` bandıyla bölündü. Şema değişti: görünüm başına `viewBox` + `paths`,
+yol başına `muscles[]` ve isteğe bağlı `clip`, kökte zorunlu `licenses`; ayna yok.
+Editörün `muscleMapSvg`'si ve uygulamanın `MuscleMap.tsx`'i yeni biçimi okuyor;
+uygulamadaki eski `FRONT_PATHS`/`BACK_PATHS` kopyası silindi (tek kaynak devredilen
+`rigAnatomy.json`). Rig 198, uygulama 430 test; tsc, lint, `expo export --platform ios`
+temiz; iki lisans metni iOS paketinde bulundu. Editörde squat, bench, barfiks, kürek
+göz ile kontrol edildi. **Cihazda görülmedi.**
+
+**Karar.** (1) MuscleMap'in erkek yollarının çoğu react-native-body-highlighter'dan
+(MIT, © 2022 ELABBASSI Hicham) birebir — ölçüldü: arka 70/70, ön 89/111. Bu yüzden iki
+lisans metni de `third_party/`'de ve `anatomy.json`'ın içinde. (2) MuscleMap'in ön alt
+grupları (upperChest, innerQuad…) gerçek bölge değil, ana grubun üstüne konmuş
+yuvarlak lekeler — alınmadı. (3) Sağ yollar sol listeyle aynı sırada DEĞİL (karın ve
+baldırda sağda yanlış blok boyanıyordu); sağ yol, aynadaki karşılığına en yakın sol
+yolun eşlemesini alıyor, 60 birimden uzaksa betik duruyor.
+
+**Bilerek yapılmadı.** Kadın modeli (MuscleMap'te var; uygulamada cinsiyet seçimi
+yok). body-muscles (Apache 2.0, çizimin kaynağı belirsiz) ve Wikimedia/OpenStax
+(CC BY-SA, aynı lisansla paylaş şartı) seçilmedi.
+
+**Açık.** (1) Uygulamada görünür bir lisans/atıf ekranı yok; metin pakette taşınıyor.
+Görünür atıf istenip istenmediği kullanıcıya soruldu. (2) Bazı eşlemeler yaklaşık:
+ön görünümdeki ince "triceps" yolu `triLong`, ön baldır içi `gastroMed`, arkada
+kalça üstü küçük yol `gluteMed`; bir antrenör gözüyle bakılmalı. (3) Kas haritası
+artık 727×1280 çizim; ekran boyutu eskisiyle aynı yükseklikte, genişlik oranı farklı
+(daha geniş) — cihazda görülmedi. (4) OTA gönderilmedi.
+
+**Nerede.** `packages/rig/scripts/import-musclemap.mjs`, `packages/rig/data/anatomy.json`,
+`packages/rig/third_party/`, `packages/rig/src/rigSchema.ts`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/MuscleMap.tsx`, `apps/gymentra-mobile/src/data/exerciseLibrary.ts`.
+
+---
+
 ## 2026-10-07 — Çalışan kaslar hareket figürünün üstünde
 
 **Yapıldı.** Kullanıcı "anatomik gerçekçi, kaslar iki tonla hem haritada hem

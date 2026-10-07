@@ -59,7 +59,7 @@ let NAMES = {};
 let CATALOG = {};
 /** Hareket başına kaslar: kimlik → { status, primary, secondary }. */
 let MUSCLEDATA = {};
-/** Kas haritası yolları: viewBox, ayna dönüşümü, ön ve arka yollar. */
+/** Kas haritası yolları: görünüm başına viewBox ve yollar (`data/anatomy.json`). */
 let ANATOMY = null;
 /** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
 let PARTS = null;
@@ -601,28 +601,43 @@ function renderPhone() {
  */
 const MUSCLE_FILL = { primary: '#10B981', secondary: '#0E6B4C', rest: '#1D2536' };
 
-/** Bir görünümün (ön/arka) kas haritasını çizer. */
+/**
+ * Bir görünümün (ön/arka) kas haritasını çizer. Uygulamada `MuscleMap.tsx`.
+ *
+ * Yollar gövdenin iki yarısını da taşıyor (ayna yok). Bir yolun birden çok kası
+ * olabilir; en güçlü düzey kazanır. `clip` bandı olan yol yalnızca o yatay
+ * şeritte çizilir — tek yolun iki kas taşıdığı yerler (göğüs, trapez) böyle.
+ */
 function muscleMapSvg(view, mus) {
-  if (!ANATOMY) return '';
+  if (!ANATOMY || !ANATOMY[view]) return '';
   const level = {};
-  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
   (mus.secondary || []).forEach((m) => (level[m] = 'secondary'));
-  const paths = ANATOMY[view] || [];
-  const half = paths
-    .map((p) => {
-      const lv = p.muscle ? level[p.muscle] : undefined;
+  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
+  const { viewBox, paths } = ANATOMY[view];
+  const [vx, , vw] = viewBox.split(' ').map(Number);
+  const clips = [];
+  const body = paths
+    .map((p, i) => {
+      const lvs = p.muscles.map((m) => level[m]);
+      const lv = lvs.includes('primary') ? 'primary' : lvs.includes('secondary') ? 'secondary' : undefined;
       // İkincil kaslar tarama desenli: renk körü kullanıcı için parlaklık
       // farkının yanında ikinci bir kanal.
-      const fill = lv === 'secondary' ? 'url(#hatch)' : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
-      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="0.7"/>`;
+      const fill = lv === 'secondary' ? `url(#hatch${view})` : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
+      let clip = '';
+      if (p.clip) {
+        const id = `mc${view}${i}`;
+        clips.push(`<clipPath id="${id}"><rect x="${vx}" y="${p.clip[0]}" width="${vw}" height="${p.clip[1] - p.clip[0]}"/></clipPath>`);
+        clip = ` clip-path="url(#${id})"`;
+      }
+      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="2"${clip}/>`;
     })
     .join('');
-  return `<svg viewBox="${ANATOMY.viewBox}" preserveAspectRatio="xMidYMid meet">
-      <defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="7" height="7" fill="${MUSCLE_FILL.secondary}"/>
-        <rect width="2.4" height="7" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
-      </pattern></defs>
-      <g>${half}</g><g transform="${ANATOMY.mirror}">${half}</g>
+  return `<svg viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">
+      <defs><pattern id="hatch${view}" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="22" height="22" fill="${MUSCLE_FILL.secondary}"/>
+        <rect width="7" height="22" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
+      </pattern>${clips.join('')}</defs>
+      ${body}
     </svg>`;
 }
 

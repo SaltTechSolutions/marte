@@ -493,19 +493,21 @@ describe('validateAnatomy — kas haritası yolları', () => {
     // boyanmaz — sessiz kayıp. Denetim bunu yakalıyor.
     const used = new Set<string>();
     (['front', 'back'] as const).forEach((v) => {
-      (rawAnatomy[v] as { muscle: string | null }[]).forEach((p) => p.muscle && used.add(p.muscle));
+      (rawAnatomy[v].paths as { muscles: string[] }[]).forEach((p) => p.muscles.forEach((m) => used.add(m)));
     });
     expect(Object.keys(MUSCLES).filter((id) => !used.has(id))).toEqual([]);
   });
 
   const cases: [string, (a: Record<string, any>) => void, string][] = [
-    ['viewBox yok', (a) => delete a.viewBox, 'viewBox'],
-    ['mirror yok', (a) => delete a.mirror, 'mirror'],
-    ['front dizisi yok', (a) => (a.front = []), 'front yol dizisi yok'],
-    ['d boş', (a) => (a.front[0].d = '  '), 'd boş'],
-    ['bilinmeyen kas', (a) => (a.front[3].muscle = 'yok-boyle'), 'bilinmeyen kas'],
-    ['bilinmeyen alan', (a) => (a.back[0].renk = 'mavi'), 'bilinmeyen alan'],
-    ['yolu silinen kas', (a) => (a.back = a.back.filter((p: any) => p.muscle !== 'lat')), 'hiçbir yolu yok'],
+    ['viewBox yok', (a) => delete a.front.viewBox, 'viewBox'],
+    ['lisans yok', (a) => (a.licenses = []), 'lisans'],
+    ['front dizisi yok', (a) => (a.front.paths = []), 'front yol dizisi yok'],
+    ['d boş', (a) => (a.front.paths[0].d = '  '), 'd boş'],
+    ['bilinmeyen kas', (a) => (a.front.paths[3].muscles = ['yok-boyle']), 'bilinmeyen kas'],
+    ['muscles dizi değil', (a) => (a.front.paths[3].muscles = 'lat'), 'muscles dizi'],
+    ['ters bant', (a) => (a.back.paths.find((p: any) => p.clip).clip.reverse()), 'clip'],
+    ['bilinmeyen alan', (a) => (a.back.paths[0].renk = 'mavi'), 'bilinmeyen alan'],
+    ['yolu silinen kas', (a) => (a.back.paths = a.back.paths.filter((p: any) => !p.muscles.includes('lat'))), 'hiçbir yolu yok'],
   ];
   cases.forEach(([name, mutate, needle]) => {
     it(`${name} reddediliyor`, () => {
@@ -521,7 +523,7 @@ describe('validateAnatomy — kas haritası yolları', () => {
     const base = { archetypes: rawArchetypes, exercises: rawExercises, muscles: rawMuscles };
     expect(validateBundle(base)).toEqual([]);
     expect(validateBundle({ ...base, anatomy: rawAnatomy })).toEqual([]);
-    expect(validateBundle({ ...base, anatomy: { front: [] } }).length).toBeGreaterThan(0);
+    expect(validateBundle({ ...base, anatomy: { front: { paths: [] } } }).length).toBeGreaterThan(0);
   });
 });
 

@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-10-07T09:06:46.443Z",
+  "generated": "2026-10-07T11:07:25.899Z",
   "source": {
-    "commit": "9fd9e285",
+    "commit": "4dd7afef",
     "dirty": true
   },
   "counts": {
@@ -28,8 +28,8 @@
       "to": "src/utils/rigAudit.ts"
     },
     "rigSchema.ts": {
-      "sha256": "7df158a645bf73b31c8ca0f860a26b9ae48388e8850f10095677ef335d24a4f9",
-      "bytes": 20355,
+      "sha256": "88f46017d6aabe82cd86f0212ab249496e0b4cd0a2041c00211a8626603870ec",
+      "bytes": 21199,
       "from": "src/rigSchema.ts",
       "what": "veri biçim doğrulaması",
       "to": "src/utils/rigSchema.ts"
@@ -63,8 +63,8 @@
       "to": "src/data/rigMuscles.json"
     },
     "anatomy.json": {
-      "sha256": "b550f2efb4a137ad469bc6f6038c58e24a33c430d3a1b6c02b4f963b33c55b5a",
-      "bytes": 7619,
+      "sha256": "76ab287571e1fda1cf6f40b9ce34d5ace05a1362824cf0871f1444f0fe82b812",
+      "bytes": 55367,
       "from": "data/anatomy.json",
       "what": "kas haritası yolları",
       "to": "src/data/rigAnatomy.json"
@@ -98,8 +98,8 @@
       "to": "src/utils/rigAudit.test.ts"
     },
     "rigSchema.test.ts": {
-      "sha256": "02c50f7602355d994149496c2835ad6ff5c6aee50b8c85f23cefc9172626c6f8",
-      "bytes": 25480,
+      "sha256": "35e77c190429c49783df9a5232a940ec1d559c2bc705802572da0e24bcf999db",
+      "bytes": 25733,
       "from": "tests/rigSchema.test.ts",
       "what": "şema testleri",
       "to": "src/utils/rigSchema.test.ts"

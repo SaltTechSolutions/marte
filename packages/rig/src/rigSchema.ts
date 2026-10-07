@@ -317,38 +317,52 @@ export function validateBundle(b: {
 }
 
 /**
- * Kas haritasının anatomi yolları.
+ * Kas haritasının anatomi yolları (`scripts/import-musclemap.mjs` üretir).
  *
- * Yollar gövdenin YARISINI çiziyor; diğer yarı aynı yolların ayna dönüşümüyle
- * çiziliyor. Bu bir boyut hilesi değil: sol ve sağ tarafın garanti simetrik
- * kalmasını sağlıyor, yani bir gölgelendirme düzeltmesi asla tek tarafa inemez.
+ * Her görünüm kendi `viewBox`'ını taşıyor ve gövdenin İKİ yarısını da ayrı
+ * yollarla çiziyor (kaynak böyle; eski el çizimi yarım gövde + aynaydı). Bir
+ * yolun `muscles` listesi boşsa silüettir (baş, el, ayak). `clip` verilmişse
+ * yol yalnızca o yatay bantta çizilir — tek yolun iki kas taşıdığı yerler
+ * (göğüs, sırttaki trapez) böyle bölünüyor.
  *
- * Denetlenen şey çizimin güzelliği değil BÜTÜNLÜĞÜ: her yolun bir `d`'si var
- * mı, kasa bağlı yolların kimliği sözlükte var mı, ve her kasın en az bir yolu
- * var mı. Sonuncusu önemli: sözlükte olup yolu olmayan bir kas, veride
- * yazılabilir ama ekranda hiç boyanmaz — sessiz bir kayıp.
+ * Denetlenen şey çizimin güzelliği değil BÜTÜNLÜĞÜ: her yolun `d`'si var mı,
+ * kas kimlikleri sözlükte var mı, ve her kasın en az bir yolu var mı.
+ * Sonuncusu önemli: sözlükte olup yolu olmayan bir kas, veride yazılabilir ama
+ * ekranda hiç boyanmaz — sessiz bir kayıp. Lisans metinleri de zorunlu: yollar
+ * MIT lisanslı iki projeden geliyor ve metin veriyle birlikte gitmek zorunda.
  */
 export function validateAnatomy(data: unknown): string[] {
   const errs: string[] = [];
   if (!isObj(data)) return ['anatomi: kök nesne bekleniyor'];
-  if (typeof data.viewBox !== 'string' || !data.viewBox.trim()) errs.push('anatomi: viewBox yok');
-  if (typeof data.mirror !== 'string' || !data.mirror.trim()) errs.push('anatomi: mirror dönüşümü yok');
+  if (!Array.isArray(data.licenses) || data.licenses.length === 0 || data.licenses.some((l) => typeof l !== 'string' || !l.includes('MIT'))) {
+    errs.push('anatomi: lisans metinleri yok — yollar MIT lisanslı kaynaktan, metin veriyle gitmeli');
+  }
 
   const seen = new Set<string>();
   (['front', 'back'] as const).forEach((view) => {
-    const list = data[view];
+    const v = data[view];
+    if (!isObj(v)) return errs.push(`anatomi: ${view} görünümü yok`);
+    if (typeof v.viewBox !== 'string' || v.viewBox.trim().split(/\s+/).length !== 4) errs.push(`anatomi ${view}: viewBox dört sayı olmalı`);
+    const list = v.paths;
     if (!Array.isArray(list) || list.length === 0) return errs.push(`anatomi: ${view} yol dizisi yok`);
     list.forEach((p: unknown, i: number) => {
       const at = `anatomi ${view}[${i}]`;
       if (!isObj(p)) return errs.push(`${at}: nesne değil`);
       Object.keys(p).forEach((k) => {
-        if (k !== 'd' && k !== 'muscle') errs.push(`${at}: bilinmeyen alan "${k}"`);
+        if (k !== 'd' && k !== 'muscles' && k !== 'clip') errs.push(`${at}: bilinmeyen alan "${k}"`);
       });
       if (typeof p.d !== 'string' || p.d.trim() === '') errs.push(`${at}: d boş`);
-      if (p.muscle === null || p.muscle === undefined) return;
-      if (typeof p.muscle !== 'string') return errs.push(`${at}: muscle metin ya da null olmalı`);
-      if (!MUSCLES[p.muscle]) errs.push(`${at}: bilinmeyen kas "${p.muscle}"`);
-      else seen.add(p.muscle);
+      if (p.clip !== undefined) {
+        const c = p.clip;
+        if (!Array.isArray(c) || c.length !== 2 || !c.every((n) => typeof n === 'number') || !(c[0] < c[1])) {
+          errs.push(`${at}: clip [üst, alt] ve üst < alt olmalı`);
+        }
+      }
+      if (!Array.isArray(p.muscles)) return errs.push(`${at}: muscles dizi olmalı (silüet için boş)`);
+      p.muscles.forEach((m: unknown) => {
+        if (typeof m !== 'string' || !MUSCLES[m]) errs.push(`${at}: bilinmeyen kas "${String(m)}"`);
+        else seen.add(m);
+      });
     });
   });
 
