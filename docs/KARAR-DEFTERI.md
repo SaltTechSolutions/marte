@@ -31,6 +31,26 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Uzuv profilleri: ters yüz hatası düzeltildi, kas kütleleri işlendi
+
+**Yapıldı.** `build-body-parts.mjs` başa giden kemiklerde (bel, göğüs, boyun) `f`/`b`'yi
+doğru yerel yarıya yazıyor (`HEADWARD`); önceden anatomik ön arkaya çiziliyordu — ölçüldü:
+bel parçasının sakrum derinliği (24) öne düşüp alt karını şişiriyordu. Profiller anatomik
+kütlelere göre yeniden yazıldı (deltoid, biceps/triceps karnı, brachioradialis, quadriceps
++ VMO, gluteal kıvrım, gastrocnemius, lordoz, göğüs/kürek kemiği). Önce/sonra aynı pozlarla
+Node'da çizilip karşılaştırıldı. Devredildi; rig 198, uygulama 430 test temiz.
+
+**Karar.** `f`/`b` her zaman ANATOMİK ön/arka; yerel yarı seçimi betikte.
+
+**Bilerek yapılmadı.** —
+
+**Açık.** Kullanıcı sonucu "çok iyi olmadı" buldu: elle yazılan yarı genişlik
+profilleriyle manken görünümü aşılmıyor. Sonraki yol kullanıcıya sunuldu (bkz. sonraki kayıt).
+
+**Nerede.** `packages/rig/scripts/build-body-parts.mjs`, `packages/rig/data/bodyParts.json`.
+
+---
+
 ## 2026-10-07 — iOS 27 için UIScene desteği açıldı (Expo 57.0.27)
 
 **Yapıldı.** Kullanıcı "UIScene desteğini ekle" seçti. `expo` 57.0.22 → 57.0.27,

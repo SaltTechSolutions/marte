@@ -57,98 +57,111 @@ const CAP = 4;
 /**
  * Profil: kemik boyunca istasyonlar.
  *
- * `u` kemiğin başından sonuna 0→1. `f` ÖN (+X, figürün baktığı yön), `b` ARKA
- * (−X) yarı genişlik. Uzuvlarda ön = ekstansör tarafı (quadriceps, tibia,
- * biceps); gövdede ön = göğüs/karın, arka = sırt.
+ * `u` kemiğin başından sonuna 0→1. `f` ANATOMİK ÖN (figürün baktığı yön), `b`
+ * ANATOMİK ARKA yarı genişlik. Uzuvlarda ön = quadriceps, tibia, biceps; gövdede
+ * ön = göğüs/karın, arka = sırt. Hangi yerel yarıya düştükleri `HEADWARD`'da.
  */
 const PROFILE = {
-  // Kalçadan dize. Kütle üst-orta üçte birde (quadriceps karnı); en üstte
-  // arka daha derin, çünkü gluteal kütle orada.
+  // Kalçadan dize. Üstte arka en derin: gluteal kıvrım uyluğun arkasına
+  // biniyor. Ön yüzde rectus femoris + vastus karnı üst-orta üçte birde,
+  // dize yakın vastus medialis'in "damlası" ikinci, küçük bir şişkinlik.
+  // Arka yüz hamstring boyunca dize doğru düzenli inceliyor.
   thigh: [
-    { u: 0.0, f: 17, b: 22 },
-    { u: 0.12, f: 19, b: 22 },
-    { u: 0.3, f: 20, b: 20 },
-    { u: 0.5, f: 18, b: 17 },
-    { u: 0.7, f: 16, b: 13 },
-    { u: 0.88, f: 13, b: 10 },
+    { u: 0.0, f: 17, b: 24 },
+    { u: 0.08, f: 19, b: 23 },
+    { u: 0.2, f: 21, b: 20.5 },
+    { u: 0.38, f: 21.5, b: 18.5 },
+    { u: 0.55, f: 20, b: 16.5 },
+    { u: 0.72, f: 17.5, b: 14 },
+    { u: 0.86, f: 15, b: 11.5 },
+    { u: 0.95, f: 13, b: 10 },
     { u: 1.0, f: 12, b: 9 },
   ],
   // Dizden ayak bileğine. Asıl biçim ARKADA: gastrocnemius karnı üst üçte
-  // birde şişiyor, ön yüz tibia boyunca neredeyse düz iniyor.
+  // birde belirgin şişiyor, alt yarıda Aşil tendonuna doğru hızla inceliyor.
+  // Ön yüz tibia boyunca neredeyse düz.
   shin: [
     { u: 0.0, f: 13, b: 12 },
-    { u: 0.12, f: 12, b: 15 },
-    { u: 0.28, f: 11, b: 17 },
-    { u: 0.45, f: 10, b: 14 },
-    { u: 0.65, f: 8, b: 10 },
-    { u: 0.85, f: 7, b: 7 },
+    { u: 0.1, f: 12, b: 15 },
+    { u: 0.22, f: 11, b: 18 },
+    { u: 0.34, f: 10.5, b: 17.5 },
+    { u: 0.5, f: 9.5, b: 13 },
+    { u: 0.65, f: 8, b: 9.5 },
+    { u: 0.8, f: 7, b: 7 },
     { u: 1.0, f: 6, b: 6 },
   ],
-  // Omuzdan dirseğe. Üstte deltoid kapağı, ortada biceps (ön) ile triceps
-  // (arka); dirsekte arka biraz daha derin — olecranon.
+  // Omuzdan dirseğe. Üstte deltoid kütlesi iki yüzü de doldurur; ortada
+  // biceps karnı önde (u≈0.5), triceps kütlesi arkada daha yüksekte (u≈0.3);
+  // dirsekte arka biraz daha derin — olecranon.
   upper: [
-    { u: 0.0, f: 13, b: 13 },
-    { u: 0.2, f: 12, b: 13 },
-    { u: 0.4, f: 11, b: 12 },
-    { u: 0.65, f: 10, b: 10 },
+    { u: 0.0, f: 14, b: 14 },
+    { u: 0.15, f: 14.5, b: 14 },
+    { u: 0.3, f: 12, b: 13.5 },
+    { u: 0.5, f: 12.5, b: 12 },
+    { u: 0.68, f: 11.5, b: 10.5 },
     { u: 0.85, f: 9, b: 9 },
     { u: 1.0, f: 8, b: 9 },
   ],
-  // Dirsekten bileğe. Kütle dirseğe yakın (fleksör karnı), bileğe doğru
-  // belirgin biçimde inceliyor.
+  // Dirsekten bileğe. Brachioradialis ve fleksör karnı dirseğin hemen
+  // altında şişiyor; bileğe doğru tendonlara inip belirgin biçimde inceliyor.
   fore: [
-    { u: 0.0, f: 9, b: 10 },
-    { u: 0.18, f: 10, b: 10 },
-    { u: 0.4, f: 9, b: 8 },
-    { u: 0.65, f: 7, b: 6 },
-    { u: 0.85, f: 6, b: 5 },
-    { u: 1.0, f: 5, b: 4 },
+    { u: 0.0, f: 9.5, b: 10 },
+    { u: 0.15, f: 11, b: 10.5 },
+    { u: 0.32, f: 10, b: 9 },
+    { u: 0.55, f: 8, b: 7 },
+    { u: 0.78, f: 6, b: 5.5 },
+    { u: 1.0, f: 5, b: 4.5 },
   ],
-  // Leğenden bele. Aşağıda leğen geniş ve arkada daha derin; yukarı doğru
-  // bel inceliyor.
+  // Leğenden bele. Arkada sakrum ve kalça kütlesinin üst kenarı en derin;
+  // yukarıda bel çukuru (lomber lordoz) arkayı İÇERİ çekiyor. Önde karın
+  // düz — eski profilde (ters yüze çizildiği için) alt karın şişkindi.
   lumbar: [
-    { u: 0.0, f: 20, b: 24 },
-    { u: 0.3, f: 20, b: 21 },
-    { u: 0.6, f: 19, b: 18 },
-    { u: 1.0, f: 18, b: 16 },
+    { u: 0.0, f: 19, b: 22 },
+    { u: 0.3, f: 19, b: 18.5 },
+    { u: 0.6, f: 18.5, b: 16.5 },
+    { u: 1.0, f: 19, b: 17 },
   ],
   /**
-   * Belden göğse — ERKEK gövde profili.
-   *
-   * Bridgman (`Constructive Anatomy`, gövde profili) iki şey söylüyor ve eski
-   * profil ikisini de yapmıyordu:
+   * Belden göğse — ERKEK gövde profili (Bridgman, `Constructive Anatomy`).
    *
    * 0. Göğüs OMUZ HİZASINDA en derindir; daralma göğüste değil BOYUNDA olur.
- *    İlk denemede üst ucu 19/21'e indirmiştim ve figür omzun hemen altında
- *    boğum yapıyordu — referans yandan çizimde göğüs koltukaltı hizasından
- *    omuza kadar dolu kalıyor, ince olan boyun.
- *
- * 1. Önden gövde TEK düz eğri değil: "göğüs kasının kenarında ve göbekte
-   *    çukurlarla üç küçük eğriye bölünüyor". Yani pektoralin ALT kenarının
-   *    altında bir çöküntü var (epigastrium). Eski profil önü aşağıdan yukarı
-   *    düz şişiriyordu.
-   * 2. Arkada "göğsün uzun arka kavisi" var — torasik kifoz, üstüne trapez ve
-   *    kürek kemiği kütlesi. Yani ÜST göğüste arka öndan daha dolgun. Eski
-   *    profil önü hep arkadan geniş tutuyordu ve göğüs öne çıkık, güvercin
-   *    göğsü gibi duruyordu.
+   * 1. Önden gövde tek düz eğri değil: pektoralin alt kenarının altında bir
+   *    çöküntü var (epigastrium), göğüs kasının kütlesi üst üçte birde.
+   * 2. Arkada torasik kifoz + trapez ve kürek kemiği kütlesi: ÜST göğüste
+   *    arka önden daha dolgun.
    *
-   * Kemik gövde EKSENİ (omurga değil, orta çizgi); rig'in omuz ve baş
-   * yerleşimi bu varsayıma göre kurulu.
+   * 2026-10-07'ye kadar bu profil ters yüze çiziliyordu (bkz. `HEADWARD`);
+   * eski sayılar ters görüntüye göre ayarlanmıştı ve aradaki fark 1 px
+   * olduğu için göğüs ön/arka ayrımı zaten silikti.
    */
   thorax: [
-    { u: 0.0, f: 18, b: 16 },
-    { u: 0.25, f: 21, b: 20 },
-    { u: 0.5, f: 25, b: 24 },
-    { u: 0.75, f: 27, b: 26 },
-    { u: 1.0, f: 26, b: 26 },
+    { u: 0.0, f: 18, b: 17 },
+    { u: 0.25, f: 20, b: 19 },
+    { u: 0.45, f: 21, b: 21 },
+    { u: 0.62, f: 24, b: 23.5 },
+    { u: 0.8, f: 25.5, b: 25 },
+    { u: 0.9, f: 25, b: 26 },
+    { u: 1.0, f: 24, b: 24.5 },
   ],
-  // Göğüsten başa. Neredeyse silindirik, arkada ense biraz daha dolgun.
+  // Göğüsten başa. Arkada trapezin eğimi enseyi doldurur; önde boyun ince.
   neck: [
-    { u: 0.0, f: 15, b: 16 },
-    { u: 0.5, f: 13, b: 14 },
+    { u: 0.0, f: 14, b: 17 },
+    { u: 0.5, f: 12.5, b: 14 },
     { u: 1.0, f: 12, b: 13 },
   ],
 };
+
+/**
+ * Kemiği BAŞA doğru giden parçalar: rig bu kemikleri leğenden yukarı doğru
+ * kuruyor ve `partTransform` yerel +Y'yi kemik yönüne çevirirken 180° döndürüyor.
+ * Sonuç: bu parçalarda yerel +X figürün ARKASINA düşüyor. `f`/`b` her zaman
+ * ANATOMİK ön/arka; hangi yerel yarıya yazılacağını burası seçiyor.
+ *
+ * Bulunuşu (2026-10-07): kas bantları figüre boyanırken bel kası hinge'de
+ * göğsün altında çıktı; aynı dönüş siluet profillerini de ters çiziyordu.
+ * `muscles.ts`'teki `HEADWARD` aynı listeyi taşıyor.
+ */
+const HEADWARD = new Set(['lumbar', 'thorax', 'neck']);
 
 const r1 = (n) => Math.round(n * 10) / 10;
 
@@ -174,10 +187,13 @@ function closedSpline(pts) {
 }
 
 /** Profilden kapalı dış hat: ön kenar aşağı, arka kenar yukarı, iki uçta kapak. */
-function outline(stations, len) {
+function outline(stations, len, headward) {
   const y = (u) => u * len;
-  const front = stations.map((s) => [s.f, y(s.u)]);
-  const back = [...stations].reverse().map((s) => [-s.b, y(s.u)]);
+  // Yerel +X yarısı: uzuvlarda anatomik ön, başa giden kemiklerde anatomik arka.
+  const pos = (s) => (headward ? s.b : s.f);
+  const neg = (s) => (headward ? s.f : s.b);
+  const front = stations.map((s) => [pos(s), y(s.u)]);
+  const back = [...stations].reverse().map((s) => [-neg(s), y(s.u)]);
   // Uçlar yuvarlak: kemiğin dışına `CAP` kadar taşan tek nokta, spline'ı
   // oradan döndürüyor. Düz kesilmiş uç, eklem topu kaçtığında görünüyordu.
   return closedSpline([...front, [0, len + CAP], ...back, [0, -CAP]]);
@@ -192,7 +208,7 @@ for (const [name, len] of Object.entries(BONES)) {
   for (let i = 1; i < stations.length; i++) {
     if (stations[i].u <= stations[i - 1].u) throw new Error(`"${name}" istasyonları artan sırada değil`);
   }
-  parts[name] = { len, d: outline(stations, len) };
+  parts[name] = { len, d: outline(stations, len, HEADWARD.has(name)) };
 }
 
 const out = {
