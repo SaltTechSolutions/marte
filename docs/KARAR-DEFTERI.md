@@ -31,6 +31,41 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Uzuv siluetleri MakeHuman (CC0) modelinden üretiliyor
+
+**Yapıldı.** Kullanıcı "Blender'ı kur, 1. yolla devam et" dedi. Blender 5.2.2 LTS (Homebrew
+cask) ve MPFB eklentisi (Blender eklenti deposu, `--online-mode` yalnızca komut için; Blender
+ayarı kalıcı değişmedi) kuruldu. `scripts/blender/extract-parts.py` başsız Blender'da erkek,
+atletik (kas 0.7, ideal oran) bir insan kurup `game_engine` iskeletini oturtuyor, her köşeyi
+baskın kemiğine atıyor, her uzvu KENDİ kemik ekseni + vücudun ileri yönü düzleminde izdüşürüp
+4 mm ızgarada dış hattını çıkarıyor (ileri yön ayak kemiğinden ölçülüyor). `scripts/import-
+makehuman.mjs` hattı sadeleştirip yumuşatıyor, Bézier'e çeviriyor ve `bodyParts.json`'ı
+yazıyor. Belgedeki "render + Inkscape'te elle çiz" adımının yerine geçti: tekrarlanabilir.
+Rig 198, uygulama 430 test; devredildi. Node'da aynı motorla çizilip göz ile kontrol edildi;
+editörde ve cihazda görülmedi.
+
+**Karar.** (1) Temel model CC0 (`base.obj` başlığı); MPFB kodu GPL ama dağıtılmıyor, yalnızca
+ürettiği geometri kullanılıyor. (2) Ölçek: kemik boyunca her parça kendi `len`'ine, enine TEK
+ölçek (bacak boyu oranı, 236 px/m) — model oranları bizimkinden farklı (modelde baldır >
+uyluk, ön kol > üst kol). (3) Uzuvlar kesilmiyor (kesik uç ayrı zincirde görünüyordu); gövde
+tek silüet olarak çıkarılıp eklem yüksekliklerinde üç banda kesiliyor, kesik köşeler `sharp`
+(spline orada taşıp omuzda çizgi bırakıyordu), önce yumuşatılıp sonra kesiliyor. (4) Gövde
+bantları ORTAK dik eksene göre: bant başına eksen modelin ~8° öne eğik göğüs eksenini taşıyıp
+belde öne basamak yapıyordu — kullanıcı "göbek saçma oldu" dedi, sebep buydu.
+
+**Bilerek yapılmadı.** Kafa, el, ayak ve leğen kütlesi (`rig.ts`'te kod) bu turda değişmedi.
+`build-body-parts.mjs` silinmedi (elle profil yolu, yedek); artık `bodyParts.json`'ı o üretmiyor.
+
+**Açık.** (1) Kafa hâlâ yumurta. (2) Diz/dirsek eklem topları yeni, daha ince uzuvların dışına
+taşıp yumru yapıyor. (3) Hinge/squat'ta kalça arkasında çift tümsek: `pelvisMass` ile uyluğun
+doğal gluteal kıvrımı üst üste. (4) Boyun arkasında küçük bir basamak. (5) Uzak uzuvlar ve
+ön görünüm denetlenmedi.
+
+**Nerede.** `packages/rig/scripts/blender/extract-parts.py`, `packages/rig/scripts/import-makehuman.mjs`,
+`packages/rig/data/bodyParts.json`.
+
+---
+
 ## 2026-10-07 — Uzuv profilleri: ters yüz hatası düzeltildi, kas kütleleri işlendi
 
 **Yapıldı.** `build-body-parts.mjs` başa giden kemiklerde (bel, göğüs, boyun) `f`/`b`'yi

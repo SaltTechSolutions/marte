@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-10-07T12:20:27.541Z",
+  "generated": "2026-10-07T12:29:52.405Z",
   "source": {
-    "commit": "c14aa969",
+    "commit": "86bc508a",
     "dirty": true
   },
   "counts": {
@@ -70,8 +70,8 @@
       "to": "src/data/rigAnatomy.json"
     },
     "bodyParts.json": {
-      "sha256": "d231d260bc0b86f333f42e249669107ea55308d6a04eb3f04dec0e4454ee3a8a",
-      "bytes": 3625,
+      "sha256": "68cb739669c006939e8f18ef66b4c4b0bef7afb39216b9a17ba21233aef515ed",
+      "bytes": 4921,
       "from": "data/bodyParts.json",
       "what": "uzuv siluet parçaları",
       "to": "src/data/rigBodyParts.json"
