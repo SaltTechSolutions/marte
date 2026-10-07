@@ -48,6 +48,8 @@ const BONES = { thigh: 105, shin: 100, upper: 78, fore: 68, lumbar: 55, thorax: 
 const CAP = 6;
 /** Sadeleştirme toleransı, rig pikseli. Izgara 4 mm ≈ 1 px; altı merdiven. */
 const TOL = 0.9;
+/** Bant kesiğindeki köşenin içeri çekilme payı, rig birimi. */
+const CUT_INSET = 1.5;
 /** Enine ölçek: rig bacak boyu / model bacak boyu. */
 const S = (BONES.thigh + BONES.shin) / mh.legLength;
 
@@ -147,7 +149,12 @@ function toPart(name, poly, u0, u1, axisV, headward, cap = CAP, capLo = cap, rou
   const local = slab.map(([u, v, cut], i) => {
     // `roundLo`: alt kesik açıkta kalıyorsa (bel bandı kalçanın önünde) köşe yuvarlanır.
     if (cut && !(roundLo && Math.abs(u - lo) < 1e-9)) sharp.add(i);
-    const x = (v - axisV(u)) * S;
+    let x = (v - axisV(u)) * S;
+    // Kesik köşesi silüetin TAM üstünde duruyordu; komşu bant aynı noktayı kendi
+    // eğrisiyle geçince köşe 1–2 birim dışarı taşıyıp boyun ve omuz hizasında
+    // çentik yapıyordu (kullanıcı: "boyundaki çentikler"). Köşe eksene doğru
+    // içeri çekiliyor: komşu parçanın dolgusunun altında kalıyor.
+    if (cut) x -= Math.sign(x) * Math.min(CUT_INSET, Math.abs(x));
     return [headward ? -x : x, (u - u0) * ky];
   });
   return { len, d: closedSpline(local, sharp) };
@@ -169,9 +176,11 @@ for (const name of ['thigh', 'shin', 'upper', 'fore']) {
 // okundu (kullanıcı: "göbek saçma oldu"). Ortak eksen: dört eklemin ön-arka
 // ortalaması — gövdenin kendi orta çizgisi.
 const T = mh.trunk;
-// Gövde daha az yumuşatılıyor (2 mm ızgaradan geliyor): göğüs kasının alt
-// kenarı ve kürek kemiği yandan bakışta okunması gereken kas ayrıntıları.
-const trunk = prepare(T.outline, 0.5, 1);
+// Gövde tek yumuşatmayla (2 mm ızgaradan): göğüs kasının alt kenarı korunacak kadar
+// az (0.5/1 turda boyun önü pürüzlüydü), ve TÜM bantlar aynı hattan kesiliyor —
+// boyun bandını ayrıca yumuşatmak onu inceltiyor, göğüs bandının üst köşeleri
+// omuz hizasında çentik olarak açıkta kalıyordu.
+const trunk = prepare(T.outline, 0.7, 2);
 /** Gövde bantları birbirine daha çok biniyor: kesik kenar zincirin içinde kalmalı. */
 const TRUNK_CAP = 10;
 const midV = (T.hip[1] + T.waist[1] + T.shoulder[1] + T.neck[1]) / 4;
@@ -180,7 +189,14 @@ const axis = () => midV;
 // köşe kalçanın önünde açıkta kalıyor, elin altında dişli bir çentik yapıyordu.
 parts.lumbar = toPart('lumbar', trunk, T.hip[0], T.waist[0], axis, true, TRUNK_CAP, 0, true);
 parts.thorax = toPart('thorax', trunk, T.waist[0], T.shoulder[0], axis, true, TRUNK_CAP);
-parts.neck = toPart('neck', trunk, T.shoulder[0], T.neck[0], axis, true, TRUNK_CAP);
+// Boyun göğüsle AYNI dikey oranla ölçekleniyor. Her bant kendi kemik boyuna
+// esnetilince (model boynu bizim 44'e, göğsü 85'e farklı oranlarla) örtüşme
+// bölgesi iki bantta farklı yüksekliğe denk geliyordu; omuz eğiminde genişlik hızlı
+// değiştiği için köşeler komşu bandın dışına taşıyıp çentik yapıyordu (kullanıcı:
+// "boyundaki çentikler"). Aynı oranla iki bant örtüşmede aynı hattı çiziyor; boyun
+// bandı modelde kafatası tabanına biraz kısa kalıyor, üstü kafanın çene-ense hattı.
+const kyT = BONES.thorax / (T.shoulder[0] - T.waist[0]);
+parts.neck = toPart('neck', trunk, T.shoulder[0], T.shoulder[0] + BONES.neck / kyT, axis, true, TRUNK_CAP);
 
 // Leğen BİLEREK yok: kalça ekleminin altındaki gövde silüeti denendi ve ince bir
 // şerit çıktı — gluteal kütlenin çoğu modelde uyluk kemiğine bağlı. Squat'ta
@@ -196,8 +212,9 @@ parts.neck = toPart('neck', trunk, T.shoulder[0], T.neck[0], axis, true, TRUNK_C
 const HEAD_UP = 28;
 const H = mh.head;
 const headPts = smooth(
-  simplifyClosed(H.outline.map(([u, v]) => [(v - H.anchor[1]) * S, -(u - H.anchor[0]) * S + HEAD_UP]), 0.35),
-  1,
+  // 0.35/1 tur çene altında dalgalı bir hat bırakıyordu; 0.5/2 burnu koruyup onu düzeltiyor.
+  simplifyClosed(H.outline.map(([u, v]) => [(v - H.anchor[1]) * S, -(u - H.anchor[0]) * S + HEAD_UP]), 0.5),
+  2,
 );
 const head = { d: closedSpline(headPts) };
 const headH = Math.max(...headPts.map((q) => q[1])) - Math.min(...headPts.map((q) => q[1]));

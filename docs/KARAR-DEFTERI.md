@@ -31,6 +31,31 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Boyun ve omuz hizasındaki çentikler giderildi
+
+**Yapıldı.** Kullanıcı "boyundaki çentikleri düzelt" dedi. Üç kaynak ölçüldü: (1) göğüs ve
+boyun bantları kendi kemik boylarına FARKLI dikey oranlarla esnetiliyordu (model boynu
+bizim 44'e, göğsü 85'e), örtüşme bölgesi iki bantta farklı yüksekliğe düşüyordu; omuz
+eğiminde genişlik hızlı değiştiği için kesik köşeleri komşu bandın dışına taşıyordu. Boyun
+artık göğüsle AYNI dikey oranla ölçekleniyor (`kyT`). (2) Gövde 0.5/1 turda boyun önünde
+pürüzlüydü: tek, ortak yumuşatma 0.7/2 tur (göğüs kası kenarı korunuyor). (3) Kafanın çene
+altı dalgalıydı: 0.5/2 tur. Kesik köşeleri ayrıca 1.5 birim içeri çekiliyor (`CUT_INSET`).
+Rig 200, uygulama 432 test; devredildi. Node'da göz ile kontrol edildi; editörde ve cihazda
+görülmedi.
+
+**Karar.** Bitişik gövde bantları aynı dikey oranı paylaşmalı; köşe ayarı bunun yerine geçmez.
+
+**Bilerek yapılmadı.** Kesiğe yakın noktaları düz bağlamak ve 3 birimlik içeri çekme denendi;
+oran farkı sürdükçe kırıklar kalıyordu, geri alındı. Bel/göğüs arası oran farkı duruyor:
+bel hizasında genişlik yavaş değiştiği için görünür kusur yok.
+
+**Açık.** Boyun bandı modelde kafatası tabanına ~1 cm kısa kalıyor; ense ile kafa arasını
+çene-ense hattı kapatıyor, gözle bakıldı, boşluk yok.
+
+**Nerede.** `packages/rig/scripts/import-makehuman.mjs`.
+
+---
+
 ## 2026-10-07 — Kaslı model; sırt üstü kiplerde gövde aynalanıyor
 
 **Yapıldı.** Kullanıcı "yan duruşta göğüs kasları düz; gym uygulamasında kassız model hoş
