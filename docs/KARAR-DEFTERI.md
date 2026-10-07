@@ -49,6 +49,16 @@ iOS 27'de açılmıyor.
 **Bilerek yapılmadı.** Android'e dokunulmadı (güncelleme durdurulu; ayar yalnızca iOS).
 Build/OTA alınmadı.
 
+**Doğrulama (aynı gün, kullanıcı simülatörde yönetici hesabıyla oturum açtıktan sonra).**
+Salon ayarlarının altında "Hakkında" bağlantısı görünüyor, ekran sürümü ve iki lisansı
+gösteriyor; lisans metni 80 sütunda elle bölündüğü için telefonda kırık satırlar
+çıkıyordu, paragraflar yeniden akıtıldı (`reflow`) ve düzgün göründüğü görüldü. Back
+squat detayında figür salonun mor temasıyla boyanıyor; kas haritası kartı ön ve arka
+görünümde tam sığıyor, efsane görünüyor, boyanan bölgeler doğru. iPhone 18 Pro Max /
+iOS 27.0, geliştirme derlemesi. Küçük ekranlı telefonda görülmedi. Not: test sırasında
+yanlış bir dokunuş hesabın "Salon duyuruları" bildirim anahtarını kapattı, aynı dakika
+içinde yeniden açıldı (ekran görüntüsüyle doğrulandı).
+
 **Açık.** (1) Native değişiklik + modül yükseltmeleri: **parmak izi değişti, OTA ile
 gitmez**, build 28 gerekir. (2) Sahne yaşam döngüsüyle derin bağlantılar, bildirime
 dokunarak açılış, Google girişi ve RevenueCat akışı cihazda denenmedi — Expo "uygulamanın

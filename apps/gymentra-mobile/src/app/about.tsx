@@ -11,6 +11,18 @@ import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 
 /**
+ * Licence files are hard-wrapped at 80 columns; on a phone that leaves a word
+ * stranded on every other line. Join the lines inside each paragraph and let
+ * the text wrap to the screen.
+ */
+const reflow = (text: string) =>
+  text
+    .trim()
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s*\n\s*/g, ' '))
+    .join('\n\n');
+
+/**
  * Third-party artwork the app ships, with its licence text.
  *
  * The muscle map is drawn from MuscleMap's paths (MIT), most of which come
@@ -71,7 +83,7 @@ export default function About() {
             </Text>
             {licenses[i] ? (
               <Text variant="label" tone="sub" style={{ lineHeight: 17, marginTop: 4 }}>
-                {licenses[i].trim()}
+                {reflow(licenses[i])}
               </Text>
             ) : null}
           </Card>
