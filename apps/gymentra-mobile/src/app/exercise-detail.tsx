@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -15,18 +15,10 @@ import { ExerciseReportReason } from '@/data/types';
 
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
-import { MuscleMap, MuscleMapLegend } from '@/components/MuscleMap';
-import { RigFigure } from '@/components/RigFigure';
+import { ExerciseCarousel } from '@/components/ExerciseCarousel';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
-import {
-  Activation,
-  Exercise,
-  MuscleId,
-  exerciseById,
-  exerciseByName,
-} from '@/data/exerciseLibrary';
-import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
+import { Exercise, exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 
@@ -93,76 +85,15 @@ function difficultyTone(difficulty: string, colors: ReturnType<typeof useAppThem
 }
 
 /**
- * Hareket ekranı: çizim üstte sabit, kaslar ve anlatım yana kaydırmalı.
+ * Hareket ekranı: üstte dönen carousel (hareket · kaslar ön · kaslar arka ·
+ * başlangıç ve bitiş), altında set/ekipman ve adımlar tek kaydırmada.
  *
- * Üye bu ekranı çoğunlukla hareketin ortasında açıyor ve baktığı tek şey
- * canlandırma. Tek uzun kaydırmada çizim ilk parmak hareketinde ekrandan
- * çıkıyor, adımları okurken duruşu görmek için geri kaydırmak gerekiyordu.
- * Çizim artık sabit; altındaki iki sayfa (kaslar / nasıl yapılır) yana
- * kaydırılıyor ya da başlıklarına dokunularak değiştiriliyor.
+ * Önceki düzende çizim üstte sabit, kaslar ve anlatım alttaki iki sekmedeydi.
+ * Kullanıcı (2026-10-07) görselleri tek kartta kaydırmalı istedi: üye bakmak
+ * istediği resme parmağıyla geçiyor, metin carousel'in altında duruyor.
  */
 function Detail({ exercise }: { exercise: Exercise }) {
   const { colors, spacing } = useAppTheme();
-  const [view, setView] = useState<'front' | 'back'>('front');
-  const [page, setPage] = useState(0);
-  // Pencere genişliği değil ölçülen genişlik: Screen'in kendi kenar boşluğu
-  // varsa sayfalar yarım kayar ve pagingEnabled hizayı bir daha tutturamaz.
-  const [pagerW, setPagerW] = useState(0);
-  const pagerRef = useRef<ScrollView>(null);
-
-  const rig = RIG_ARCHETYPES[exercise.archetype];
-  const activation: Partial<Record<MuscleId, Activation>> = {};
-  exercise.secondary.forEach((m) => (activation[m] = 'secondary'));
-  exercise.primary.forEach((m) => (activation[m] = 'primary'));
-
-  const goTo = (i: number) => {
-    setPage(i);
-    if (pagerW > 0) pagerRef.current?.scrollTo({ x: i * pagerW, animated: true });
-  };
-
-  const viewToggle = (target: 'front' | 'back', label: string) => {
-    const on = view === target;
-    return (
-      <Pressable
-        onPress={() => setView(target)}
-        accessibilityRole="button"
-        accessibilityState={{ selected: on }}
-        style={{
-          height: 44,
-          minWidth: 60,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 14,
-          borderRadius: 999,
-          backgroundColor: on ? colors.p : 'transparent',
-        }}>
-        <Text variant="helper" weight="700" tone={on ? 'onp' : 'sub'}>
-          {label}
-        </Text>
-      </Pressable>
-    );
-  };
-
-  const tab = (i: number, label: string) => {
-    const on = page === i;
-    return (
-      <Pressable
-        key={label}
-        onPress={() => goTo(i)}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: on }}
-        style={{ flex: 1, alignItems: 'center', paddingVertical: 10, gap: 8 }}>
-        {/* `inherit` leaves color undefined and nothing above sets one, so the
-            selected label fell back to black on the dark background. */}
-        <Text variant="label" weight="900" tone={on ? 'primary' : 'sub'}>
-          {label}
-        </Text>
-        <View style={{ height: 2, width: '70%', borderRadius: 2, backgroundColor: on ? colors.p : 'transparent' }} />
-      </Pressable>
-    );
-  };
-
-  const pageStyle = pagerW > 0 ? { width: pagerW } : { width: 0 };
 
   return (
     <Screen>
@@ -183,66 +114,19 @@ function Detail({ exercise }: { exercise: Exercise }) {
         </View>
       </View>
 
-      {/* --- Hareket: sabit, kaydırılmaz --- */}
-      <Card style={{ marginHorizontal: spacing.md, marginBottom: spacing.sm, gap: 10 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <Text variant="label" tone="sub">
-            HAREKET
-          </Text>
-        </View>
-        <RigFigure rig={rig} muscles={exercise} />
-        {/*
-          plan.md D-5. Eski metin "antrenör onayı bekliyor" diyordu ve iki ayrı
-          şeyi tek cümlede karıştırıyordu: bizim **iç kalite durumumuz** ile
-          kullanıcının **güvenliği**. Birincisi kullanıcının yapabileceği bir
-          şey değil, üstelik hem incelemeciye hem ilk üyeye "bu içerik
-          doğrulanmadı" diye okunuyordu. İkincisi ise gerçek ve kalması
-          gereken uyarı.
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
+        <ExerciseCarousel exercise={exercise} />
 
-          Uyarı artık `poseReviewed`'a bağlı değil, çünkü doğru olduğu koşul
-          bu bayrak değil: bir antrenör kareleri onaylasa bile çizimler
-          şematik kalır ve teknik yine antrenörden öğrenilir. Bayrağa
-          bağlasaydık, onay geldiği gün güvenlik uyarısı sessizce kaybolurdu.
-          `poseReviewed` veride kalıyor — karelerin nasıl üretildiğini
-          söyleyen bir künye, arayüz anahtarı değil.
+        {/*
+          plan.md D-5. Uyarı `poseReviewed`'a bağlı değil: bir antrenör kareleri
+          onaylasa bile çizimler şematik kalır ve teknik yine antrenörden öğrenilir.
+          Bayrağa bağlasaydık, onay geldiği gün güvenlik uyarısı sessizce kaybolurdu.
         */}
-        <Text variant="label" tone="sub">
+        <Text variant="label" tone="sub" style={{ paddingHorizontal: spacing.md, marginBottom: spacing.sm }}>
           ⓘ Çizimler şematiktir; hareketin yolunu gösterir, tekniği anlatmaz. Tekniği antrenörüne doğrulat.
         </Text>
-      </Card>
 
-      {/* --- Kaslar / anlatım --- */}
-      <View style={{ flexDirection: 'row', paddingHorizontal: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-        {tab(0, 'ÇALIŞAN KASLAR')}
-        {tab(1, 'NASIL YAPILIR')}
-      </View>
-
-      <ScrollView
-        ref={pagerRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onLayout={(e) => setPagerW(e.nativeEvent.layout.width)}
-        onMomentumScrollEnd={(e) => {
-          if (pagerW > 0) setPage(Math.round(e.nativeEvent.contentOffset.x / pagerW));
-        }}
-        style={{ flex: 1 }}>
-        <ScrollView style={pageStyle} contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.sm }}>
-          <Card style={{ gap: 10 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <View style={{ flexDirection: 'row', backgroundColor: colors.bg1, borderRadius: 999, padding: 3 }}>
-                {viewToggle('front', 'Ön')}
-                {viewToggle('back', 'Arka')}
-              </View>
-            </View>
-            <View style={{ alignItems: 'center' }}>
-              <MuscleMap view={view} activation={activation} />
-            </View>
-            <MuscleMapLegend />
-          </Card>
-        </ScrollView>
-
-        <ScrollView style={pageStyle} contentContainerStyle={{ padding: spacing.md, paddingBottom: spacing.lg, gap: spacing.sm }}>
+        <View style={{ paddingHorizontal: spacing.md, gap: spacing.sm }}>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Card style={{ flex: 1, gap: 3 }}>
               <Text variant="label" tone="sub">
@@ -270,6 +154,9 @@ function Detail({ exercise }: { exercise: Exercise }) {
 
           {exercise.steps.length > 0 && (
             <Card style={{ gap: 14 }}>
+              <Text variant="label" tone="sub">
+                ADIMLAR
+              </Text>
               {exercise.steps.map(([tr, en], i) => (
                 <View key={i} style={{ flexDirection: 'row', gap: 11 }}>
                   <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
@@ -287,9 +174,9 @@ function Detail({ exercise }: { exercise: Exercise }) {
               ))}
             </Card>
           )}
+        </View>
 
-          <ReportProblem exercise={exercise} />
-        </ScrollView>
+        <ReportProblem exercise={exercise} />
       </ScrollView>
     </Screen>
   );

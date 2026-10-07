@@ -31,6 +31,35 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Hareket ekranı: dönen dört slaytlı carousel
+
+**Yapıldı.** Kullanıcının istediği düzen: üstte yana kaydırılan, dönen carousel —
+1) hareketli çizim (ortalanmış), 2) çalışan kaslar önden, 3) arkadan, 4) başlangıç ve bitiş
+çizimi (durağan) → yine 1. Altında set/tekrar, ekipman, adımlar ve "Sorun bildir" tek dikey
+kaydırmada; eski "Çalışan kaslar / Nasıl yapılır" sekmeleri kalktı. Yeni bileşen
+`ExerciseCarousel`: slaytların başına sonuncunun, sonuna ilkinin kopyası konuyor, kopyaya
+varılınca görünmeden asıl slayta atlanıyor; kopyalar durağan (ikinci animasyon döngüsü
+yok). Noktalar dokunulabilir. `RigFigure`'a `still` (sabit an) eklendi. `keyPhases` (ilk kare
++ ondan en çok ayrılan kare) editörden motora (`rig.ts`) taşındı, editör oradan alıyor,
+testi var. **Simülatörde görüldü** (iPhone 18 Pro Max, iOS 27, yönetici hesabı, back squat):
+dört slayt, iki yönde döngü ve noktalar çalışıyor. İlk denemede 4. slaytta figürler
+görünmüyordu (ortalanan sütunda SVG genişliği 0), düzeltildi. Rig 201, uygulama 433 test.
+
+**Karar.** Kas haritası ve hareket aynı kartta, metin altında; carousel yüksekliği sabit
+(340) ki slayt değişirken sayfa zıplamasın.
+
+**Bilerek yapılmadı.** Otomatik kayan carousel (üye okurken kayması istenmez). Görünmeyen
+slayttaki animasyonu durdurma (tek döngü, maliyeti düşük).
+
+**Açık.** Küçük ekranlı telefonda (SE) slayt yüksekliği denenmedi. Ön görünümlü hareketlerde
+(yanal kaldırma vb.) 4. slayt görülmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/components/ExerciseCarousel.tsx`,
+`apps/gymentra-mobile/src/app/exercise-detail.tsx`, `apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`packages/rig/src/rig.ts` (`keyPhases`), `packages/rig/editor/editor.js`.
+
+---
+
 ## 2026-10-07 — Boyun ve omuz hizasındaki çentikler giderildi
 
 **Yapıldı.** Kullanıcı "boyundaki çentikleri düzelt" dedi. Üç kaynak ölçüldü: (1) göğüs ve

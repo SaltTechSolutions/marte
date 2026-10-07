@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '@/data/rigArchetypes';
-import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '@/utils/rig';
+import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, keyPhases, poseAt, showFarLeg, skeleton } from '@/utils/rig';
 import { auditExercise, auditLoop, auditSegments } from '@/utils/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -260,6 +260,16 @@ describe('rig hareket denetimi', () => {
       const ex = RIG_ARCHETYPES[key];
       const widths = Array.from({ length: 21 }, (_, i) => poseAt(ex, i / 20).p.hxF);
       expect(Math.max(...widths) - Math.min(...widths), `${key} açılma`).toBeGreaterThan(40);
+    });
+  });
+});
+
+describe('evre çifti (başlangıç ve bitiş slaytı)', () => {
+  it('her arketipte ilk kare ve ondan farklı bir kare seçilir', () => {
+    entries.forEach(([key, ex]) => {
+      const [a, b] = keyPhases(ex);
+      expect(a, key).toBe(0);
+      expect(b > 0 && b < ex.kf.length, `${key} → ${b}`).toBe(true);
     });
   });
 });

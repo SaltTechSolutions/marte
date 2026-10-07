@@ -165,8 +165,14 @@ export function RigFigure({
   view,
   height = 260,
   muscles,
+  still,
 }: {
   rig: RigExercise;
+  /**
+   * Verilirse figür oynamaz, bu andaki (0..1) pozda durur — "başlangıç ve bitiş"
+   * çizimi ve carousel'in kopya slaytları için.
+   */
+  still?: number;
   /**
    * Hareketin çalıştırdığı kaslar: verilirse figürün üstünde iki tonla
    * boyanır (birincil koyu, ikincil açık). Yalnızca yan görünümde.
@@ -178,20 +184,22 @@ export function RigFigure({
 }) {
   const { colors } = useAppTheme();
   const plane: 'side' | 'front' = view ?? rig.view ?? 'side';
-  const [t, setT] = useState(0);
+  const [tLive, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const t = still ?? tLive;
   const originRef = useRef(0);
   const lastPaintRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    if (still !== undefined) return undefined;
     AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
       if (!cancelled && !reduce) setPlaying(true);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [still]);
 
   useFocusEffect(
     useCallback(() => {

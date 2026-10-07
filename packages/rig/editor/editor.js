@@ -11,7 +11,7 @@
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirFarOf, footDirOf, footPath,
   propShift,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, keyPhases, lerpP, partTransform, pelvisMass, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
 import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
@@ -655,29 +655,6 @@ function muscleMapSvg(view, mus) {
       </pattern>${clips.join('')}</defs>
       ${body}
     </svg>`;
-}
-
-/**
- * Hareketi iki karede anlatan evre çifti.
- *
- * İlk kare ve ondan EN ÇOK AYRILAN kare. Elle "başlangıç ve tepe" işaretlemek
- * yerine veriden çıkıyor: kareler değişince seçim de kendiliğinden değişir,
- * unutulmuş bir bayrak yüzünden yanlış evre gösterilmez. Ayrılma iskelet
- * üstünden ölçülüyor, poz alanları üstünden değil — hepsi piksel, birim
- * karışması olmuyor.
- */
-function keyPhases(e) {
-  const S0 = skeleton(e, fillPose(e.kf[0].p));
-  const joints = Object.keys(S0).filter((k) => k !== 'bar');
-  let best = Math.min(1, e.kf.length - 1);
-  let bestD = -1;
-  e.kf.forEach((k, i) => {
-    if (i === 0) return;
-    const S = skeleton(e, fillPose(k.p));
-    const d = joints.reduce((sum, j) => sum + Math.hypot(S[j][0] - S0[j][0], S[j][1] - S0[j][1]), 0);
-    if (d > bestD) { bestD = d; best = i; }
-  });
-  return [0, best];
 }
 
 /** Tek bir pozu verilen SVG'ye çizer. */

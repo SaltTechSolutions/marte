@@ -395,6 +395,34 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   return { p: toWorld(l), phase: raw < 0.5 ? a : b };
 }
 
+/**
+ * Hareketi iki karede anlatan evre çifti: ilk kare ve ondan EN ÇOK AYRILAN kare.
+ *
+ * Elle "başlangıç ve tepe" işaretlemek yerine veriden çıkıyor: kareler değişince
+ * seçim de kendiliğinden değişir. Ayrılma iskelet üstünden ölçülüyor (hepsi
+ * piksel, birim karışmıyor). Editörün önizlemesi ve uygulamanın "başlangıç ve
+ * bitiş" slaytı bunu kullanıyor. Döner: kare indeksleri.
+ */
+export function keyPhases(ex: RigExercise): [number, number] {
+  const S0 = skeleton(ex, fillPose(ex.kf[0].p));
+  const joints = (Object.keys(S0) as (keyof Skeleton)[]).filter((k) => k !== 'bar');
+  let best = Math.min(1, ex.kf.length - 1);
+  let bestD = -1;
+  ex.kf.forEach((k, i) => {
+    if (i === 0) return;
+    const S = skeleton(ex, fillPose(k.p));
+    const d = joints.reduce((sum, j) => {
+      const a = S[j] as Vec | null, b = S0[j] as Vec | null;
+      return a && b ? sum + Math.hypot(a[0] - b[0], a[1] - b[1]) : sum;
+    }, 0);
+    if (d > bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return [0, best];
+}
+
 export interface Skeleton {
   pelvis: Vec;
   knee: Vec;
