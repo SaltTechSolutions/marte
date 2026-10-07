@@ -31,6 +31,31 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Rig ara kareleri monoton kübik oldu
+
+**Yapıldı.** `poseAt` geçiş karelerinde doğrusal karışım yerine her eklem-yerel
+kanalda monoton kübik Hermite (Fritsch–Carlson, Brodlie teğetleri) kullanıyor.
+Beklemede ve tepe/dip karesinde teğet sıfır, yani iki ucu durgun aralık eskisi
+gibi smoothstep; geçiş karesinde hız artık sürekli. İki test eklendi: ara kare
+komşu karelerin aralığından taşmaz; geçiş karesinde hız kırılmaz (eski motorda
+bu test kalıyor, yenisinde geçiyor). 191 test, typecheck temiz, 40 arketip
+denetimden uyarısız. Editörde görüldü, uygulamaya **devredilmedi**.
+
+**Karar.** Monoton kübik, Catmull-Rom'un reddedilme gerekçesini (uç aşımı → ROM
+ihlali) karşılıyor; bu yüzden kabul. Durum taraması: arketip eksikliği
+`exerciseLibrary.test.ts` ile zaten korunuyor, dirsek bandı zaten iskeletten
+okuyor — ikisi de ek iş gerektirmedi.
+
+**Bilerek yapılmadı.** Reanimated'a geçiş (native bağımlılık, OTA parmak izini
+etkiler). Ayak bileği açısı (geriye uyumsuz). `npm run export` (onay bekliyor).
+
+**Açık.** Devir yapılmadı: uygulamadaki `rig.ts` hâlâ doğrusal geçişte. Omuz/boyun
+ROM (TODOS) duruyor.
+
+**Nerede.** `packages/rig/src/rig.ts` (`poseAt`, `monoSlope`), `packages/rig/tests/rig.test.ts`.
+
+---
+
 ## 2026-09-21 — iOS build 27 için OTA dalı hazırlandı (yayınlanmadı)
 
 **Yapıldı.** `ota/ios-27-denetim` (yerel, `6ac705f4`): build 27'nin commit'i
