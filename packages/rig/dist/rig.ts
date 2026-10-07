@@ -849,7 +849,9 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
   // Ön/arka AYRI: ibiğin genişlemesi yanaldır, yandan bakışta leğenin önü
   // belden daha ileri çıkmaz. Simetrik bir blok kalçanın önünde bir çıkıntı
   // bırakıyordu. Derinlik arkada: gluteal kütle orada.
-  const FRONT = 20;
+  // Diz verilince (kalça zarfı) ön, bel bandının kalçadaki ön genişliğine
+  // (MakeHuman, 25) yaklaşıyor ki bel önü zarfa düz insin.
+  const FRONT = knee ? 24.5 : 20;
   // Kalça, yandan bakışta figürün EN ÇIKIK ARKA noktasıdır — kullanıcının
   // verdiği anatomi referansında sırt çizgisi düz iner, çıkıntıyı gluteal
   // kütle yapar. 27'de sırt hattıyla neredeyse aynı hizadaydı.
@@ -886,13 +888,20 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec): string {
     const kl = Math.hypot(kx, ky) || 1;
     const d: Vec = [kx / kl, ky / kl];
     const back: Vec = [-d[1], d[0]];
+    const at = (t: number, side: Vec, w: number): Vec => [pelvis[0] + d[0] * kl * t + side[0] * w, pelvis[1] + d[1] * kl * t + side[1] * w];
     [
       [-0.04, 15],
       [0.06, 14.5],
       [0.16, 12.5],
-    ].forEach(([t, w]) => {
-      pts.push([pelvis[0] + d[0] * kl * t + back[0] * w, pelvis[1] + d[1] * kl * t + back[1] * w]);
-    });
+    ].forEach(([t, w]) => pts.push(at(t, back, w)));
+    // ÖN de köprüleniyor: bel bandının önü kalçada 25 birim, uyluğun önü ancak
+    // 15–25 birim aşağıda o genişliğe ulaşıyor. Arada bel bandının ön-alt köşesi
+    // damla gibi sarkıp kasıkta bir çıkıntı bırakıyordu (kullanıcı, 2026-10-07).
+    const front: Vec = [d[1], -d[0]];
+    [
+      [0.12, 21],
+      [0.2, 23.5],
+    ].forEach(([t, w]) => pts.push(at(t, front, w)));
   }
   if (!knee) return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
   // Zarf düz kenarlarla birleşince ayakta kalçanın altında kama çıkıyordu;

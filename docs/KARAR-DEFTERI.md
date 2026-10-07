@@ -50,6 +50,13 @@ Hinge, squat, hip thrust, hamle Node'da göz ile kontrol edildi; editörde ve ci
 etkisi olmadı ve kırpma köşesi küçük bir çentik bıraktı — geri alındı. Uzak bacak zincirine
 zarf eklenmedi (uzak kalça gövdenin arkasında).
 
+**Ek (aynı gün, kullanıcı ekran görüntüsüyle):** Kasıkta, gövdenin uyluğa bağlandığı yerde
+önde bir çıkıntı vardı. Ölçüldü: bel bandının önü kalçada 25 birim, leğen bloğunun önü 20;
+bel bandının ön-alt köşesi bloğun önünden damla gibi sarkıyordu ve uyluğun önü ancak 15–25
+birim aşağıda o genişliğe ulaşıyor. Zarfın önü 24.5'e çıktı ve uyluğun üst-ön kenarından iki
+nokta eklendi: bel önü zarfın üstünden uyluğa tek eğriyle iniyor. Diz verilmeyen eski çağrılar
+(`FRONT = 20`) değişmedi.
+
 **Açık.** Hinge'de kalçanın altında 1–2 px'lik küçük bir kanca kalabilir (uyluk topuzu
 zarfın kenarına çok yakın). Önden görünüm değişmedi.
 

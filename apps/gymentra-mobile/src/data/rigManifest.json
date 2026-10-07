@@ -1,9 +1,9 @@
 {
   "name": "antrenman-simulatoru",
   "version": "1.0.0",
-  "generated": "2026-10-07T12:42:37.934Z",
+  "generated": "2026-10-07T12:58:09.548Z",
   "source": {
-    "commit": "e434e23b",
+    "commit": "48af0254",
     "dirty": true
   },
   "counts": {
@@ -14,8 +14,8 @@
   },
   "files": {
     "rig.ts": {
-      "sha256": "c95a199cb590790c1aae61645df60b331f8f43054f43ee1e9a3b9b16929d12ca",
-      "bytes": 53490,
+      "sha256": "fd60644a2457f3594c21c95dedcb71fe8672c494b9ae3d1296a06bcac821011e",
+      "bytes": 54125,
       "from": "src/rig.ts",
       "what": "motor",
       "to": "src/utils/rig.ts"
