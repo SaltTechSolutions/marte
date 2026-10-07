@@ -39,7 +39,9 @@ Beklemede ve tepe/dip karesinde teğet sıfır, yani iki ucu durgun aralık eski
 gibi smoothstep; geçiş karesinde hız artık sürekli. İki test eklendi: ara kare
 komşu karelerin aralığından taşmaz; geçiş karesinde hız kırılmaz (eski motorda
 bu test kalıyor, yenisinde geçiyor). 191 test, typecheck temiz, 40 arketip
-denetimden uyarısız. Editörde görüldü, uygulamaya **devredilmedi**.
+denetimden uyarısız. Editörde görüldü. Kullanıcı onayıyla `npm run export` ile uygulamaya
+devredildi (`rig.ts`, `rig.test.ts`, manifest); uygulamada `tsc`, lint ve 423
+test temiz. Cihazda görülmedi.
 
 **Karar.** Monoton kübik, Catmull-Rom'un reddedilme gerekçesini (uç aşımı → ROM
 ihlali) karşılıyor; bu yüzden kabul. Durum taraması: arketip eksikliği
@@ -49,8 +51,10 @@ okuyor — ikisi de ek iş gerektirmedi.
 **Bilerek yapılmadı.** Reanimated'a geçiş (native bağımlılık, OTA parmak izini
 etkiler). Ayak bileği açısı (geriye uyumsuz). `npm run export` (onay bekliyor).
 
-**Açık.** Devir yapılmadı: uygulamadaki `rig.ts` hâlâ doğrusal geçişte. Omuz/boyun
-ROM (TODOS) duruyor.
+**Açık.** Manifest `dirty: true`: export anında ağaçta bu işle ilgisiz
+`apps/gymentra-mobile/AGENTS.md` değişikliği ve `docs/BUILD.md` vardı. Değişiklik
+JS-only, OTA ile gidebilir ama gönderilmedi. Omuz/boyun ROM (TODOS) duruyor.
+Sırada: anatomik gerçekçi figür + iki tonlu kas vurgusu (kullanıcı seçimi).
 
 **Nerede.** `packages/rig/src/rig.ts` (`poseAt`, `monoSlope`), `packages/rig/tests/rig.test.ts`.
 

@@ -221,21 +221,16 @@ const BASE = {
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
 export const ease = (u: number): number => u * u * (3 - 2 * u);
 
-/** Duruştan çıkış: yavaş başla, hızla devam et. */
-const easeOut = (u: number): number => u * u;
-/** Duruşa varış: hızla gel, yavaşlayarak dur. */
-const easeIn = (u: number): number => u * (2 - u);
-
 /**
- * İki karenin pozu aynı mı? Aynıysa aradaki aralık bir BEKLEME'dir.
- *
- * Bekleme ile geçiş ayrımı yumuşatmanın nereye uygulanacağını belirliyor:
- * beklemede hızın sıfırlanması hareketin kendisi, geçiş karesinde ise hata.
+ * Monoton kübik için bir karedeki teğet: iki komşu eğimin ağırlıklı harmonik
+ * ortalaması (Brodlie). Eğimler zıt işaretliyse ya da biri sıfırsa (tepe, dip,
+ * bekleme) teğet sıfır — eğri o karede durur ve aralığın dışına taşamaz.
  */
-const samePose = (a: RigKeyframe, b: RigKeyframe): boolean => {
-  const A = fillPose(a.p);
-  const B = fillPose(b.p);
-  return (Object.keys(A) as (keyof RigPose)[]).every((k) => Math.abs(A[k] - B[k]) <= 0.5);
+const monoSlope = (d0: number, d1: number, h0: number, h1: number): number => {
+  if (d0 * d1 <= 0) return 0;
+  const w0 = 2 * h1 + h0;
+  const w1 = h1 + 2 * h0;
+  return (w0 + w1) / (w0 / d0 + w1 / d1);
 };
 
 /**
@@ -358,33 +353,41 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   const raw = Math.min(1, Math.max(0, (t - a.t) / span));
 
   /*
-   * Yumuşatma her aralığa DEĞİL, yalnızca hareketin gerçekten durduğu yerlere
-   * uygulanıyor.
+   * Ara kareler her eklem-yerel kanalda MONOTON KÜBİK Hermite ile çiziliyor
+   * (Fritsch–Carlson, Brodlie teğetleri).
    *
-   * Eskiden her aralık smoothstep'ti ve bu, figürün HER ara karede hızını
-   * sıfırlaması demekti. Ölçüldü: 30 arketipteki 9 gerçek geçiş karesinin
-   * dokuzunda da hız ortalamanın %25'inin altına düşüyordu — kol çevirme turun
-   * içinde üç kez, omuz presi itişin ortasında duruyordu.
+   * Tarihçe: önce her aralık smoothstep'ti ve figür HER ara karede duruyordu
+   * (30 arketipteki 9 geçiş karesinin dokuzunda hız ortalamanın %25'inin
+   * altına iniyordu). Sonra yalnızca beklemeler yumuşatıldı, geçişler doğrusal
+   * kaldı — duraklama gitti ama geçiş karesinde hız KIRIK kaldı.
    *
-   * Sıfır hız yalnızca BEKLEME'de doğru: iki komşu karenin pozu aynıysa orada
-   * hareket gerçekten duruyor (çömelmenin dibi, plank duruşu). Geçiş
-   * karesinden ise hızla geçilmeli.
-   *
-   * Kübik bir eğri (Catmull-Rom) hızı tam sürekli yapardı ama uçları aşabilir
-   * ve aşan bir eklem ROM bandını ihlal eder; yani yumuşaklık uğruna anatomik
-   * doğruluk riske girerdi. Buradaki çözüm hızda küçük bir kırılma bırakıyor,
-   * ama duraklamayı tamamen kaldırıyor.
+   * Catmull-Rom bilerek kullanılmıyor: uçları aşabilir, aşan eklem ROM
+   * bandını ihlal eder. Monoton kübik aşamaz — her aralıkta değer iki kare
+   * değerinin arasında kalır — ve hız geçiş karelerinde süreklidir.
+   * Beklemede (komşu iki kare aynı) ve tepe/dip karelerinde (yön değişimi)
+   * teğet sıfır; iki ucu durgun aralık eski smoothstep'in kendisi.
    */
-  const startsAtRest = i === 0 || samePose(kf[i - 1], a);
-  const endsAtRest = i + 2 >= kf.length || samePose(b, kf[i + 2]);
-  const u = startsAtRest && endsAtRest ? ease(raw) : startsAtRest ? easeOut(raw) : endsAtRest ? easeIn(raw) : raw;
   const la = toLocal(fillPose(a.p));
   const lb = toLocal(fillPose(b.p));
+  const prev = i > 0 ? toLocal(fillPose(kf[i - 1].p)) : null;
+  const next = i + 2 < kf.length ? toLocal(fillPose(kf[i + 2].p)) : null;
+  const h = span;
+  const h0 = i > 0 ? Math.max(0.0001, a.t - kf[i - 1].t) : 0;
+  const h1 = i + 2 < kf.length ? Math.max(0.0001, kf[i + 2].t - b.t) : 0;
+  const r2 = raw * raw;
+  const r3 = r2 * raw;
+  const H00 = 2 * r3 - 3 * r2 + 1;
+  const H10 = r3 - 2 * r2 + raw;
+  const H01 = -2 * r3 + 3 * r2;
+  const H11 = r3 - r2;
   const l = {} as LocalPose;
   (Object.keys(la) as (keyof LocalPose)[]).forEach((k) => {
-    l[k] = la[k] + (lb[k] - la[k]) * u;
+    const d = (lb[k] - la[k]) / h;
+    const ma = prev ? monoSlope((la[k] - prev[k]) / h0, d, h0, h) : 0;
+    const mb = next ? monoSlope(d, (next[k] - lb[k]) / h1, h, h1) : 0;
+    l[k] = H00 * la[k] + H10 * h * ma + H01 * lb[k] + H11 * h * mb;
   });
-  return { p: toWorld(l), phase: u < 0.5 ? a : b };
+  return { p: toWorld(l), phase: raw < 0.5 ? a : b };
 }
 
 export interface Skeleton {
