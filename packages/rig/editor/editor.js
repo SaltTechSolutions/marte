@@ -17,7 +17,7 @@ import {
 import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { dragFootDirFar } from '/engine/rig.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
-import { groupsOf, labelsOf } from '/engine/muscles.js';
+import { TINT_MIX, figureTints, groupsOf, labelsOf, tintEllipse } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 /** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
@@ -195,7 +195,35 @@ const EDGE_W = 1.6;
  * Aynısı `RigFigure.tsx`'te `Chain` olarak yazılı — çizim iki yerde ayrı
  * yazılıyor ama görünüm ayrışamaz (bkz. AGENTS.md).
  */
-const chain = (specs, fill, edge) => {
+let tintSeq = 0;
+/**
+ * Çalışan kasların bantları — zincirin dolgusunun ÜSTÜNE, hattın içine.
+ * Her bant kendi parçasının silüetiyle kırpılıyor, yani uzvun ön ya da arka
+ * yarısını tam o uzvun biçimiyle dolduruyor. Uygulamada `RigFigure`'ın
+ * `TintLayer`'ı ile aynı; sayılar iki yerde ayrışamaz.
+ */
+const tintNodes = (list, tints, far) => {
+  if (!tints || !tints.length) return [];
+  const base = far ? 'var(--skinFar)' : 'var(--skin)';
+  const fillOf = (level) => `color-mix(in srgb, var(--p) ${Math.round(TINT_MIX[level] * 100)}%, ${base})`;
+  const out = [];
+  list.forEach((q) => {
+    if (!q.part) return;
+    const mine = tints.filter((t) => t.part === q.part);
+    if (!mine.length) return;
+    const id = `tint${++tintSeq}`;
+    const kids = [el('clipPath', { id }, [el('path', { d: q.d })])];
+    mine.forEach((t) => {
+      const r = tintEllipse(t, q.len);
+      kids.push(el('ellipse', { cx: r.cx, cy: r.cy, rx: r.rx, ry: r.ry, style: `fill:${fillOf(t.level)}`,
+        'clip-path': `url(#${id})` }));
+    });
+    out.push(el('g', { transform: q.tf }, kids));
+  });
+  return out;
+};
+
+const chain = (specs, fill, edge, tints, far) => {
   const paint = (q, alt) => {
     const a = alt
       ? { fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }
@@ -208,13 +236,14 @@ const chain = (specs, fill, edge) => {
   return [
     el('g', {}, list.map((q) => paint(q, true))),
     el('g', {}, list.map((q) => paint(q, false))),
+    el('g', {}, tintNodes(list, tints, far)),
   ];
 };
 
 /** Zincire girecek uzuv parçaları (çizmez, tarif eder). */
 const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
   const q = useParts && name && PARTS && PARTS[name];
-  if (q) return [{ d: q.d, tf: partTransform(a, b) }];
+  if (q) return [{ d: q.d, tf: partTransform(a, b), part: name, len: q.len }];
   const m = lerpP(a, b, at);
   return [{ d: capsule(a, m, wa, wm) }, { d: capsule(m, b, wm, wb) }];
 };
@@ -311,7 +340,7 @@ const mkBall = () => (c, r) => ({ c, r });
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
-  return q ? { d: q.d, tf: partTransform(a, b) } : null;
+  return q ? { d: q.d, tf: partTransform(a, b), part: name, len: q.len } : null;
 };
 
 
@@ -630,8 +659,13 @@ function drawPose(svg, e, p) {
   const ball = mkBall();
   const limb = mkLimb();
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
-  const near = (specs) => push(chain(specs, skin, edge));
-  const far = (specs) => push(chain(specs, skinFar, edgeFar));
+  // Önizleme uygulamanın gösterdiğini gösterir: arketibi kullanan İLK
+  // hareketin kasları (yan paneldeki kas şemasıyla aynı seçim).
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  const tints = mus && mus.status === 'authored' ? figureTints(mus.primary, mus.secondary) : [];
+  const near = (specs) => push(chain(specs, skin, edge, tints, false));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar, tints, true));
   // KATMAN yan: floor
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce

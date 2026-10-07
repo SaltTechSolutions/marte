@@ -31,6 +31,42 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Çalışan kaslar hareket figürünün üstünde
+
+**Yapıldı.** Kullanıcı "anatomik gerçekçi, kaslar iki tonla hem haritada hem
+figürde" seçti; bu ilk adım. `muscles.ts`'e `MUSCLE_PATCHES` eklendi: 39 kasın her
+biri, bir uzuv parçasının ön/arka yarısında, kemik boyunca `u0..u1` bandı.
+`figureTints` aynı yüzde çakışan bantları birleştiriyor, `tintEllipse` bandı kas
+karnı biçiminde bir elipse çeviriyor. Elips parça siluetiyle kırpılıyor. Hem editör
+önizlemesi (`tintNodes`) hem uygulamanın `RigFigure`'ı (`muscles` prop'u,
+`exercise-detail` geçiyor) çiziyor. Testler: her kasın bandı var, kası yazılmış
+her hareket figüre çözülüyor, birleşme ve yön. Rig 196, uygulama 428 test; tsc,
+lint, `expo export --platform ios` temiz. Editörde squat, hinge, bench, barfiks,
+kürek ve pushdown göz ile kontrol edildi. **Cihazda görülmedi.**
+
+**Karar.** Renk saydamlık değil KARIŞIM (`TINT_MIX` birincil 0.78, ikincil 0.38;
+uzvun kendi dolgusundan accent'e). Saydam bantlar üst üste bindikçe koyulaşıyordu.
+Yandan bakışta iç/dış ayrımı (quadVL↔quadVM) yok, bilerek; o ayrım kas
+haritasında. Gövde parçaları (bel, göğüs, boyun) başa doğru gittiği için
+`partTransform` onları 180° döndürüyor ve yerel +X ARKAYA düşüyor; bant hesabı bunu
+`HEADWARD` ile düzeltiyor (hinge'de bel kası önce göğsün altında çıktı, böyle bulundu).
+
+**Bilerek yapılmadı.** Önden görünüm (`FrontBody`) boyanmıyor. Kas haritasının
+kendisi değişmedi (sıradaki adım). Yönelmiş, saydam bant denendi, reddedildi.
+
+**Açık.** (1) Aynı 180° dönüş sebebiyle `build-body-parts.mjs`'teki gövde
+profillerinin ön (`f`) ve arka (`b`) değerleri çizimde TERS yüze düşüyor olmalı;
+"erkek gövde profili" düzeltmesi bu ters görüntüye göre yapılmış olabilir. Siluet
+işinde (adım 3) ölçülerek doğrulanmalı. (2) `arm-circles` kası `pending`, figür
+boyanmıyor. (3) Sırt üstü kiplerde (`facingFlip`) parçalar aynalanmıyor; bantlar
+parçayı izliyor, ama yön göz ile yalnızca hip_thrust ve bench'te kontrol edildi.
+(4) Devir yapıldı, OTA gönderilmedi.
+
+**Nerede.** `packages/rig/src/muscles.ts`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`, `apps/gymentra-mobile/src/app/exercise-detail.tsx`.
+
+---
+
 ## 2026-10-07 — Rig ara kareleri monoton kübik oldu
 
 **Yapıldı.** `poseAt` geçiş karelerinde doğrusal karışım yerine her eklem-yerel

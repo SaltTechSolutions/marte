@@ -11,7 +11,7 @@ import rawMuscles from '@/data/rigMuscles.json';
 import rawAnatomy from '@/data/rigAnatomy.json';
 import rawParts from '@/data/rigBodyParts.json';
 import { B } from '@/utils/rig';
-import { MUSCLES, groupsOf, labelsOf } from '@/utils/muscles';
+import { MUSCLES, MUSCLE_PATCHES, figureTints, groupsOf, labelsOf, tintEllipse } from '@/utils/muscles';
 import {
   MIN_DUR,
   assertArchetypes,
@@ -561,5 +561,48 @@ describe('validateBodyParts — uzuv siluet parçaları', () => {
       expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
       expect(e.join(' ')).toContain(needle);
     });
+  });
+});
+
+describe('kas → figür bantları', () => {
+  const parts = (rawParts as { parts: Record<string, { len: number }> }).parts;
+
+  // Haritada boyanan her kas figürde de bir yere düşmeli; yoksa iki çizim
+  // aynı hareket için farklı şey söyler.
+  it('her kasın figürde en az bir bandı var ve bant geçerli', () => {
+    Object.keys(MUSCLES).forEach((id) => {
+      const list = MUSCLE_PATCHES[id as keyof typeof MUSCLE_PATCHES];
+      expect(list && list.length, id).toBeTruthy();
+      list.forEach((q) => {
+        expect(parts[q.part], `${id} → ${q.part}`).toBeDefined();
+        expect(q.u0 >= 0 && q.u1 <= 1 && q.u0 < q.u1, `${id} ${q.u0}..${q.u1}`).toBe(true);
+      });
+    });
+  });
+
+  // `pending` hareketlerin kası henüz yazılmadı (arm-circles); figür boyanmaz.
+  it('kası yazılmış hareketlerin birincil kasları figüre çözülür', () => {
+    Object.entries(rawMuscles as Record<string, { status: string; primary: string[]; secondary: string[] }>).forEach(([k, m]) => {
+      if (m.status !== 'authored') return;
+      const tints = figureTints(m.primary, m.secondary);
+      expect(tints.filter((q) => q.level === 'primary').length, k).toBeGreaterThan(0);
+    });
+  });
+
+  it('birincil ikincilin üstüne çizilir ve ikisinde olan kas birincil sayılır', () => {
+    const t = figureTints(['biceps'], ['triLat', 'biceps']);
+    expect(t.map((q) => q.level)).toEqual(['secondary', 'primary']);
+  });
+
+  it('aynı yüzde çakışan bantlar tek banda birleşir', () => {
+    const t = figureTints(['quadRF', 'quadVL', 'quadVM', 'adductors']);
+    expect(t).toEqual([{ part: 'thigh', side: 'front', u0: 0, u1: 0.95, level: 'primary' }]);
+  });
+
+  it('bant doğru yarıda; başa giden kemiklerde yerel eksen ters', () => {
+    expect(tintEllipse({ part: 'thigh', side: 'front', u0: 0.5, u1: 1 }, 100)).toEqual({ cx: 40, cy: 75, rx: 46, ry: 25 });
+    expect(tintEllipse({ part: 'thigh', side: 'back', u0: 0, u1: 0.5 }, 100).cx).toBe(-40);
+    expect(tintEllipse({ part: 'thorax', side: 'back', u0: 0, u1: 1 }, 85).cx).toBe(40);
+    expect(tintEllipse({ part: 'thorax', side: 'front', u0: 0, u1: 1 }, 85).cx).toBe(-40);
   });
 });

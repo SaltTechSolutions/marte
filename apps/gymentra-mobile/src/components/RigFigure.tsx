@@ -1,8 +1,9 @@
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
 
+import { mix } from '@/theme/deriveColor';
 import { figureColors } from '@/theme/figureColors';
 import { useAppTheme } from '@/theme/ThemeContext';
 import {
@@ -34,6 +35,7 @@ import {
   solePoints,
 } from '@/utils/rig';
 import rigBodyParts from '@/data/rigBodyParts.json';
+import { FigureTint, TINT_MIX, figureTints, tintEllipse } from '@/utils/muscles';
 
 /**
  * Kemiğe oturan uzuv siluetleri.
@@ -51,7 +53,10 @@ const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 const EDGE_W = 1.6;
 
 /** Zincirin tek bir parçası: ya dönüştürülmüş bir yol ya da bir eklem topu. */
-type Piece = { key: string; d: string; tf?: string } | { key: string; c: Vec; r: number };
+type Piece = { key: string; d: string; tf?: string; part?: string; len?: number } | { key: string; c: Vec; r: number };
+
+/** Kas bantlarının iki tonu — uzvun kendi dolgusundan accent'e karışım. */
+type TintFill = Record<FigureTint['level'], string>;
 
 /** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
 const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
@@ -74,7 +79,23 @@ const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
  * Zincir sınırları çizim sırasını da taşıyor: gövde ile yakın kol ayrı
  * zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat İSTENİYOR.
  */
-function Chain({ id, pieces, fill, edge }: { id: string; pieces: (Piece | null)[]; fill: string; edge: string }) {
+function Chain({
+  id,
+  pieces,
+  fill,
+  edge,
+  tints,
+  tintFill,
+  clipId,
+}: {
+  id: string;
+  pieces: (Piece | null)[];
+  fill: string;
+  edge: string;
+  tints?: FigureTint[];
+  tintFill?: TintFill;
+  clipId?: string;
+}) {
   const list = pieces.filter((q): q is Piece => q !== null);
   const draw = (q: Piece, pass: 'alt' | 'ust') => {
     const k = `${q.key}${pass}`;
@@ -85,10 +106,38 @@ function Chain({ id, pieces, fill, edge }: { id: string; pieces: (Piece | null)[
       ? <Path key={k} d={q.d} transform={q.tf} {...paint} />
       : <Circle key={k} cx={q.c[0]} cy={q.c[1]} r={q.r} {...paint} />;
   };
+  /*
+   * Çalışan kasların bantları — dolgunun ÜSTÜNE, dış hattın içine. Her bant
+   * kendi parçasının siluetiyle kırpılıyor, yani uzvun ön ya da arka yarısını
+   * o uzvun biçimiyle dolduruyor. Editörde `tintNodes`; sayılar `muscles.ts`'ten.
+   */
+  const bands =
+    tints && tints.length && tintFill
+      ? list.flatMap((q) => {
+          if (!('d' in q) || !q.part || !q.len) return [];
+          const mine = tints.filter((t) => t.part === q.part);
+          if (!mine.length) return [];
+          const cid = `${clipId}${id}${q.key}`;
+          return [
+            <G key={`${q.key}tint`} transform={q.tf}>
+              <Defs>
+                <ClipPath id={cid}>
+                  <Path d={q.d} />
+                </ClipPath>
+              </Defs>
+              {mine.map((t, i) => {
+                const e = tintEllipse(t, q.len!);
+                return <Ellipse key={i} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={tintFill[t.level]} clipPath={`url(#${cid})`} />;
+              })}
+            </G>,
+          ];
+        })
+      : [];
   return (
     <G key={id}>
       <G>{list.map((q) => draw(q, 'alt'))}</G>
       <G>{list.map((q) => draw(q, 'ust'))}</G>
+      {bands.length > 0 && <G>{bands}</G>}
     </G>
   );
 }
@@ -105,8 +154,14 @@ export function RigFigure({
   rig,
   view,
   height = 260,
+  muscles,
 }: {
   rig: RigExercise;
+  /**
+   * Hareketin çalıştırdığı kaslar: verilirse figürün üstünde iki tonla
+   * boyanır (birincil koyu, ikincil açık). Yalnızca yan görünümde.
+   */
+  muscles?: { primary: readonly string[]; secondary: readonly string[] };
   /** Yazılmazsa hareketin kendi düzlemi: yanal işler önden okunur. */
   view?: 'side' | 'front';
   height?: number;
@@ -153,6 +208,11 @@ export function RigFigure({
   // `line` SAHNE eşyasının (sehpa, basamak, kablo, makine) ince hattı olarak
   // kalıyor: figürün hattıyla aynı vurguyu alsaydı mobilya figürle yarışırdı.
   const line = colors.line;
+  // SVG kimliği: aynı ekranda birden çok figür olabilir, kırpma yolları çakışmasın.
+  const clipId = `rf${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const tints = useMemo(() => (muscles ? figureTints(muscles.primary, muscles.secondary) : []), [muscles]);
+  const tintNear: TintFill = { primary: mix(skin, colors.p, TINT_MIX.primary), secondary: mix(skin, colors.p, TINT_MIX.secondary) };
+  const tintFar: TintFill = { primary: mix(skinFar, colors.p, TINT_MIX.primary), secondary: mix(skinFar, colors.p, TINT_MIX.secondary) };
 
   const { p, phase } = poseAt(rig, t);
   const S = useMemo(() => skeleton(rig, p), [rig, p]);
@@ -187,7 +247,7 @@ export function RigFigure({
   /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
   const part = (key: string, name: string, a: Vec, b: Vec): Piece | null => {
     const q = PARTS[name];
-    return q ? { key, d: q.d, tf: partTransform(a, b) } : null;
+    return q ? { key, d: q.d, tf: partTransform(a, b), part: name, len: q.len } : null;
   };
   /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
   const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, name?: string): Piece[] => {
@@ -208,11 +268,11 @@ export function RigFigure({
   };
   /** Yakın taraf zinciri. */
   const near = (key: string, pieces: (Piece | null)[]) => (
-    <Chain key={key} id={key} pieces={pieces} fill={skin} edge={edge} />
+    <Chain key={key} id={key} pieces={pieces} fill={skin} edge={edge} tints={tints} tintFill={tintNear} clipId={clipId} />
   );
   /** Uzak taraf zinciri: dolgu kart rengi, ayrımı hat taşıyor. */
   const far = (key: string, pieces: (Piece | null)[]) => (
-    <Chain key={key} id={key} pieces={pieces} fill={skinFar} edge={edgeFar} />
+    <Chain key={key} id={key} pieces={pieces} fill={skinFar} edge={edgeFar} tints={tints} tintFill={tintFar} clipId={clipId} />
   );
   /**
    * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin

@@ -190,7 +190,7 @@ function Detail({ exercise }: { exercise: Exercise }) {
             HAREKET
           </Text>
         </View>
-        <RigFigure rig={rig} />
+        <RigFigure rig={rig} muscles={exercise} />
         {/*
           plan.md D-5. Eski metin "antrenör onayı bekliyor" diyordu ve iki ayrı
           şeyi tek cümlede karıştırıyordu: bizim **iç kalite durumumuz** ile
