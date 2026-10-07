@@ -31,6 +31,37 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — "Hakkında" ekranı ve iOS 27 simülatöründe açılış çökmesi
+
+**Yapıldı.** Kullanıcının isteğiyle `src/app/about.tsx` eklendi: sürüm ve açık kaynak
+lisansları (MuscleMap, react-native-body-highlighter; metinler `rigAnatomy.json`'ın
+`licenses` alanından okunuyor, kopyalanmıyor). `LegalLinks`'e üçüncü bağlantı
+"Hakkında" eklendi, yani üye/antrenör profili ve yönetici ayarlarının altında görünüyor.
+tsc, lint, 430 test temiz. Kullanıcı mobilde test istedi: `expo run:ios` ile geliştirme
+derlemesi alındı ve iPhone 18 Pro Max (iOS 27.0) simülatörüne kuruldu, **ama uygulama
+açılışta çöktü**; ekran ve kas haritası kartı cihazda görülmedi.
+
+**Karar.** Çökme bu değişiklikten bağımsız ve native: `UIApplicationEvaluateRuntimeIssue
+ForNoSceneLifecycleAdoption` (EXC_BREAKPOINT). iOS 27 SDK'sıyla derlenen uygulamanın
+UIScene yaşam döngüsünü benimsemesi zorunlu; `ios/` CNG ile üretiliyor ve Info.plist'te
+`UIApplicationSceneManifest` yok. Bilgisayarda yalnızca iOS 27 simülatör çalışma zamanı
+kurulu (26.1 ve 26.5 "unavailable").
+
+**Bilerek yapılmadı.** Sahne desteğini eklemek (config plugin / Expo yükseltmesi): native
+değişiklik, parmak izini bozar, build 28'in kararı. iOS 26 çalışma zamanını indirmek
+(büyük indirme, kullanıcının makinesi). Simülatörde başka uygulamaya (Kolba) dokunulmadı.
+
+**Açık.** (1) **Build 28 riski:** Xcode 27 / iOS 27 SDK ile alınacak bir sonraki build
+iOS 27 cihazlarda aynı şekilde açılışta çökebilir; build 27 eski SDK'yla alındığı için
+muhtemelen etkilenmiyor, doğrulanmadı. (2) Hakkında ekranı ve yeni kas haritası kartı
+cihazda görülmedi. (3) Uygulamadaki diğer açık kaynak bağımlılıkların (React Native,
+Expo…) lisansları bu ekranda yok; yalnızca kas haritası çizimleri.
+
+**Nerede.** `apps/gymentra-mobile/src/app/about.tsx`, `src/components/LegalLinks.tsx`,
+`src/app/_layout.tsx`.
+
+---
+
 ## 2026-10-07 — Kas haritası MuscleMap'in anatomik yollarına geçti
 
 **Yapıldı.** Kullanıcı kaynak olarak MuscleMap'i seçti. `scripts/import-musclemap.mjs`
