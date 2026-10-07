@@ -31,6 +31,34 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — iOS 27 için UIScene desteği açıldı (Expo 57.0.27)
+
+**Yapıldı.** Kullanıcı "UIScene desteğini ekle" seçti. `expo` 57.0.22 → 57.0.27,
+`npx expo install --fix` ile hizalanan 9 Expo paketi (`expo-router`, `expo-updates`,
+`expo-notifications`, `@expo/ui`, `expo-camera`, `expo-glass-effect`,
+`expo-image-manipulator`, `expo-image-picker`, `expo-linking`) yama sürümüne çıktı;
+`app.json`'da `expo-build-properties` → `ios.enableSceneSupport: true` (Expo'nun resmi
+çözümü, expo/expo#46664; en az expo 57.0.23 + expo-build-properties 57.0.20 ister).
+`prebuild --clean` sonrası Info.plist'te `UIApplicationSceneManifest` →
+`EXExpoAppSceneDelegate`. Aynı iOS 27 simülatöründe geliştirme derlemesi artık
+**açılıyor** (öncesinde açılışta EXC_BREAKPOINT). tsc, 430 test temiz.
+
+**Karar.** Sahne desteği build 28'in parçası: Xcode 27 SDK'sıyla alınan her build onsuz
+iOS 27'de açılmıyor.
+
+**Bilerek yapılmadı.** Android'e dokunulmadı (güncelleme durdurulu; ayar yalnızca iOS).
+Build/OTA alınmadı.
+
+**Açık.** (1) Native değişiklik + modül yükseltmeleri: **parmak izi değişti, OTA ile
+gitmez**, build 28 gerekir. (2) Sahne yaşam döngüsüyle derin bağlantılar, bildirime
+dokunarak açılış, Google girişi ve RevenueCat akışı cihazda denenmedi — Expo "uygulamanın
+açılışını değiştirir, iyice test edin" diyor. (3) Geliştirme istemcisi Metro'ya ağ
+adresinden (172.25.x) ulaşamadı, `localhost` URL'iyle açıldı (yalnızca yerel ortam).
+
+**Nerede.** `apps/gymentra-mobile/{app.json,package.json,package-lock.json}`.
+
+---
+
 ## 2026-10-07 — "Hakkında" ekranı ve iOS 27 simülatöründe açılış çökmesi
 
 **Yapıldı.** Kullanıcının isteğiyle `src/app/about.tsx` eklendi: sürüm ve açık kaynak
