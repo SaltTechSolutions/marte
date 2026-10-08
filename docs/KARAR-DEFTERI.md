@@ -31,6 +31,39 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-08 — iOS 1.1.0 (build 32) TestFlight'a yüklendi
+
+**Yapıldı.** PR #3 kullanıcı tarafından birleştirildi (`f3f10b2e`). `main`'den yerel iOS üretim
+build'i; sürüm 1.0.0 → **1.1.0** (`7596fc0d`, kullanıcı seçti). Build 32 `.ipa`'sı denetlendi
+(build/sürüm, `UIApplicationSceneManifest` → `EXExpoAppSceneDelegate`, pakette `tarabyamarte` ve
+Firebase API anahtarı, MuscleMap lisans metni) ve kullanıcının isteğiyle `eas submit` ile App Store
+Connect'e yüklendi; Apple işliyor. App Store incelemesine gönderilmedi.
+
+**Karar.** EAS'ın App Store dağıtım sertifikası artık bu Mac'teki sertifika (seri `9EBAC5AF…`, 22 Eyl
+2027); kullanıcı `.p12`'yi dışa aktarıp `eas credentials` ile yükledi, EAS yeni profil üretti
+(`C785AMA43K`). Swift uygulamaları aynı sertifikayı kullanmaya devam ediyor; hiçbir sertifika iptal
+edilmedi.
+
+**Neden 28–31 atlandı (ölçülenler).** 28: CocoaPods'un GitHub klonu "Connection reset" ile düştü
+(geçici). 29 ve 30'un ilk denemesi: aynı anda çalışan, bu oturumun başlatmadığı bir `brew upgrade`
+`node`/`simdjson`/`ruby`'yi değiştiriyordu (Node `libsimdjson.33` bulamadı). 30: imzalama — EAS'taki
+profil eski EAS sertifikasını (`99640FC8…`) içeriyordu, Xcode ise anahtar zincirindeki aynı adlı başka
+sertifikayı seçti ("Apple Distribution: Tarkan Çiçek" iki tane). 31: başarılı ama Apple "bu sürüm zaten
+gönderildi" dedi — 1.0.0 onaylı olduğu için yeni build kabul etmiyor. Profil `autoIncrement` her
+denemede numarayı EAS'ta artırıyor.
+
+**Bilerek yapılmadı.** EAS bulut build (kota). Xcode Cloud (CNG, env, build numarası iki yerde olurdu).
+Eski EAS sertifikasını iptal etmek. Android build (güncellemeler durdurulu).
+
+**Açık.** (1) `7596fc0d` ve bu kayıt `main`'de yerel; push kullanıcıda. (2) Ad Hoc profili hâlâ eski
+sertifikayla. (3) TestFlight'ta cihazda denenmesi gerekenler: derin bağlantı, bildirimden açılış, Google
+girişi, satın alma, küçük ekranda carousel. (4) Build 31'in `.ipa`'sı (1.0.0, kullanılamaz) ve
+`EAS_LOCAL_BUILD_SKIP_CLEANUP` ile bırakılan geçici dizinler diskte.
+
+**Nerede.** `apps/gymentra-mobile/app.json`; EAS kimlik bilgileri (proje `@tarkancicek/gymentra-mobile`).
+
+---
+
 ## 2026-10-07 — Hareket ekranı: dönen dört slaytlı carousel
 
 **Yapıldı.** Kullanıcının istediği düzen: üstte yana kaydırılan, dönen carousel —
