@@ -47,7 +47,7 @@ dist/archetypes.ts        kare verisini tipleyen ve YÜKLEME ANINDA doğrulayan 
 dist/rigArchetypes.json   30 arketipin kare verisi
 dist/exercises.json       34 hareketin kataloğu (kimlik → ad + arketip)
 dist/rigMuscles.json      hareket başına birincil/ikincil kaslar
-dist/anatomy.json         kas haritasının ön/arka çizim yolları
+dist/anatomy.json         kas haritasının ön/arka çizim yolları (scripts/import-musclemap.mjs üretir; MIT, lisanslar içinde)
 dist/bodyParts.json       uzuv siluet parçaları
 dist/rig.test.ts          motor testleri          ┐ devredilen KODUN
 dist/rigAudit.test.ts     denetim testleri        │ testleri de

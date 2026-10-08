@@ -1,8 +1,9 @@
 import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, Path, Rect } from 'react-native-svg';
 
+import { mix } from '@/theme/deriveColor';
 import { figureColors } from '@/theme/figureColors';
 import { useAppTheme } from '@/theme/ThemeContext';
 import {
@@ -34,6 +35,7 @@ import {
   solePoints,
 } from '@/utils/rig';
 import rigBodyParts from '@/data/rigBodyParts.json';
+import { FigureTint, TINT_MIX, figureTints, tintEllipse } from '@/utils/muscles';
 
 /**
  * Kemiğe oturan uzuv siluetleri.
@@ -44,6 +46,11 @@ import rigBodyParts from '@/data/rigBodyParts.json';
  * anlatamıyordu. Bir parça eksikse çağıran kapsüle düşüyor.
  */
 const PARTS = rigBodyParts.parts as Record<string, { len: number; d: string }>;
+/**
+ * Kafa silueti: MakeHuman modelinden (`head.d`, merkezinden, +X yüz), yoksa
+ * `headProfile()`. Editörde `headD()`; ikisi aynı kalmalı.
+ */
+const HEAD_D = (rigBodyParts as { head?: { d: string } }).head?.d ?? headProfile();
 
 const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 
@@ -51,7 +58,15 @@ const FRAME_MS = 33; // ~30 fps: telefonda akıcı, pili yakmıyor
 const EDGE_W = 1.6;
 
 /** Zincirin tek bir parçası: ya dönüştürülmüş bir yol ya da bir eklem topu. */
-type Piece = { key: string; d: string; tf?: string } | { key: string; c: Vec; r: number };
+/**
+ * `fillOnly`: dış hat geçişinde atlanır, yalnızca dolgu çizilir. Başka bir
+ * zincirin zaten çizdiği bir kütlenin altında kalan iç hatları örtmek için
+ * (bkz. kalça zarfı).
+ */
+type Piece = { key: string; d: string; tf?: string; part?: string; len?: number; fillOnly?: boolean } | { key: string; c: Vec; r: number };
+
+/** Kas bantlarının iki tonu — uzvun kendi dolgusundan accent'e karışım. */
+type TintFill = Record<FigureTint['level'], string>;
 
 /** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
 const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
@@ -74,7 +89,23 @@ const ellipsePath = (cx: number, cy: number, rx: number, ry: number) =>
  * Zincir sınırları çizim sırasını da taşıyor: gövde ile yakın kol ayrı
  * zincirler, çünkü kolun gövdenin önünden geçtiği yerde hat İSTENİYOR.
  */
-function Chain({ id, pieces, fill, edge }: { id: string; pieces: (Piece | null)[]; fill: string; edge: string }) {
+function Chain({
+  id,
+  pieces,
+  fill,
+  edge,
+  tints,
+  tintFill,
+  clipId,
+}: {
+  id: string;
+  pieces: (Piece | null)[];
+  fill: string;
+  edge: string;
+  tints?: FigureTint[];
+  tintFill?: TintFill;
+  clipId?: string;
+}) {
   const list = pieces.filter((q): q is Piece => q !== null);
   const draw = (q: Piece, pass: 'alt' | 'ust') => {
     const k = `${q.key}${pass}`;
@@ -85,10 +116,38 @@ function Chain({ id, pieces, fill, edge }: { id: string; pieces: (Piece | null)[
       ? <Path key={k} d={q.d} transform={q.tf} {...paint} />
       : <Circle key={k} cx={q.c[0]} cy={q.c[1]} r={q.r} {...paint} />;
   };
+  /*
+   * Çalışan kasların bantları — dolgunun ÜSTÜNE, dış hattın içine. Her bant
+   * kendi parçasının siluetiyle kırpılıyor, yani uzvun ön ya da arka yarısını
+   * o uzvun biçimiyle dolduruyor. Editörde `tintNodes`; sayılar `muscles.ts`'ten.
+   */
+  const bands =
+    tints && tints.length && tintFill
+      ? list.flatMap((q) => {
+          if (!('d' in q) || !q.part || !q.len) return [];
+          const mine = tints.filter((t) => t.part === q.part);
+          if (!mine.length) return [];
+          const cid = `${clipId}${id}${q.key}`;
+          return [
+            <G key={`${q.key}tint`} transform={q.tf}>
+              <Defs>
+                <ClipPath id={cid}>
+                  <Path d={q.d} />
+                </ClipPath>
+              </Defs>
+              {mine.map((t, i) => {
+                const e = tintEllipse(t, q.len!);
+                return <Ellipse key={i} cx={e.cx} cy={e.cy} rx={e.rx} ry={e.ry} fill={tintFill[t.level]} clipPath={`url(#${cid})`} />;
+              })}
+            </G>,
+          ];
+        })
+      : [];
   return (
     <G key={id}>
-      <G>{list.map((q) => draw(q, 'alt'))}</G>
+      <G>{list.filter((q) => !('fillOnly' in q && q.fillOnly)).map((q) => draw(q, 'alt'))}</G>
       <G>{list.map((q) => draw(q, 'ust'))}</G>
+      {bands.length > 0 && <G>{bands}</G>}
     </G>
   );
 }
@@ -105,28 +164,42 @@ export function RigFigure({
   rig,
   view,
   height = 260,
+  muscles,
+  still,
 }: {
   rig: RigExercise;
+  /**
+   * Verilirse figür oynamaz, bu andaki (0..1) pozda durur — "başlangıç ve bitiş"
+   * çizimi ve carousel'in kopya slaytları için.
+   */
+  still?: number;
+  /**
+   * Hareketin çalıştırdığı kaslar: verilirse figürün üstünde iki tonla
+   * boyanır (birincil koyu, ikincil açık). Yalnızca yan görünümde.
+   */
+  muscles?: { primary: readonly string[]; secondary: readonly string[] };
   /** Yazılmazsa hareketin kendi düzlemi: yanal işler önden okunur. */
   view?: 'side' | 'front';
   height?: number;
 }) {
   const { colors } = useAppTheme();
   const plane: 'side' | 'front' = view ?? rig.view ?? 'side';
-  const [t, setT] = useState(0);
+  const [tLive, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const t = still ?? tLive;
   const originRef = useRef(0);
   const lastPaintRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
+    if (still !== undefined) return undefined;
     AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
       if (!cancelled && !reduce) setPlaying(true);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [still]);
 
   useFocusEffect(
     useCallback(() => {
@@ -153,6 +226,11 @@ export function RigFigure({
   // `line` SAHNE eşyasının (sehpa, basamak, kablo, makine) ince hattı olarak
   // kalıyor: figürün hattıyla aynı vurguyu alsaydı mobilya figürle yarışırdı.
   const line = colors.line;
+  // SVG kimliği: aynı ekranda birden çok figür olabilir, kırpma yolları çakışmasın.
+  const clipId = `rf${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const tints = useMemo(() => (muscles ? figureTints(muscles.primary, muscles.secondary) : []), [muscles]);
+  const tintNear: TintFill = { primary: mix(skin, colors.p, TINT_MIX.primary), secondary: mix(skin, colors.p, TINT_MIX.secondary) };
+  const tintFar: TintFill = { primary: mix(skinFar, colors.p, TINT_MIX.primary), secondary: mix(skinFar, colors.p, TINT_MIX.secondary) };
 
   const { p, phase } = poseAt(rig, t);
   const S = useMemo(() => skeleton(rig, p), [rig, p]);
@@ -179,15 +257,17 @@ export function RigFigure({
    * Eklem topu.
    *
    * İki katı parçanın uç uca eklendiği yerdeki kamayı dolduruyor. Yarıçaplar
-   * siluetin o uçtaki yarı genişliğine göre seçili (diz 13 ↔ uyluk ucu 12 /
-   * baldır başı 15, dirsek 10 ↔ üst kol ucu 9 / ön kol başı 10): büyüğü
-   * silueti dışarı taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor.
+   * siluetin o uçtaki yarı genişliğine göre seçili: büyüğü silueti dışarı
+   * taşırıp yumru yapıyor, küçüğü kamayı kapatmıyor. Parçalar MakeHuman
+   * modelinden gelince (2026-10-07) diz ve dirsek gerçek oranda inceldi ve
+   * eski toplar (diz 13, dirsek 10) yumru yaptı: diz 10, dirsek 7. Uzak taraf
+   * birer/üçer küçük. Editördeki sayılar aynı.
    */
   const ball = (key: string, c: Vec, r: number): Piece => ({ key, c, r });
   /** Veri siluetini kemiğe oturtur; parça yoksa null döner. */
   const part = (key: string, name: string, a: Vec, b: Vec): Piece | null => {
     const q = PARTS[name];
-    return q ? { key, d: q.d, tf: partTransform(a, b) } : null;
+    return q ? { key, d: q.d, tf: partTransform(a, b, flip), part: name, len: q.len } : null;
   };
   /** Uzuv: parça varsa siluet, yoksa iki kapsül (kütle üst üçte birde). */
   const limb = (key: string, a: Vec, b: Vec, wa: number, wm: number, wb: number, at: number, name?: string): Piece[] => {
@@ -204,15 +284,15 @@ export function RigFigure({
     const dx = wrist[0] - elbow[0];
     const dy = wrist[1] - elbow[1];
     const l = Math.hypot(dx, dy) || 1;
-    return { key, d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
+    return { key, d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18], flip) };
   };
   /** Yakın taraf zinciri. */
   const near = (key: string, pieces: (Piece | null)[]) => (
-    <Chain key={key} id={key} pieces={pieces} fill={skin} edge={edge} />
+    <Chain key={key} id={key} pieces={pieces} fill={skin} edge={edge} tints={tints} tintFill={tintNear} clipId={clipId} />
   );
   /** Uzak taraf zinciri: dolgu kart rengi, ayrımı hat taşıyor. */
   const far = (key: string, pieces: (Piece | null)[]) => (
-    <Chain key={key} id={key} pieces={pieces} fill={skinFar} edge={edgeFar} />
+    <Chain key={key} id={key} pieces={pieces} fill={skinFar} edge={edgeFar} tints={tints} tintFill={tintFar} clipId={clipId} />
   );
   /**
    * Dambıl: kısa sap, iki ucunda ağırlık. Ön kola DİK duruyor — elin
@@ -281,7 +361,7 @@ export function RigFigure({
               { key: 'ffoot', d: footPath(S.ankleF, footDirFarOf(rig, p), pinToe, flip) },
               ...limb('ft', S.hipF, S.kneeF, 38, 30, 24, 0.42, 'thigh'),
               ...limb('fs', S.kneeF, S.ankleF, 24, 25, 12, 0.34, 'shin'),
-              ball('fk', S.kneeF, 12),
+              ball('fk', S.kneeF, 9),
             ])}
           {/* KATMAN yan: farm */}
           {!rig.hideFarArm && (
@@ -289,7 +369,7 @@ export function RigFigure({
               {far('farm', [
                 ...limb('fu', S.shF, S.elbowF, 23, 21, 16, 0.5, 'upper'),
                 ...limb('ff', S.elbowF, S.handF, 17, 17, 11, 0.3, 'fore'),
-                ball('fe', S.elbowF, 9),
+                ball('fe', S.elbowF, 6),
                 ball('fw', S.handF, 9),
                 hand('fh', S.handF, S.elbowF),
               ])}
@@ -533,7 +613,7 @@ export function RigFigure({
           // kütleler uç uca gelmez, geçer. Bu blok yokken bel parçası ile
           // uyluk parçası tek noktada değiyordu ve kalça gövdeden kopuk
           // görünüyordu.
-          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar) },
+          { key: 'pelvis', d: pelvisMass(S.pelvis, S.lumbar, S.knee, flip) },
           part('waist', 'lumbar', S.pelvis, S.lumbar) ?? seg('waist', S.pelvis, S.lumbar, 40, 33),
           part('rib', 'thorax', S.lumbar, S.thorax) ?? seg('rib', S.lumbar, S.thorax, 54, 46),
           part('neck', 'neck', S.thorax, S.neck) ?? seg('neck', S.thorax, S.neck, 21, 19),
@@ -547,10 +627,17 @@ export function RigFigure({
             yerde hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor. */}
         {/* KATMAN yan: nleg */}
         {near('nleg', [
+          // Kalça zarfı bacak zincirinde DE, yalnızca dolgu olarak: zincir önce
+          // bütün hatları, sonra dolguları çizdiği için uyluk topuzunun kalçanın
+          // içinde kalan hattı bu dolgunun altında kayboluyor (yoksa kalçanın
+          // ortasından geçip iki kütle gibi okunuyordu — çift tümsek). Kendi
+          // hattı yok: olsaydı ayakta kalçanın üstünde şort kenarı çizerdi.
+          // Kalçanın dış silüetini gövde zincirindeki kopya çiziyor.
+          { key: 'nglute', d: pelvisMass(S.pelvis, S.lumbar, S.knee, flip), fillOnly: true },
           { key: 'nfoot', d: footPath(S.ankle, footDirOf(rig), pinToe, flip) },
           ...limb('t', S.pelvis, S.knee, 42, 33, 26, 0.42, 'thigh'),
           ...limb('s', S.knee, S.ankle, 26, 28, 13, 0.34, 'shin'),
-          ball('k', S.knee, 13),
+          ball('k', S.knee, 10),
           ball('a', S.ankle, 9),
         ])}
         {/* Sırt üstü kiplerde profil AYNALANIYOR. Kemik açısı başı doğru yere
@@ -562,8 +649,8 @@ export function RigFigure({
             görünürdü. Dönüşüm iki geçişi birden sarıyor. */}
         {/* KATMAN yan: head */}
         <G key="head" transform={`translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${flip} 1)`}>
-          <Path d={headProfile()} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
-          <Path d={headProfile()} fill={skin} />
+          <Path d={HEAD_D} fill={edge} stroke={edge} strokeWidth={EDGE_W * 2} strokeLinejoin="round" />
+          <Path d={HEAD_D} fill={skin} />
         </G>
         {/* YAKIN KOL KAFADAN SONRA. Yan görünümde yakın kol izleyiciyle kafa
             arasında duruyor, yani kafayı ÖRTMELİ. Önce çizildiğinde tersi
@@ -575,7 +662,7 @@ export function RigFigure({
         {near('narm', [
           ...limb('u', S.sh, S.elbow, 25, 22, 17, 0.5, 'upper'),
           ...limb('f2', S.elbow, S.hand, 18, 18, 12, 0.3, 'fore'),
-          ball('e', S.elbow, 10),
+          ball('e', S.elbow, 7),
           hand('h', S.hand, S.elbow),
         ])}
         {/* KATMAN yan: db */}

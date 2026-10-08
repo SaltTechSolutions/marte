@@ -1,4 +1,5 @@
 import * as Linking from 'expo-linking';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, Pressable, View } from 'react-native';
 
@@ -21,10 +22,12 @@ const SUBSCRIPTION_TERMS_URL =
 /**
  * Both stores expect the privacy policy and terms to be reachable from
  * inside the app, not only from the store listing. Rendered at the bottom
- * of the per-role settings/profile screens.
+ * of the per-role settings/profile screens, with the "Hakkında" page
+ * (version, open-source licences) beside them.
  */
 export function LegalLinks() {
   const { colors, spacing } = useAppTheme();
+  const router = useRouter();
 
   const open = (path: string) => {
     Linking.openURL(`${SITE}${path}`).catch(() => {
@@ -47,6 +50,15 @@ export function LegalLinks() {
       <Pressable onPress={() => open('/terms/')} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
         <Text variant="label" tone="sub">
           Kullanım Şartları
+        </Text>
+      </Pressable>
+      <Text variant="label" style={{ color: colors.line }}>
+        |
+      </Text>
+      {/* Version and the open-source licences the muscle map is drawn under. */}
+      <Pressable onPress={() => router.push('/about')} hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
+        <Text variant="label" tone="sub">
+          Hakkında
         </Text>
       </Pressable>
     </View>

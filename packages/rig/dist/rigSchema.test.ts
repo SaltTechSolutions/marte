@@ -11,7 +11,7 @@ import rawMuscles from '@/data/rigMuscles.json';
 import rawAnatomy from '@/data/rigAnatomy.json';
 import rawParts from '@/data/rigBodyParts.json';
 import { B } from '@/utils/rig';
-import { MUSCLES, groupsOf, labelsOf } from '@/utils/muscles';
+import { MUSCLES, MUSCLE_PATCHES, figureTints, groupsOf, labelsOf, tintEllipse } from '@/utils/muscles';
 import {
   MIN_DUR,
   assertArchetypes,
@@ -498,19 +498,21 @@ describe('validateAnatomy — kas haritası yolları', () => {
     // boyanmaz — sessiz kayıp. Denetim bunu yakalıyor.
     const used = new Set<string>();
     (['front', 'back'] as const).forEach((v) => {
-      (rawAnatomy[v] as { muscle: string | null }[]).forEach((p) => p.muscle && used.add(p.muscle));
+      (rawAnatomy[v].paths as { muscles: string[] }[]).forEach((p) => p.muscles.forEach((m) => used.add(m)));
     });
     expect(Object.keys(MUSCLES).filter((id) => !used.has(id))).toEqual([]);
   });
 
   const cases: [string, (a: Record<string, any>) => void, string][] = [
-    ['viewBox yok', (a) => delete a.viewBox, 'viewBox'],
-    ['mirror yok', (a) => delete a.mirror, 'mirror'],
-    ['front dizisi yok', (a) => (a.front = []), 'front yol dizisi yok'],
-    ['d boş', (a) => (a.front[0].d = '  '), 'd boş'],
-    ['bilinmeyen kas', (a) => (a.front[3].muscle = 'yok-boyle'), 'bilinmeyen kas'],
-    ['bilinmeyen alan', (a) => (a.back[0].renk = 'mavi'), 'bilinmeyen alan'],
-    ['yolu silinen kas', (a) => (a.back = a.back.filter((p: any) => p.muscle !== 'lat')), 'hiçbir yolu yok'],
+    ['viewBox yok', (a) => delete a.front.viewBox, 'viewBox'],
+    ['lisans yok', (a) => (a.licenses = []), 'lisans'],
+    ['front dizisi yok', (a) => (a.front.paths = []), 'front yol dizisi yok'],
+    ['d boş', (a) => (a.front.paths[0].d = '  '), 'd boş'],
+    ['bilinmeyen kas', (a) => (a.front.paths[3].muscles = ['yok-boyle']), 'bilinmeyen kas'],
+    ['muscles dizi değil', (a) => (a.front.paths[3].muscles = 'lat'), 'muscles dizi'],
+    ['ters bant', (a) => (a.back.paths.find((p: any) => p.clip).clip.reverse()), 'clip'],
+    ['bilinmeyen alan', (a) => (a.back.paths[0].renk = 'mavi'), 'bilinmeyen alan'],
+    ['yolu silinen kas', (a) => (a.back.paths = a.back.paths.filter((p: any) => !p.muscles.includes('lat'))), 'hiçbir yolu yok'],
   ];
   cases.forEach(([name, mutate, needle]) => {
     it(`${name} reddediliyor`, () => {
@@ -526,7 +528,7 @@ describe('validateAnatomy — kas haritası yolları', () => {
     const base = { archetypes: rawArchetypes, exercises: rawExercises, muscles: rawMuscles };
     expect(validateBundle(base)).toEqual([]);
     expect(validateBundle({ ...base, anatomy: rawAnatomy })).toEqual([]);
-    expect(validateBundle({ ...base, anatomy: { front: [] } }).length).toBeGreaterThan(0);
+    expect(validateBundle({ ...base, anatomy: { front: { paths: [] } } }).length).toBeGreaterThan(0);
   });
 });
 
@@ -561,5 +563,62 @@ describe('validateBodyParts — uzuv siluet parçaları', () => {
       expect(e.length, `hata bekleniyordu, çıkan: ${JSON.stringify(e)}`).toBeGreaterThan(0);
       expect(e.join(' ')).toContain(needle);
     });
+  });
+});
+
+describe('kas → figür bantları', () => {
+  const parts = (rawParts as { parts: Record<string, { len: number }> }).parts;
+
+  // Haritada boyanan her kas figürde de bir yere düşmeli; yoksa iki çizim
+  // aynı hareket için farklı şey söyler.
+  it('her kasın figürde en az bir bandı var ve bant geçerli', () => {
+    Object.keys(MUSCLES).forEach((id) => {
+      const list = MUSCLE_PATCHES[id as keyof typeof MUSCLE_PATCHES];
+      expect(list && list.length, id).toBeTruthy();
+      list.forEach((q) => {
+        expect(parts[q.part], `${id} → ${q.part}`).toBeDefined();
+        expect(q.u0 >= 0 && q.u1 <= 1 && q.u0 < q.u1, `${id} ${q.u0}..${q.u1}`).toBe(true);
+      });
+    });
+  });
+
+  // `pending` hareketlerin kası henüz yazılmadı (arm-circles); figür boyanmaz.
+  it('kası yazılmış hareketlerin birincil kasları figüre çözülür', () => {
+    Object.entries(rawMuscles as Record<string, { status: string; primary: string[]; secondary: string[] }>).forEach(([k, m]) => {
+      if (m.status !== 'authored') return;
+      const tints = figureTints(m.primary, m.secondary);
+      expect(tints.filter((q) => q.level === 'primary').length, k).toBeGreaterThan(0);
+    });
+  });
+
+  it('birincil ikincilin üstüne çizilir ve ikisinde olan kas birincil sayılır', () => {
+    const t = figureTints(['biceps'], ['triLat', 'biceps']);
+    expect(t.map((q) => q.level)).toEqual(['secondary', 'primary']);
+  });
+
+  it('aynı yüzde çakışan bantlar tek banda birleşir', () => {
+    const t = figureTints(['quadRF', 'quadVL', 'quadVM', 'adductors']);
+    expect(t).toEqual([{ part: 'thigh', side: 'front', u0: 0, u1: 0.95, level: 'primary' }]);
+  });
+
+  it('bant doğru yarıda; başa giden kemiklerde yerel eksen ters', () => {
+    expect(tintEllipse({ part: 'thigh', side: 'front', u0: 0.5, u1: 1 }, 100)).toEqual({ cx: 40, cy: 75, rx: 46, ry: 25 });
+    expect(tintEllipse({ part: 'thigh', side: 'back', u0: 0, u1: 0.5 }, 100).cx).toBe(-40);
+    expect(tintEllipse({ part: 'thorax', side: 'back', u0: 0, u1: 1 }, 85).cx).toBe(40);
+    expect(tintEllipse({ part: 'thorax', side: 'front', u0: 0, u1: 1 }, 85).cx).toBe(-40);
+  });
+});
+
+describe('uzuv parçaları — kafa silueti', () => {
+  it('gerçek veri kafayı taşıyor ve geçiyor', () => {
+    expect((rawParts as { head?: { d: string } }).head?.d).toBeTruthy();
+    expect(validateBodyParts(rawParts, B)).toEqual([]);
+  });
+  it('boş ya da fazla alanlı kafa reddediliyor', () => {
+    const p = JSON.parse(JSON.stringify(rawParts));
+    p.head = { d: ' ' };
+    expect(validateBodyParts(p, B).join(' ')).toContain('head.d boş');
+    p.head = { d: 'M 0 0 Z', renk: 'x' };
+    expect(validateBodyParts(p, B).join(' ')).toContain('bilinmeyen alan');
   });
 });

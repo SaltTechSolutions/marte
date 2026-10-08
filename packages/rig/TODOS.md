@@ -52,7 +52,14 @@ güvenli kılan ön koşul.
 
 ---
 
-## Vendored Muscle-Map kopyasının bakımı
+## ~~Vendored Muscle-Map kopyasının bakımı~~ — KONUSUZ (2026-10-07)
+
+Hiçbir kütüphane vendor edilmedi. Kas haritası artık MuscleMap'in (MIT)
+YOLLARINDAN üretilen veri: `scripts/import-musclemap.mjs` → `data/anatomy.json`.
+Çalışma zamanında kütüphane yok, bakım borcu yok; kaynak değişirse betik yeniden
+çalıştırılır. Aşağısı tarihçe.
+
+### Eski kayıt
 
 **Ne:** `Muscle-Map-for-React-Native` deposunun kopyalanan halini sürdürmek;
 React Native sürüm yükseltmelerinde kırılırsa düzeltmek.

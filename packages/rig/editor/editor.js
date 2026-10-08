@@ -11,13 +11,13 @@
 import {
   BAR_Y, CENTER_X, D, FX, GROUND, add, boundsFor, capsule, facingFlip, fillPose, footDirFor, footDirFarOf, footDirOf, footPath,
   propShift,
-  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, lerpP, partTransform, pelvisMass, poseAt,
+  frontPoints, frontTorsoPath, frontTrunk, handPath, headProfile, keyPhases, lerpP, partTransform, pelvisMass, poseAt,
   shoulderWedge, showFarLeg, skeleton, solePoints,
 } from '/engine/rig.js';
 import { applyPatch, dragFootDir, dragHandles, dragJoint } from '/engine/rigEdit.js';
 import { dragFootDirFar } from '/engine/rig.js';
 import { auditExercise, auditFrame, auditLoop } from '/engine/rigAudit.js';
-import { groupsOf, labelsOf } from '/engine/muscles.js';
+import { TINT_MIX, figureTints, groupsOf, labelsOf, tintEllipse } from '/engine/muscles.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 /** Elips → yol. Zincire giren her şey `d` taşımak zorunda. */
@@ -59,10 +59,18 @@ let NAMES = {};
 let CATALOG = {};
 /** Hareket başına kaslar: kimlik → { status, primary, secondary }. */
 let MUSCLEDATA = {};
-/** Kas haritası yolları: viewBox, ayna dönüşümü, ön ve arka yollar. */
+/** Kas haritası yolları: görünüm başına viewBox ve yollar (`data/anatomy.json`). */
 let ANATOMY = null;
 /** Uzuv siluet parçaları; yoksa kapsül çizime düşülüyor. */
 let PARTS = null;
+/**
+ * Çizilen figürün aynası: `facingFlip(mode)`. Sırt üstü kiplerde gövde ve uzuvlar
+ * da aynalanıyor (bkz. `partTransform`). Her çizim başında ayarlanıyor; uygulamada
+ * `RigFigure`'ın `flip`'i.
+ */
+let MIRROR = 1;
+/** MakeHuman kafa silueti (`bodyParts.json` → `head.d`), yoksa null. */
+let PARTS_HEAD = null;
 /** Çizim kipi: kapsül mü parça mı. */
 let useParts = true;
 let key = null;
@@ -195,7 +203,35 @@ const EDGE_W = 1.6;
  * Aynısı `RigFigure.tsx`'te `Chain` olarak yazılı — çizim iki yerde ayrı
  * yazılıyor ama görünüm ayrışamaz (bkz. AGENTS.md).
  */
-const chain = (specs, fill, edge) => {
+let tintSeq = 0;
+/**
+ * Çalışan kasların bantları — zincirin dolgusunun ÜSTÜNE, hattın içine.
+ * Her bant kendi parçasının silüetiyle kırpılıyor, yani uzvun ön ya da arka
+ * yarısını tam o uzvun biçimiyle dolduruyor. Uygulamada `RigFigure`'ın
+ * `TintLayer`'ı ile aynı; sayılar iki yerde ayrışamaz.
+ */
+const tintNodes = (list, tints, far) => {
+  if (!tints || !tints.length) return [];
+  const base = far ? 'var(--skinFar)' : 'var(--skin)';
+  const fillOf = (level) => `color-mix(in srgb, var(--p) ${Math.round(TINT_MIX[level] * 100)}%, ${base})`;
+  const out = [];
+  list.forEach((q) => {
+    if (!q.part) return;
+    const mine = tints.filter((t) => t.part === q.part);
+    if (!mine.length) return;
+    const id = `tint${++tintSeq}`;
+    const kids = [el('clipPath', { id }, [el('path', { d: q.d })])];
+    mine.forEach((t) => {
+      const r = tintEllipse(t, q.len);
+      kids.push(el('ellipse', { cx: r.cx, cy: r.cy, rx: r.rx, ry: r.ry, style: `fill:${fillOf(t.level)}`,
+        'clip-path': `url(#${id})` }));
+    });
+    out.push(el('g', { transform: q.tf }, kids));
+  });
+  return out;
+};
+
+const chain = (specs, fill, edge, tints, far) => {
   const paint = (q, alt) => {
     const a = alt
       ? { fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }
@@ -206,15 +242,17 @@ const chain = (specs, fill, edge) => {
   };
   const list = specs.filter(Boolean);
   return [
-    el('g', {}, list.map((q) => paint(q, true))),
+    // `fillOnly` parçanın hattı yok — `RigFigure`'daki `fillOnly` ile aynı.
+    el('g', {}, list.filter((q) => !q.fillOnly).map((q) => paint(q, true))),
     el('g', {}, list.map((q) => paint(q, false))),
+    el('g', {}, tintNodes(list, tints, far)),
   ];
 };
 
 /** Zincire girecek uzuv parçaları (çizmez, tarif eder). */
 const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
   const q = useParts && name && PARTS && PARTS[name];
-  if (q) return [{ d: q.d, tf: partTransform(a, b) }];
+  if (q) return [{ d: q.d, tf: partTransform(a, b, MIRROR), part: name, len: q.len }];
   const m = lerpP(a, b, at);
   return [{ d: capsule(a, m, wa, wm) }, { d: capsule(m, b, wm, wb) }];
 };
@@ -251,8 +289,8 @@ const mkLimb = () => (a, b, wa, wm, wb, at, far, name) => {
  */
 const headNodes = (e, S, p, fill, edge) => [
   el('g', { transform: `translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)` }, [
-    el('path', { d: headProfile(), fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }),
-    el('path', { d: headProfile(), fill }),
+    el('path', { d: headD(), fill: edge, stroke: edge, 'stroke-width': EDGE_W * 2, 'stroke-linejoin': 'round' }),
+    el('path', { d: headD(), fill }),
   ]),
 ];
 
@@ -268,7 +306,7 @@ const handAt = (wrist, elbow) => {
   const dx = wrist[0] - elbow[0];
   const dy = wrist[1] - elbow[1];
   const l = Math.hypot(dx, dy) || 1;
-  return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18]) };
+  return { d: handPath(), tf: partTransform(wrist, [wrist[0] + (dx / l) * 18, wrist[1] + (dy / l) * 18], MIRROR) };
 };
 
 /**
@@ -309,9 +347,15 @@ const plateAt = (c) => (c ? [
 const mkBall = () => (c, r) => ({ c, r });
 
 /** Gövde parçası; parça kipi kapalıysa null döner ve çağıran kapsüle düşer. */
+/**
+ * Kafa silueti: veri varsa MakeHuman'dan (`bodyParts.json` → `head`), yoksa
+ * koddaki çizim. Uygulamada `RigFigure`'ın `HEAD_D`'si; ikisi aynı kalmalı.
+ */
+const headD = () => (useParts && PARTS_HEAD) || headProfile();
+
 const trunkPart = (name, a, b) => {
   const q = useParts && PARTS && PARTS[name];
-  return q ? { d: q.d, tf: partTransform(a, b) } : null;
+  return q ? { d: q.d, tf: partTransform(a, b, MIRROR), part: name, len: q.len } : null;
 };
 
 
@@ -322,13 +366,14 @@ function cmpFigure(e, p, mode) {
   const skin = css('--skin'), skinFar = css('--skinFar'), line = css('--line');
   const edge = css('--edge'), edgeFar = css('--edgeFar');
   const S = skeleton(e, p);
+  MIRROR = facingFlip(e.mode);
   // `chain`'in metin karşılığı: aynı iki geçiş, aynı gerekçe.
   const chainStr = (ds, fill, ed) => {
     const pass = (a) => ds.filter(Boolean).map((d) => `<path d="${d.d}" transform="${d.tf || ''}" ${a}/>`).join('');
     return pass(`fill="${ed}" stroke="${ed}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"`) + pass(`fill="${fill}"`);
   };
   const circ = (c, r) => ({ d: `M ${c[0] - r} ${c[1]} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z` });
-  const pc = (n, a, b) => (PARTS && PARTS[n] ? { d: PARTS[n].d, tf: partTransform(a, b) } : null);
+  const pc = (n, a, b) => (PARTS && PARTS[n] ? { d: PARTS[n].d, tf: partTransform(a, b, MIRROR) } : null);
   const limbOf = (n, a, b, w1, w2, w3, at) =>
     mode === 'capsule'
       ? (() => { const m = lerpP(a, b, at); return [{ d: capsule(a, m, w1, w2) }, { d: capsule(m, b, w2, w3) }]; })()
@@ -351,7 +396,7 @@ function cmpFigure(e, p, mode) {
   g += chainStr([
     ...limbOf('upper', S.sh, S.elbow, 25, 22, 17, .5), ...limbOf('fore', S.elbow, S.hand, 18, 18, 12, .3),
     circ(S.elbow, 10),
-    { d: handPath(), tf: partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18]) },
+    { d: handPath(), tf: partTransform(S.hand, [S.hand[0] + (dx / hl) * 18, S.hand[1] + (dy / hl) * 18], MIRROR) },
   ], skin, edge);
   // Dambıl da çiziliyor: karşılaştırma ekranı çizim seçeneklerini yan yana
   // koyuyor ve ağırlığı olmayan bir figür ana sahnedekiyle aynı şey değil.
@@ -367,8 +412,8 @@ function cmpFigure(e, p, mode) {
   g += mode === 'capsule'
     ? `<circle cx="${S.head[0]}" cy="${S.head[1] - 3}" r="24" fill="${skin}" stroke="${edge}" stroke-width="${EDGE_W}"/>`
     : `<g transform="translate(${S.head[0]} ${S.head[1]}) rotate(${p.neckA}) scale(${facingFlip(e.mode)} 1)">`
-      + `<path d="${headProfile()}" fill="${edge}" stroke="${edge}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"/>`
-      + `<path d="${headProfile()}" fill="${skin}"/></g>`;
+      + `<path d="${headD()}" fill="${edge}" stroke="${edge}" stroke-width="${EDGE_W * 2}" stroke-linejoin="round"/>`
+      + `<path d="${headD()}" fill="${skin}"/></g>`;
   if (S.bar) {
     const metal = css('--metal'), accent = css('--p');
     const end = (sgn) => [S.bar[0] + sgn * 58, S.bar[1] - sgn * 17];
@@ -572,57 +617,50 @@ function renderPhone() {
  */
 const MUSCLE_FILL = { primary: '#10B981', secondary: '#0E6B4C', rest: '#1D2536' };
 
-/** Bir görünümün (ön/arka) kas haritasını çizer. */
+/**
+ * Bir görünümün (ön/arka) kas haritasını çizer. Uygulamada `MuscleMap.tsx`.
+ *
+ * Yollar gövdenin iki yarısını da taşıyor (ayna yok). Bir yolun birden çok kası
+ * olabilir; en güçlü düzey kazanır. `clip` bandı olan yol yalnızca o yatay
+ * şeritte çizilir — tek yolun iki kas taşıdığı yerler (göğüs, trapez) böyle.
+ */
 function muscleMapSvg(view, mus) {
-  if (!ANATOMY) return '';
+  if (!ANATOMY || !ANATOMY[view]) return '';
   const level = {};
-  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
   (mus.secondary || []).forEach((m) => (level[m] = 'secondary'));
-  const paths = ANATOMY[view] || [];
-  const half = paths
-    .map((p) => {
-      const lv = p.muscle ? level[p.muscle] : undefined;
+  (mus.primary || []).forEach((m) => (level[m] = 'primary'));
+  const { viewBox, paths } = ANATOMY[view];
+  const [vx, , vw] = viewBox.split(' ').map(Number);
+  const clips = [];
+  const body = paths
+    .map((p, i) => {
+      const lvs = p.muscles.map((m) => level[m]);
+      const lv = lvs.includes('primary') ? 'primary' : lvs.includes('secondary') ? 'secondary' : undefined;
       // İkincil kaslar tarama desenli: renk körü kullanıcı için parlaklık
       // farkının yanında ikinci bir kanal.
-      const fill = lv === 'secondary' ? 'url(#hatch)' : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
-      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="0.7"/>`;
+      const fill = lv === 'secondary' ? `url(#hatch${view})` : MUSCLE_FILL[lv] || MUSCLE_FILL.rest;
+      let clip = '';
+      if (p.clip) {
+        const id = `mc${view}${i}`;
+        clips.push(`<clipPath id="${id}"><rect x="${vx}" y="${p.clip[0]}" width="${vw}" height="${p.clip[1] - p.clip[0]}"/></clipPath>`);
+        clip = ` clip-path="url(#${id})"`;
+      }
+      return `<path d="${p.d}" fill="${fill}" stroke="#39445A" stroke-width="2"${clip}/>`;
     })
     .join('');
-  return `<svg viewBox="${ANATOMY.viewBox}" preserveAspectRatio="xMidYMid meet">
-      <defs><pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="7" height="7" fill="${MUSCLE_FILL.secondary}"/>
-        <rect width="2.4" height="7" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
-      </pattern></defs>
-      <g>${half}</g><g transform="${ANATOMY.mirror}">${half}</g>
+  return `<svg viewBox="${viewBox}" preserveAspectRatio="xMidYMid meet">
+      <defs><pattern id="hatch${view}" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="22" height="22" fill="${MUSCLE_FILL.secondary}"/>
+        <rect width="7" height="22" fill="${MUSCLE_FILL.primary}" opacity=".55"/>
+      </pattern>${clips.join('')}</defs>
+      ${body}
     </svg>`;
-}
-
-/**
- * Hareketi iki karede anlatan evre çifti.
- *
- * İlk kare ve ondan EN ÇOK AYRILAN kare. Elle "başlangıç ve tepe" işaretlemek
- * yerine veriden çıkıyor: kareler değişince seçim de kendiliğinden değişir,
- * unutulmuş bir bayrak yüzünden yanlış evre gösterilmez. Ayrılma iskelet
- * üstünden ölçülüyor, poz alanları üstünden değil — hepsi piksel, birim
- * karışması olmuyor.
- */
-function keyPhases(e) {
-  const S0 = skeleton(e, fillPose(e.kf[0].p));
-  const joints = Object.keys(S0).filter((k) => k !== 'bar');
-  let best = Math.min(1, e.kf.length - 1);
-  let bestD = -1;
-  e.kf.forEach((k, i) => {
-    if (i === 0) return;
-    const S = skeleton(e, fillPose(k.p));
-    const d = joints.reduce((sum, j) => sum + Math.hypot(S[j][0] - S0[j][0], S[j][1] - S0[j][1]), 0);
-    if (d > bestD) { bestD = d; best = i; }
-  });
-  return [0, best];
 }
 
 /** Tek bir pozu verilen SVG'ye çizer. */
 function drawPose(svg, e, p) {
   const S = skeleton(e, p);
+  MIRROR = facingFlip(e.mode);
   svg.setAttribute('viewBox', boundsFor(e, 'side'));
   svg.innerHTML = '';
   const skin = css('--skin'), skinFar = css('--skinFar'), joint = css('--joint'), line = css('--line');
@@ -630,8 +668,13 @@ function drawPose(svg, e, p) {
   const ball = mkBall();
   const limb = mkLimb();
   const push = (arr) => arr.forEach((n) => svg.appendChild(n));
-  const near = (specs) => push(chain(specs, skin, edge));
-  const far = (specs) => push(chain(specs, skinFar, edgeFar));
+  // Önizleme uygulamanın gösterdiğini gösterir: arketibi kullanan İLK
+  // hareketin kasları (yan paneldeki kas şemasıyla aynı seçim).
+  const mid = Object.keys(CATALOG).find((k) => CATALOG[k].archetype === key);
+  const mus = MUSCLEDATA[mid];
+  const tints = mus && mus.status === 'authored' ? figureTints(mus.primary, mus.secondary) : [];
+  const near = (specs) => push(chain(specs, skin, edge, tints, false));
+  const far = (specs) => push(chain(specs, skinFar, edgeFar, tints, true));
   // KATMAN yan: floor
   push([el('line', { x1: S.pelvis[0] - 200, y1: GROUND, x2: S.pelvis[0] + 260, y2: GROUND, stroke: css('--floor'), 'stroke-width': 2 })]);
   // Uzuv adları GEÇİLİYOR: `mkLimb` parça siluetini ancak adı görünce
@@ -644,12 +687,12 @@ function drawPose(svg, e, p) {
     // önizleme uygulamayı değil eksik bir figürü gösteriyordu.
     far([{ d: footPath(S.ankleF, footDirFarOf(e, p), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
          ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
-         ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 12)]);
+         ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'), ball(S.kneeF, 9)]);
   }
   // KATMAN yan: farm
   if (!e.hideFarArm) {
     far([...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
-         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 9),
+         ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'), ball(S.elbowF, 6),
          handAt(S.handF, S.elbowF)]);
     // Uzak ağırlık uzak kolun ardında, gövdeden ÖNCE: ikisi de figürün
     // arkasında. Uygulamadaki sıranın aynısı.
@@ -664,15 +707,17 @@ function drawPose(svg, e, p) {
   // KATMAN yan: torso
   const trunk = [trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax), trunkPart('neck', S.thorax, S.neck)].filter(Boolean);
   near(trunk.length === 3
-    ? [{ d: pelvisMass(S.pelvis, S.lumbar) }, ...trunk, ball(S.sh, 16)]
+    ? [{ d: pelvisMass(S.pelvis, S.lumbar, S.knee, MIRROR) }, ...trunk, ball(S.sh, 16)]
     : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }, { d: capsule(S.lumbar, S.thorax, 54, 46) },
        { d: capsule(S.thorax, S.neck, 21, 19) }, ball(S.sh, 17)]);
   // KATMAN yan: nleg
   near([
+    // Kalça zarfı bacak zincirinde de, yalnızca dolgu — `RigFigure` ile aynı gerekçe.
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee, MIRROR), fillOnly: true },
     { d: footPath(S.ankle, footDirOf(e), e.prop !== 'box' && p.ankleLift > 0, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
-    ball(S.knee, 13), ball(S.ankle, 9),
+    ball(S.knee, 10), ball(S.ankle, 9),
   ]);
   // KATMAN yan: head
   push(headNodes(e, S, p, skin, edge));
@@ -685,7 +730,7 @@ function drawPose(svg, e, p) {
   near([
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
-    ball(S.elbow, 10),
+    ball(S.elbow, 7),
     handAt(S.hand, S.elbow),
   ]);
   // KATMAN yan: db
@@ -743,6 +788,7 @@ function draw() {
   const e = ex();
   const p = currentPose();
   const S = skeleton(e, p);
+  MIRROR = facingFlip(e.mode);
   const S0 = skeleton(e, poseAt(e, 0).p);
   const view = plane;
   svg.innerHTML = '';
@@ -824,7 +870,7 @@ function draw() {
       { d: footPath(S.ankleF, footDirFarOf(e, p), pin, facingFlip(e.mode)) },
       ...limb(S.hipF, S.kneeF, 38, 30, 24, .42, true, 'thigh'),
       ...limb(S.kneeF, S.ankleF, 24, 25, 12, .34, true, 'shin'),
-      ball(S.kneeF, 12),
+      ball(S.kneeF, 9),
     ]);
   }
   // KATMAN yan: farm
@@ -836,7 +882,7 @@ function draw() {
     far([
       ...limb(S.shF, S.elbowF, 23, 21, 16, .5, true, 'upper'),
       ...limb(S.elbowF, S.handF, 17, 17, 11, .3, true, 'fore'),
-      ball(S.elbowF, 9), ball(S.handF, 9),
+      ball(S.elbowF, 6), ball(S.handF, 9),
       useParts ? handAt(S.handF, S.elbowF) : null,
     ]);
     // KATMAN yan: dbfar
@@ -868,7 +914,7 @@ function draw() {
     // ekleminin ALTINA taşıyor ki uyluk onun üstüne binsin — kütleler uç uca
     // gelmez, geçer. Blok yokken bel ve uyluk parçaları tek noktada değiyor,
     // kalça gövdeden kopuk görünüyordu.
-    { d: pelvisMass(S.pelvis, S.lumbar) },
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee, MIRROR) },
     trunkPart('lumbar', S.pelvis, S.lumbar), trunkPart('thorax', S.lumbar, S.thorax),
     ...(useParts && PARTS ? [] : [{ d: capsule(S.pelvis, S.lumbar, 40, 33) }]),
     ...(useParts ? [] : [{ d: ellipsePath(thoraxMid, 27, 47), tf: `rotate(${p.thoraxA} ${thoraxMid[0]} ${thoraxMid[1]})` }]),
@@ -879,10 +925,12 @@ function draw() {
   // hat isteniyor, yoksa uzuv gövdeye yapışık okunuyor.
   // KATMAN yan: nleg
   near([
+    // Kalça zarfı bacak zincirinde de, yalnızca dolgu — `RigFigure` ile aynı gerekçe.
+    { d: pelvisMass(S.pelvis, S.lumbar, S.knee, MIRROR), fillOnly: true },
     { d: footPath(S.ankle, footDirOf(e), pin, facingFlip(e.mode)) },
     ...limb(S.pelvis, S.knee, 42, 33, 26, .42, false, 'thigh'),
     ...limb(S.knee, S.ankle, 26, 28, 13, .34, false, 'shin'),
-    ball(S.knee, 13), ball(S.ankle, 9),
+    ball(S.knee, 10), ball(S.ankle, 9),
   ]);
   // Sırt üstü kiplerde profil aynalanıyor: kemik açısı başı doğru yere
   // koyuyor ama yüzün hangi yöne baktığını söyleyemiyor (bkz. facingFlip).
@@ -909,7 +957,7 @@ function draw() {
   near([
     ...limb(S.sh, S.elbow, 25, 22, 17, .5, false, 'upper'),
     ...limb(S.elbow, S.hand, 18, 18, 12, .3, false, 'fore'),
-    ball(S.elbow, 10),
+    ball(S.elbow, 7),
     useParts ? handAt(S.hand, S.elbow) : ball(S.hand, 10),
   ]);
   // KATMAN yan: db
@@ -2075,6 +2123,7 @@ const boot = async () => {
   MUSCLEDATA = muscles;
   ANATOMY = anatomy && anatomy.front ? anatomy : null;
   PARTS = parts && parts.parts ? parts.parts : null;
+  PARTS_HEAD = parts && parts.head ? parts.head.d : null;
   DATA = data;
   CATALOG = names;
   rebuildNames();

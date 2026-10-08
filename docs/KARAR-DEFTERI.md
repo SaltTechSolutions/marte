@@ -31,6 +31,385 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-07 — Hareket ekranı: dönen dört slaytlı carousel
+
+**Yapıldı.** Kullanıcının istediği düzen: üstte yana kaydırılan, dönen carousel —
+1) hareketli çizim (ortalanmış), 2) çalışan kaslar önden, 3) arkadan, 4) başlangıç ve bitiş
+çizimi (durağan) → yine 1. Altında set/tekrar, ekipman, adımlar ve "Sorun bildir" tek dikey
+kaydırmada; eski "Çalışan kaslar / Nasıl yapılır" sekmeleri kalktı. Yeni bileşen
+`ExerciseCarousel`: slaytların başına sonuncunun, sonuna ilkinin kopyası konuyor, kopyaya
+varılınca görünmeden asıl slayta atlanıyor; kopyalar durağan (ikinci animasyon döngüsü
+yok). Noktalar dokunulabilir. `RigFigure`'a `still` (sabit an) eklendi. `keyPhases` (ilk kare
++ ondan en çok ayrılan kare) editörden motora (`rig.ts`) taşındı, editör oradan alıyor,
+testi var. **Simülatörde görüldü** (iPhone 18 Pro Max, iOS 27, yönetici hesabı, back squat):
+dört slayt, iki yönde döngü ve noktalar çalışıyor. İlk denemede 4. slaytta figürler
+görünmüyordu (ortalanan sütunda SVG genişliği 0), düzeltildi. Rig 201, uygulama 433 test.
+
+**Karar.** Kas haritası ve hareket aynı kartta, metin altında; carousel yüksekliği sabit
+(340) ki slayt değişirken sayfa zıplamasın.
+
+**Bilerek yapılmadı.** Otomatik kayan carousel (üye okurken kayması istenmez). Görünmeyen
+slayttaki animasyonu durdurma (tek döngü, maliyeti düşük).
+
+**Açık.** Küçük ekranlı telefonda (SE) slayt yüksekliği denenmedi. Ön görünümlü hareketlerde
+(yanal kaldırma vb.) 4. slayt görülmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/components/ExerciseCarousel.tsx`,
+`apps/gymentra-mobile/src/app/exercise-detail.tsx`, `apps/gymentra-mobile/src/components/RigFigure.tsx`,
+`packages/rig/src/rig.ts` (`keyPhases`), `packages/rig/editor/editor.js`.
+
+---
+
+## 2026-10-07 — Boyun ve omuz hizasındaki çentikler giderildi
+
+**Yapıldı.** Kullanıcı "boyundaki çentikleri düzelt" dedi. Üç kaynak ölçüldü: (1) göğüs ve
+boyun bantları kendi kemik boylarına FARKLI dikey oranlarla esnetiliyordu (model boynu
+bizim 44'e, göğsü 85'e), örtüşme bölgesi iki bantta farklı yüksekliğe düşüyordu; omuz
+eğiminde genişlik hızlı değiştiği için kesik köşeleri komşu bandın dışına taşıyordu. Boyun
+artık göğüsle AYNI dikey oranla ölçekleniyor (`kyT`). (2) Gövde 0.5/1 turda boyun önünde
+pürüzlüydü: tek, ortak yumuşatma 0.7/2 tur (göğüs kası kenarı korunuyor). (3) Kafanın çene
+altı dalgalıydı: 0.5/2 tur. Kesik köşeleri ayrıca 1.5 birim içeri çekiliyor (`CUT_INSET`).
+Rig 200, uygulama 432 test; devredildi. Node'da göz ile kontrol edildi; editörde ve cihazda
+görülmedi.
+
+**Karar.** Bitişik gövde bantları aynı dikey oranı paylaşmalı; köşe ayarı bunun yerine geçmez.
+
+**Bilerek yapılmadı.** Kesiğe yakın noktaları düz bağlamak ve 3 birimlik içeri çekme denendi;
+oran farkı sürdükçe kırıklar kalıyordu, geri alındı. Bel/göğüs arası oran farkı duruyor:
+bel hizasında genişlik yavaş değiştiği için görünür kusur yok.
+
+**Açık.** Boyun bandı modelde kafatası tabanına ~1 cm kısa kalıyor; ense ile kafa arasını
+çene-ense hattı kapatıyor, gözle bakıldı, boşluk yok.
+
+**Nerede.** `packages/rig/scripts/import-makehuman.mjs`.
+
+---
+
+## 2026-10-07 — Kaslı model; sırt üstü kiplerde gövde aynalanıyor
+
+**Yapıldı.** Kullanıcı "yan duruşta göğüs kasları düz; gym uygulamasında kassız model hoş
+değil" dedi. Model kaslı ve yağsız: makro kas 0.7→1.0, kilo 0.5→0.4; ayrıca MakeHuman
+bölgesel kas hedefleri (CC0): göğüs 1.0, kanat 0.7, V-gövde 0.4, karın tonu 0.7, kalça 0.3,
+omuz/pazu 0.6, ön kol 0.4, uyluk/baldır 0.5 — iskeletten ÖNCE uygulanıyor ki eklemler yeni
+biçime otursun. Gövde 2 mm ızgarada çıkarılıyor ve daha az yumuşatılıyor (göğüs kasının alt
+kenarı 4 mm + iki tur yumuşatmada siliniyordu). Kolsuz önce/sonra çizimle karşılaştırıldı:
+göğüs öne çıkıp alt kenarında içeri dönüyor, sırt dolgunlaştı.
+
+**Bulunan hata.** Sırt üstü kiplerde (`bench`, `supine`: bench_press, incline_press, dead_bug,
+curl_up) yalnızca kafa aynalanıyordu; gövde ve uzuvlar aynalanmadığı için göğüs sehpaya,
+kalça tavana bakıyordu. Eski ön/arka simetriğe yakın profillerde görünmüyordu. `partTransform`
+ve `pelvisMass` artık `mirror` (= `facingFlip(mode)`) alıyor; `RigFigure` `flip`'i, editör
+modül düzeyindeki `MIRROR`'ı (her çizim başında kipten) geçiriyor. Kas bantları dönüşümü
+izlediği için onlar da doğru yüze geçti. Rig 200, uygulama 432 test; devredildi. Node'da göz
+ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Aynalama tek kural: kafayı aynalayan kip bütün figürü aynalar.
+
+**Bilerek yapılmadı.** Yüzükoyun kip (`quad`) aynalanmadı: orada sırtın yukarıda olması doğru.
+
+**Açık.** Boyun önünde/köprücük hizasında küçük çentikler (gövde bandının üst kesiği ile omuz
+topu); kol çoğu pozda örtüyor.
+
+**Nerede.** `packages/rig/scripts/blender/extract-parts.py` (`MACRO`, `DETAIL`, `RES_TRUNK`),
+`packages/rig/scripts/import-makehuman.mjs`, `packages/rig/src/rig.ts` (`partTransform`,
+`pelvisMass`), `packages/rig/editor/editor.js`, `apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
+---
+
+## 2026-10-07 — Kalçadaki çift tümsek giderildi
+
+**Yapıldı.** Kullanıcı "kalçadaki çift tümseği düzelt" dedi. Sebep ölçüldü: MakeHuman
+uyluğunun üst ucu kalça ekleminin çevresinde kendi gluteal kıvrımıyla yuvarlanıyor; rig'in
+leğen bloğu (`pelvisMass`) gövdeyle, uyluk bacakla dönünce hinge/squat'ta ikisi ayrışıp
+arada çukur bırakıyordu. `pelvisMass(pelvis, lumbar, knee?)`: diz verilirse blok, uyluğun
+üst-arka kenarından üç noktayla birlikte dışbükey zarfa alınıyor ve Catmull-Rom ile
+yumuşatılıyor (düz zarf ayakta kalçanın altında kama yapıyordu). Zarf iki yerde çiziliyor:
+gövde zincirinde (silüet) ve yakın bacak zincirinde YALNIZCA DOLGU olarak (`fillOnly`,
+uygulama ve editör) — uyluk topuzunun kalçanın içinde kalan hattını örtüyor; hatlı olsaydı
+ayakta kalçanın üstünde şort kenarı çiziyordu. Rig 200, uygulama 432 test; devredildi.
+Hinge, squat, hip thrust, hamle Node'da göz ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Kalça kütlesinin tek sahibi zarf; uyluk verisi kırpılmıyor.
+
+**Bilerek yapılmadı.** Uyluğun arka yüzünü üstte kırpmak (`trimGlute`) denendi, görünür
+etkisi olmadı ve kırpma köşesi küçük bir çentik bıraktı — geri alındı. Uzak bacak zincirine
+zarf eklenmedi (uzak kalça gövdenin arkasında).
+
+**Ek (aynı gün, kullanıcı ekran görüntüsüyle):** Kasıkta, gövdenin uyluğa bağlandığı yerde
+önde bir çıkıntı vardı. Ölçüldü: bel bandının önü kalçada 25 birim, leğen bloğunun önü 20;
+bel bandının ön-alt köşesi bloğun önünden damla gibi sarkıyordu ve uyluğun önü ancak 15–25
+birim aşağıda o genişliğe ulaşıyor. Zarfın önü 24.5'e çıktı ve uyluğun üst-ön kenarından iki
+nokta eklendi: bel önü zarfın üstünden uyluğa tek eğriyle iniyor. Diz verilmeyen eski çağrılar
+(`FRONT = 20`) değişmedi.
+
+**Açık.** Hinge'de kalçanın altında 1–2 px'lik küçük bir kanca kalabilir (uyluk topuzu
+zarfın kenarına çok yakın). Önden görünüm değişmedi.
+
+**Nerede.** `packages/rig/src/rig.ts` (`pelvisMass`, `convexHull`), `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`.
+
+---
+
+## 2026-10-07 — Kafa modelden, boyun 44, eklem topları küçüldü
+
+**Yapıldı.** Kafa silüeti de MakeHuman'dan (`bodyParts.json` → `head`, 1.5 mm ızgara; burun,
+dudak, çene hattı var); şema isteğe bağlı `head.d`'yi kabul ediyor, editör (`headD`) ve
+`RigFigure` (`HEAD_D`) varsa onu, yoksa `headProfile()`'ı çiziyor. **`B.neck` 24 → 44**: model
+kafası kafatası tabanından oturtulunca kısa boyunda çene göğse gömülüyordu (model: omuz →
+kafatası tabanı ≈ 47). Sırttaki bar boyun ucuna bağlıydı ve enseye tırmandı (squat tutuş
+kuralı düştü) — artık `BAR_TRAP` (göğüs üstünden 24, eski trapez hizası). Yan görünüm eklem
+topları küçüldü: diz 13→10, dirsek 10→7, uzak diz 12→9, uzak dirsek 9→6 (uygulama ve editör).
+Bel bandı kalçada bitiyor ve alt köşesi yuvarlak (kalçanın önünde dişli çentik vardı). Rig
+200, uygulama 430 test; devredildi. Node'da göz ile kontrol edildi; editörde ve cihazda görülmedi.
+
+**Karar.** Boyun boyu modelin oranına çekildi; pozlar açı olarak saklandığı için yalnızca
+kafa yükseldi, kadraj `boundsFor` ile kendiliğinden genişliyor.
+
+**Bilerek yapılmadı.** Leğen silüeti modelden alınmadı: kalça altı gövde silüeti ince bir
+şerit çıktı (gluteal kütle modelde uyluğa bağlı), squat'ta kuyruk gibi geriye uzadı;
+`pelvisMass` kalıyor. Önden görünüm (`FrontBody`) değişmedi.
+
+**Açık.** (1) Kalça arkasında `pelvisMass` + uyluğun gluteal kıvrımı hâlâ yer yer çift tümsek.
+(2) Önden görünümdeki boyun da 44'e uzadı, göz ile bakılmadı. (3) Uzak uzuvlar, sırt üstü
+kipler (`facingFlip`) ve el/ayak koddaki eski çizim. (4) Yeni kadraj küçük telefonda
+denenmedi.
+
+**Nerede.** `packages/rig/src/rig.ts` (`B.neck`, `BAR_TRAP`), `packages/rig/src/rigSchema.ts`,
+`packages/rig/scripts/{blender/extract-parts.py,import-makehuman.mjs}`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`, `packages/rig/docs/uzuv-parcalari-nasil-uretilir.md`.
+
+---
+
+## 2026-10-07 — Uzuv siluetleri MakeHuman (CC0) modelinden üretiliyor
+
+**Yapıldı.** Kullanıcı "Blender'ı kur, 1. yolla devam et" dedi. Blender 5.2.2 LTS (Homebrew
+cask) ve MPFB eklentisi (Blender eklenti deposu, `--online-mode` yalnızca komut için; Blender
+ayarı kalıcı değişmedi) kuruldu. `scripts/blender/extract-parts.py` başsız Blender'da erkek,
+atletik (kas 0.7, ideal oran) bir insan kurup `game_engine` iskeletini oturtuyor, her köşeyi
+baskın kemiğine atıyor, her uzvu KENDİ kemik ekseni + vücudun ileri yönü düzleminde izdüşürüp
+4 mm ızgarada dış hattını çıkarıyor (ileri yön ayak kemiğinden ölçülüyor). `scripts/import-
+makehuman.mjs` hattı sadeleştirip yumuşatıyor, Bézier'e çeviriyor ve `bodyParts.json`'ı
+yazıyor. Belgedeki "render + Inkscape'te elle çiz" adımının yerine geçti: tekrarlanabilir.
+Rig 198, uygulama 430 test; devredildi. Node'da aynı motorla çizilip göz ile kontrol edildi;
+editörde ve cihazda görülmedi.
+
+**Karar.** (1) Temel model CC0 (`base.obj` başlığı); MPFB kodu GPL ama dağıtılmıyor, yalnızca
+ürettiği geometri kullanılıyor. (2) Ölçek: kemik boyunca her parça kendi `len`'ine, enine TEK
+ölçek (bacak boyu oranı, 236 px/m) — model oranları bizimkinden farklı (modelde baldır >
+uyluk, ön kol > üst kol). (3) Uzuvlar kesilmiyor (kesik uç ayrı zincirde görünüyordu); gövde
+tek silüet olarak çıkarılıp eklem yüksekliklerinde üç banda kesiliyor, kesik köşeler `sharp`
+(spline orada taşıp omuzda çizgi bırakıyordu), önce yumuşatılıp sonra kesiliyor. (4) Gövde
+bantları ORTAK dik eksene göre: bant başına eksen modelin ~8° öne eğik göğüs eksenini taşıyıp
+belde öne basamak yapıyordu — kullanıcı "göbek saçma oldu" dedi, sebep buydu.
+
+**Bilerek yapılmadı.** Kafa, el, ayak ve leğen kütlesi (`rig.ts`'te kod) bu turda değişmedi.
+`build-body-parts.mjs` silinmedi (elle profil yolu, yedek); artık `bodyParts.json`'ı o üretmiyor.
+
+**Açık.** (1) Kafa hâlâ yumurta. (2) Diz/dirsek eklem topları yeni, daha ince uzuvların dışına
+taşıp yumru yapıyor. (3) Hinge/squat'ta kalça arkasında çift tümsek: `pelvisMass` ile uyluğun
+doğal gluteal kıvrımı üst üste. (4) Boyun arkasında küçük bir basamak. (5) Uzak uzuvlar ve
+ön görünüm denetlenmedi.
+
+**Nerede.** `packages/rig/scripts/blender/extract-parts.py`, `packages/rig/scripts/import-makehuman.mjs`,
+`packages/rig/data/bodyParts.json`.
+
+---
+
+## 2026-10-07 — Uzuv profilleri: ters yüz hatası düzeltildi, kas kütleleri işlendi
+
+**Yapıldı.** `build-body-parts.mjs` başa giden kemiklerde (bel, göğüs, boyun) `f`/`b`'yi
+doğru yerel yarıya yazıyor (`HEADWARD`); önceden anatomik ön arkaya çiziliyordu — ölçüldü:
+bel parçasının sakrum derinliği (24) öne düşüp alt karını şişiriyordu. Profiller anatomik
+kütlelere göre yeniden yazıldı (deltoid, biceps/triceps karnı, brachioradialis, quadriceps
++ VMO, gluteal kıvrım, gastrocnemius, lordoz, göğüs/kürek kemiği). Önce/sonra aynı pozlarla
+Node'da çizilip karşılaştırıldı. Devredildi; rig 198, uygulama 430 test temiz.
+
+**Karar.** `f`/`b` her zaman ANATOMİK ön/arka; yerel yarı seçimi betikte.
+
+**Bilerek yapılmadı.** —
+
+**Açık.** Kullanıcı sonucu "çok iyi olmadı" buldu: elle yazılan yarı genişlik
+profilleriyle manken görünümü aşılmıyor. Sonraki yol kullanıcıya sunuldu (bkz. sonraki kayıt).
+
+**Nerede.** `packages/rig/scripts/build-body-parts.mjs`, `packages/rig/data/bodyParts.json`.
+
+---
+
+## 2026-10-07 — iOS 27 için UIScene desteği açıldı (Expo 57.0.27)
+
+**Yapıldı.** Kullanıcı "UIScene desteğini ekle" seçti. `expo` 57.0.22 → 57.0.27,
+`npx expo install --fix` ile hizalanan 9 Expo paketi (`expo-router`, `expo-updates`,
+`expo-notifications`, `@expo/ui`, `expo-camera`, `expo-glass-effect`,
+`expo-image-manipulator`, `expo-image-picker`, `expo-linking`) yama sürümüne çıktı;
+`app.json`'da `expo-build-properties` → `ios.enableSceneSupport: true` (Expo'nun resmi
+çözümü, expo/expo#46664; en az expo 57.0.23 + expo-build-properties 57.0.20 ister).
+`prebuild --clean` sonrası Info.plist'te `UIApplicationSceneManifest` →
+`EXExpoAppSceneDelegate`. Aynı iOS 27 simülatöründe geliştirme derlemesi artık
+**açılıyor** (öncesinde açılışta EXC_BREAKPOINT). tsc, 430 test temiz.
+
+**Karar.** Sahne desteği build 28'in parçası: Xcode 27 SDK'sıyla alınan her build onsuz
+iOS 27'de açılmıyor.
+
+**Bilerek yapılmadı.** Android'e dokunulmadı (güncelleme durdurulu; ayar yalnızca iOS).
+Build/OTA alınmadı.
+
+**Doğrulama (aynı gün, kullanıcı simülatörde yönetici hesabıyla oturum açtıktan sonra).**
+Salon ayarlarının altında "Hakkında" bağlantısı görünüyor, ekran sürümü ve iki lisansı
+gösteriyor; lisans metni 80 sütunda elle bölündüğü için telefonda kırık satırlar
+çıkıyordu, paragraflar yeniden akıtıldı (`reflow`) ve düzgün göründüğü görüldü. Back
+squat detayında figür salonun mor temasıyla boyanıyor; kas haritası kartı ön ve arka
+görünümde tam sığıyor, efsane görünüyor, boyanan bölgeler doğru. iPhone 18 Pro Max /
+iOS 27.0, geliştirme derlemesi. Küçük ekranlı telefonda görülmedi. Not: test sırasında
+yanlış bir dokunuş hesabın "Salon duyuruları" bildirim anahtarını kapattı, aynı dakika
+içinde yeniden açıldı (ekran görüntüsüyle doğrulandı).
+
+**Açık.** (1) Native değişiklik + modül yükseltmeleri: **parmak izi değişti, OTA ile
+gitmez**, build 28 gerekir. (2) Sahne yaşam döngüsüyle derin bağlantılar, bildirime
+dokunarak açılış, Google girişi ve RevenueCat akışı cihazda denenmedi — Expo "uygulamanın
+açılışını değiştirir, iyice test edin" diyor. (3) Geliştirme istemcisi Metro'ya ağ
+adresinden (172.25.x) ulaşamadı, `localhost` URL'iyle açıldı (yalnızca yerel ortam).
+
+**Nerede.** `apps/gymentra-mobile/{app.json,package.json,package-lock.json}`.
+
+---
+
+## 2026-10-07 — "Hakkında" ekranı ve iOS 27 simülatöründe açılış çökmesi
+
+**Yapıldı.** Kullanıcının isteğiyle `src/app/about.tsx` eklendi: sürüm ve açık kaynak
+lisansları (MuscleMap, react-native-body-highlighter; metinler `rigAnatomy.json`'ın
+`licenses` alanından okunuyor, kopyalanmıyor). `LegalLinks`'e üçüncü bağlantı
+"Hakkında" eklendi, yani üye/antrenör profili ve yönetici ayarlarının altında görünüyor.
+tsc, lint, 430 test temiz. Kullanıcı mobilde test istedi: `expo run:ios` ile geliştirme
+derlemesi alındı ve iPhone 18 Pro Max (iOS 27.0) simülatörüne kuruldu, **ama uygulama
+açılışta çöktü**; ekran ve kas haritası kartı cihazda görülmedi.
+
+**Karar.** Çökme bu değişiklikten bağımsız ve native: `UIApplicationEvaluateRuntimeIssue
+ForNoSceneLifecycleAdoption` (EXC_BREAKPOINT). iOS 27 SDK'sıyla derlenen uygulamanın
+UIScene yaşam döngüsünü benimsemesi zorunlu; `ios/` CNG ile üretiliyor ve Info.plist'te
+`UIApplicationSceneManifest` yok. Bilgisayarda yalnızca iOS 27 simülatör çalışma zamanı
+kurulu (26.1 ve 26.5 "unavailable").
+
+**Bilerek yapılmadı.** Sahne desteğini eklemek (config plugin / Expo yükseltmesi): native
+değişiklik, parmak izini bozar, build 28'in kararı. iOS 26 çalışma zamanını indirmek
+(büyük indirme, kullanıcının makinesi). Simülatörde başka uygulamaya (Kolba) dokunulmadı.
+
+**Açık.** (1) **Build 28 riski:** Xcode 27 / iOS 27 SDK ile alınacak bir sonraki build
+iOS 27 cihazlarda aynı şekilde açılışta çökebilir; build 27 eski SDK'yla alındığı için
+muhtemelen etkilenmiyor, doğrulanmadı. (2) Hakkında ekranı ve yeni kas haritası kartı
+cihazda görülmedi. (3) Uygulamadaki diğer açık kaynak bağımlılıkların (React Native,
+Expo…) lisansları bu ekranda yok; yalnızca kas haritası çizimleri.
+
+**Nerede.** `apps/gymentra-mobile/src/app/about.tsx`, `src/components/LegalLinks.tsx`,
+`src/app/_layout.tsx`.
+
+---
+
+## 2026-10-07 — Kas haritası MuscleMap'in anatomik yollarına geçti
+
+**Yapıldı.** Kullanıcı kaynak olarak MuscleMap'i seçti. `scripts/import-musclemap.mjs`
+MuscleMap'in (MIT, github.com/melihcolpan/MuscleMap @ 7dc03071) erkek ön/arka Swift
+verisinden `data/anatomy.json`'ı üretiyor: ön 99, arka 72 yol, 55 KB (eskisi 7.6 KB).
+Eşleme grup değil YOL düzeyinde: her slug'ın her yolu bizim 39 kimliğimizden
+birine/birkaçına; numaralı haritayla elle eşlendi. Tek yolun iki kas taşıdığı göğüs
+(pecClav/pecSternal), sırttaki trapez (trapMid/trapLower) ve pazu (biceps/brachialis)
+yatay `clip` bandıyla bölündü. Şema değişti: görünüm başına `viewBox` + `paths`,
+yol başına `muscles[]` ve isteğe bağlı `clip`, kökte zorunlu `licenses`; ayna yok.
+Editörün `muscleMapSvg`'si ve uygulamanın `MuscleMap.tsx`'i yeni biçimi okuyor;
+uygulamadaki eski `FRONT_PATHS`/`BACK_PATHS` kopyası silindi (tek kaynak devredilen
+`rigAnatomy.json`). Rig 198, uygulama 430 test; tsc, lint, `expo export --platform ios`
+temiz; iki lisans metni iOS paketinde bulundu. Editörde squat, bench, barfiks, kürek
+göz ile kontrol edildi. **Cihazda görülmedi.**
+
+**Karar.** (1) MuscleMap'in erkek yollarının çoğu react-native-body-highlighter'dan
+(MIT, © 2022 ELABBASSI Hicham) birebir — ölçüldü: arka 70/70, ön 89/111. Bu yüzden iki
+lisans metni de `third_party/`'de ve `anatomy.json`'ın içinde. (2) MuscleMap'in ön alt
+grupları (upperChest, innerQuad…) gerçek bölge değil, ana grubun üstüne konmuş
+yuvarlak lekeler — alınmadı. (3) Sağ yollar sol listeyle aynı sırada DEĞİL (karın ve
+baldırda sağda yanlış blok boyanıyordu); sağ yol, aynadaki karşılığına en yakın sol
+yolun eşlemesini alıyor, 60 birimden uzaksa betik duruyor.
+
+**Bilerek yapılmadı.** Kadın modeli (MuscleMap'te var; uygulamada cinsiyet seçimi
+yok). body-muscles (Apache 2.0, çizimin kaynağı belirsiz) ve Wikimedia/OpenStax
+(CC BY-SA, aynı lisansla paylaş şartı) seçilmedi.
+
+**Açık.** (1) Uygulamada görünür bir lisans/atıf ekranı yok; metin pakette taşınıyor.
+Görünür atıf istenip istenmediği kullanıcıya soruldu. (2) Bazı eşlemeler yaklaşık:
+ön görünümdeki ince "triceps" yolu `triLong`, ön baldır içi `gastroMed`, arkada
+kalça üstü küçük yol `gluteMed`; bir antrenör gözüyle bakılmalı. (3) Kas haritası
+artık 727×1280 çizim; ekran boyutu eskisiyle aynı yükseklikte, genişlik oranı farklı
+(daha geniş) — cihazda görülmedi. (4) OTA gönderilmedi.
+
+**Nerede.** `packages/rig/scripts/import-musclemap.mjs`, `packages/rig/data/anatomy.json`,
+`packages/rig/third_party/`, `packages/rig/src/rigSchema.ts`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/MuscleMap.tsx`, `apps/gymentra-mobile/src/data/exerciseLibrary.ts`.
+
+---
+
+## 2026-10-07 — Çalışan kaslar hareket figürünün üstünde
+
+**Yapıldı.** Kullanıcı "anatomik gerçekçi, kaslar iki tonla hem haritada hem
+figürde" seçti; bu ilk adım. `muscles.ts`'e `MUSCLE_PATCHES` eklendi: 39 kasın her
+biri, bir uzuv parçasının ön/arka yarısında, kemik boyunca `u0..u1` bandı.
+`figureTints` aynı yüzde çakışan bantları birleştiriyor, `tintEllipse` bandı kas
+karnı biçiminde bir elipse çeviriyor. Elips parça siluetiyle kırpılıyor. Hem editör
+önizlemesi (`tintNodes`) hem uygulamanın `RigFigure`'ı (`muscles` prop'u,
+`exercise-detail` geçiyor) çiziyor. Testler: her kasın bandı var, kası yazılmış
+her hareket figüre çözülüyor, birleşme ve yön. Rig 196, uygulama 428 test; tsc,
+lint, `expo export --platform ios` temiz. Editörde squat, hinge, bench, barfiks,
+kürek ve pushdown göz ile kontrol edildi. **Cihazda görülmedi.**
+
+**Karar.** Renk saydamlık değil KARIŞIM (`TINT_MIX` birincil 0.78, ikincil 0.38;
+uzvun kendi dolgusundan accent'e). Saydam bantlar üst üste bindikçe koyulaşıyordu.
+Yandan bakışta iç/dış ayrımı (quadVL↔quadVM) yok, bilerek; o ayrım kas
+haritasında. Gövde parçaları (bel, göğüs, boyun) başa doğru gittiği için
+`partTransform` onları 180° döndürüyor ve yerel +X ARKAYA düşüyor; bant hesabı bunu
+`HEADWARD` ile düzeltiyor (hinge'de bel kası önce göğsün altında çıktı, böyle bulundu).
+
+**Bilerek yapılmadı.** Önden görünüm (`FrontBody`) boyanmıyor. Kas haritasının
+kendisi değişmedi (sıradaki adım). Yönelmiş, saydam bant denendi, reddedildi.
+
+**Açık.** (1) Aynı 180° dönüş sebebiyle `build-body-parts.mjs`'teki gövde
+profillerinin ön (`f`) ve arka (`b`) değerleri çizimde TERS yüze düşüyor olmalı;
+"erkek gövde profili" düzeltmesi bu ters görüntüye göre yapılmış olabilir. Siluet
+işinde (adım 3) ölçülerek doğrulanmalı. (2) `arm-circles` kası `pending`, figür
+boyanmıyor. (3) Sırt üstü kiplerde (`facingFlip`) parçalar aynalanmıyor; bantlar
+parçayı izliyor, ama yön göz ile yalnızca hip_thrust ve bench'te kontrol edildi.
+(4) Devir yapıldı, OTA gönderilmedi.
+
+**Nerede.** `packages/rig/src/muscles.ts`, `packages/rig/editor/editor.js`,
+`apps/gymentra-mobile/src/components/RigFigure.tsx`, `apps/gymentra-mobile/src/app/exercise-detail.tsx`.
+
+---
+
+## 2026-10-07 — Rig ara kareleri monoton kübik oldu
+
+**Yapıldı.** `poseAt` geçiş karelerinde doğrusal karışım yerine her eklem-yerel
+kanalda monoton kübik Hermite (Fritsch–Carlson, Brodlie teğetleri) kullanıyor.
+Beklemede ve tepe/dip karesinde teğet sıfır, yani iki ucu durgun aralık eskisi
+gibi smoothstep; geçiş karesinde hız artık sürekli. İki test eklendi: ara kare
+komşu karelerin aralığından taşmaz; geçiş karesinde hız kırılmaz (eski motorda
+bu test kalıyor, yenisinde geçiyor). 191 test, typecheck temiz, 40 arketip
+denetimden uyarısız. Editörde görüldü. Kullanıcı onayıyla `npm run export` ile uygulamaya
+devredildi (`rig.ts`, `rig.test.ts`, manifest); uygulamada `tsc`, lint ve 423
+test temiz. Cihazda görülmedi.
+
+**Karar.** Monoton kübik, Catmull-Rom'un reddedilme gerekçesini (uç aşımı → ROM
+ihlali) karşılıyor; bu yüzden kabul. Durum taraması: arketip eksikliği
+`exerciseLibrary.test.ts` ile zaten korunuyor, dirsek bandı zaten iskeletten
+okuyor — ikisi de ek iş gerektirmedi.
+
+**Bilerek yapılmadı.** Reanimated'a geçiş (native bağımlılık, OTA parmak izini
+etkiler). Ayak bileği açısı (geriye uyumsuz). `npm run export` (onay bekliyor).
+
+**Açık.** Manifest `dirty: true`: export anında ağaçta bu işle ilgisiz
+`apps/gymentra-mobile/AGENTS.md` değişikliği ve `docs/BUILD.md` vardı. Değişiklik
+JS-only, OTA ile gidebilir ama gönderilmedi. Omuz/boyun ROM (TODOS) duruyor.
+Sırada: anatomik gerçekçi figür + iki tonlu kas vurgusu (kullanıcı seçimi).
+
+**Nerede.** `packages/rig/src/rig.ts` (`poseAt`, `monoSlope`), `packages/rig/tests/rig.test.ts`.
+
+---
+
 ## 2026-09-21 — iOS build 27 için OTA dalı hazırlandı (yayınlanmadı)
 
 **Yapıldı.** `ota/ios-27-denetim` (yerel, `6ac705f4`): build 27'nin commit'i

@@ -26,13 +26,18 @@
 
 export type Vec = [number, number];
 
+/** Sırttaki barın trapez hizası: göğüs üstünden boyun yönünde (eski boyun boyu). */
+const BAR_TRAP = 24;
+
 /** Segment boyları. Tek doğruluk kaynağı: hiçbir kare boy yazmaz. */
 export const B = {
   shin: 100,
   thigh: 105,
   lumbar: 55,
   thorax: 85,
-  neck: 24,
+  // 24'tü; MakeHuman modelinde omuz → kafatası tabanı ≈ 47. Kısa boyunda
+  // modelden gelen kafa çeneyi göğse gömüyordu.
+  neck: 44,
   upper: 78,
   fore: 68,
   foot: 46,
@@ -221,21 +226,16 @@ const BASE = {
 /** Yumuşak geçiş (smoothstep). Uçlarda hız sıfır, ortada en hızlı. */
 export const ease = (u: number): number => u * u * (3 - 2 * u);
 
-/** Duruştan çıkış: yavaş başla, hızla devam et. */
-const easeOut = (u: number): number => u * u;
-/** Duruşa varış: hızla gel, yavaşlayarak dur. */
-const easeIn = (u: number): number => u * (2 - u);
-
 /**
- * İki karenin pozu aynı mı? Aynıysa aradaki aralık bir BEKLEME'dir.
- *
- * Bekleme ile geçiş ayrımı yumuşatmanın nereye uygulanacağını belirliyor:
- * beklemede hızın sıfırlanması hareketin kendisi, geçiş karesinde ise hata.
+ * Monoton kübik için bir karedeki teğet: iki komşu eğimin ağırlıklı harmonik
+ * ortalaması (Brodlie). Eğimler zıt işaretliyse ya da biri sıfırsa (tepe, dip,
+ * bekleme) teğet sıfır — eğri o karede durur ve aralığın dışına taşamaz.
  */
-const samePose = (a: RigKeyframe, b: RigKeyframe): boolean => {
-  const A = fillPose(a.p);
-  const B = fillPose(b.p);
-  return (Object.keys(A) as (keyof RigPose)[]).every((k) => Math.abs(A[k] - B[k]) <= 0.5);
+const monoSlope = (d0: number, d1: number, h0: number, h1: number): number => {
+  if (d0 * d1 <= 0) return 0;
+  const w0 = 2 * h1 + h0;
+  const w1 = h1 + 2 * h0;
+  return (w0 + w1) / (w0 / d0 + w1 / d1);
 };
 
 /**
@@ -358,33 +358,69 @@ export function poseAt(ex: RigExercise, t: number): { p: RigPose; phase: RigKeyf
   const raw = Math.min(1, Math.max(0, (t - a.t) / span));
 
   /*
-   * Yumuşatma her aralığa DEĞİL, yalnızca hareketin gerçekten durduğu yerlere
-   * uygulanıyor.
+   * Ara kareler her eklem-yerel kanalda MONOTON KÜBİK Hermite ile çiziliyor
+   * (Fritsch–Carlson, Brodlie teğetleri).
    *
-   * Eskiden her aralık smoothstep'ti ve bu, figürün HER ara karede hızını
-   * sıfırlaması demekti. Ölçüldü: 30 arketipteki 9 gerçek geçiş karesinin
-   * dokuzunda da hız ortalamanın %25'inin altına düşüyordu — kol çevirme turun
-   * içinde üç kez, omuz presi itişin ortasında duruyordu.
+   * Tarihçe: önce her aralık smoothstep'ti ve figür HER ara karede duruyordu
+   * (30 arketipteki 9 geçiş karesinin dokuzunda hız ortalamanın %25'inin
+   * altına iniyordu). Sonra yalnızca beklemeler yumuşatıldı, geçişler doğrusal
+   * kaldı — duraklama gitti ama geçiş karesinde hız KIRIK kaldı.
    *
-   * Sıfır hız yalnızca BEKLEME'de doğru: iki komşu karenin pozu aynıysa orada
-   * hareket gerçekten duruyor (çömelmenin dibi, plank duruşu). Geçiş
-   * karesinden ise hızla geçilmeli.
-   *
-   * Kübik bir eğri (Catmull-Rom) hızı tam sürekli yapardı ama uçları aşabilir
-   * ve aşan bir eklem ROM bandını ihlal eder; yani yumuşaklık uğruna anatomik
-   * doğruluk riske girerdi. Buradaki çözüm hızda küçük bir kırılma bırakıyor,
-   * ama duraklamayı tamamen kaldırıyor.
+   * Catmull-Rom bilerek kullanılmıyor: uçları aşabilir, aşan eklem ROM
+   * bandını ihlal eder. Monoton kübik aşamaz — her aralıkta değer iki kare
+   * değerinin arasında kalır — ve hız geçiş karelerinde süreklidir.
+   * Beklemede (komşu iki kare aynı) ve tepe/dip karelerinde (yön değişimi)
+   * teğet sıfır; iki ucu durgun aralık eski smoothstep'in kendisi.
    */
-  const startsAtRest = i === 0 || samePose(kf[i - 1], a);
-  const endsAtRest = i + 2 >= kf.length || samePose(b, kf[i + 2]);
-  const u = startsAtRest && endsAtRest ? ease(raw) : startsAtRest ? easeOut(raw) : endsAtRest ? easeIn(raw) : raw;
   const la = toLocal(fillPose(a.p));
   const lb = toLocal(fillPose(b.p));
+  const prev = i > 0 ? toLocal(fillPose(kf[i - 1].p)) : null;
+  const next = i + 2 < kf.length ? toLocal(fillPose(kf[i + 2].p)) : null;
+  const h = span;
+  const h0 = i > 0 ? Math.max(0.0001, a.t - kf[i - 1].t) : 0;
+  const h1 = i + 2 < kf.length ? Math.max(0.0001, kf[i + 2].t - b.t) : 0;
+  const r2 = raw * raw;
+  const r3 = r2 * raw;
+  const H00 = 2 * r3 - 3 * r2 + 1;
+  const H10 = r3 - 2 * r2 + raw;
+  const H01 = -2 * r3 + 3 * r2;
+  const H11 = r3 - r2;
   const l = {} as LocalPose;
   (Object.keys(la) as (keyof LocalPose)[]).forEach((k) => {
-    l[k] = la[k] + (lb[k] - la[k]) * u;
+    const d = (lb[k] - la[k]) / h;
+    const ma = prev ? monoSlope((la[k] - prev[k]) / h0, d, h0, h) : 0;
+    const mb = next ? monoSlope(d, (next[k] - lb[k]) / h1, h, h1) : 0;
+    l[k] = H00 * la[k] + H10 * h * ma + H01 * lb[k] + H11 * h * mb;
   });
-  return { p: toWorld(l), phase: u < 0.5 ? a : b };
+  return { p: toWorld(l), phase: raw < 0.5 ? a : b };
+}
+
+/**
+ * Hareketi iki karede anlatan evre çifti: ilk kare ve ondan EN ÇOK AYRILAN kare.
+ *
+ * Elle "başlangıç ve tepe" işaretlemek yerine veriden çıkıyor: kareler değişince
+ * seçim de kendiliğinden değişir. Ayrılma iskelet üstünden ölçülüyor (hepsi
+ * piksel, birim karışmıyor). Editörün önizlemesi ve uygulamanın "başlangıç ve
+ * bitiş" slaytı bunu kullanıyor. Döner: kare indeksleri.
+ */
+export function keyPhases(ex: RigExercise): [number, number] {
+  const S0 = skeleton(ex, fillPose(ex.kf[0].p));
+  const joints = (Object.keys(S0) as (keyof Skeleton)[]).filter((k) => k !== 'bar');
+  let best = Math.min(1, ex.kf.length - 1);
+  let bestD = -1;
+  ex.kf.forEach((k, i) => {
+    if (i === 0) return;
+    const S = skeleton(ex, fillPose(k.p));
+    const d = joints.reduce((sum, j) => {
+      const a = S[j] as Vec | null, b = S0[j] as Vec | null;
+      return a && b ? sum + Math.hypot(a[0] - b[0], a[1] - b[1]) : sum;
+    }, 0);
+    if (d > bestD) {
+      bestD = d;
+      best = i;
+    }
+  });
+  return [0, best];
 }
 
 export interface Skeleton {
@@ -571,10 +607,12 @@ function build(ex: RigExercise, p: RigPose): Skeleton {
         // dirseği o kadar katlanmadığı için el barı hiç tutamıyor, hareket
         // "eller arkada tutuluyor" gibi okunuyordu.
         //
-        // Çapa artık BOYUN: bar ensenin 14px arkasında. Omuz-bar 40-43px,
-        // gereken dirsek 146-149°, sınırın altında. Yön gövdeyle döndüğü için
-        // figür öne eğilirken bar trapezde kalıyor.
-        add(neck, D(p.thoraxA + 270), 14)
+        // Çapa TRAPEZ: göğüs üstünden boyun yönünde `BAR_TRAP` ve 14px geride.
+        // Omuz-bar 40-43px, gereken dirsek 146-149°, sınırın altında. Yön
+        // gövdeyle döndüğü için figür öne eğilirken bar trapezde kalıyor.
+        // Eskiden çapa boyun ucuydu; boyun 24 → 44 uzayınca (MakeHuman oranı)
+        // bar enseye tırmandı ve el yetişmedi — trapezin yeri boyun boyuna bağlı değil.
+        add(add(thorax, D(p.neckA), BAR_TRAP), D(p.thoraxA + 270), 14)
       : ex.bar === 'hands'
         ? [hand![0], hand![1]]
         : // Kalçadaki bar yükün nerede olduğunu söyler ve kalçayla birlikte
@@ -827,19 +865,22 @@ export function frontTorsoPath(F: FrontPoints): string {
  * GEÇER ("morticed"). Blok kalça ekleminin altına taşıyor ki uyluk onun
  * üstüne binsin.
  */
-export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
+export function pelvisMass(pelvis: Vec, lumbar: Vec, knee?: Vec, mirror = 1): string {
   const dx = lumbar[0] - pelvis[0];
   const dy = lumbar[1] - pelvis[1];
   const l = Math.hypot(dx, dy) || 1;
   // Omurga ekseni ve ona dik eksen: blok figürle birlikte eğiliyor.
   const uy: Vec = [dx / l, dy / l];
-  const ux: Vec = [-uy[1], uy[0]];
+  // `mirror`: sırt üstü kiplerde ön ve arka yer değiştiriyor (bkz. `partTransform`).
+  const ux: Vec = [-uy[1] * mirror, uy[0] * mirror];
   const cx = pelvis[0] + uy[0] * 8;
   const cy = pelvis[1] + uy[1] * 8;
   // Ön/arka AYRI: ibiğin genişlemesi yanaldır, yandan bakışta leğenin önü
   // belden daha ileri çıkmaz. Simetrik bir blok kalçanın önünde bir çıkıntı
   // bırakıyordu. Derinlik arkada: gluteal kütle orada.
-  const FRONT = 20;
+  // Diz verilince (kalça zarfı) ön, bel bandının kalçadaki ön genişliğine
+  // (MakeHuman, 25) yaklaşıyor ki bel önü zarfa düz insin.
+  const FRONT = knee ? 24.5 : 20;
   // Kalça, yandan bakışta figürün EN ÇIKIK ARKA noktasıdır — kullanıcının
   // verdiği anatomi referansında sırt çizgisi düz iner, çıkıntıyı gluteal
   // kütle yapar. 27'de sırt hattıyla neredeyse aynı hizadaydı.
@@ -857,7 +898,73 @@ export function pelvisMass(pelvis: Vec, lumbar: Vec): string {
     const py = s2 * RY * k;
     pts.push([cx + ux[0] * px + uy[0] * py, cy + ux[1] * px + uy[1] * py]);
   }
-  return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
+  /*
+   * Kalça TEK kütle: blok + uyluğun üst-arka kenarının dışbükey zarfı.
+   *
+   * Uyluk parçası MakeHuman modelinden geliyor ve üst ucu kalça ekleminin
+   * çevresinde kendi gluteal kıvrımıyla yuvarlanıyor. Blok gövdeyle, uyluk
+   * bacakla dönüyor; hinge ve squat'ta ikisi ayrışıp arada bir çukur, yani
+   * kalçada ÇİFT TÜMSEK bırakıyordu (kullanıcı, 2026-10-07). Zarf aradaki
+   * çukuru dolduruyor: kalça hangi açıda olursa olsun tek yuvarlak.
+   *
+   * Uyluk arkası kemiğin −X'i (parça yerel uzayı: +X ön). Genişlikler
+   * `bodyParts.json`'daki uyluğun arka yarı genişliğinden, biraz içeride —
+   * zarf uyluğun kendi hattını aşmasın.
+   */
+  if (knee) {
+    const kx = knee[0] - pelvis[0];
+    const ky = knee[1] - pelvis[1];
+    const kl = Math.hypot(kx, ky) || 1;
+    const d: Vec = [kx / kl, ky / kl];
+    const back: Vec = [-d[1] * mirror, d[0] * mirror];
+    const at = (t: number, side: Vec, w: number): Vec => [pelvis[0] + d[0] * kl * t + side[0] * w, pelvis[1] + d[1] * kl * t + side[1] * w];
+    [
+      [-0.04, 15],
+      [0.06, 14.5],
+      [0.16, 12.5],
+    ].forEach(([t, w]) => pts.push(at(t, back, w)));
+    // ÖN de köprüleniyor: bel bandının önü kalçada 25 birim, uyluğun önü ancak
+    // 15–25 birim aşağıda o genişliğe ulaşıyor. Arada bel bandının ön-alt köşesi
+    // damla gibi sarkıp kasıkta bir çıkıntı bırakıyordu (kullanıcı, 2026-10-07).
+    const front: Vec = [d[1] * mirror, -d[0] * mirror];
+    [
+      [0.12, 21],
+      [0.2, 23.5],
+    ].forEach(([t, w]) => pts.push(at(t, front, w)));
+  }
+  if (!knee) return pts.map((q, i) => `${i ? 'L' : 'M'} ${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' ') + ' Z';
+  // Zarf düz kenarlarla birleşince ayakta kalçanın altında kama çıkıyordu;
+  // köşelerin üstünden geçen kapalı Catmull-Rom ile yumuşatılıyor.
+  const h = convexHull(pts);
+  const n = h.length;
+  const at = (i: number) => h[((i % n) + n) % n];
+  let d = `M ${h[0][0].toFixed(1)} ${h[0][1].toFixed(1)}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    d +=
+      ` C ${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)} ${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)}` +
+      ` ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)} ${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)}` +
+      ` ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d + ' Z';
+}
+
+/** Dışbükey zarf (Andrew'un monoton zinciri), saat yönünün tersine. */
+function convexHull(points: Vec[]): Vec[] {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Vec, a: Vec, b: Vec) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: Vec[] = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper: Vec[] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const q = p[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return [...lower.slice(0, -1), ...upper.slice(0, -1)];
 }
 
 /**
@@ -930,13 +1037,18 @@ export function handPath(): string {
  * uzuvlara bölünmüş gerçek anatomik siluet de aynı yere oturuyor; kod aynı
  * kalıyor, yalnızca `data/bodyParts.json` değişiyor.
  */
-export function partTransform(a: Vec, b: Vec): string {
+export function partTransform(a: Vec, b: Vec, mirror = 1): string {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const l = Math.hypot(dx, dy) || 1;
   // Yerel +Y'yi kemik yönüne çeviren açı.
   const deg = (Math.atan2(-dx / l, dy / l) * 180) / Math.PI;
-  return `translate(${a[0]} ${a[1]}) rotate(${deg})`;
+  // `mirror` = `facingFlip(mode)`: sırt üstü kiplerde parça kemik ekseni boyunca
+  // AYNALANIYOR. Kafa zaten aynalanıyordu, gövde ve uzuvlar aynalanmıyordu: bench
+  // ve supine'de sırt yukarıya, göğüs sehpaya bakıyordu. Ön/arka simetriğe yakın
+  // eski profillerde görünmüyordu; kaslı MakeHuman gövdesiyle ortaya çıktı
+  // (2026-10-07, bench_press, incline_press, dead_bug, curl_up).
+  return `translate(${a[0]} ${a[1]}) rotate(${deg})${mirror < 0 ? ' scale(-1 1)' : ''}`;
 }
 
 /**

@@ -1,20 +1,26 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
-import Svg, { G, Path } from 'react-native-svg';
+import Svg, { ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
 
-import { Activation, BACK_PATHS, FRONT_PATHS, MUSCLE_LABELS, MuscleId } from '@/data/exerciseLibrary';
+import { Activation, MUSCLE_LABELS, MuscleId } from '@/data/exerciseLibrary';
+import rigAnatomy from '@/data/rigAnatomy.json';
 import { mix } from '@/theme/deriveColor';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 import { Text } from './Text';
 
+type AnatomyPath = { d: string; muscles: string[]; clip?: number[] };
+const ANATOMY = rigAnatomy as unknown as Record<'front' | 'back', { viewBox: string; paths: AnatomyPath[] }>;
+
 /**
  * Front/back anatomy chart with the worked muscles shaded (PER-19).
  *
- * The SVG describes ONE half of the body; the other half is the same paths
- * drawn again through a mirroring transform. That is not a size trick — it
- * keeps left and right guaranteed symmetrical, so a shading fix can never
- * land on one side only.
+ * Paths come from packages/rig (`scripts/import-musclemap.mjs`): MuscleMap's
+ * male body, MIT-licensed, most of it from react-native-body-highlighter (MIT).
+ * Both licence texts travel inside `rigAnatomy.json` (`licenses`). Each path
+ * draws both body halves explicitly; one path may carry several muscles, and a
+ * path with `clip` is drawn only inside that horizontal band (chest, trapezius
+ * and biceps are split that way). A path with no muscles is silhouette.
  *
  * Colours come from the tenant's own palette rather than the design file's
  * hardcoded green: a gym on the orange theme gets an orange activation map.
@@ -34,7 +40,9 @@ export function MuscleMap({
   size?: number;
 }) {
   const { colors } = useAppTheme();
-  const paths = view === 'front' ? FRONT_PATHS : BACK_PATHS;
+  const { viewBox, paths } = ANATOMY[view];
+  const [vx, vy, vw, vh] = viewBox.split(' ').map(Number);
+  const clipBase = `mm${view}`;
 
   // Secondary sits between the accent and the card surface: present enough to
   // read as "this works too", quiet enough that primary still wins the eye.
@@ -43,24 +51,33 @@ export function MuscleMap({
   // NOT `colors.line`: that token is an rgba() string and `mix` reads hex.
   const outline = useMemo(() => mix(colors.surf2, colors.txt, 0.34), [colors.surf2, colors.txt]);
 
-  const fillFor = (muscle: string | null) => {
-    if (!muscle) return restingColor;
-    const level = activation[muscle as MuscleId];
-    if (level === 'primary') return colors.p;
-    if (level === 'secondary') return secondaryColor;
+  // The strongest level among a path's muscles wins.
+  const fillFor = (muscles: string[]) => {
+    const levels = muscles.map((m) => activation[m as MuscleId]);
+    if (levels.includes('primary')) return colors.p;
+    if (levels.includes('secondary')) return secondaryColor;
     return restingColor;
   };
 
-  const half = paths.map((p, i) => (
-    <Path key={i} d={p.d} fill={fillFor(p.muscle)} stroke={outline} strokeWidth={0.7} />
-  ));
+  const clips: React.ReactElement[] = [];
+  const body = paths.map((p, i) => {
+    let clipPath: string | undefined;
+    if (p.clip) {
+      const id = `${clipBase}${i}`;
+      clips.push(
+        <ClipPath key={id} id={id}>
+          <Rect x={vx} y={p.clip[0]} width={vw} height={p.clip[1] - p.clip[0]} />
+        </ClipPath>,
+      );
+      clipPath = `url(#${id})`;
+    }
+    // Stroke is in drawing units: the drawing is ~727 wide, so 2 ≈ the old 0.7 on a 200-wide one.
+    return <Path key={i} d={p.d} fill={fillFor(p.muscles)} stroke={outline} strokeWidth={2} clipPath={clipPath} />;
+  });
 
-  // The drawing is 200 wide by up to 460 tall (the bottom ~20 units are the old
-  // caption's strip, kept so no limb is cropped without a device to check). It used to be laid out in a
-  // size x size*1.68 box, which `meet` shrank to 72% and left empty margins to
-  // either side; the box now follows the drawing, at the same drawn scale. The
-  // caption moved out of the SVG: at that scale its 11pt text drew at ~8pt.
-  const scale = (size * 1.68) / 460;
+  // Same drawn height as before (size × 1.68); width follows the drawing.
+  const height = size * 1.68;
+  const width = (height * vw) / vh;
 
   // The picture carries nothing a screen reader can use, so say which muscles
   // are shaded (the same words the "Kaslar" page lists).
@@ -78,9 +95,9 @@ export function MuscleMap({
 
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={spoken} style={{ alignItems: 'center', gap: 4 }}>
-      <Svg viewBox="0 0 200 460" width={200 * scale} height={460 * scale}>
-        <G>{half}</G>
-        <G transform="translate(200,0) scale(-1,1)">{half}</G>
+      <Svg viewBox={`${vx} ${vy} ${vw} ${vh}`} width={width} height={height}>
+        {clips.length > 0 && <Defs>{clips}</Defs>}
+        <G>{body}</G>
       </Svg>
       <Text variant="label" weight="700" tone="sub">
         {caption}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { RIG_ARCHETYPES } from '../src/archetypes';
-import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, poseAt, showFarLeg, skeleton } from '../src/rig';
+import { B, MAX_ANKLE_LIFT, SEAT_Y, Skeleton, Vec, angleOf, boundsFor, frontPoints, ik, keyPhases, poseAt, showFarLeg, skeleton } from '../src/rig';
 import { auditExercise, auditLoop, auditSegments } from '../src/rigAudit';
 
 const len = (a: Vec, b: Vec) => Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -81,6 +81,58 @@ describe('rig kinematics', () => {
  * yazılırken kolayca ayak havada bırakılır ya da diz ters bükülür. Otomatik
  * çevrilmiş kareler tam bu yüzden saçmalıyordu.
  */
+describe('ara kare eğrisi', () => {
+  // Eklem-yerel açılar: yorumdaki gerekçe `poseAt`'te. Dünya açısı da olur
+  // ama yerel kanal monotonluğun gerçekten garanti edildiği yer.
+  const local = (p: ReturnType<typeof poseAt>['p']) => [
+    p.thighA - p.torso, p.shinA - p.thighA, p.upperA - p.thoraxA, p.foreA - p.upperA, p.thoraxA - p.torso,
+  ];
+
+  // Catmull-Rom reddedildi çünkü uçları aşabiliyordu; monoton kübik aşamaz.
+  // Aşan bir ara kare ROM bandını kareler temizken ihlal edebilirdi.
+  it('ara kareler iki komşu karenin değer aralığından taşmaz', () => {
+    entries.forEach(([key, ex]) => {
+      for (let i = 0; i + 1 < ex.kf.length; i++) {
+        const A = local(poseAt(ex, ex.kf[i].t).p);
+        const Bv = local(poseAt(ex, ex.kf[i + 1].t).p);
+        for (let s = 1; s < 10; s++) {
+          const t = ex.kf[i].t + ((ex.kf[i + 1].t - ex.kf[i].t) * s) / 10;
+          local(poseAt(ex, t).p).forEach((v, c) => {
+            const lo = Math.min(A[c], Bv[c]) - 1e-6;
+            const hi = Math.max(A[c], Bv[c]) + 1e-6;
+            expect(v >= lo && v <= hi, `${key} kanal ${c} @${t.toFixed(3)}: ${v}`).toBe(true);
+          });
+        }
+      }
+    });
+  });
+
+  // Doğrusal geçişte hız geçiş karesinde sıçrıyordu. Artık iki yandan ölçülen
+  // hız aynı olmalı (sayısal türev payıyla).
+  it('geçiş karesinde hız kırılmaz', () => {
+    const e = 1e-4;
+    let checked = 0;
+    entries.forEach(([key, ex]) => {
+      for (let i = 1; i + 1 < ex.kf.length; i++) {
+        const t = ex.kf[i].t;
+        const P = local(poseAt(ex, t).p);
+        const L = local(poseAt(ex, t - e).p);
+        const R = local(poseAt(ex, t + e).p);
+        P.forEach((v, c) => {
+          const vl = (v - L[c]) / e;
+          const vr = (R[c] - v) / e;
+          const scale = Math.max(Math.abs(vl), Math.abs(vr));
+          // Taban 1°/t: tepe karelerinde iki yan da ~0 ve sayısal türevin
+          // ikinci derece hatası baskın. Tipik hız yüzlerce °/t.
+          expect(Math.abs(vl - vr) - 1, `${key} kare ${i} kanal ${c}: ${vl} vs ${vr}`).toBeLessThan(0.02 * scale);
+          checked++;
+        });
+      }
+    });
+    expect(checked).toBeGreaterThan(0);
+  });
+});
+
 describe('rig hareket denetimi', () => {
   // Kurallar rigAudit.ts'te: aynı kurallar editörde de canlı çalışıyor, yani
   // burada geçen bir arketip editörde de temiz görünüyor.
@@ -203,6 +255,16 @@ describe('rig hareket denetimi', () => {
       const ex = RIG_ARCHETYPES[key];
       const widths = Array.from({ length: 21 }, (_, i) => poseAt(ex, i / 20).p.hxF);
       expect(Math.max(...widths) - Math.min(...widths), `${key} açılma`).toBeGreaterThan(40);
+    });
+  });
+});
+
+describe('evre çifti (başlangıç ve bitiş slaytı)', () => {
+  it('her arketipte ilk kare ve ondan farklı bir kare seçilir', () => {
+    entries.forEach(([key, ex]) => {
+      const [a, b] = keyPhases(ex);
+      expect(a, key).toBe(0);
+      expect(b > 0 && b < ex.kf.length, `${key} → ${b}`).toBe(true);
     });
   });
 });

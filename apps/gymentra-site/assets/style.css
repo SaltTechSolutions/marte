@@ -162,6 +162,7 @@ footer.site {
 }
 footer.site a { color: var(--sub); margin-left: 14px; }
 footer.site a:hover { color: var(--txt); }
+footer.site .built-by a { margin-left: 0; text-decoration: underline; }
 
 /* Legal document pages */
 .doc h1 {

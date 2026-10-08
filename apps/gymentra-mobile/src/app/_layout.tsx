@@ -102,6 +102,8 @@ function RootLayout() {
                 writing a programme, so it sits outside both tab groups. */}
             <Stack.Screen name="exercise-detail" />
             <Stack.Screen name="exercise-library" />
+            {/* Shared: version and open-source licences, linked from every role's settings. */}
+            <Stack.Screen name="about" />
           </Stack>
         </AuthProvider>
       </ToastProvider>
