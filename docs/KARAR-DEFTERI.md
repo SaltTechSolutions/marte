@@ -31,6 +31,34 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-10 — 1.1.0: Android iç testte, iOS TestFlight'ta
+
+**Yapıldı.** Play duraklatması kalktı (kullanıcı: "Play'de yayın başladı").
+Yerel üretim build'leri alındı: Android AAB sürüm kodu **10** (R8 ilk kez
+açık) Play **iç test** kanalına, iOS IPA build **33** altool ile TestFlight'a.
+Kapılar: typecheck, 433 test, lint, expo-doctor 21/21. AAB emülatöre
+(Pixel 7, API 35) bundletool ile kuruldu, açılış temiz, logcat'te çökme yok.
+
+**Karar.** Android üretime değil **iç teste** gönderildi: Google girişi, push
+ve QR üretim imzasıyla hâlâ denenmedi, iç test bunu mümkün kılan tek yol.
+Üretime terfi ayrı onay.
+
+**Bilerek yapılmadı.** TestFlight'ta dış test grubuna açılmadı, App Store
+incelemesine gönderilmedi. Play üretim kanalındaki boş taslak sürüme
+dokunulmadı. `npm run build:android:*` script'lerindeki artık var olmayan
+`openjdk@17` yolu düzeltilmedi (istenmeyen refactor); build Gradle'ın indirdiği
+JDK 17 ile elle alındı.
+
+**Açık.** Rig ekranı (yeni figür, kas haritası, carousel) hiçbir yerde
+görülmedi — giriş arkasında, ajan şifre girmiyor. Google girişi/push/QR
+doğrulaması duruyor. Sürüm kodu 9 atlandı (28 Eylül'deki preview build yaktı).
+`AGENTS.md`'de commit edilmemiş 88 satırlık silme duruyor.
+
+**Nerede.** `docs/BUILD.md`, `apps/gymentra-mobile/app.json` (R8), Play iç test
+notu, App Store Connect build 33.
+
+---
+
 ## 2026-10-08 — iOS 1.1.0 (build 32) TestFlight'a yüklendi
 
 **Yapıldı.** PR #3 kullanıcı tarafından birleştirildi (`f3f10b2e`). `main`'den yerel iOS üretim
