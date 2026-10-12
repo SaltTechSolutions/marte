@@ -56,9 +56,11 @@ setle (1080×1920, başlıklı) değiştirildi; yüklenenler Play'deki özetlerl
 görsellerin yedeği yerelde (`scratchpad/shots/store-play/`, küçük önizleme
 sürümleri; orijinal boyutlar kurtarılamaz).
 
-**Açık.** (1) Üyeliğin ne zaman/neden silindiği bilinmiyor. (2) Play videosu
-YouTube bağlantısı ister: kullanıcı yükleyecek, sonra giriş `video` alanına
-PATCH ile eklenir (**PUT kullanma**: `play.mjs listing` PUT yapıyor, kısmi
+**Açık.** (1) Üyeliğin ne zaman/neden silindiği bilinmiyor. (2) ~~Play videosu~~
+*(12 Ekim: kullanıcı YouTube'a yükledi (Shorts), `video` alanına
+`watch?v=vCaM6zO6_1c` biçimiyle PATCH ile eklendi; başlık/açıklama önce-sonra
+karşılaştırıldı, değişmedi. Videonun Play sayfasında oynadığı görülmedi.)*
+**PUT kullanma**: `play.mjs listing` PUT yapıyor, kısmi
 JSON başlık ve açıklamaları silebilir). (3) Eski Play görsellerinin
 "288×512" olduğu iddiası yanlıştı: Play'in indirme bağlantısı küçük önizleme
 veriyor, gerçek boyut bilinmiyor. Asıl sorun Tarabya içeriğiydi (kod, gelir,
