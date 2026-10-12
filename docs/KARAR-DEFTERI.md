@@ -50,15 +50,24 @@ hesabını bozuyordu. `seed_supergym_demo.cjs --apply` kullanıcı tarafından
 için izin sistemi engelledi, kuru çalıştırmayı bile). Hesap oluşturulmadı.
 Play görselleri henüz değiştirilmedi.
 
-**Açık.** (1) Üyeliğin ne zaman/neden silindiği bilinmiyor. (2) **Play'de
-yayındaki 6 telefon görseli Tarabya'dan**: `TARABYA-01`, "56 aktif üye",
-"4.500₺", gerçek kişi adı (Hakan İsmailoğlu) görünüyor ve 288×512 boyutunda.
-Supergym'den yeni set çekilip değiştirilecek; Android emülatöründe `uye01`
-oturumu gerekiyor. (3) Play videosu YouTube bağlantısı ister. (4) iOS videosunda
-hareket "goblet squat"; mağaza görselleri "halter sırtta squat" gösteriyor
-(tutarlılık zorunlu değil). (5) `ios/.xcode.env.local` eski Node yolunu
-gösteriyordu (brew güncellemesi), düzeltildi; Release derlemesi gerekirse tekrar
-bozulabilir.
+**Yapıldı (devam, aynı gün).** Play'in 6 telefon görseli Supergym'den yeni 8'lik
+setle (1080×1920, başlıklı) değiştirildi; yüklenenler Play'deki özetlerle
+8/8 eşleşti. Android tur videosu kaydedildi (43,7 sn, 1080×1920). Eski
+görsellerin yedeği yerelde (`scratchpad/shots/store-play/`, küçük önizleme
+sürümleri; orijinal boyutlar kurtarılamaz).
+
+**Açık.** (1) Üyeliğin ne zaman/neden silindiği bilinmiyor. (2) Play videosu
+YouTube bağlantısı ister: kullanıcı yükleyecek, sonra giriş `video` alanına
+PATCH ile eklenir (**PUT kullanma**: `play.mjs listing` PUT yapıyor, kısmi
+JSON başlık ve açıklamaları silebilir). (3) Eski Play görsellerinin
+"288×512" olduğu iddiası yanlıştı: Play'in indirme bağlantısı küçük önizleme
+veriyor, gerçek boyut bilinmiyor. Asıl sorun Tarabya içeriğiydi (kod, gelir,
+gerçek kişi adı), o giderildi. (4) iOS videosunda hareket "goblet squat",
+mağaza görsellerinde "halter sırtta squat" (tutarlılık zorunlu değil).
+(5) `ios/.xcode.env.local` eski Node yolunu gösteriyordu (brew güncellemesi),
+düzeltildi; tekrar bozulabilir. (6) Android'in geri tuşu üye ekranlarında
+uygulamadan çıkarıyor (liste → Program yerine ana ekran): gerçek kullanıcı için
+de bir UX kusuru olabilir, doğrulanmadı.
 
 **Nerede.** `scratchpad/shots/compose.py` (oturum geçici dizini, depoda yok),
 App Store Connect 1.1.0 görselleri/önizleme.
