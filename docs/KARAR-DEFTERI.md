@@ -31,6 +31,40 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-12 — 1.1.0 mağaza görselleri ve iOS önizleme videosu; uye01 üyeliği silinmişti
+
+**Yapıldı.** Android 1.1.0 (kod 10) üretime %100 çıktı. iOS 1.1.0 sürümü
+oluşturuldu: build 33 bağlı, "Yenilikler" yazıldı, 8 başlıklı görsel
+(1290×2796, `compose.py` ile: koyu zemin + başlık bandı + yuvarlak köşeli ekran)
+ve 25,8 sn'lik uygulama önizlemesi (886×1920, simülatörden `simctl io
+recordVideo`, ffmpeg ile kurgu; Apple `COMPLETE`) yüklendi. Gönderim
+(Submit for Review) kullanıcıda. Hareket kütüphanesinin dört slaytı iki
+platformda çekildi.
+
+**Karar.** Mağaza görselleri yalnız Supergym-88'den. `uye01`'in Supergym
+üyeliği Firestore'da yoktu (0 kayıt): hem görsel çekimini hem App Review demo
+hesabını bozuyordu. `seed_supergym_demo.cjs --apply` kullanıcı tarafından
+çalıştırıldı (394 doküman, idempotent); üyelik doğrulandı (aktif, member).
+
+**Bilerek yapılmadı.** Betiği ben çalıştırmadım (üretim Firestore'una yazdığı
+için izin sistemi engelledi, kuru çalıştırmayı bile). Hesap oluşturulmadı.
+Play görselleri henüz değiştirilmedi.
+
+**Açık.** (1) Üyeliğin ne zaman/neden silindiği bilinmiyor. (2) **Play'de
+yayındaki 6 telefon görseli Tarabya'dan**: `TARABYA-01`, "56 aktif üye",
+"4.500₺", gerçek kişi adı (Hakan İsmailoğlu) görünüyor ve 288×512 boyutunda.
+Supergym'den yeni set çekilip değiştirilecek; Android emülatöründe `uye01`
+oturumu gerekiyor. (3) Play videosu YouTube bağlantısı ister. (4) iOS videosunda
+hareket "goblet squat"; mağaza görselleri "halter sırtta squat" gösteriyor
+(tutarlılık zorunlu değil). (5) `ios/.xcode.env.local` eski Node yolunu
+gösteriyordu (brew güncellemesi), düzeltildi; Release derlemesi gerekirse tekrar
+bozulabilir.
+
+**Nerede.** `scratchpad/shots/compose.py` (oturum geçici dizini, depoda yok),
+App Store Connect 1.1.0 görselleri/önizleme.
+
+---
+
 ## 2026-10-10 — 1.1.0: Android iç testte, iOS TestFlight'ta
 
 **Yapıldı.** Play duraklatması kalktı (kullanıcı: "Play'de yayın başladı").
