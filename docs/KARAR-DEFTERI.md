@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F1 okuma uçları tamamlandı (staging)
+
+**Yapıldı.** `api/src/reads2.ts`: üye kayıtları (paketler, program, antrenman günlüğü, ölçüm, ödeme, PT), antrenör takvimi ve paylaşımlı takvim, kimliksiz meşgul slotlar, müsaitlik, duyurular, personel üye listesi, antrenör notu, yönetici notu, adres. Yetkiler `firestore.rules` okuma kurallarından birebir çıkarıldı (ödeme: üye/yönetici/onaylı veli; antrenör göremez). 15 test, staging'e deploy edildi.
+
+**Karar.** Veli erişimi yalnız `guardian_status='approved'` ile; `pending` veli hiçbir kaydı okuyamaz (kuraldaki gibi).
+
+**Bilerek yapılmadı.** Sayfalama imleci (şimdilik `limit` ≤200); gerçek zamanlı dinleyici karşılığı F4'te polling olarak tasarlanacak. Çocuğun üyelik satırını veliye gösteren uç (kural `pending` veliye okuma veriyordu) henüz yok.
+
+**Açık.** Geçerli Firebase token ile canlı doğrulama hâlâ yok. `classes`/paket/ödeme gibi JSON'daki sorgulanacak alanlar sütuna taşınmadı (codex önerisi, yazma uçlarıyla birlikte). Kalan okumalar: `program_templates` (global), `gym_packages`, `promotions`, `package_change_requests`, `renewal_requests`, `exercise_reports`.
+
+**Nerede.** `api/src/reads2.ts`, `api/test/api.test.ts`.
+
 ## 2026-10-15 — API staging'e deploy edildi, F1 ilk dilim
 
 **Yapıldı.** `gymentra-api-staging` Worker'ı deploy edildi (`https://gymentra-api-staging.tarkan-cicek.workers.dev`, staging D1'e bağlı). F1 ilk dilim: salon kodu → güvenli DTO, ders listesi (aktif üye), kredi okuma (kendisi ya da personel). 11 test.

@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 
 import { requireAuth, requireRole } from './auth';
 import { reads } from './reads';
+import { reads2 } from './reads2';
 import { createManagedMember } from './managedMembers';
 import { setAdminNote } from './notes';
 import type { Env, Vars } from './types';
@@ -25,6 +26,7 @@ app.get('/v1/me', async (c) => {
 });
 
 app.route('/v1', reads);
+app.route('/v1', reads2);
 app.post('/v1/tenants/:tenantId/members/managed', requireRole('admin'), createManagedMember);
 app.put('/v1/tenants/:tenantId/members/:memberId/admin-note', requireRole('admin'), setAdminNote);
 

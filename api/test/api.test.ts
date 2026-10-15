@@ -141,3 +141,47 @@ describe('F1 reads', () => {
     expect((await get('/v1/tenants/t1/members/u-mem/credits', 'fb-other')).status).toBe(403);
   });
 });
+
+describe('F1 reads (member records)', () => {
+  const get = async (path: string, sub: string) => call(path, { token: await sign(sub) });
+  const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
+  beforeEach(async () => {
+    await run(`INSERT INTO users (id, created_at) VALUES ('u-trn',1), ('u-par',1), ('u-oth',1)`);
+    await run(`INSERT INTO identities VALUES ('firebase','fb-trn','u-trn'), ('firebase','fb-par','u-par'), ('firebase','fb-oth','u-oth')`);
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at, guardian_id, guardian_status) VALUES
+      ('t1','u-trn','active','["trainer"]',1,NULL,NULL), ('t1','u-oth','active','["member"]',1,NULL,NULL)`);
+    await run(`UPDATE memberships SET guardian_id='u-par', guardian_status='approved' WHERE member_id='u-mem'`);
+    await run(`INSERT INTO payments (id, tenant_id, member_id, amount, status, data, created_at) VALUES ('pay1','t1','u-mem',500,'approved','{}',1)`);
+    await run(`INSERT INTO measurements (id, tenant_id, member_id, data, measured_at) VALUES ('m1','t1','u-mem','{"kg":80}',1)`);
+    await run(`INSERT INTO pt_sessions (id, tenant_id, trainer_id, member_id, starts_at, duration_minutes, status, created_at, updated_at)
+      VALUES ('s1','t1','u-trn','u-mem',9999999999999,60,'scheduled',1,1)`);
+  });
+  it('payments: self, admin and approved guardian; trainer and strangers denied', async () => {
+    for (const [sub, code] of [['fb-mem',200],['fb-admin',200],['fb-par',200],['fb-trn',403],['fb-oth',403],['fb-new',403]] as const) {
+      expect((await get('/v1/tenants/t1/members/u-mem/payments', sub)).status, sub).toBe(code);
+    }
+  });
+  it('measurements: trainer allowed, other member denied; pending guardian denied', async () => {
+    expect((await get('/v1/tenants/t1/members/u-mem/measurements', 'fb-trn')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem/measurements', 'fb-oth')).status).toBe(403);
+    await db.prepare(`UPDATE memberships SET guardian_status='pending' WHERE member_id='u-mem'`).run();
+    expect((await get('/v1/tenants/t1/members/u-mem/measurements', 'fb-par')).status).toBe(403);
+  });
+  it('trainer calendar: own, admin, share viewer; busy slots expose no identity', async () => {
+    expect((await get('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-oth')).status).toBe(403);
+    expect((await get('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-trn')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-admin')).status).toBe(200);
+    await db.prepare(`INSERT INTO calendar_shares VALUES ('t1','u-trn','u-oth',1)`).run();
+    expect((await get('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-oth')).status).toBe(200);
+    const busy = (await (await get('/v1/tenants/t1/trainers/u-trn/busy', 'fb-oth')).json()) as object[];
+    expect(Object.keys(busy[0]).sort()).toEqual(['durationMinutes', 'startsAt']);
+  });
+  it('member list and notes are staff-only; address and admin note are admin-only', async () => {
+    expect((await get('/v1/tenants/t1/members', 'fb-mem')).status).toBe(403);
+    expect((await get('/v1/tenants/t1/members', 'fb-trn')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem/admin-note', 'fb-trn')).status).toBe(403);
+    expect((await get('/v1/tenants/t1/members/u-mem/admin-note', 'fb-admin')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem/address', 'fb-mem')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem/address', 'fb-trn')).status).toBe(403);
+  });
+});
