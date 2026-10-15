@@ -156,6 +156,15 @@ export interface TenantMembership {
    */
   heightCm?: number;
   /**
+   * A member the gym's admin added by hand (14 Oct 2026): no account, no
+   * app, a synthetic `mm…` id. It is the one thing that lets an admin edit
+   * this person's details — someone who signed up themself owns their own.
+   * Written only by the `createManagedMember` callable.
+   */
+  managed?: boolean;
+  /** The admin who added a `managed` member. */
+  createdBy?: string;
+  /**
    * Tokenised download URL of the member's own photo. The Storage object is
    * unreadable by rule; the token in the URL is what grants access, so the
    * roster can render it without a cross-service rule. Uploaded through the
@@ -1026,6 +1035,19 @@ export interface MemberNote {
   text: string;
   updatedBy: string;
   updatedByName?: string;
+  updatedAt: Date;
+}
+
+/**
+ * A member's postal address. Its own document, not a membership field: the
+ * membership row is readable by every trainer, an address is for the person
+ * and the gym's admins only.
+ */
+export interface MemberAddress {
+  tenantId: string;
+  memberId: string;
+  address: string;
+  updatedBy: string;
   updatedAt: Date;
 }
 

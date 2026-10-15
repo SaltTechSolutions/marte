@@ -31,6 +31,56 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — Elle üye, yönetici-özel not ve adres (kod hazır, DEPLOY EDİLMEDİ)
+
+**Yapıldı.** Salon sahibinin üye bilgisini görmesi ve yönetmesi: (1) `createManagedMember`
+callable'ı yöneticinin uygulaması olmayan bir üyeyi elle eklemesini sağlıyor:
+sentetik `mm…` kimlik, `managed: true`, aktif üyelik, ücretsiz plan koltuk sınırı
+uygulanıyor; (2) `member_admin_notes`: yalnızca yöneticinin gördüğü ikinci not
+(antrenörün `member_notes`'u olduğu gibi kaldı); (3) `member_addresses`: adres
+ayrı belgede; (4) yönetici ekranında telefon/e-posta/doğum tarihi/adres kartı,
+özel not kartı, "Üye ekle" ekranı; üye kendi profilinde adres girebiliyor.
+Kural testleri 251/251, fonksiyon testleri 141/141, mobil 433/433, tsc/lint temiz.
+
+**Karar.** (a) **Yönetici yalnızca kendi eklediği (`managed`) üyenin bilgisini
+düzenler**; kendi hesabıyla katılan üye kendi bilgisinin sahibidir, salon okur.
+(b) Hesapsız üyeye **Firebase Auth kullanıcısı açılmadı**, sentetik kimlik
+kullanıldı: kimsenin giriş yapamayacağı sahipsiz hesap birikmesin, "ben miyim"
+kuralları hep false kalsın. (c) Adres `tenant_memberships`'e **konmadı**: o belge
+her antrenör tarafından okunuyor, bir alan bir okuyucudan gizlenemez. (d) **18 yaş
+altı elle eklenemez ve doğum tarihi düzenlemeyle de 18 altına çekilemez**: veli
+onayı akışını (MEMBER-5b) atlatmasın. (e) Üyelik create kuralı `managed`/`createdBy`
+alanlarını reddediyor: kimse kendi satırına `managed: true` yazıp salona kendi
+bilgisini yeniden yazma hakkı veremesin.
+
+**Bilerek yapılmadı.** Deploy (kurallar + fonksiyon üretime gider, onay ister).
+Elle eklenen üyenin sonradan uygulamaya katılıp kaydı "sahiplenmesi" (claim/birleştirme)
+yapılmadı. Antrenörün telefon/doğum tarihini görmesi kapatılmadı: bunlar zaten
+`tenant_memberships`'te antrenöre okunuyordu, kullanıcı isteğinde yok. Sentetik üyeye
+QR/üye kartı verilmedi; salona 6 haneli kodla girer.
+
+**Açık.** (1) **Davranış değişikliği:** yönetici artık kendi hesabıyla katılan veya
+marte06'dan taşınan üyenin adını/telefonunu/doğum tarihini/boyunu düzeltemiyor
+(eskiden herkes için açıktı; WEB-6'daki hatalı adlar bu yolla düzeltiliyordu).
+Taşınan üyeleri `managed` işaretleyen bir backfill gerekebilir, kullanıcıya soruldu.
+(2) **Deploy sırası:** önce kurallar + `createManagedMember` (`firebase deploy --only
+firestore:rules,functions:createManagedMember`), sonra uygulama; tersi olursa yeni
+ekranlar izin hatası verir. (3) Uygulama tarafı yalnızca JS (native değişiklik yok): Android 10 / iOS 33
+ile aynı parmak izini taşıyorsa OTA ile gidebilir, `eas fingerprint:compare` ile
+**doğrulanmadı**. Backend deploy edilmeden gönderilmemeli. (4) **Mağaza beyanları elle:**
+App Privacy → Physical Address, Play Veri Güvenliği → Adres (APP_PRIVACY.md'de
+yazılı); gizlilik sayfası (`apps/gymentra-site/privacy`) güncellendi, yayına
+alınması ayrı. (5) Cihazda/simülatörde görülmedi: ekranlar yalnızca derlendi ve
+tsc'den geçti. (6) Elle eklenen üyeler hesap silme akışına sahip değil; silme
+yönetici üzerinden.
+
+**Nerede.** `backend/firestore.rules`, `backend/functions/src/managedMembers.ts`,
+`docs/SCHEMA.md` (member_admin_notes, member_addresses, managed/createdBy),
+`apps/gymentra-mobile/src/app/admin/{add-member,edit-member,member,members}.tsx`,
+`src/components/{MemberContactCard,MemberNoteCard}.tsx`, `APP_PRIVACY.md`.
+
+---
+
 ## 2026-10-12 — 1.1.0 mağaza görselleri ve iOS önizleme videosu; uye01 üyeliği silinmişti
 
 **Yapıldı.** Android 1.1.0 (kod 10) üretime %100 çıktı. iOS 1.1.0 sürümü

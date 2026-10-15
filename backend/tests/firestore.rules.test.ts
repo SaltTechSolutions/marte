@@ -2452,6 +2452,12 @@ describe('Admin edits a member\'s basic details', () => {
     );
   });
 
+  test('an admin cannot edit a managed member into a minor — that would skip the parent\'s consent', async () => {
+    const db = testEnv.authenticatedContext('boss').firestore();
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ birthDate: new Date('2015-06-01') }));
+    await assertSucceeds(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ birthDate: new Date('1985-06-01') }));
+  });
+
   test('the edit path cannot rewrite the check-in shortCode', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
     await assertFails(

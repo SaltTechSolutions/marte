@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
+import { MemberContactCard } from '@/components/MemberContactCard';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { markRenewalHandled, watchMyRenewalRequest } from '@/data/firebase/renewalRequestRepo';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -186,13 +187,15 @@ export default function AdminMemberDetail() {
           <Text variant="h3" numberOfLines={1}>
             {name}
           </Text>
-          {(membership?.phone || membership?.birthDate) && (
-            <Text variant="label" tone="sub" numberOfLines={1}>
-              {[membership.phone, membership.birthDate ? formatDate(membership.birthDate) : null].filter(Boolean).join(' · ')}
-            </Text>
-          )}
         </View>
       </View>
+
+      <MemberContactCard
+        tenantId={tenantId}
+        memberId={memberId}
+        membership={membership}
+        onEdit={() => membership && router.push({ pathname: '/admin/edit-member', params: { membershipId: membership.id } })}
+      />
 
       <Button
         label="+ Paket ata"
@@ -411,6 +414,7 @@ export default function AdminMemberDetail() {
       ) : null}
 
       <MemberNoteCard tenantId={tenantId} memberId={memberId} />
+      <MemberNoteCard tenantId={tenantId} memberId={memberId} kind="admin" />
 
       <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
         PAKETLER

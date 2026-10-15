@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
+import { MEMBER_ADMIN_NOTE_MAX, setMemberAdminNote, watchMemberAdminNote } from '@/data/firebase/memberAdminNoteRepo';
 import { MEMBER_NOTE_MAX, setMemberNote, watchMemberNote } from '@/data/firebase/memberNoteRepo';
 import { MemberNote } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -25,8 +26,41 @@ function formatWhen(d: Date): string {
  * rather than saved on every keystroke: a note about someone's knee is worth
  * a deliberate save, and a half-typed thought must not land in front of the
  * next coach who opens the screen.
+ *
+ * `kind="admin"` is the owner's private note (14 Oct 2026): the same card
+ * against a second, admin-only collection. A trainer never reaches it — the
+ * admin detail screen is the only place it is mounted, and the rules refuse
+ * everyone but admins regardless.
  */
-export function MemberNoteCard({ tenantId, memberId }: { tenantId: string; memberId: string }) {
+type NoteKind = 'trainer' | 'admin';
+
+const NOTE_COPY: Record<NoteKind, { title: string; badge: string; placeholder: string; max: number }> = {
+  trainer: {
+    title: 'ANTRENÖR NOTU',
+    badge: 'üye görmez',
+    placeholder: 'Sakatlık, hedef, dikkat edilecekler…',
+    max: MEMBER_NOTE_MAX,
+  },
+  admin: {
+    title: 'ÖZEL NOT',
+    badge: 'yalnızca yöneticiler görür',
+    placeholder: 'Ödeme düzeni, şikâyet, aile durumu…',
+    max: MEMBER_ADMIN_NOTE_MAX,
+  },
+};
+
+export function MemberNoteCard({
+  tenantId,
+  memberId,
+  kind = 'trainer',
+}: {
+  tenantId: string;
+  memberId: string;
+  kind?: NoteKind;
+}) {
+  const copy = NOTE_COPY[kind];
+  const watchNote = kind === 'admin' ? watchMemberAdminNote : watchMemberNote;
+  const saveNote = kind === 'admin' ? setMemberAdminNote : setMemberNote;
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const toast = useToast();
@@ -37,8 +71,8 @@ export function MemberNoteCard({ tenantId, memberId }: { tenantId: string; membe
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    return watchMemberNote(tenantId, memberId, setNote, () => setFailed(true));
-  }, [tenantId, memberId]);
+    return watchNote(tenantId, memberId, setNote, () => setFailed(true));
+  }, [watchNote, tenantId, memberId]);
 
   const startEdit = () => {
     setDraft(note?.text ?? '');
@@ -49,7 +83,7 @@ export function MemberNoteCard({ tenantId, memberId }: { tenantId: string; membe
     if (!user || saving) return;
     setSaving(true);
     try {
-      await setMemberNote({
+      await saveNote({
         tenantId,
         memberId,
         text: draft,
@@ -68,10 +102,10 @@ export function MemberNoteCard({ tenantId, memberId }: { tenantId: string; membe
     <Card style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <Text variant="label" tone="sub">
-          ANTRENÖR NOTU
+          {copy.title}
         </Text>
         <Text variant="label" tone="sub">
-          üye görmez
+          {copy.badge}
         </Text>
       </View>
 
@@ -79,8 +113,8 @@ export function MemberNoteCard({ tenantId, memberId }: { tenantId: string; membe
         <>
           <TextField
             value={draft}
-            onChangeText={(v) => setDraft(v.slice(0, MEMBER_NOTE_MAX))}
-            placeholder="Sakatlık, hedef, dikkat edilecekler…"
+            onChangeText={(v) => setDraft(v.slice(0, copy.max))}
+            placeholder={copy.placeholder}
             multiline
           />
           <View style={{ flexDirection: 'row', gap: 8 }}>

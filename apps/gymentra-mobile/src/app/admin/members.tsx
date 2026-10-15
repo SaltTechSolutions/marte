@@ -326,6 +326,12 @@ export default function AdminMembers() {
             {trimmedQuery ? `${visibleMembers.length}/${members?.length ?? 0}` : (members?.length ?? 0)}
           </Text>
         </Text>
+        {/* A member with no account, added by hand (14 Oct 2026). */}
+        <Pressable onPress={() => router.push('/admin/add-member')} accessibilityRole="button" hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
+          <Text variant="helper" weight="900" style={{ color: colors.pText }}>
+            + Üye ekle
+          </Text>
+        </Pressable>
       </View>
 
       {/* PER-12. The trainer's roster has had search since it was written;
@@ -370,11 +376,17 @@ export default function AdminMembers() {
             <SwipeableRow
               key={m.id}
               actions={[
-                {
-                  icon: 'create-outline',
-                  label: 'Düzenle',
-                  onPress: () => router.push({ pathname: '/admin/edit-member', params: { membershipId: m.id } }),
-                },
+                // Only for members the admin added by hand: someone who joined
+                // with their own account owns their details (14 Oct 2026).
+                ...(m.managed
+                  ? [
+                      {
+                        icon: 'create-outline' as const,
+                        label: 'Düzenle',
+                        onPress: () => router.push({ pathname: '/admin/edit-member', params: { membershipId: m.id } }),
+                      },
+                    ]
+                  : []),
                 {
                   icon: 'trash-outline',
                   label: 'Sil',

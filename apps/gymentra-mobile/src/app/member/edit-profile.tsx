@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { AccessGuard } from '@/components/AccessGuard';
 import { Button } from '@/components/Button';
@@ -9,6 +9,7 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
+import { getMemberAddress, MEMBER_ADDRESS_MAX, setMemberAddress } from '@/data/firebase/memberAddressRepo';
 import { requestGuardian, updateMemberDetails } from '@/data/firebase/membershipRepo';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -44,12 +45,28 @@ function EditForm({ membership }: { membership: TenantMembership }) {
   const { colors, spacing } = useAppTheme();
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [name, setName] = useState(membership.userDisplayName ?? '');
   const [phone, setPhone] = useState(membership.phone ?? '');
   const [birthDate, setBirthDate] = useState(formatBirthDate(membership.birthDate));
   const [height, setHeight] = useState(membership.heightCm ? String(membership.heightCm) : '');
+  // The address is its own document, read once when the form opens. Only the
+  // gym's admins and the member can read it; a trainer cannot (14 Oct 2026).
+  const [address, setAddress] = useState('');
+  const [storedAddress, setStoredAddress] = useState('');
+  const addressTouched = useRef(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getMemberAddress(membership.tenantId, membership.userId)
+      .then((a) => {
+        setStoredAddress(a?.address ?? '');
+        // Never overwrite what the member has already started typing.
+        if (!addressTouched.current) setAddress(a?.address ?? '');
+      })
+      .catch(() => {});
+  }, [membership.tenantId, membership.userId]);
   const [guardianEmail, setGuardianEmail] = useState('');
   const [linking, setLinking] = useState(false);
 
@@ -94,6 +111,10 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         ...(parsed ? { birthDate: parsed } : {}),
         heightCm: heightNum === null ? null : Math.round(heightNum),
       });
+      const nextAddress = address.trim();
+      if (user && nextAddress !== storedAddress.trim()) {
+        await setMemberAddress({ tenantId: membership.tenantId, memberId: membership.userId, address: nextAddress, updatedBy: user.uid });
+      }
       toast.success('Bilgilerin güncellendi');
       router.back();
     } catch (e) {
@@ -122,6 +143,18 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         keyboardType="numbers-and-punctuation"
       />
       <TextField placeholder="Boy (cm) — örn. 176" value={height} onChangeText={setHeight} keyboardType="number-pad" />
+      <TextField
+        placeholder="Adres (isteğe bağlı)"
+        value={address}
+        onChangeText={(v) => {
+          addressTouched.current = true;
+          setAddress(v.slice(0, MEMBER_ADDRESS_MAX));
+        }}
+        multiline
+      />
+      <Text variant="label" tone="sub">
+        Adresini yalnızca salonunun yöneticisi görür; antrenörler göremez.
+      </Text>
       {!heightValid ? (
         <Text variant="helper" style={{ color: colors.danger }}>
           Boyu santimetre olarak yaz: 100 ile 250 arası.

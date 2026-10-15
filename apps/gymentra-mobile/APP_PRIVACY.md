@@ -31,15 +31,33 @@ Her satır için Apple üç şey soruyor: **amaç**, **kimliğe bağlı mı**,
 | Contact Info | Name | Üyenin adı, salon personeline görünür | `tenant_memberships.userDisplayName` |
 | Contact Info | Email Address | Hesap kimliği | Firebase Auth |
 | Contact Info | Phone Number | Üye profili (isteğe bağlı) | `tenant_memberships.phone` |
+| Contact Info | **Physical Address** | Üye profili (isteğe bağlı). **Yalnızca kişinin kendisi ve salonun yöneticisi görür**, antrenör göremez. *(14 Ekim 2026'da eklendi)* | `member_addresses.address` |
 | Health & Fitness | **Health** | Kilo, göğüs/bel/kol ölçüsü, boy | `MeasurementEntry`, `heightCm` |
 | Health & Fitness | **Fitness** | Antrenman kayıtları (hareket, set, ağırlık, süre), salona giriş kayıtları | `WorkoutLog`, `checkins` |
 | User Content | Photos or Videos | Profil fotoğrafı | `uploadMemberPhoto` |
-| User Content | Other User Content | Antrenörün üye hakkındaki notu, salon duyuruları | `member_notes`, `announcements` |
+| User Content | Other User Content | Antrenörün üye hakkındaki notu, **yöneticinin özel üye notu** (yalnızca yöneticiler görür, üye görmez), salon duyuruları | `member_notes`, `member_admin_notes`, `announcements` |
 | Identifiers | User ID | Firebase kullanıcı kimliği | Firebase Auth |
 | Identifiers | Device ID | Bildirim jetonu | `pushTokenRepo` |
 | Purchases | Purchase History | Abonelik durumu | RevenueCat |
 | Diagnostics | Crash Data | Çökme yığını — **kimliğe bağlı DEĞİL** | Sentry (`_layout.tsx`) |
 | Other Data | Other Data Types | Doğum tarihi (18 yaş altı veli onayı için) | `tenant_memberships.birthDate` |
+
+## Elle eklenen üyeler (14 Ekim 2026)
+
+Salon yöneticisi, uygulaması olmayan bir üyeyi elle ekleyebilir
+(`createManagedMember`). Bu kişi uygulamayı hiç açmaz; adı, telefonu, e-postası,
+doğum tarihi ve adresi **salon tarafından** girilir ve yalnızca o salonun
+yöneticileri düzenler. Mağaza beyanı açısından yeni bir veri türü değil: aynı
+alanlar (ad, e-posta, telefon, adres, diğer: doğum tarihi), yalnızca kaynağı
+kullanıcı değil salon. Kişinin hesabı olmadığı için hesap silme akışı yok:
+silme, yöneticinin üyeyi salondan çıkarmasıyla (`removeMemberFromTenant`) olur
+ve adres ile özel notu da götürür. 18 yaşından küçükler elle eklenemez.
+
+**Konsolda yapılacak (kod değil, el ile):** App Store Connect → App Privacy'de
+*Contact Info → Physical Address* eklenmeli (kimliğe bağlı, takip için değil,
+amaç App Functionality). Play Console → Veri güvenliği'nde *Kişisel bilgiler →
+Adres* eklenmeli (toplanıyor, paylaşılmıyor, isteğe bağlı, uygulama
+işlevselliği). Yeni sürümün incelemeye gitmesinden önce.
 
 ## Toplanmayanlar — bilerek
 
@@ -67,6 +85,7 @@ Google'ın kategorileri Apple'ınkiyle birebir örtüşmüyor. Karşılıklar:
 | Apple | Play |
 |---|---|
 | Name, Email Address, Phone Number | Kişisel bilgiler → Ad, E-posta adresi, Telefon numarası |
+| **Physical Address** | Kişisel bilgiler → **Adres** *(yeni, 14 Ekim 2026)* |
 | Other Data Types (doğum tarihi) | Kişisel bilgiler → **Diğer bilgiler** |
 | User ID | Kişisel bilgiler → Kullanıcı kimlikleri *(tek "paylaşılan" kalem — Firebase)* |
 | Health | Sağlık ve fitness → Sağlık bilgisi |

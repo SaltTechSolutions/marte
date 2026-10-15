@@ -14,6 +14,7 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { app, db } from '@/services/firebase';
+import { formatBirthDate } from '@/utils/birthDate';
 
 import { MembershipPermission, MembershipRole, TenantMembership } from '../types';
 import { membershipFromDoc } from './convert';
@@ -296,10 +297,19 @@ export async function setMembershipRoles(
  */
 export async function updateMemberDetails(
   membershipDocId: string,
-  details: { userDisplayName?: string; phone?: string; birthDate?: Date | null; heightCm?: number | null; photoUrl?: string | null },
+  details: {
+    userDisplayName?: string;
+    /** An admin may set it for a member they added by hand; for anyone else the rules refuse it. */
+    userEmail?: string;
+    phone?: string;
+    birthDate?: Date | null;
+    heightCm?: number | null;
+    photoUrl?: string | null;
+  },
 ): Promise<void> {
   const patch: Record<string, unknown> = {};
   if (details.userDisplayName !== undefined) patch.userDisplayName = details.userDisplayName.trim();
+  if (details.userEmail !== undefined) patch.userEmail = details.userEmail.trim();
   if (details.phone !== undefined) patch.phone = details.phone.trim();
   if (details.birthDate !== undefined && details.birthDate !== null) patch.birthDate = details.birthDate;
   // `null` clears: a removed photo or height must not leave the old value behind.
@@ -307,6 +317,37 @@ export async function updateMemberDetails(
   if (details.photoUrl !== undefined) patch.photoUrl = details.photoUrl === null ? deleteField() : details.photoUrl;
   if (Object.keys(patch).length === 0) return;
   await updateDoc(doc(db, 'tenant_memberships', membershipDocId), patch);
+}
+
+/**
+ * An admin adds a member by hand — someone with no account who pays at the desk.
+ *
+ * Server-side (`createManagedMember`): the row carries fields no client may
+ * write, and the free-tier seat limit is enforced there. `birthDate` travels as
+ * a plain `YYYY-MM-DD` so no timezone can move it across a birthday, and the
+ * server refuses under-18s (a minor needs a parent's recorded consent).
+ */
+export async function createManagedMember(params: {
+  tenantId: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  birthDate?: Date | null;
+  address?: string;
+}): Promise<{ memberId: string; membershipId: string }> {
+  const call = httpsCallable<
+    { tenantId: string; name: string; phone?: string; email?: string; birthDate?: string; address?: string },
+    { memberId: string; membershipId: string }
+  >(functions, 'createManagedMember');
+  const res = await call({
+    tenantId: params.tenantId,
+    name: params.name,
+    ...(params.phone?.trim() ? { phone: params.phone.trim() } : {}),
+    ...(params.email?.trim() ? { email: params.email.trim() } : {}),
+    ...(params.address?.trim() ? { address: params.address.trim() } : {}),
+    ...(params.birthDate ? { birthDate: formatBirthDate(params.birthDate) } : {}),
+  });
+  return res.data;
 }
 
 /**

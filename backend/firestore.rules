@@ -376,8 +376,13 @@ service cloud.firestore {
            request.resource.data.userDisplayName.size() <= 100)) &&
         (!('phone' in request.resource.data) ||
           (request.resource.data.phone is string && request.resource.data.phone.size() <= 30)) &&
+        // Not under 18: `createManagedMember` refuses a minor, and an edit must
+        // not be the way round it — a minor's membership needs a parent's
+        // recorded consent (MEMBER-5b), which a row the gym wrote skips.
+        // Same 6575-day margin `guardianApprovedIfMinor` uses.
         (!('birthDate' in request.resource.data) ||
-          request.resource.data.birthDate is timestamp);
+          (request.resource.data.birthDate is timestamp &&
+           request.time > request.resource.data.birthDate + duration.value(6575, 'd')));
       // The member corrects their own details. Same three fields and the same
       // validation as the admin path above — a separate rule for the same
       // reason that one is separate: the approval rule validates `status` on

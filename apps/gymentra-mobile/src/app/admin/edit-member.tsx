@@ -11,18 +11,21 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
+import { getMemberAddress, MEMBER_ADDRESS_MAX, setMemberAddress } from '@/data/firebase/memberAddressRepo';
 import { getMembershipById, updateMemberDetails } from '@/data/firebase/membershipRepo';
 import { canManageGym } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
-import { formatBirthDate, parseBirthDate } from '@/utils/birthDate';
+import { ageFrom, formatBirthDate, parseBirthDate } from '@/utils/birthDate';
 
 /**
- * Correcting a member's details.
+ * Editing the details of a member the admin ADDED BY HAND (`managed`).
  *
- * Names arrive from the member's own sign-up or the marte06 migration and are
- * routinely wrong, abbreviated, or several people in one field (see WEB-6).
- * Only the three fields rules allow an admin to touch are here — role and
+ * Until 14 Oct 2026 this screen opened for every member, to fix names that
+ * arrive wrong from the member's own sign-up or the marte06 migration (WEB-6).
+ * It is now only for members the gym itself created: someone with their own
+ * account owns their details and the rules refuse the write, so the screen says
+ * so instead of letting an admin fill in a form that cannot save. Role and
  * status changes live on their own screens, where they get their own guards.
  */
 export default function EditMember() {
@@ -30,12 +33,17 @@ export default function EditMember() {
   const { colors, spacing } = useAppTheme();
   const router = useRouter();
   const toast = useToast();
-  const { activeMembership } = useAuth();
+  const { activeMembership, user } = useAuth();
 
   const [membership, setMembership] = useState<TenantMembership | null | undefined>(undefined);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [address, setAddress] = useState('');
+  // What was stored when the form opened: a blank field is only a deletion if
+  // there was something to delete, and deleting a missing document is refused.
+  const [storedAddress, setStoredAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,7 +53,14 @@ export default function EditMember() {
       if (m) {
         setName(m.userDisplayName ?? '');
         setPhone(m.phone ?? '');
+        setEmail(m.userEmail ?? '');
         setBirthDate(formatBirthDate(m.birthDate));
+        getMemberAddress(m.tenantId, m.userId)
+          .then((a) => {
+            setAddress(a?.address ?? '');
+            setStoredAddress(a?.address ?? '');
+          })
+          .catch(() => {});
       }
     });
   }, [membershipId]);
@@ -66,10 +81,19 @@ export default function EditMember() {
     return <AccessGuard title="Üye bulunamadı" />;
   }
 
+  if (!membership.managed) {
+    return <AccessGuard title="Bu üye kendi hesabıyla katıldı: bilgilerini yalnızca kendisi düzenleyebilir" />;
+  }
+
   const trimmedName = name.trim();
   // The date is optional, but a half-typed one must not save silently.
-  const birthDateValid = birthDate.trim() === '' || parseBirthDate(birthDate) !== null;
-  const canSave = trimmedName.length > 0 && birthDateValid && !saving;
+  const parsedBirth = parseBirthDate(birthDate);
+  const birthDateValid = birthDate.trim() === '' || parsedBirth !== null;
+  // The gym cannot write a minor's membership: a parent's recorded consent is
+  // part of joining, and a row the gym edits itself skips it.
+  const isMinor = parsedBirth !== null && ageFrom(parsedBirth) < 18;
+  const emailValid = email.trim() === '' || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+  const canSave = trimmedName.length > 0 && birthDateValid && !isMinor && emailValid && !saving;
 
   const save = async () => {
     if (!canSave) return;
@@ -79,8 +103,13 @@ export default function EditMember() {
       await updateMemberDetails(membershipId, {
         userDisplayName: trimmedName,
         phone,
+        userEmail: email,
         ...(parsed ? { birthDate: parsed } : {}),
       });
+      const nextAddress = address.trim();
+      if (user && nextAddress !== storedAddress.trim()) {
+        await setMemberAddress({ tenantId: membership.tenantId, memberId: membership.userId, address: nextAddress, updatedBy: user.uid });
+      }
       toast.success('Bilgiler güncellendi');
       router.back();
     } catch (e) {
@@ -95,14 +124,25 @@ export default function EditMember() {
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
       <Text variant="h3">Üye bilgilerini düzenle</Text>
 
-      {membership.userEmail ? (
-        <Text variant="label" tone="sub">
-          {membership.userEmail} — e-posta üyenin kendi hesabına ait, buradan değiştirilemez.
-        </Text>
-      ) : null}
+      <Text variant="label" tone="sub">
+        Bu üyeyi sen ekledin, bilgilerini sen yönetirsin.
+      </Text>
 
       <TextField placeholder="Ad Soyad" value={name} onChangeText={setName} autoCapitalize="words" />
       <TextField placeholder="Telefon" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+      <TextField
+        placeholder="E-posta"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+      />
+      {!emailValid && (
+        <Text variant="helper" style={{ color: colors.danger }}>
+          E-posta adresi geçersiz görünüyor.
+        </Text>
+      )}
       <TextField
         placeholder="Doğum tarihi (1990-05-21)"
         value={birthDate}
@@ -115,6 +155,17 @@ export default function EditMember() {
           Tarihi yıl-ay-gün olarak yaz: 1990-05-21
         </Text>
       )}
+      {isMinor && (
+        <Text variant="helper" style={{ color: colors.danger }}>
+          18 yaşından küçük üyeler elle yönetilemez: veli onayı için uygulamadan katılmaları gerekiyor.
+        </Text>
+      )}
+      <TextField
+        placeholder="Adres"
+        value={address}
+        onChangeText={(v) => setAddress(v.slice(0, MEMBER_ADDRESS_MAX))}
+        multiline
+      />
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={!canSave} onPress={save} />
     </KeyboardAwareScroll>

@@ -36,11 +36,18 @@
 
     <h2>1. Topladığımız Veriler</h2>
     <p><strong>Hesap bilgileri:</strong> E-posta adresi, ad-soyad, isteğe bağlı telefon numarası,
-      doğum tarihi ve (varsa) profil fotoğrafı. Doğum tarihi yalnızca yaş grubunu belirlemek ve
+      isteğe bağlı adres, doğum tarihi ve (varsa) profil fotoğrafı. Adresinizi yalnızca siz ve
+      üyesi olduğunuz salonun yöneticisi görebilir; antrenörler göremez. Doğum tarihi yalnızca yaş grubunu belirlemek ve
       18 yaşından küçük üyeler için ebeveyn onayı sürecini işletmek amacıyla kullanılır. Hesabınızı
       e-posta/şifre, Google veya Apple ile oluşturabilirsiniz; bu durumda ilgili sağlayıcıdan
       adınızı ve e-posta adresinizi alırız. Şifrenizi biz saklamayız — kimlik doğrulama Firebase
       Authentication üzerinden yürütülür.</p>
+    <p><strong>Salon yöneticisi tarafından eklenen üyeler:</strong> Salon yöneticisi, uygulamayı
+      kullanmayan bir üyeyi elle ekleyebilir. Bu durumda ad-soyad, telefon, e-posta, doğum tarihi
+      ve adres bilgisini salon girer ve yalnızca o salonun yöneticileri düzenleyebilir. 18 yaşından
+      küçükler bu yolla eklenemez. Salon yöneticisi ayrıca üyeler hakkında yalnızca yöneticilerin
+      görebildiği özel bir not tutabilir; bu not üyeye ve antrenörlere gösterilmez ve başka bir
+      salona taşınmaz.</p>
     <p><strong>Üyelik bilgileri:</strong> Hangi salon(lar)a üye olduğunuz, rolünüz (üye, antrenör
       veya salon yöneticisi), üyelik durumu ve check-in için kullanılan kısa kod.</p>
     <p><strong>Antrenman ve ölçüm verileri:</strong> Size atanan antrenman programları, tamamladığınız
@@ -109,13 +116,13 @@
 
     <h3>5.2. Silme anında kalıcı olarak silinenler</h3>
     <ul>
-      <li>Hesabınız ve kimlik doğrulama kaydınız (ad, e-posta, telefon, doğum tarihi)</li>
+      <li>Hesabınız ve kimlik doğrulama kaydınız (ad, e-posta, telefon, adres, doğum tarihi)</li>
       <li>Profil fotoğrafınız</li>
       <li>Salon üyelikleriniz ve üye kartınız</li>
       <li>Üyelik paketleriniz, ders haklarınız ve kalan kredileriniz</li>
       <li>Check-in (salona giriş) kayıtlarınız</li>
       <li>Vücut ölçümleriniz ve antrenman kayıtlarınız</li>
-      <li>Size atanmış antrenman programlarınız ve hakkınızda tutulmuş üye notları</li>
+      <li>Size atanmış antrenman programlarınız ve hakkınızda tutulmuş üye notları (antrenör notu ve yöneticinin özel notu dahil)</li>
       <li>Bildirim gönderebilmemiz için tutulan cihaz kaydınız</li>
       <li>Varsa antrenör takvim paylaşımlarınız</li>
     </ul>

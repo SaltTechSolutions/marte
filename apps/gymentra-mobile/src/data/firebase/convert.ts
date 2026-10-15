@@ -18,6 +18,7 @@ import {
   Tenant,
   TenantMembership,
   Announcement,
+  MemberAddress,
   MemberNote,
   RenewalRequest,
   WorkoutLog,
@@ -69,6 +70,8 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     phone: data.phone,
     birthDate: toDate(data.birthDate),
     heightCm: data.heightCm,
+    managed: data.managed === true ? true : undefined,
+    createdBy: data.createdBy,
     photoUrl: data.photoUrl,
     guardianId: data.guardianId,
     guardianName: data.guardianName,
@@ -400,6 +403,18 @@ export function memberNoteFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     text: data.text ?? '',
     updatedBy: data.updatedBy,
     updatedByName: data.updatedByName,
+    updatedAt: toDate(data.updatedAt) ?? new Date(),
+  };
+}
+
+export function memberAddressFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot): MemberAddress | null {
+  const data = snap.data();
+  if (!data) return null;
+  return {
+    tenantId: data.tenantId,
+    memberId: data.memberId,
+    address: data.address ?? '',
+    updatedBy: data.updatedBy,
     updatedAt: toDate(data.updatedAt) ?? new Date(),
   };
 }
