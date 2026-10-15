@@ -308,7 +308,7 @@ writes2.delete('/tenants/:tenantId/calendar-shares/:ownerId/:viewerId', async (c
 writes2.post('/tenants/:tenantId/exercise-reports', async (c) => {
   if (!isStaff(await rolesOf(c))) return forbidden(c);
   const b = await body(c);
-  if (typeof b.exerciseId !== 'string' || !b.exerciseId || !['pose', 'muscles', 'text', 'other'].includes(b.reason as string)
+  if (typeof b.exerciseId !== 'string' || !b.exerciseId || b.exerciseId.length > 64 || !['pose', 'muscles', 'text', 'other'].includes(b.reason as string)
       || typeof b.note !== 'string' || b.note.length > 500) return bad(c, 'bad report');
   const u = await c.env.DB.prepare(`SELECT display_name FROM users WHERE id = ?`).bind(c.get('userId')).first<any>();
   await c.env.DB.prepare(

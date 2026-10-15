@@ -30,8 +30,10 @@ writes.put('/tenants/:tenantId/members/:memberId/roles', async (c) => {
   const m = await c.env.DB.prepare(`SELECT status, roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)
     .bind(tenantId, memberId).first<{ status: string; roles: string }>();
   if (!m || m.status === 'left') return c.json({ error: 'not found' }, 404);
-  const had = (JSON.parse(m.roles) as string[]).includes('admin');
+  const hadRoles = JSON.parse(m.roles) as string[];
+  const had = hadRoles.includes('admin');
   const will = next.includes('admin');
+  const seatDelta = (next.includes('member') ? 1 : 0) - (hadRoles.includes('member') ? 1 : 0);
   // Never strip your own admin seat: the last-admin count cannot be arbitrated mid-edit.
   if (memberId === c.get('userId') && !will) return c.json({ error: 'cannot demote yourself' }, 409);
   const counts = m.status === 'active';
@@ -46,6 +48,11 @@ writes.put('/tenants/:tenantId/members/:memberId/roles', async (c) => {
     stmts.push(c.env.DB.prepare(
       `UPDATE tenants SET active_admin_count = MAX(active_admin_count + ?, 0) WHERE id = ? AND changes() = 1`,
     ).bind(grant ? 1 : -1, tenantId));
+  }
+  if (counts && seatDelta !== 0) {
+    stmts.push(c.env.DB.prepare(
+      `UPDATE tenants SET active_member_count = MAX(active_member_count + ?, 0) WHERE id = ? AND (SELECT roles FROM memberships WHERE tenant_id = ? AND member_id = ?) = ?`,
+    ).bind(seatDelta, tenantId, tenantId, memberId, JSON.stringify(next)));
   }
   await c.env.DB.batch(stmts);
   const after = await c.env.DB.prepare(`SELECT roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)

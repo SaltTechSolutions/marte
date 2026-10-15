@@ -41,19 +41,19 @@ const page = (c: Ctx) => Math.min(Number(c.req.query('limit') ?? 100) || 100, 20
 const memberLists: Array<{ path: string; who: Who; sql: string; map: (r: any) => unknown }> = [
   { path: 'packages', who: 'self+staff+guardian',
     sql: `SELECT id, package_id, final_price, starts_at, ends_at, status, payment_id, data, assigned_at FROM member_packages WHERE tenant_id = ? AND member_id = ? ORDER BY ends_at DESC LIMIT ?`,
-    map: (r) => ({ id: r.id, packageId: r.package_id, finalPrice: r.final_price, startsAt: r.starts_at, endsAt: r.ends_at, status: r.status, paymentId: r.payment_id, assignedAt: r.assigned_at, ...json(r.data) }) },
+    map: (r) => ({ ...json(r.data), id: r.id, packageId: r.package_id, finalPrice: r.final_price, startsAt: r.starts_at, endsAt: r.ends_at, status: r.status, paymentId: r.payment_id, assignedAt: r.assigned_at }) },
   { path: 'programs', who: 'self+staff+guardian',
     sql: `SELECT id, data, updated_at FROM programs WHERE tenant_id = ? AND member_id = ? ORDER BY updated_at DESC LIMIT ?`,
-    map: (r) => ({ id: r.id, updatedAt: r.updated_at, ...json(r.data) }) },
+    map: (r) => ({ ...json(r.data), id: r.id, updatedAt: r.updated_at }) },
   { path: 'workout-logs', who: 'self+staff+guardian',
     sql: `SELECT id, data, logged_at FROM workout_logs WHERE tenant_id = ? AND member_id = ? ORDER BY logged_at DESC LIMIT ?`,
-    map: (r) => ({ id: r.id, loggedAt: r.logged_at, ...json(r.data) }) },
+    map: (r) => ({ ...json(r.data), id: r.id, loggedAt: r.logged_at }) },
   { path: 'measurements', who: 'self+staff+guardian',
     sql: `SELECT id, data, measured_at FROM measurements WHERE tenant_id = ? AND member_id = ? ORDER BY measured_at DESC LIMIT ?`,
-    map: (r) => ({ id: r.id, measuredAt: r.measured_at, ...json(r.data) }) },
+    map: (r) => ({ ...json(r.data), id: r.id, measuredAt: r.measured_at }) },
   { path: 'payments', who: 'self+admin+guardian',
     sql: `SELECT id, amount, status, data, created_at FROM payments WHERE tenant_id = ? AND member_id = ? ORDER BY created_at DESC LIMIT ?`,
-    map: (r) => ({ id: r.id, amount: r.amount, status: r.status, createdAt: r.created_at, ...json(r.data) }) },
+    map: (r) => ({ ...json(r.data), id: r.id, amount: r.amount, status: r.status, createdAt: r.created_at }) },
 ];
 for (const l of memberLists) {
   reads2.get(`/tenants/:tenantId/members/:memberId/${l.path}`, async (c) => {
@@ -172,4 +172,23 @@ reads2.get('/tenants/:tenantId/members/:memberId/address', async (c) => {
   const r = await c.env.DB.prepare(`SELECT address FROM member_addresses WHERE tenant_id = ? AND member_id = ?`)
     .bind(tenantId, memberId).first<any>();
   return c.json({ address: r?.address ?? '' });
+});
+
+/** Check-in history: the member, an approved guardian, an admin or a holder of the delegated 'checkin' permission. */
+reads2.get('/tenants/:tenantId/members/:memberId/checkins', async (c) => {
+  const tenantId = c.req.param('tenantId')!;
+  const memberId = c.req.param('memberId')!;
+  const uid = c.get('userId');
+  let ok = !!uid && uid === memberId;
+  if (!ok && uid) {
+    const m = await c.env.DB.prepare(`SELECT roles, permissions FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'active'`)
+      .bind(tenantId, uid).first<any>();
+    ok = !!m && (JSON.parse(m.roles).includes('admin') || JSON.parse(m.permissions).includes('checkin'));
+  }
+  if (!ok && uid) ok = await isGuardian(c, tenantId, memberId);
+  if (!ok) return c.json({ error: 'forbidden' }, 403);
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, data, created_at FROM checkins WHERE tenant_id = ? AND member_id = ? ORDER BY created_at DESC LIMIT ?`,
+  ).bind(tenantId, memberId, page(c)).all<any>();
+  return c.json(results.map((r) => ({ ...json(r.data), id: r.id, createdAt: r.created_at })));
 });

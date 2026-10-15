@@ -15,19 +15,19 @@ reads3.get('/tenants/:tenantId/packages', async (c) => {
   if (!(await roles(c)).length) return c.json({ error: 'forbidden' }, 403);
   const { results } = await c.env.DB.prepare(`SELECT id, data, active_assignment_count FROM gym_packages WHERE tenant_id = ? LIMIT 200`)
     .bind(c.req.param('tenantId')).all<any>();
-  return c.json(results.map((r) => ({ id: r.id, activeAssignmentCount: r.active_assignment_count, ...parse(r.data) })));
+  return c.json(results.map((r) => ({ ...parse(r.data), id: r.id, activeAssignmentCount: r.active_assignment_count })));
 });
 
 reads3.get('/tenants/:tenantId/promotions', async (c) => {
   if (!isStaff(await roles(c))) return c.json({ error: 'forbidden' }, 403);
   const { results } = await c.env.DB.prepare(`SELECT id, data FROM promotions WHERE tenant_id = ? LIMIT 200`)
     .bind(c.req.param('tenantId')).all<any>();
-  return c.json(results.map((r) => ({ id: r.id, ...parse(r.data) })));
+  return c.json(results.map((r) => ({ ...parse(r.data), id: r.id })));
 });
 
-const reqRow = (r: any) => ({ id: r.id, memberId: r.member_id, status: r.status, effectiveAt: r.effective_at,
+const reqRow = (r: any) => ({ ...parse(r.data), id: r.id, memberId: r.member_id, status: r.status, effectiveAt: r.effective_at,
   expiresAt: r.expires_at, appliedAt: r.applied_at, createdBy: r.created_by, createdAt: r.created_at,
-  respondedAt: r.responded_at, ...parse(r.data) });
+  respondedAt: r.responded_at });
 
 /** Staff see every request; a member sees only their own. */
 reads3.get('/tenants/:tenantId/package-change-requests', async (c) => {
@@ -65,7 +65,7 @@ reads3.get('/program-templates', async (c) => {
      WHERE tenant_id IS NULL OR tenant_id IN (SELECT tenant_id FROM memberships WHERE member_id = ? AND status = 'active')
      ORDER BY updated_at DESC LIMIT 500`,
   ).bind(uid ?? '').all<any>();
-  return c.json(results.map((r) => ({ id: r.id, tenantId: r.tenant_id, updatedAt: r.updated_at, ...parse(r.data) })));
+  return c.json(results.map((r) => ({ ...parse(r.data), id: r.id, tenantId: r.tenant_id, updatedAt: r.updated_at })));
 });
 
 /** One membership row: self, staff, any member for trainer rows, or a guardian (any link state). */

@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F2 kapandı: 250 kural testi satır satır eşlendi
+
+**Yapıldı.** Dört ajan kural testi dilimlerini paralel eşledi (`api/test/matrix-A..D.test.ts`, ~210 yeni test, adlar `[L<satır>]`); sonuç `docs/KURAL-TEST-MATRISI.md`: **ESLENDİ 192, F3 37, N/A 21, GAP 0**. Bulunan iki gerçek açık kapatıldı: işe alım (yalnız `member` rolü koltuk sayar ve paywall'a takılır; rol değişimi, ayrılma, askı sayaçla tutarlı) ve onaylı velinin çocuğun kredi/check-in okuması (yeni `GET …/checkins`). Ayrıca `exerciseId` ≤ 64; okuma DTO'larında gövdedeki `id`/`tenantId` gerçek sütunları artık ezemez. Tüm paket 255+ test, staging'e deploy edildi.
+
+**Karar.** F2 "bitti": kalan 37 satır F3 uçlarına bağlı ve matriste adıyla duruyor; F3 bitince aynı tablo kapanış kontrolü olacak.
+
+**Bilerek yapılmadı.** Kural testlerini API'ye otomatik çevirmek; her satır elle değerlendirildi. Sağlayıcı olarak 251 sayısı doğrulanmadı (statik sayım 250).
+
+**Açık.** Testler hâlâ `node:sqlite` taklidinde; gerçek workerd/D1 ve geçerli Firebase token ile uçtan uca koşu yok. Tenant sayaçları (`active_member_count`, `active_admin_count`) veri aktarımında gerçek sayılarla doldurulmalı. `tenant_contacts` okuma/yazma ucu yok (başvuran ekranı iletişimi gösteremez). Kalan F3: paket/promosyon/değişim talebi/kredi, PT, veli bağlantısı, salon oluşturma, toplu ödeme, hesap silme, bekleme listesi, `user_settings`.
+
+**Nerede.** `docs/KURAL-TEST-MATRISI.md`, `api/test/matrix-*.test.ts`, `api/src/membership.ts`, `api/src/writes.ts`, `api/src/reads*.ts`.
+
 ## 2026-10-15 — F2 yazmaları ikinci tur: check-in, ders, program, günlük, ödeme
 
 **Yapıldı.** `api/src/writes2.ts`: check-in (admin ya da `checkin` izni), ders CRUD (antrenör yalnız kendi dersi, devretme yok), sınırsız-hak ile grup dersi rezervasyonu (hak + kapasite + aktif üyelik tek `INSERT`'te), program ve şablon, antrenman günlüğü (yalnız `exerciseLogs`/`completedAt` değişir), ölçüm, ödeme defteri (üye/veli bekleyen, yönetici onaylı; karar bir kez; iade tek kazanan), müsaitlik, takvim paylaşımı, egzersiz raporu. 38 test, staging'e deploy edildi.

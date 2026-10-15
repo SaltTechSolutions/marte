@@ -72,7 +72,10 @@ membership.put('/tenants/:tenantId/members/:memberId/status', async (c) => {
   const m = await c.env.DB.prepare(`SELECT status, roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)
     .bind(tenantId, memberId).first<{ status: string; roles: string }>();
   if (!m) return c.json({ error: 'not found' }, 404);
-  const isAdminRow = (JSON.parse(m.roles) as string[]).includes('admin');
+  const rowRoles = JSON.parse(m.roles) as string[];
+  const isAdminRow = rowRoles.includes('admin');
+  // Only the 'member' role takes a seat: hiring staff is never paywalled (as in the rules).
+  const isSeat = rowRoles.includes('member');
   const now = Date.now();
 
   if (to === 'active') {
@@ -82,17 +85,18 @@ membership.put('/tenants/:tenantId/members/:memberId/status', async (c) => {
       c.env.DB.prepare(
         `UPDATE memberships SET status = 'active', approved_at = ? WHERE tenant_id = ? AND member_id = ? AND status IN ('pending','suspended')
            AND (birth_date IS NULL OR birth_date + ${MINOR_MS} < ? OR guardian_status = 'approved')
-           AND ((SELECT subscription_status FROM tenants WHERE id = ?1) = 'active'
-                OR (SELECT active_member_count FROM tenants WHERE id = ?1) < ${FREE_MEMBER_LIMIT})
+           ${isSeat ? `AND ((SELECT subscription_status FROM tenants WHERE id = ?1) = 'active'
+                OR (SELECT active_member_count FROM tenants WHERE id = ?1) < ${FREE_MEMBER_LIMIT})` : ''}
            ${isAdminRow ? `AND (SELECT active_admin_count FROM tenants WHERE id = ?1) < ${ADMIN_LIMIT}` : ''}`
           .replace(/\?1/g, '?'),
       ),
     ];
     // Positional rebind: the SQL above uses `?` for tenant ids in order.
-    const args: unknown[] = [now, tenantId, memberId, now, tenantId, tenantId];
+    const args: unknown[] = [now, tenantId, memberId, now, ...(isSeat ? [tenantId, tenantId] : [])];
     if (isAdminRow) args.push(tenantId);
     stmts[0] = stmts[0].bind(...args);
-    stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = active_member_count + 1 WHERE id = ? AND changes() = 1`).bind(tenantId));
+    if (isSeat) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = active_member_count + 1 WHERE id = ? AND changes() = 1`).bind(tenantId));
+    // changes() is still the membership UPDATE's when no seat statement ran before this one.
     if (isAdminRow) {
       stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_admin_count = active_admin_count + 1 WHERE id = ? AND changes() = 1`).bind(tenantId));
     }
@@ -110,7 +114,7 @@ membership.put('/tenants/:tenantId/members/:memberId/status', async (c) => {
   const stmts = [c.env.DB.prepare(`UPDATE memberships SET status = ? WHERE tenant_id = ? AND member_id = ? AND status = ?`)
     .bind(to, tenantId, memberId, m.status)];
   if (wasActive) {
-    stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
+    if (isSeat) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
     if (isAdminRow) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_admin_count = MAX(active_admin_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
   }
   await c.env.DB.batch(stmts);
@@ -126,7 +130,9 @@ membership.post('/tenants/:tenantId/leave', async (c) => {
   const m = await c.env.DB.prepare(`SELECT status, roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)
     .bind(tenantId, uid).first<{ status: string; roles: string }>();
   if (!m || m.status === 'left') return c.json({ error: 'not found' }, 404);
-  const isAdminRow = (JSON.parse(m.roles) as string[]).includes('admin');
+  const leaveRoles = JSON.parse(m.roles) as string[];
+  const isAdminRow = leaveRoles.includes('admin');
+  const isSeat = leaveRoles.includes('member');
   if (isAdminRow && m.status === 'active') {
     const other = await c.env.DB.prepare(
       `SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id != ? AND status = 'active' AND roles LIKE '%"admin"%'`,
@@ -136,7 +142,7 @@ membership.post('/tenants/:tenantId/leave', async (c) => {
   const stmts = [c.env.DB.prepare(`UPDATE memberships SET status = 'left', left_at = ? WHERE tenant_id = ? AND member_id = ? AND status != 'left'`)
     .bind(Date.now(), tenantId, uid)];
   if (m.status === 'active') {
-    stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
+    if (isSeat) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
     if (isAdminRow) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_admin_count = MAX(active_admin_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
   }
   await c.env.DB.batch(stmts);
