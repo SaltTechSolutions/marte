@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F2 yazmaları ikinci tur: check-in, ders, program, günlük, ödeme
+
+**Yapıldı.** `api/src/writes2.ts`: check-in (admin ya da `checkin` izni), ders CRUD (antrenör yalnız kendi dersi, devretme yok), sınırsız-hak ile grup dersi rezervasyonu (hak + kapasite + aktif üyelik tek `INSERT`'te), program ve şablon, antrenman günlüğü (yalnız `exerciseLogs`/`completedAt` değişir), ölçüm, ödeme defteri (üye/veli bekleyen, yönetici onaylı; karar bir kez; iade tek kazanan), müsaitlik, takvim paylaşımı, egzersiz raporu. 38 test, staging'e deploy edildi.
+
+**Karar.** Kredi ile rezervasyon ve iade bu turda yok; sınırsız-hak yolu rules'ta istemciden yazılabilen tek yoldu, yalnız o taşındı. Ödeme tutarı tam sayı kuruş, üst sınır 1.000.000 TL.
+
+**Bilerek yapılmadı.** Bekleme listesi (tablo yok, F3'te `class_waitlist`). PT yazmaları (kredi düşümü, çakışma), veli bağlantı akışı, salon oluşturma, hesap silme: F3. Egzersiz raporunun e-postası: F3 outbox.
+
+**Açık.** Matriste satır düzeyi eşleme hâlâ yok (grup düzeyi var); F2'yi "bitti" demek için `firestore.rules.test.ts` satırları tek tek API testine bağlanmalı. Çapraz-tenant enjeksiyon testleri API'de ayrıca yazılmadı. Gerçek token / workerd doğrulaması yok.
+
+**Nerede.** `api/src/writes2.ts`, `docs/KURAL-TEST-MATRISI.md`.
+
 ## 2026-10-15 — F2 yazmaları: rol atama, not, adres, duyuru, yenileme, push
 
 **Yapıldı.** `api/src/writes.ts`: rol/izin atama (yönetici sınırı atomik, kendini düşürme yok, sayaç aynı batch'te), antrenör notu, adres (üye ya da managed için yönetici), kendi/managed ayrıntı düzenleme (reşit olmayan reddi), duyuru, yenileme talebi akışı, push token. Migration `0003` (push `platform`) staging'e uygulandı, Worker deploy edildi. 32 test. Matris güncellendi.

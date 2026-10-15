@@ -385,3 +385,102 @@ describe('F2 writes', () => {
     expect(await one(`SELECT 1 x FROM push_tokens`)).not.toBeNull();
   });
 });
+
+describe('F2 writes (logs, classes, payments, calendar)', () => {
+  const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
+  const one = async (q: string, ...a: unknown[]) => await db.prepare(q).bind(...a).first<any>();
+  const send = async (method: string, path: string, sub: string, body?: object) =>
+    call(path, { method, token: await sign(sub), body: body ? JSON.stringify(body) : undefined });
+  beforeEach(async () => {
+    await run(`INSERT INTO users (id, created_at) VALUES ('u-trn',1), ('u-trn2',1), ('u-par',1)`);
+    await run(`INSERT INTO identities VALUES ('firebase','fb-trn','u-trn'), ('firebase','fb-trn2','u-trn2'), ('firebase','fb-par','u-par')`);
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, permissions, requested_at) VALUES
+      ('t1','u-trn','active','["trainer"]','["checkin"]',1), ('t1','u-trn2','active','["trainer"]','[]',1)`);
+  });
+
+  it('check-in: admin or delegated permission only; reason validated; immutable', async () => {
+    const p = '/v1/tenants/t1/checkins';
+    expect((await send('POST', p, 'fb-mem', { memberId: 'u-mem', accessReason: 'ok' })).status).toBe(403);
+    expect((await send('POST', p, 'fb-trn2', { memberId: 'u-mem', accessReason: 'ok' })).status).toBe(403);
+    expect((await send('POST', p, 'fb-trn', { memberId: 'u-mem', accessReason: 'weird' })).status).toBe(400);
+    expect((await send('POST', p, 'fb-trn', { memberId: 'u-mem', accessReason: 'ok' })).status).toBe(201);
+    expect((await send('POST', p, 'fb-admin', { memberId: 'ghost', accessReason: 'ok' })).status).toBe(404);
+  });
+
+  it('classes: trainer owns only theirs; cannot reassign; admin any; delete scoped', async () => {
+    const mk = (sub: string, o: object) => send('POST', '/v1/tenants/t1/classes', sub, { name: 'Pilates', capacity: 2, startsAt: 9e12, ...o });
+    expect((await mk('fb-mem', { trainerId: 'u-mem' })).status).toBe(403);
+    expect((await mk('fb-trn', { trainerId: 'u-trn2' })).status).toBe(403);       // not for someone else
+    const { id } = (await (await mk('fb-trn', { trainerId: 'u-trn' })).json()) as { id: string };
+    const put = (sub: string, o: object) => send('PUT', `/v1/tenants/t1/classes/${id}`, sub, { name: 'Y', capacity: 3, startsAt: 9e12, ...o });
+    expect((await put('fb-trn2', { trainerId: 'u-trn' })).status).toBe(403);
+    expect((await put('fb-trn', { trainerId: 'u-trn2' })).status).toBe(403);       // no hand-over
+    expect((await put('fb-trn', { trainerId: 'u-trn' })).status).toBe(200);
+    expect((await put('fb-admin', { trainerId: 'u-trn2' })).status).toBe(200);
+    expect((await send('DELETE', `/v1/tenants/t1/classes/${id}`, 'fb-trn')).status).toBe(403); // now trn2's
+    expect((await send('DELETE', `/v1/tenants/t1/classes/${id}`, 'fb-admin')).status).toBe(200);
+  });
+
+  it('booking: unlimited entitlement + capacity enforced in the insert; guardian can book a child', async () => {
+    const { id } = (await (await send('POST', '/v1/tenants/t1/classes', 'fb-admin', { name: 'Y', capacity: 1, startsAt: 9e12 })).json()) as { id: string };
+    const book = (sub: string, o?: object) => send('POST', `/v1/tenants/t1/classes/${id}/book`, sub, o);
+    expect((await book('fb-mem')).status).toBe(409);                                   // no entitlement
+    await run(`INSERT INTO member_packages (id, tenant_id, member_id, package_id, final_price, starts_at, ends_at, status, data, assigned_at)
+      VALUES ('mp1','t1','u-mem','g1',0,1,9999999999999,'active','{"entitlements":{"groupClasses":{"unlimited":true}}}',1),
+             ('mp2','t1','u-oth','g1',0,1,9999999999999,'active','{"entitlements":{"groupClasses":{"unlimited":true}}}',1)`);
+    await run(`INSERT INTO users (id, created_at) VALUES ('u-oth',1)`);
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t1','u-oth','active','["member"]',1)`);
+    await run(`INSERT INTO identities VALUES ('firebase','fb-oth','u-oth')`);
+    expect((await book('fb-mem')).status).toBe(201);
+    expect((await book('fb-oth')).status).toBe(409);                                   // capacity 1
+    expect((await book('fb-oth', { memberId: 'u-mem' })).status).toBe(403);            // not a guardian
+    expect((await send('DELETE', `/v1/tenants/t1/classes/${id}/book`, 'fb-mem')).status).toBe(200);
+    expect((await book('fb-oth')).status).toBe(201);
+  });
+
+  it('programs/templates: staff only, tenant pinned; logs and measurements: own only, validated', async () => {
+    expect((await send('POST', '/v1/tenants/t1/programs', 'fb-mem', { memberId: 'u-mem' })).status).toBe(403);
+    const { id } = (await (await send('POST', '/v1/tenants/t1/programs', 'fb-trn', { memberId: 'u-mem', name: 'A' })).json()) as { id: string };
+    expect((await send('PUT', `/v1/tenants/t1/programs/${id}`, 'fb-trn', { name: 'B', memberId: 'u-oth' })).status).toBe(200);
+    expect((await one(`SELECT member_id m FROM programs WHERE id = ?`, id)).m).toBe('u-mem');   // member pinned
+    expect((await send('POST', '/v1/tenants/t1/program-templates', 'fb-mem', {})).status).toBe(403);
+    expect((await send('POST', '/v1/tenants/t1/workout-logs', 'fb-mem', {})).status).toBe(400);
+    const log = (await (await send('POST', '/v1/tenants/t1/workout-logs', 'fb-mem', { programId: id, exerciseLogs: [] })).json()) as { id: string };
+    expect((await send('PUT', `/v1/tenants/t1/workout-logs/${log.id}`, 'fb-trn', { completedAt: 1 })).status).toBe(404);
+    await send('PUT', `/v1/tenants/t1/workout-logs/${log.id}`, 'fb-mem', { completedAt: 5, programId: 'hack' });
+    expect(JSON.parse((await one(`SELECT data d FROM workout_logs WHERE id = ?`, log.id)).d)).toMatchObject({ programId: id, completedAt: 5 });
+    expect((await send('POST', '/v1/tenants/t1/measurements', 'fb-mem', { weightKg: 600 })).status).toBe(400);
+    expect((await send('POST', '/v1/tenants/t1/measurements', 'fb-mem', { weightKg: 80 })).status).toBe(201);
+  });
+
+  it('payments: member/guardian → pending, admin → confirmed; decision once; reversal single winner', async () => {
+    const pay = (sub: string, o: object) => send('POST', '/v1/tenants/t1/payments', sub, { memberId: 'u-mem', amount: 500, method: 'cash', ...o });
+    expect((await pay('fb-trn', {})).status).toBe(403);
+    expect((await pay('fb-mem', { amount: -1 })).status).toBe(400);
+    expect((await pay('fb-mem', { kind: 'reversal', reversesPaymentId: 'x' })).status).toBe(403);
+    const m = (await (await pay('fb-mem', {})).json()) as { id: string };
+    expect((await one(`SELECT status s FROM payments WHERE id = ?`, m.id)).s).toBe('pending');
+    expect((await send('PUT', `/v1/tenants/t1/payments/${m.id}/decision`, 'fb-mem', { status: 'confirmed' })).status).toBe(403);
+    expect((await send('PUT', `/v1/tenants/t1/payments/${m.id}/decision`, 'fb-admin', { status: 'confirmed' })).status).toBe(200);
+    expect((await send('PUT', `/v1/tenants/t1/payments/${m.id}/decision`, 'fb-admin', { status: 'rejected' })).status).toBe(409);
+    const rev = () => pay('fb-admin', { kind: 'reversal', reversesPaymentId: m.id, reason: 'hata' });
+    expect((await rev()).status).toBe(201);
+    expect((await rev()).status).toBe(409);
+    expect(await one(`SELECT count(*) c FROM payments`)).toEqual({ c: 2 });
+    await run(`UPDATE memberships SET guardian_id='u-par', guardian_status='approved' WHERE member_id='u-mem'`);
+    expect((await pay('fb-par', {})).status).toBe(201);
+  });
+
+  it('availability, calendar shares and reports', async () => {
+    const av = '/v1/tenants/t1/trainers/u-trn/availability';
+    expect((await send('PUT', av, 'fb-trn2', { weekly: {}, slotMinutes: 60 })).status).toBe(403);
+    expect((await send('PUT', av, 'fb-trn', { weekly: { mon: [{ start: '09:00', end: '12:00' }] }, slotMinutes: 50 })).status).toBe(400);
+    expect((await send('PUT', av, 'fb-trn', { weekly: { mon: [{ start: '09:00', end: '12:00' }] }, slotMinutes: 60 })).status).toBe(200);
+    expect((await send('PUT', '/v1/tenants/t1/calendar-shares/u-trn2', 'fb-trn')).status).toBe(200);
+    expect((await send('PUT', '/v1/tenants/t1/calendar-shares/u-mem', 'fb-trn')).status).toBe(400);   // viewer must be a trainer
+    expect((await send('DELETE', '/v1/tenants/t1/calendar-shares/u-trn/u-trn2', 'fb-trn2')).status).toBe(403);
+    expect((await send('DELETE', '/v1/tenants/t1/calendar-shares/u-trn/u-trn2', 'fb-admin')).status).toBe(200);
+    expect((await send('POST', '/v1/tenants/t1/exercise-reports', 'fb-mem', { exerciseId: 'back-squat', reason: 'pose', note: 'x' })).status).toBe(403);
+    expect((await send('POST', '/v1/tenants/t1/exercise-reports', 'fb-trn', { exerciseId: 'back-squat', reason: 'pose', note: 'x' })).status).toBe(201);
+  });
+});

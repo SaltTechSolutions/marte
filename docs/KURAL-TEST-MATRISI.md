@@ -7,16 +7,16 @@ Kaynak: `backend/tests/firestore.rules.test.ts` (45 describe, 250 test bloğu; k
 |---|---|---|
 | Firestore rules | 1 | F2/F3: yazma yolu, bekliyor |
 | Tenants and tenant memberships | 9 | okuma kısmı kapalı (by-code, members); yazma F2 |
-| Classes | 9 | F2/F3: yazma yolu, bekliyor |
-| Check-ins | 3 | F2/F3: yazma yolu, bekliyor |
+| Classes | 9 | KISMEN: oluştur/düzenle/sil/sahiplik + sınırsız-hak rezervasyonu ve kapasite testli; bekleme listesi ve kredi ile rezervasyon F3 |
+| Check-ins | 3 | EŞLENDİ: admin / `checkin` izni, neden doğrulaması (`F2 writes (logs…)`); rezervasyonlu giriş kontrolleri F3 |
 | Rejoining a gym after leaving or being rejected (P0-6) | 9 | KISMEN: join/rejoin testi var (`F2 membership lifecycle`); rejected→join eşlemesi sürüyor |
 | Trainer list visibility to members (PKG-8) | 4 | F1: `/members/:id` trainer satırı (test var) |
-| Tenant isolation — classes | 4 | F2/F3: yazma yolu, bekliyor |
-| Cross-tenant injection — workout_logs, measurements, payments | 9 | F2/F3: yazma yolu, bekliyor |
+| Tenant isolation — classes | 4 | KISMEN: sınıf okuma/yazma tenant kapsamlı; çapraz-tenant rezervasyon enjeksiyonu ayrıca eklenecek |
+| Cross-tenant injection — workout_logs, measurements, payments | 9 | KISMEN: salon üyeliği şartı testli; başka salona yazma satır satır eşlenecek |
 | PT sessions | 6 | okuma F1; yazma F3 (bookPtSessions) |
-| Trainer availability and busy slots (PKG-7, PKG-8) | 2 | okuma F1; yazma F2 |
-| Calendar shares | 2 | okuma F1 (PT takvimi); yazma F2 |
-| Trainer owns their own classes (PER-8) | 9 | F2/F3: yazma yolu, bekliyor |
+| Trainer availability and busy slots (PKG-7, PKG-8) | 2 | EŞLENDİ: kendi / yönetici yazar, dilim doğrulaması; meşgul slot kimliksiz |
+| Calendar shares | 2 | EŞLENDİ: sahip oluşturur, sahip/yönetici siler, izleyici antrenör olmalı |
+| Trainer owns their own classes (PER-8) | 9 | EŞLENDİ: kendi sınıfı, devretme yok, eski sınıf yalnız yönetici |
 | Pending applicant can reach the gym (PER-1) | 5 | F2/F3: yazma yolu, bekliyor |
 | Password reset throttling (PER-2) | 1 | Firebase Auth/callable — taşınmayacak, F3 `sendReset` uç noktası |
 | Member profile: height and photo (PER-20) | 3 | KISMEN: boy aralığı testli; fotoğraf yükleme F3 (medya) |
@@ -24,10 +24,10 @@ Kaynak: `backend/tests/firestore.rules.test.ts` (45 describe, 250 test bloğu; k
 | Deterministik kimlikli boş dokümanlar okunabilmeli | 4 | F2/F3: yazma yolu, bekliyor |
 | Renewal requests (PER-15) | 7 | EŞLENDİ: tek bekleyen, geri çekme, yeniden gönderme, yönetici işleme |
 | Member notes (PER-14c) | 5 | EŞLENDİ: personel yaz/sil, üye reddedilir, boş reddedilir |
-| Exercise reports (PER-19) | 7 | F2/F3: yazma yolu, bekliyor |
+| Exercise reports (PER-19) | 7 | KISMEN: personel yazar, doğrulama; e-posta iletimi F3 outbox |
 | Push tokens | 2 | EŞLENDİ: biçim, platform, salon üyeliği; cihaz token'ı son girişe taşınır (rules'tan bilinçli fark) |
-| Programs | 2 | okuma F1; yazma F2 |
-| Program templates (PER-18) | 4 | okuma F1 (sızıntı kapatıldı); yazma F2 |
+| Programs | 2 | EŞLENDİ: yalnız personel, tenant/üye sabit |
+| Program templates (PER-18) | 4 | EŞLENDİ: personel yaz/sil; okuma sızıntısı kapatıldı |
 | Gym packages (PKG-1) | 8 | okuma F1; yazma F3 |
 | Package change requests (PKG-6) | 5 | okuma F1; yazma F3 |
 | Promotions (PKG-5) | 5 | okuma F1; yazma F3 |
@@ -44,8 +44,8 @@ Kaynak: `backend/tests/firestore.rules.test.ts` (45 describe, 250 test bloğu; k
 | Guardian link (MEMBER-5b) | 12 | KISMEN: reşit olmayan aktivasyon kapısı testli; requestGuardian/respondToGuardian F3 |
 | Guardian authority (MEMBER-5c) | 12 | F2/F3: yazma yolu, bekliyor |
 | Guardian check-in reason (MEMBER-5d) | 3 | F2/F3: yazma yolu, bekliyor |
-| Guardian bulk payment (MEMBER-5e) | 4 | F2/F3: yazma yolu, bekliyor |
-| Payment reversal (ADMIN-4) | 7 | F2/F3: yazma yolu, bekliyor |
+| Guardian bulk payment (MEMBER-5e) | 4 | KISMEN: onaylı veli bekleyen ödeme açar; toplu ödeme bekliyor |
+| Payment reversal (ADMIN-4) | 7 | EŞLENDİ: yalnız yönetici, tek kazanan, orijinal işaretlenir; kredi etkisi F3 |
 | Package assignment stays closed to clients (ADMIN-4) | 4 | F2/F3: yazma yolu, bekliyor |
 | Admin seat cap (3 per gym) | 5 | KISMEN: onayda 3 yönetici sınırı testli; rol atama yolu (F2) bekliyor |
 | Owner-only member note (member_admin_notes) | 6 | F0/F1 kapalı (not + okuma, test var) |
