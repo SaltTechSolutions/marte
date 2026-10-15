@@ -279,6 +279,11 @@ const MEMBER_OWNED_COLLECTIONS: { name: string; field: string }[] = [
   { name: 'measurements', field: 'memberId' },
   { name: 'workout_logs', field: 'memberId' },
   { name: 'member_notes', field: 'memberId' },
+  // The owner's private note and the person's address are gym-scoped person
+  // data like the rest; leaving them behind on removal would keep a stranger's
+  // address and a note about them after the membership is gone.
+  { name: 'member_admin_notes', field: 'memberId' },
+  { name: 'member_addresses', field: 'memberId' },
   { name: 'payments', field: 'memberId' },
 ];
 

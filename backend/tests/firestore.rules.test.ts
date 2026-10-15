@@ -1235,11 +1235,25 @@ describe('Member profile: height and photo (PER-20)', () => {
     await assertFails(db.doc(`tenant_memberships/${TENANT}_member-1`).update({ heightCm: 12 }));
   });
 
-  test('an admin may correct height; height cannot ride along on a role change', async () => {
+  test('an admin may correct the height of a member they created; height cannot ride along on a role change', async () => {
+    await seedTenant();
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await ctx.firestore().doc(`tenant_memberships/${TENANT}_mm1`).set({
+        userId: 'mm1', tenantId: TENANT, status: 'active', roles: ['member'], permissions: [],
+        userDisplayName: 'Elle Eklenen', managed: true, createdBy: 'admin-1',
+      });
+    });
+    const db = testEnv.authenticatedContext('admin-1').firestore();
+    await assertSucceeds(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ heightCm: 180 }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ roles: ['member', 'trainer'], heightCm: 181 }));
+  });
+
+  // 14 Oct 2026: someone who signed up with their own account owns their height
+  // like their name and phone — the gym reads it, it does not rewrite it.
+  test('an admin does not correct the height of a member who signed up themself', async () => {
     await seedTenant();
     const db = testEnv.authenticatedContext('admin-1').firestore();
-    await assertSucceeds(db.doc(`tenant_memberships/${TENANT}_member-1`).update({ heightCm: 180 }));
-    await assertFails(db.doc(`tenant_memberships/${TENANT}_member-1`).update({ roles: ['member', 'trainer'], heightCm: 181 }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_member-1`).update({ heightCm: 180 }));
   });
 });
 
@@ -2357,12 +2371,15 @@ describe('Approving a request that still carries the legacy `role` field', () =>
  * sign-up (or the marte06 migration) and are routinely wrong.
  */
 describe('Admin edits a member\'s basic details', () => {
+  // 14 Oct 2026: an admin edits only members THEY CREATED (`managed`). A member
+  // who signed up with their own account owns their details; the gym reads them.
   beforeEach(async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
       await db.doc(`tenant_memberships/${TENANT}_boss`).set({
         userId: 'boss', tenantId: TENANT, status: 'active', roles: ['admin'], permissions: [],
       });
+      // signed up on their own
       await db.doc(`tenant_memberships/${TENANT}_m1`).set({
         userId: 'm1', tenantId: TENANT, status: 'active', roles: ['member'], permissions: [],
         userDisplayName: 'yanlis isim', shortCode: '111111',
@@ -2371,30 +2388,61 @@ describe('Admin edits a member\'s basic details', () => {
         userId: 'still-pending', tenantId: TENANT, status: 'pending', roles: ['member'], permissions: [],
         userDisplayName: 'Bekleyen',
       });
+      // added by hand by the admin
+      await db.doc(`tenant_memberships/${TENANT}_mm1`).set({
+        userId: 'mm1', tenantId: TENANT, status: 'active', roles: ['member'], permissions: [],
+        userDisplayName: 'Elle Eklenen', shortCode: '222222', managed: true, createdBy: 'boss',
+      });
     });
   });
 
-  test('an admin can correct name, phone and birth date', async () => {
+  test('an admin can correct name, phone, e-mail and birth date of a member they created', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
     await assertSucceeds(
-      db.doc(`tenant_memberships/${TENANT}_m1`).update({
-        userDisplayName: 'Doğru İsim', phone: '05551112233', birthDate: new Date('1990-01-01'),
+      db.doc(`tenant_memberships/${TENANT}_mm1`).update({
+        userDisplayName: 'Doğru İsim', phone: '05551112233', userEmail: 'dogru@example.com', birthDate: new Date('1990-01-01'),
       }),
     );
   });
 
-  test('editing a still-pending request works too — status is not re-validated', async () => {
+  test('an admin cannot rewrite the details of a member who signed up themself', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
-    await assertSucceeds(
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).update({ userDisplayName: 'Doğru İsim' }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).update({ phone: '05551112233' }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).update({ userEmail: 'x@example.com' }));
+  });
+
+  test('nor a still-pending request of someone with their own account', async () => {
+    const db = testEnv.authenticatedContext('boss').firestore();
+    await assertFails(
       db.doc(`tenant_memberships/${TENANT}_still-pending`).update({ userDisplayName: 'Düzeltilmiş' }),
     );
+  });
+
+  test('an admin of ANOTHER gym cannot edit a managed member', async () => {
+    await seedMembership('other-boss', 'admin', 'other-gym');
+    const db = testEnv.authenticatedContext('other-boss').firestore();
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: 'Ele Geçirildi' }));
+  });
+
+  test('a trainer cannot edit a managed member', async () => {
+    await seedMembership('coach', 'trainer');
+    const db = testEnv.authenticatedContext('coach').firestore();
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: 'X' }));
   });
 
   test('the edit path cannot smuggle a role change', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
     await assertFails(
-      db.doc(`tenant_memberships/${TENANT}_m1`).update({ userDisplayName: 'X', roles: ['admin'] }),
+      db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: 'X', roles: ['admin'] }),
     );
+  });
+
+  test('the edit path cannot clear or flip `managed`, nor change who created the row', async () => {
+    const db = testEnv.authenticatedContext('boss').firestore();
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ managed: false }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).update({ managed: true }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ createdBy: 'someone-else' }));
   });
 
   test('the edit path cannot activate someone', async () => {
@@ -2407,13 +2455,14 @@ describe('Admin edits a member\'s basic details', () => {
   test('the edit path cannot rewrite the check-in shortCode', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
     await assertFails(
-      db.doc(`tenant_memberships/${TENANT}_m1`).update({ userDisplayName: 'X', shortCode: '999999' }),
+      db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: 'X', shortCode: '999999' }),
     );
   });
 
-  test('an empty name is rejected', async () => {
+  test('an empty name or an oversized e-mail is rejected', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
-    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).update({ userDisplayName: '' }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: '' }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userEmail: 'a'.repeat(250) + '@x.co' }));
   });
 
   // Self-edit used to be closed too; MEMBER-5a opened it for the member's own
@@ -2423,13 +2472,23 @@ describe('Admin edits a member\'s basic details', () => {
     await assertFails(
       db.doc(`tenant_memberships/${TENANT}_still-pending`).update({ userDisplayName: 'Başkası' }),
     );
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).update({ userDisplayName: 'Başkası' }));
+  });
+
+  test('a member cannot stamp `managed` or `createdBy` on their own new row', async () => {
+    const db = testEnv.authenticatedContext('newcomer').firestore();
+    const base = { userId: 'newcomer', tenantId: TENANT, status: 'pending', roles: ['member'] };
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_newcomer`).set({ ...base, managed: true }));
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_newcomer`).set({ ...base, createdBy: 'boss' }));
+    await assertSucceeds(db.doc(`tenant_memberships/${TENANT}_newcomer`).set(base));
   });
 
   test('deleting a membership stays closed to clients — removal goes through the callable', async () => {
     const db = testEnv.authenticatedContext('boss').firestore();
-    await assertFails(db.doc(`tenant_memberships/${TENANT}_m1`).delete());
+    await assertFails(db.doc(`tenant_memberships/${TENANT}_mm1`).delete());
   });
 });
+
 
 /**
  * MEMBER-5a: the member correcting their own record. The precondition for the
@@ -3263,5 +3322,147 @@ describe('Admin seat cap (3 per gym)', () => {
     });
     const db = testEnv.authenticatedContext('boss').firestore();
     await assertSucceeds(db.doc(`tenant_memberships/${TENANT}_second`).update({ roles: ['member'] }));
+  });
+});
+
+describe('Owner-only member note (member_admin_notes)', () => {
+  const id = `${TENANT}_member-1`;
+  const note = (over: Record<string, unknown> = {}) => ({
+    tenantId: TENANT, memberId: 'member-1', text: 'Ödemeyi ayın 5\'inde yapıyor.', updatedBy: 'admin-1', ...over,
+  });
+
+  test('an admin writes, reads and deletes the note', async () => {
+    await seedMembership('admin-1', 'admin');
+    const db = testEnv.authenticatedContext('admin-1').firestore();
+    await assertSucceeds(db.doc(`member_admin_notes/${id}`).set(note()));
+    await assertSucceeds(db.doc(`member_admin_notes/${id}`).get());
+    await assertSucceeds(db.doc(`member_admin_notes/${id}`).delete());
+  });
+
+  test('reading a note nobody has written yet works for an admin', async () => {
+    await seedMembership('admin-1', 'admin');
+    await assertSucceeds(testEnv.authenticatedContext('admin-1').firestore().doc(`member_admin_notes/${id}`).get());
+  });
+
+  test('a trainer reads and writes the shared note, but not this one', async () => {
+    await seedMembership('admin-1', 'admin');
+    await seedMembership('trainer-1', 'trainer');
+    await testEnv.authenticatedContext('admin-1').firestore().doc(`member_admin_notes/${id}`).set(note());
+    const db = testEnv.authenticatedContext('trainer-1').firestore();
+    await assertFails(db.doc(`member_admin_notes/${id}`).get());
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ updatedBy: 'trainer-1' })));
+    await assertFails(db.doc(`member_admin_notes/${id}`).delete());
+    // the trainer-visible note is untouched by any of this
+    await assertSucceeds(db.doc(`member_notes/${id}`).set({
+      tenantId: TENANT, memberId: 'member-1', text: 'Dizi sakat.', updatedBy: 'trainer-1',
+    }));
+  });
+
+  test('the member the note is about cannot read it, even their own', async () => {
+    await seedMembership('admin-1', 'admin');
+    await seedMembership('member-1', 'member');
+    await testEnv.authenticatedContext('admin-1').firestore().doc(`member_admin_notes/${id}`).set(note());
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertFails(db.doc(`member_admin_notes/${id}`).get());
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ updatedBy: 'member-1' })));
+  });
+
+  test('an admin of another gym sees nothing', async () => {
+    await seedMembership('admin-1', 'admin');
+    await seedMembership('rival', 'admin', 'other-gym');
+    await testEnv.authenticatedContext('admin-1').firestore().doc(`member_admin_notes/${id}`).set(note());
+    await assertFails(testEnv.authenticatedContext('rival').firestore().doc(`member_admin_notes/${id}`).get());
+  });
+
+  test('the id pins the note to its member and gym; text and author are checked', async () => {
+    await seedMembership('admin-1', 'admin');
+    const db = testEnv.authenticatedContext('admin-1').firestore();
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ memberId: 'member-2' })));
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ text: '' })));
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ text: 'x'.repeat(2001) })));
+    await assertFails(db.doc(`member_admin_notes/${id}`).set(note({ updatedBy: 'someone-else' })));
+  });
+});
+
+describe('Member address (member_addresses)', () => {
+  const id = `${TENANT}_member-1`;
+  const addr = (over: Record<string, unknown> = {}) => ({
+    tenantId: TENANT, memberId: 'member-1', address: 'Bağdat Cad. 12/3, Kadıköy', updatedBy: 'member-1', ...over,
+  });
+  async function seedManaged(uid: string) {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(`tenant_memberships/${TENANT}_${uid}`).set({
+        userId: uid, tenantId: TENANT, status: 'active', roles: ['member'], managed: true, createdBy: 'admin-1',
+      });
+    });
+  }
+
+  test('a member writes, reads and deletes their own address', async () => {
+    await seedMembership('member-1', 'member');
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertSucceeds(db.doc(`member_addresses/${id}`).set(addr()));
+    await assertSucceeds(db.doc(`member_addresses/${id}`).get());
+    await assertSucceeds(db.doc(`member_addresses/${id}`).delete());
+  });
+
+  test('a member with no row in the gym cannot attach an address to it', async () => {
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertFails(db.doc(`member_addresses/${id}`).set(addr()));
+  });
+
+  test('a member cannot write or read someone else\'s address', async () => {
+    await seedMembership('member-1', 'member');
+    await seedMembership('member-2', 'member');
+    await testEnv.authenticatedContext('member-1').firestore().doc(`member_addresses/${id}`).set(addr());
+    const other = testEnv.authenticatedContext('member-2').firestore();
+    await assertFails(other.doc(`member_addresses/${id}`).get());
+    await assertFails(other.doc(`member_addresses/${id}`).set(addr({ updatedBy: 'member-2' })));
+    await assertFails(other.doc(`member_addresses/${TENANT}_member-2`).set(addr({ memberId: 'member-1', updatedBy: 'member-2' })));
+  });
+
+  test('the gym\'s admin reads it; a trainer and another gym\'s admin do not', async () => {
+    await seedMembership('member-1', 'member');
+    await seedMembership('admin-1', 'admin');
+    await seedMembership('trainer-1', 'trainer');
+    await seedMembership('rival', 'admin', 'other-gym');
+    await testEnv.authenticatedContext('member-1').firestore().doc(`member_addresses/${id}`).set(addr());
+    await assertSucceeds(testEnv.authenticatedContext('admin-1').firestore().doc(`member_addresses/${id}`).get());
+    await assertFails(testEnv.authenticatedContext('trainer-1').firestore().doc(`member_addresses/${id}`).get());
+    await assertFails(testEnv.authenticatedContext('rival').firestore().doc(`member_addresses/${id}`).get());
+  });
+
+  test('reading an address nobody has written yet works for the person and the admin', async () => {
+    await seedMembership('member-1', 'member');
+    await seedMembership('admin-1', 'admin');
+    await assertSucceeds(testEnv.authenticatedContext('member-1').firestore().doc(`member_addresses/${id}`).get());
+    await assertSucceeds(testEnv.authenticatedContext('admin-1').firestore().doc(`member_addresses/${id}`).get());
+  });
+
+  test('an admin writes the address of a member they created, and no one else\'s', async () => {
+    await seedMembership('admin-1', 'admin');
+    await seedManaged('member-1');
+    await seedMembership('member-2', 'member');
+    const db = testEnv.authenticatedContext('admin-1').firestore();
+    await assertSucceeds(db.doc(`member_addresses/${id}`).set(addr({ updatedBy: 'admin-1' })));
+    await assertSucceeds(db.doc(`member_addresses/${id}`).delete());
+    await assertFails(
+      db.doc(`member_addresses/${TENANT}_member-2`).set(addr({ memberId: 'member-2', updatedBy: 'admin-1' })),
+    );
+  });
+
+  test('an admin cannot delete the address of a member who signed up themself', async () => {
+    await seedMembership('admin-1', 'admin');
+    await seedMembership('member-1', 'member');
+    await testEnv.authenticatedContext('member-1').firestore().doc(`member_addresses/${id}`).set(addr());
+    await assertFails(testEnv.authenticatedContext('admin-1').firestore().doc(`member_addresses/${id}`).delete());
+  });
+
+  test('empty, oversized or mis-attributed addresses are rejected', async () => {
+    await seedMembership('member-1', 'member');
+    const db = testEnv.authenticatedContext('member-1').firestore();
+    await assertFails(db.doc(`member_addresses/${id}`).set(addr({ address: '' })));
+    await assertFails(db.doc(`member_addresses/${id}`).set(addr({ address: 'x'.repeat(301) })));
+    await assertFails(db.doc(`member_addresses/${id}`).set(addr({ updatedBy: 'someone-else' })));
+    await assertFails(db.doc(`member_addresses/${id}`).set(addr({ address: 123 })));
   });
 });

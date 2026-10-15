@@ -170,6 +170,8 @@ koleksiyonları kendi `isAdmin()` kontrollerini korur.
 | `shortCode` | string? | 6 haneli elle giriş kodu (kiracı içinde tekil) |
 | `phone` / `birthDate` | string? / Timestamp? | Yalnızca marte06'dan taşınan üyelerde — bkz. aşağı |
 | `heightCm` | number? | 100–250. **Ölçüm değil, profil alanı**: yetişkinde sabit, her ölçüme kopyalansa kilo serisini kirletirdi. Kilo profilde en son `measurements`'tan okunur (PER-20) |
+| `managed` | `true`? | **Elle eklenen üye** (14 Ekim 2026): yönetici `createManagedMember` ile açtı, hesabı yok. Yalnızca o callable yazar — hiçbir `hasOnly` listesinde yok, üyelik create kuralı da reddeder. Yöneticinin üyenin ad/telefon/e-posta/doğum tarihini düzenleyebilmesinin tek koşulu bu. |
+| `createdBy` | string? | Elle ekleyen yöneticinin uid'si. `managed` ile birlikte yazılır |
 | `photoUrl` | string? | Token'lı indirme adresi. Storage nesnesi (`members/{uid}/avatar.jpg`) kuralla tamamen kapalı; adresteki token erişimin kendisi. `uploadMemberPhoto` callable yazar (telefonda 512×512 JPEG'e küçültülür, geçici dosya silinir), `deleteMemberPhoto` siler, `deleteMyAccount` cascade'i de siler |
 | `requestedAt` / `approvedAt` | Timestamp | |
 
@@ -196,9 +198,18 @@ Update = dört ayrı yol:
    **`shortCode` değiştirilemez** — `assignMembershipShortCode` yalnızca
    `onDocumentCreated` olduğu için üzerine yazılırsa bir daha atanmaz.
 4. **Yönetici — temel bilgi düzeltmesi**: yalnızca `userDisplayName`,
-   `phone`, `birthDate`. 1. yoldan ayrı tutuldu çünkü o kural her yazımda
+   `userEmail`, `phone`, `birthDate`, `heightCm`, `photoUrl` ve **yalnızca
+   `managed: true` bir üyede** (14 Ekim 2026, sahibinin kararı). Kendi
+   hesabıyla katılan üye kendi bilgisinin sahibidir: salon okur, yeniden
+   yazmaz. Bundan önce her üye için açıktı; marte06'dan taşınan üyelerin
+   hatalı adları artık yönetici tarafından düzeltilemez (bkz. KARAR-DEFTERI
+   2026-10-14, "Açık"). 1. yoldan ayrı tutuldu çünkü o kural her yazımda
    `status` doğruluyor; henüz `pending` bir kayıtta salt profil düzenlemesi
    buna takılırdı.
+
+**Create** ayrıca `managed` ve `createdBy` alanlarını reddeder: biri kendi
+satırına `managed: true` yazıp salona kendi bilgisini yeniden yazma hakkı
+veremez.
 
 **Silme = `false`.** Üye çıkarma `removeMemberFromTenant` callable'ından
 geçer: cascade sekiz koleksiyonda başkasının dokümanlarına dokunuyor, bu
@@ -912,6 +923,41 @@ korumaz. `removeMemberFromTenant` / `deleteMyAccount` cascade listesinde.
 
 ---
 
+### `member_admin_notes` — yöneticinin özel üye notu (14 Ekim 2026)
+**Doküman kimliği: `{tenantId}_{memberId}`**
+
+`member_notes`'un **ikincisi**, yerine geçeni değil: o not antrenörlerle
+paylaşılır (sakatlık, hedef), bu yalnızca salonu yönetenlerindir (ödeme
+düzeni, şikâyet, aile bağlamı). Aynı şekil: `tenantId` / `memberId` / `text`
+(1–2000) / `updatedBy` / `updatedByName` / `updatedAt`.
+
+**Kurallar:** okuma/yazma/silme = **yalnızca `isTenantAdmin`**. Antrenör ve üye
+okuyamaz, o üyenin kendisi bile. Salonun kendi koleksiyonunda, `memberId` ile
+bağlı — kişiyle birlikte taşınmaz: başka salona katılan üye orada notsuz
+başlar. Cascade listesinde (`removeMemberFromTenant` / `deleteMyAccount`).
+
+---
+
+### `member_addresses` — üyenin adresi (14 Ekim 2026)
+**Doküman kimliği: `{tenantId}_{memberId}`**
+
+| Alan | Tip | Not |
+|---|---|---|
+| `tenantId` / `memberId` | string | Kimliğe sabitlenmiş |
+| `address` | string | 1–300 karakter. Boş adres saklanmaz, doküman silinir |
+| `updatedBy` | string | Yazanın uid'si (üye ya da yönetici) |
+| `updatedAt` | Timestamp | |
+
+`tenant_memberships`'e konmadı: o doküman her antrenör tarafından okunuyor ve
+bir alan bir okuyucudan gizlenemez. Adresi antrenörün bilmesine gerek yok.
+
+**Kurallar:** okuma = kişinin kendisi ya da salonun yöneticisi. Yazma/silme =
+kişi kendi satırı için (salonda satırı varken) **ya da** yönetici, yalnızca
+kendi eklediği (`managed`) üye için. Kendi hesabıyla katılan üyenin adresini
+yönetici yazamaz/silemez. Cascade listesinde.
+
+---
+
 ### `exercise_reports` — hareket anlatımı sorun bildirimi (PER-19)
 | Alan | Tip | Not |
 |---|---|---|
@@ -990,6 +1036,7 @@ ve `payments` için ikinci (legacy) match bloğu.
 | `notifyOnPaymentStatusChange` | `payments` update | Ödeme onay/ret push'u |
 | `notifyOnProgramAssigned` | `programs` update | Program atandı push'u |
 | `emailExerciseReport` | `exercise_reports` create | Raporu Resend ile e-posta olarak iletir (PER-19). Anahtar yoksa loglar ve geçer — rapor zaten kayıtlı. |
+| `createManagedMember` | onCall (yönetici) | Elle (hesapsız) üye ekler: sentetik `mm…` kimlikli, `managed: true`, `active` üyelik; adres varsa `member_addresses`. Ücretsiz plan koltuk sınırını (`withinMemberLimit` ile aynı) uygular; **18 yaş altını reddeder** (veli onayı akışını atlatmasın). Auth kullanıcısı açmaz. |
 | `syncPackageAssignmentCount` | `member_packages` yazım | `gym_packages.activeAssignmentCount` senkronu (PKG-1 kilidinin dayanağı) |
 | `creditRollover` | zamanlanmış (günlük, 24 saat) | Süresi dolan her krediyi expired yapar; entitlement kaynaklıları bir sonraki döneme yuvarlar, tek transaction'da (PKG-2, eski adı renewEntitlementCredits) |
 | `notifyOnPackageChangeRequested` | `package_change_requests` create | Üyeye "paket teklifin var" push'u (PKG-6) |

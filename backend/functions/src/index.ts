@@ -37,6 +37,7 @@ export { creditRollover, approvePackageChange, expirePendingPackageChangeRequest
 } from './packages';
 export { bookPtSessions, cancelPtSession, createPtSessionByStaff } from './sessions';
 export { requestGuardian, respondToGuardian } from './guardians';
+export { createManagedMember } from './managedMembers';
 export { revenueCatWebhook } from './subscriptions';
 export { uploadTenantLogo } from './branding';
 export { uploadMemberPhoto, deleteMemberPhoto } from './media';

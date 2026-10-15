@@ -244,6 +244,11 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         membershipId == request.resource.data.tenantId + '_' + request.auth.uid &&
         request.resource.data.userId == request.auth.uid &&
+        // `managed` / `createdBy` belong to the createManagedMember callable.
+        // Without this a member could stamp `managed: true` on their own row
+        // and hand the gym the right to rewrite their details.
+        !('managed' in request.resource.data) &&
+        !('createdBy' in request.resource.data) &&
         (
           (request.resource.data.roles == ['member'] && request.resource.data.status == 'pending') ||
           (
@@ -344,16 +349,26 @@ service cloud.firestore {
         ('admin' in resource.data.get('roles', []) ||
           !('admin' in request.resource.data.get('roles', [])) ||
           withinAdminLimit(resource.data.tenantId));
-      // An admin corrects a member's basic details. Names arrive from the
-      // member's own sign-up (or the marte06 migration) and are routinely
-      // wrong, abbreviated or missing a phone.
+      // An admin edits the details of a member THEY CREATED (`managed`), and
+      // only those. A member who signed up with their own account owns their
+      // name, phone and birth date: the gym reads them, it does not rewrite
+      // them. Until 14 Oct 2026 this was open for every member of the gym; the
+      // owner asked for the narrower rule when manual (account-less) members
+      // arrived, because only for those is the gym the source of the data.
+      //
+      // `managed` is written by the `createManagedMember` callable alone —
+      // no `hasOnly` list below contains it, so a client can neither set it
+      // on someone's row nor clear it to take a member over.
       //
       // A separate rule rather than widening the one above: that one
       // validates `status` on every write, so a pure profile edit on a
       // still-`pending` request would have failed it.
       allow update: if isTenantAdmin(resource.data.tenantId) &&
+        resource.data.get('managed', false) == true &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['userDisplayName', 'phone', 'birthDate', 'heightCm', 'photoUrl']) &&
+          .hasOnly(['userDisplayName', 'userEmail', 'phone', 'birthDate', 'heightCm', 'photoUrl']) &&
+        (!('userEmail' in request.resource.data) ||
+          (request.resource.data.userEmail is string && request.resource.data.userEmail.size() <= 254)) &&
         (!('heightCm' in request.resource.data) || (request.resource.data.heightCm is number && request.resource.data.heightCm >= 100 && request.resource.data.heightCm <= 250)) &&
         (!('userDisplayName' in request.resource.data) ||
           (request.resource.data.userDisplayName is string &&
@@ -848,6 +863,61 @@ service cloud.firestore {
         request.resource.data.text.size() > 0 &&
         request.resource.data.text.size() <= 2000;
       allow delete: if isSignedIn() && isTenantStaff(resource.data.tenantId);
+    }
+
+    // The owner's private note about a member (14 Oct 2026). A SECOND note
+    // beside `member_notes`, not a replacement: that one is shared with the
+    // gym's trainers on purpose (injury, goal), this one is for the people who
+    // run the gym — payment arrangements, complaints, family context — and a
+    // trainer must not read it. It sits in the gym's own collection, keyed by
+    // `{tenantId}_{memberId}`, so it never travels with the person: a member
+    // who joins another gym starts there with no note, and
+    // `removeMemberFromTenant` deletes it with the rest of their gym data.
+    match /member_admin_notes/{noteId} {
+      allow read: if isSignedIn() && (resource != null
+        ? isTenantAdmin(resource.data.tenantId)
+        : isTenantAdmin(tenantOfId(noteId)));
+      allow create, update: if isSignedIn() &&
+        isTenantAdmin(request.resource.data.tenantId) &&
+        noteId == request.resource.data.tenantId + '_' + request.resource.data.memberId &&
+        request.resource.data.updatedBy == request.auth.uid &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 2000;
+      allow delete: if isSignedIn() && isTenantAdmin(resource.data.tenantId);
+    }
+
+    // A member's postal address, kept apart from `tenant_memberships` on
+    // purpose. That document is readable by every trainer of the gym; an
+    // address is not something a coach needs, and a field cannot be hidden from
+    // one reader of a document. Here only the person themself and the gym's
+    // admins read it.
+    //
+    // Written by the member for their own row, or by an admin for a member the
+    // admin created (`managed`) — the same boundary the detail edit above uses.
+    match /member_addresses/{addressId} {
+      allow read: if isSignedIn() && (resource != null
+        ? (resource.data.memberId == request.auth.uid || isTenantAdmin(resource.data.tenantId))
+        : (addressId.matches('^.*_' + request.auth.uid + '$') || isTenantAdmin(tenantOfId(addressId))));
+      allow create, update: if isSignedIn() &&
+        addressId == request.resource.data.tenantId + '_' + request.resource.data.memberId &&
+        request.resource.data.address is string &&
+        request.resource.data.address.size() > 0 &&
+        request.resource.data.address.size() <= 300 &&
+        request.resource.data.updatedBy == request.auth.uid &&
+        (
+          // the person themself, and only while they hold a row in this gym
+          (request.resource.data.memberId == request.auth.uid &&
+            hasMembership(request.resource.data.tenantId)) ||
+          // an admin, for a member of their own making
+          (isTenantAdmin(request.resource.data.tenantId) &&
+            get(/databases/$(database)/documents/tenant_memberships/$(addressId)).data.get('managed', false) == true)
+        );
+      allow delete: if isSignedIn() && (
+        resource.data.memberId == request.auth.uid ||
+        (isTenantAdmin(resource.data.tenantId) &&
+          get(/databases/$(database)/documents/tenant_memberships/$(addressId)).data.get('managed', false) == true)
+      );
     }
 
     match /exercise_reports/{reportId} {
