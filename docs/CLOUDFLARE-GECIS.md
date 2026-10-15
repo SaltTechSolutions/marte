@@ -35,8 +35,13 @@ kullanım küçük).
   karşılığı yok:** 31 tetikleyicinin her biri, tetikleyen yazmayı yapan uçta
   açıkça çağrılır ya da kuyruğa atılır. Bu en çok dikkat isteyen kısım.
 - **Webhook:** RevenueCat → Worker.
-- **Giriş:** aşamalı. İlk aşamada Firebase Auth kimlik sağlayıcı olarak kalır,
-  Worker ID token'ı doğrular; kendi oturum sistemi ayrı bir kararla gelir.
+- **Giriş:** karar bekliyor (aşağıda, madde 2). Önerilen: Firebase Auth kimlik
+  sağlayıcı olarak kalır, Worker ID token'ı JWKS ile doğrular. **Çıkış yolunu
+  açık tutan tasarım şartı:** D1 Firebase uid'ine bağlanmaz. Her kişinin iç
+  kimliği (`users.id`) vardır, `identities(provider, subject, user_id)` tablosu
+  Firebase uid'ini (ve ileride başka sağlayıcıları) iç kimliğe eşler. Elle eklenen
+  üyeler zaten kimliksiz bir iç kimlikle yaşar. Böylece kimlik sağlayıcıyı
+  değiştirmek yalnızca doğrulama katmanını ve giriş ekranlarını etkiler.
 - **Bildirim:** Expo Push kalır. Android için FCM gerektiğinden küçük bir Firebase
   projesi (Blaze gerekmez) ayakta kalır.
 
@@ -98,12 +103,12 @@ birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
 
 ## Kullanıcıdan beklenen kararlar
 
-1. **Canlı veri:** Durable Object + WebSocket (gerçek zamanlı, daha çok iş) mı,
-   yoklama + push sinyali (basit, birkaç saniye gecikmeli) mi? Salon sahibi
-   ekranları için yoklama yeterli görünüyor; ders doluluğu ve üye kartı en çok
-   canlı olması gereken yerler.
+1. ~~**Canlı veri:**~~ **KARARA BAĞLANDI (15 Ekim 2026): yoklama + push sinyali.**
+   Ders doluluğu ve üye kartı en çok canlı olması gereken yerler; oralarda
+   yoklama aralığı kısa tutulur, değişiklikte push sinyaliyle anında yenilenir.
+   Durable Object + WebSocket gerekirse sonradan eklenir.
 2. **Giriş:** F1–F4 boyunca Firebase Auth kalsın mı (önerim), yoksa baştan mı?
-3. **Alan adı:** `api.gymentra.salt-tech-apps.com` uygun mu?
+3. ~~**Alan adı:**~~ **KARARA BAĞLANDI: `api.gymentra.salt-tech-apps.com`.**
 4. ~~**Mevcut hazır özellik (elle üye, özel not, adres):**~~ **KARARA BAĞLANDI
    (15 Ekim 2026): Firebase'e deploy edilmeyecek, Cloudflare'e yazılacak.** Ama
    yukarıdaki strateji notu gereği özellik tek başına değil, üyelik alanıyla
