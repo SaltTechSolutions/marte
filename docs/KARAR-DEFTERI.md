@@ -31,6 +31,47 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — Yeni logo: eğik halter, Volt paleti (build'e girmedi)
+
+**Yapıldı.** Eski logo (parlayan kalp atışı çizgisi, iki beyaz nokta, gri
+parantezler) yerine **eğik halter**: çubuk ve dış plakalar açık, iç plakalar Volt
+limon (`#C8FF2E`) koyu zeminde (`#0B0F14`). Tek kaynak
+`apps/gymentra-mobile/scripts/brand-assets.py`; vektör ana dosyalar
+`assets/brand/*.svg`. Üretilenler: uygulama simgesi (1024, alfasız), Android
+uyarlanabilir simge (ön plan, arka plan, tek renk), splash, 96 px bildirim simgesi,
+site logosu ve favicon'lar, Play simgesi (`assets/brand/export/play-icon-512.png`).
+`app.json` bildirim simgesini yeni dosyaya çevirdi, bildirim rengi `#10B981` →
+`#8FB800` (Volt'un koyulaştırılmış hali: açık bildirim zemininde limon okunmaz).
+
+**Karar.** Eski logo okunmuyordu (ses dalgası/sağlık uygulaması çağrışımı), küçük
+boyutta dağılıyordu (ince parantezler, parlama, noktalar) ve gradyan/parlamaya
+dayandığı için tek renge inmiyordu. Yeni logo 29 px'te ve tek renkte ayakta.
+**Elle çizilmiş vektör**, AI görsel değil: ölçeklenebilir, düzenlenebilir, telif
+sorunu yok. Halter yönü, G+giriş, GE monogram, zikzak ve plaka çubukları arasından
+seçildi (karar: kullanıcı B/D arasında kaldı, öneri B2e kabul edildi).
+
+**Bilerek yapılmadı.** Elenenler: **A (G+giriş)** güç/oturum-aç düğmesine benziyor;
+**D1/D2** borsa grafiği ve sinyal çubuğuna benziyor, ayırt edici değil; **B1**
+diyagonal-kalabalık; **B3 / B2a (soldan sağa büyüyen plakalar)** iki denemede de
+ses dalgasına döndü, yani eski logonun kusurunu tekrarladı. Yatay B2 de elendi:
+"H" harfine çok benziyor, marka adında H yok; eğim bu benzerliği büyük ölçüde
+kırıyor. Adın kendisi (Entra, giriş) logoda yok; istenirse yazı logosunda taşınır.
+
+**Açık.** (1) **İkon native: yeni build ister, OTA ile gitmez.** Hiçbir build alınmadı.
+(2) Mağaza simgeleri elle/ayrı onayla: App Store simgesi build'den gelir, Play girişi
+için `play-icon-512.png` hazır ama yüklenmedi. (3) Statik site (`gymentra-site`)
+dosyaları güncellendi, **yayına alınmadı**. (4) Cihazda görülmedi: Android maskeleri
+yalnızca simüle edildi (daire ve yuvarlatılmış kare, içerik 66 dp güvenli bölgede),
+iOS 18 koyu/tonlu simge varyantları üretilmedi. (5) Eski `logo-glow.png`, `react-logo*`
+vb. dosyalar duruyor, kullanılıp kullanılmadığına bakılmadı. (6) `expo-doctor`
+21 kontrolden 1'ini geçemiyor: Expo yeni yama sürümleri çıkarmış (expo 57.0.29,
+yüklü 57.0.27), logoyla ilgisiz.
+
+**Nerede.** `apps/gymentra-mobile/scripts/brand-assets.py`, `assets/brand/`,
+`assets/images/`, `app.json`, `apps/gymentra-site/assets/`.
+
+---
+
 ## 2026-10-15 — Elle üye, yönetici-özel not ve adres (kod hazır, DEPLOY EDİLMEDİ)
 
 **Yapıldı.** Salon sahibinin üye bilgisini görmesi ve yönetmesi: (1) `createManagedMember`
