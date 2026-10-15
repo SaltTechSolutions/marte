@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F3 ilk dilim: paket kataloğu, promosyon ve atama (sunucuda)
+
+**Yapıldı.** `api/src/packages.ts`: paket kataloğu (kullanımdaki paket yalnız `isActive`/`sortOrder` değiştirir, kontrol yazımın içinde tekrarlanır), promosyon CRUD (`redeemed` istemciden yazılamaz), ve **atama sunucuda**: indirim/bonus hesabı, `member_packages` + hak/kredi satırları + kullanım sayacı tek batch; promosyon tüketimi kapıdır, tükenmişse hiçbir şey yazılmaz. Firestore'da bu hesap istemcideydi (`assignPackageToMember`). 269 test, matris satırları güncellendi (192→203 eşlendi).
+
+**Karar.** Atama hesabı artık yalnız sunucuda: istemci fiyat/bitiş göndermez, yalnız paket + promosyon seçer. Gün hesabı UTC 24 saat (Firestore yerel `setDate` kullanıyordu; DST kayması yok).
+
+**Bilerek yapılmadı.** Paket değişim teklifleri (onay/red, kredi taşıma), dondurma, iptal, kredi devri, cron'lar (`creditRollover`, `sweepPackageStatuses`, süre dolum bildirimi), PT rezervasyonu ve iadeleri, veli akışı, hesap silme: sıradaki F3 dilimleri.
+
+**Açık.** Ödeme ile atama bağı (`paymentId`) doğrulanmıyor (aynı salon/üye/onaylı mı): sonraki dilimde. `member_entitlements` artık sorgu değil henüz yazılmadı; check-in ve rezervasyon `member_packages` üzerinden okur.
+
+**Nerede.** `api/src/packages.ts`, `api/test/packages.test.ts`.
+
 ## 2026-10-15 — F2 kapandı: 250 kural testi satır satır eşlendi
 
 **Yapıldı.** Dört ajan kural testi dilimlerini paralel eşledi (`api/test/matrix-A..D.test.ts`, ~210 yeni test, adlar `[L<satır>]`); sonuç `docs/KURAL-TEST-MATRISI.md`: **ESLENDİ 192, F3 37, N/A 21, GAP 0**. Bulunan iki gerçek açık kapatıldı: işe alım (yalnız `member` rolü koltuk sayar ve paywall'a takılır; rol değişimi, ayrılma, askı sayaçla tutarlı) ve onaylı velinin çocuğun kredi/check-in okuması (yeni `GET …/checkins`). Ayrıca `exerciseId` ≤ 64; okuma DTO'larında gövdedeki `id`/`tenantId` gerçek sütunları artık ezemez. Tüm paket 255+ test, staging'e deploy edildi.

@@ -1,7 +1,7 @@
 # Kural testi → API testi eşleme matrisi (F2 kapanış)
 
 Kaynak: `backend/tests/firestore.rules.test.ts`, **250 test** satır düzeyinde eşlendi (statik sayım 250 `it`/`test`; raporlanan 251 ile 1'lik fark açıklanamadı, Firestore emülatörlü koşuda doğrulanacak).
-Durum: **ESLENDİ 192**, **F3 37**, **N/A 21**, **GAP 0**.
+Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 - ESLENDİ: aynı izin/ret davranışını doğrulayan geçen API testi var. Testler `api/test/matrix-{A,B,C,D,fixes}.test.ts`, adlar `[L<satır>]` ile başlar.
 - F3: ilgili uç henüz yok (paket/kredi/PT/veli/salon/hesap silme); F3 bitmeden kapanmış sayılmaz.
 - N/A: Firestore mekaniği, API'de karşılığı yok ve güvenli (route yokluğu testle 404 doğrulandı).
@@ -123,11 +123,11 @@ Durum: **ESLENDİ 192**, **F3 37**, **N/A 21**, **GAP 0**.
 | 1601 | Program templates (PER-18) | a template cannot be moved to another gym | ESLENDI | matrix-B: [L1601] a template cannot be moved to another gym (column pinned; see cosmetic DTO note in report) |
 | 1624 | Gym packages (PKG-1) | any active member of the tenant can read the catalog | ESLENDI | matrix-B: [L1624] any active member reads the catalog (also api.test: packages: members; promotions: staff only) |
 | 1634 | Gym packages (PKG-1) | a member from another gym cannot read the catalog | ESLENDI | matrix-B: [L1634] a member of another gym cannot read the catalog |
-| 1646 | Gym packages (PKG-1) | only a tenant admin may create a package | F3 | no package create endpoint yet (admin package CRUD is later work) |
-| 1657 | Gym packages (PKG-1) | a package cannot be created with a non-zero assignment count | F3 | no package create endpoint; activeAssignmentCount must start 0 (server-owned column) |
-| 1663 | Gym packages (PKG-1) | an unlocked package (no assignments) can be freely edited by the admin | F3 | no package update endpoint yet |
-| 1675 | Gym packages (PKG-1) | a locked package (has assignments) rejects a content edit | F3 | no package update endpoint; lock-by-assignment logic needs it |
-| 1689 | Gym packages (PKG-1) | the client can never move activeAssignmentCount, locked or not | F3 | no package update endpoint; active_assignment_count maintained by assign flow (F3) |
+| 1646 | Gym packages (PKG-1) | only a tenant admin may create a package | ESLENDI | packages.test.ts: katalog yalnız yönetici |
+| 1657 | Gym packages (PKG-1) | a package cannot be created with a non-zero assignment count | ESLENDI | packages.test.ts [L1657] |
+| 1663 | Gym packages (PKG-1) | an unlocked package (no assignments) can be freely edited by the admin | ESLENDI | packages.test.ts: kullanılmayan paket serbestçe düzenlenir |
+| 1675 | Gym packages (PKG-1) | a locked package (has assignments) rejects a content edit | ESLENDI | packages.test.ts: kullanılan paket içerik düzenlemesini reddeder (409) |
+| 1689 | Gym packages (PKG-1) | the client can never move activeAssignmentCount, locked or not | ESLENDI | packages.test.ts [L1689] |
 | 1701 | Gym packages (PKG-1) | packages are never deleted, even by an admin | NA | no delete route for packages; verified 404 in matrix-B: [L1701] |
 | 1728 | Package change requests (PKG-6) | only a tenant admin may create a request, and only as themselves | F3 | no package-change-request create endpoint (admin offer flow) yet |
 | 1740 | Package change requests (PKG-6) | the member has no direct write path to status — approve/reject only goes through approvePackageChange (Faz 1.6) | NA | no client write route on package-change-requests; approve/reject (approvePackageChange) is F3; verified 404 in matrix-B: [L1740] |
@@ -135,15 +135,15 @@ Durum: **ESLENDİ 192**, **F3 37**, **N/A 21**, **GAP 0**.
 | 1767 | Package change requests (PKG-6) | the admin can cancel a still-pending offer; not once it has been answered | F3 | no cancel endpoint for package-change-requests yet |
 | 1785 | Package change requests (PKG-6) | a member reads their own request; a colleague of theirs does not | ESLENDI | matrix-B: [L1785] a member reads their own request; a colleague does not (also api.test: change requests) |
 | 1813 | Promotions (PKG-5) | staff can read; only a tenant admin may create | F3 | read half asserted in matrix-B: [L1813] (staff 200, member 403); promotion create endpoint is F3 |
-| 1831 | Promotions (PKG-5) | a promotion cannot be created already redeemed | F3 | no promotion create endpoint yet |
-| 1837 | Promotions (PKG-5) | an admin can edit any field except redeemed directly | F3 | no promotion update endpoint yet |
-| 1849 | Promotions (PKG-5) | redemption may only move redeemed by exactly +1, and only under the cap | F3 | no promotion update/redeem endpoint yet (redemption belongs to package assignment flow) |
-| 1862 | Promotions (PKG-5) | a tenant admin can delete a promotion | F3 | no promotion delete endpoint yet |
-| 1908 | Member packages and credits (PKG-2) | only a tenant admin may assign a package, and only as themselves | F3 | no package assignment endpoint (member_packages writes, counters, payments) yet |
-| 1928 | Member packages and credits (PKG-2) | a retired (inactive) package cannot be assigned | F3 | no package assignment endpoint yet (inactive-package check lives there) |
+| 1831 | Promotions (PKG-5) | a promotion cannot be created already redeemed | ESLENDI | packages.test.ts [L1831] |
+| 1837 | Promotions (PKG-5) | an admin can edit any field except redeemed directly | ESLENDI | packages.test.ts [L1837] (redeemed yazılamaz, 400) |
+| 1849 | Promotions (PKG-5) | redemption may only move redeemed by exactly +1, and only under the cap | ESLENDI | packages.test.ts: ödeme/atama içinde +1, sınırda tükenir, hiçbir şey yazılmaz |
+| 1862 | Promotions (PKG-5) | a tenant admin can delete a promotion | ESLENDI | packages.test.ts [L1862] |
+| 1908 | Member packages and credits (PKG-2) | only a tenant admin may assign a package, and only as themselves | ESLENDI | packages.test.ts: atama yalnız yönetici, aktif üyeye |
+| 1928 | Member packages and credits (PKG-2) | a retired (inactive) package cannot be assigned | ESLENDI | packages.test.ts: pasif paket atanamaz |
 | 1939 | Member packages and credits (PKG-2) | a member reads their own assignment; another member cannot | ESLENDI | matrix-B: [L1939] a member reads their own assignment; another member cannot |
 | 1956 | Member packages and credits (PKG-2) | an assignment can never be updated or deleted by a client, even an admin | NA | no update/delete route on member_packages; verified 404 in matrix-B: [L1956] |
-| 1983 | Member packages and credits (PKG-2) | only a tenant admin may create a credit, and never pre-used | F3 | no credit creation endpoint (credits are issued by the assignment flow) yet |
+| 1983 | Member packages and credits (PKG-2) | only a tenant admin may create a credit, and never pre-used | NA | kredi yalnız atama içinde oluşur; doğrudan uç yok (packages.test.ts [L1983], 404) |
 | 1995 | Member packages and credits (PKG-2) | a credit can never be updated by a client — consumption is server-only | NA | no client write route on member_credits; consumption is server-side; verified 404 in matrix-B: [L1995] |
 | 2007 | Member packages and credits (PKG-2) | a member reads their own credit; staff reads it too; another member cannot | ESLENDI | matrix-B: [L2007] a member reads own credits; staff too; another member cannot |
 | 2048 | Role model — multiple roles and delegated permissions | an owner who also coaches holds both roles and gets both surfaces | ESLENDI | matrix-C [L2048] (admin+trainer roles, check-in, own pt-sessions read); note: PT booking half (pt_sessions create) is F3 bookPtSessions |

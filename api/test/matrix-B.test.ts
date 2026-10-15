@@ -383,13 +383,13 @@ describe('matrix B: package change requests (PKG-6)', () => {
 });
 
 describe('matrix B: promotions (PKG-5)', () => {
-  it('[L1813] staff can read promotions; a member cannot (create half is F3)', async () => {
+  it('[L1813] staff can read promotions; a member cannot; only an admin writes them', async () => {
     const h = await world();
     await h.run(`INSERT INTO promotions (id, tenant_id, data) VALUES ('pr1','t1','{"kind":"bonusDays"}')`);
     expect((await h.send('GET', '/v1/tenants/t1/promotions', 'fb-trn')).status).toBe(200);
     expect((await h.send('GET', '/v1/tenants/t1/promotions', 'fb-admin')).status).toBe(200);
     expect((await h.send('GET', '/v1/tenants/t1/promotions', 'fb-mem')).status).toBe(403);
-    expect((await h.send('POST', '/v1/tenants/t1/promotions', 'fb-trn', { kind: 'bonusDays' })).status).toBe(404);   // no write route yet
+    expect((await h.send('POST', '/v1/tenants/t1/promotions', 'fb-trn', { kind: 'bonusDays' })).status).toBe(403);
   });
 });
 

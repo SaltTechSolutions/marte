@@ -7,6 +7,7 @@ import { reads3 } from './reads3';
 import { membership } from './membership';
 import { writes } from './writes';
 import { writes2 } from './writes2';
+import { packages } from './packages';
 import { createManagedMember } from './managedMembers';
 import { setAdminNote } from './notes';
 import type { Env, Vars } from './types';
@@ -35,6 +36,7 @@ app.route('/v1', reads3);
 app.route('/v1', membership);
 app.route('/v1', writes);
 app.route('/v1', writes2);
+app.route('/v1', packages);
 app.post('/v1/tenants/:tenantId/members/managed', requireRole('admin'), createManagedMember);
 app.put('/v1/tenants/:tenantId/members/:memberId/admin-note', requireRole('admin'), setAdminNote);
 
