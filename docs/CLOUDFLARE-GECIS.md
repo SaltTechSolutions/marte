@@ -40,7 +40,26 @@ kullanım küçük).
 - **Bildirim:** Expo Push kalır. Android için FCM gerektiğinden küçük bir Firebase
   projesi (Blaze gerekmez) ayakta kalır.
 
-## Aşamalar
+## Strateji: paralel kur, tek seferde geç (15 Ekim 2026 düzeltmesi)
+
+İlk taslak "dilimli geçiş" diyordu: önce bir alan, sonra diğeri, üretimde. **Bu
+tutmuyor.** Firestore'daki neredeyse her kural rolü `tenant_memberships`
+belgesinden okuyor (`isTenantAdmin` → `get()`). Üyelikler D1'e geçerse geri kalan 27
+koleksiyonun kuralı yöneticiyi bulamaz; yalnızca bir parçayı taşıyıp ikisini aynı
+anda doğru tutmak (çift yazma) hem karmaşık hem hataya açık. Elle üye özelliğinin
+"doğrudan Cloudflare'e yazılması" kararı da bu yüzden tek başına uygulanamaz:
+özellik, üyelik alanıyla birlikte taşınır.
+
+Bunun yerine: **yeni arka ucu Firebase'in yanında, üretime dokunmadan kur; mobil veri
+katmanını `src/data/api/` arayüzüyle hazırla; hazır olunca yeni mağaza sürümüyle tek
+seferde geç.** Aşamalar aşağıda hâlâ *inşa sırası*, üretim dilimi değil. Kullanıcı
+sayısı az olduğu için tek seferde geçiş burada ucuz ve güvenli.
+
+Bu arada **üretimdeki uygulama değişmez**: yeni özellikler `src/data/features.ts`
+bayrağının arkasında kapalı (`managedMembers: false`), kapalıyken uygulama
+deploy edilmiş kuralların izin verdiği eski davranışı korur.
+
+## Aşamalar (inşa sırası)
 
 | # | İş | Çıkış ölçütü |
 |---|---|---|
@@ -51,7 +70,8 @@ kullanım küçük).
 | F4 | Canlı veri ve çevrimdışı (üye kartı önbelleği) | 49 dinleyicinin karşılığı çalışıyor |
 | F5 | Geçiş: yeni mağaza sürümü; Firestore → D1 aktarım betiği; eski sürümler için Firebase'i belirli süre açık tut; kapat | Eski projeye trafik sıfır |
 
-Her aşama ayrı onay ister; F5'e kadar üretimde hiçbir şey değişmez.
+Her aşama ayrı onay ister; F5'e kadar üretimde hiçbir şey değişmez. Aşamalar
+birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
 
 ## Playbook'tan gelen dersler (bu işe doğrudan uyan)
 
@@ -84,9 +104,10 @@ Her aşama ayrı onay ister; F5'e kadar üretimde hiçbir şey değişmez.
    canlı olması gereken yerler.
 2. **Giriş:** F1–F4 boyunca Firebase Auth kalsın mı (önerim), yoksa baştan mı?
 3. **Alan adı:** `api.gymentra.salt-tech-apps.com` uygun mu?
-4. **Mevcut hazır özellik (elle üye, özel not, adres):** Firebase'e deploy edilip
-   sonra mı taşınsın, yoksa deploy edilmeden doğrudan Cloudflare'e mi yazılsın?
-   Önerim: deploy etme, F2–F3'te taşı. Mağazada olmayan bir özellik için iki kez
-   iş yapmanın anlamı yok. Mobil tarafı (ekranlar) repo arayüzü üzerinden olduğu
-   için büyük ölçüde korunur.
+4. ~~**Mevcut hazır özellik (elle üye, özel not, adres):**~~ **KARARA BAĞLANDI
+   (15 Ekim 2026): Firebase'e deploy edilmeyecek, Cloudflare'e yazılacak.** Ama
+   yukarıdaki strateji notu gereği özellik tek başına değil, üyelik alanıyla
+   birlikte taşınır. Bu arada mobil ekranlar `FEATURES.managedMembers` bayrağıyla
+   kapalı; kod ve arka uç testleri (kurallar 251, fonksiyon 141) taşınacak
+   davranışın belirtimi olarak duruyor.
 5. **Sıra:** yeni özellik geliştirmeyi taşıma süresince durduralım mı?

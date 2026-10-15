@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { getMemberAddress, MEMBER_ADDRESS_MAX, setMemberAddress } from '@/data/firebase/memberAddressRepo';
 import { requestGuardian, updateMemberDetails } from '@/data/firebase/membershipRepo';
+import { FEATURES } from '@/data/features';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { ageFrom, formatBirthDate, parseBirthDate } from '@/utils/birthDate';
@@ -59,6 +60,8 @@ function EditForm({ membership }: { membership: TenantMembership }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // Rules for the address document are not deployed while the flag is off.
+    if (!FEATURES.managedMembers) return;
     getMemberAddress(membership.tenantId, membership.userId)
       .then((a) => {
         setStoredAddress(a?.address ?? '');
@@ -112,7 +115,7 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         heightCm: heightNum === null ? null : Math.round(heightNum),
       });
       const nextAddress = address.trim();
-      if (user && nextAddress !== storedAddress.trim()) {
+      if (FEATURES.managedMembers && user && nextAddress !== storedAddress.trim()) {
         await setMemberAddress({ tenantId: membership.tenantId, memberId: membership.userId, address: nextAddress, updatedBy: user.uid });
       }
       toast.success('Bilgilerin güncellendi');
@@ -143,18 +146,22 @@ function EditForm({ membership }: { membership: TenantMembership }) {
         keyboardType="numbers-and-punctuation"
       />
       <TextField placeholder="Boy (cm) — örn. 176" value={height} onChangeText={setHeight} keyboardType="number-pad" />
-      <TextField
-        placeholder="Adres (isteğe bağlı)"
-        value={address}
-        onChangeText={(v) => {
-          addressTouched.current = true;
-          setAddress(v.slice(0, MEMBER_ADDRESS_MAX));
-        }}
-        multiline
-      />
-      <Text variant="label" tone="sub">
-        Adresini yalnızca salonunun yöneticisi görür; antrenörler göremez.
-      </Text>
+      {FEATURES.managedMembers && (
+        <>
+          <TextField
+            placeholder="Adres (isteğe bağlı)"
+            value={address}
+            onChangeText={(v) => {
+              addressTouched.current = true;
+              setAddress(v.slice(0, MEMBER_ADDRESS_MAX));
+            }}
+            multiline
+          />
+          <Text variant="label" tone="sub">
+            Adresini yalnızca salonunun yöneticisi görür; antrenörler göremez.
+          </Text>
+        </>
+      )}
       {!heightValid ? (
         <Text variant="helper" style={{ color: colors.danger }}>
           Boyu santimetre olarak yaz: 100 ile 250 arası.

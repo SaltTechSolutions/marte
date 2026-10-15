@@ -25,6 +25,7 @@ import {
 } from '@/data/firebase/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
+import { FEATURES } from '@/data/features';
 import { canActivateAnotherMember } from '@/data/seats';
 import { TenantMembership } from '@/data/types';
 import { useAuth } from '@/context/AuthContext';
@@ -326,12 +327,14 @@ export default function AdminMembers() {
             {trimmedQuery ? `${visibleMembers.length}/${members?.length ?? 0}` : (members?.length ?? 0)}
           </Text>
         </Text>
-        {/* A member with no account, added by hand (14 Oct 2026). */}
-        <Pressable onPress={() => router.push('/admin/add-member')} accessibilityRole="button" hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
-          <Text variant="helper" weight="900" style={{ color: colors.pText }}>
-            + Üye ekle
-          </Text>
-        </Pressable>
+        {/* A member with no account, added by hand (14 Oct 2026). Off until its backend is live. */}
+        {FEATURES.managedMembers && (
+          <Pressable onPress={() => router.push('/admin/add-member')} accessibilityRole="button" hitSlop={8} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text variant="helper" weight="900" style={{ color: colors.pText }}>
+              + Üye ekle
+            </Text>
+          </Pressable>
+        )}
       </View>
 
       {/* PER-12. The trainer's roster has had search since it was written;
@@ -378,7 +381,7 @@ export default function AdminMembers() {
               actions={[
                 // Only for members the admin added by hand: someone who joined
                 // with their own account owns their details (14 Oct 2026).
-                ...(m.managed
+                ...(m.managed || !FEATURES.managedMembers
                   ? [
                       {
                         icon: 'create-outline' as const,

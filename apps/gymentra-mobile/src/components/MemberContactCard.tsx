@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { watchMemberAddress } from '@/data/firebase/memberAddressRepo';
+import { FEATURES } from '@/data/features';
 import { MemberAddress, TenantMembership } from '@/data/types';
 
 import { Button } from './Button';
@@ -50,6 +51,8 @@ export function MemberContactCard({
   const [addressFailed, setAddressFailed] = useState(false);
 
   useEffect(() => {
+    // The address document's rules are not deployed while the flag is off.
+    if (!FEATURES.managedMembers) return;
     return watchMemberAddress(tenantId, memberId, setAddress, () => setAddressFailed(true));
   }, [tenantId, memberId]);
 
@@ -61,18 +64,22 @@ export function MemberContactCard({
         <Text variant="label" tone="sub">
           KİŞİ BİLGİLERİ
         </Text>
-        <Text variant="label" tone="sub">
-          {membership.managed ? 'elle eklendi' : 'üyenin kendi girdiği'}
-        </Text>
+        {FEATURES.managedMembers && (
+          <Text variant="label" tone="sub">
+            {membership.managed ? 'elle eklendi' : 'üyenin kendi girdiği'}
+          </Text>
+        )}
       </View>
       <Row label="Telefon" value={membership.phone} />
       <Row label="E-posta" value={membership.userEmail} />
       <Row label="Doğum tarihi" value={membership.birthDate ? formatBirthDate(membership.birthDate) : undefined} />
-      <Row
-        label="Adres"
-        value={addressFailed ? 'Yüklenemedi' : address === undefined ? 'Yükleniyor…' : (address?.address ?? undefined)}
-      />
-      {membership.managed ? (
+      {FEATURES.managedMembers && (
+        <Row
+          label="Adres"
+          value={addressFailed ? 'Yüklenemedi' : address === undefined ? 'Yükleniyor…' : (address?.address ?? undefined)}
+        />
+      )}
+      {membership.managed || !FEATURES.managedMembers ? (
         <Button label="Bilgileri düzenle" variant="secondary" compact onPress={onEdit} />
       ) : (
         <Text variant="label" tone="sub">

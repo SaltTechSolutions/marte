@@ -13,6 +13,7 @@ import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { getMemberAddress, MEMBER_ADDRESS_MAX, setMemberAddress } from '@/data/firebase/memberAddressRepo';
 import { getMembershipById, updateMemberDetails } from '@/data/firebase/membershipRepo';
+import { FEATURES } from '@/data/features';
 import { canManageGym } from '@/data/membership';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -55,12 +56,14 @@ export default function EditMember() {
         setPhone(m.phone ?? '');
         setEmail(m.userEmail ?? '');
         setBirthDate(formatBirthDate(m.birthDate));
-        getMemberAddress(m.tenantId, m.userId)
-          .then((a) => {
-            setAddress(a?.address ?? '');
-            setStoredAddress(a?.address ?? '');
-          })
-          .catch(() => {});
+        if (FEATURES.managedMembers) {
+          getMemberAddress(m.tenantId, m.userId)
+            .then((a) => {
+              setAddress(a?.address ?? '');
+              setStoredAddress(a?.address ?? '');
+            })
+            .catch(() => {});
+        }
       }
     });
   }, [membershipId]);
@@ -81,7 +84,7 @@ export default function EditMember() {
     return <AccessGuard title="Üye bulunamadı" />;
   }
 
-  if (!membership.managed) {
+  if (FEATURES.managedMembers && !membership.managed) {
     return <AccessGuard title="Bu üye kendi hesabıyla katıldı: bilgilerini yalnızca kendisi düzenleyebilir" />;
   }
 
@@ -91,7 +94,7 @@ export default function EditMember() {
   const birthDateValid = birthDate.trim() === '' || parsedBirth !== null;
   // The gym cannot write a minor's membership: a parent's recorded consent is
   // part of joining, and a row the gym edits itself skips it.
-  const isMinor = parsedBirth !== null && ageFrom(parsedBirth) < 18;
+  const isMinor = FEATURES.managedMembers && parsedBirth !== null && ageFrom(parsedBirth) < 18;
   const emailValid = email.trim() === '' || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const canSave = trimmedName.length > 0 && birthDateValid && !isMinor && emailValid && !saving;
 
@@ -103,11 +106,12 @@ export default function EditMember() {
       await updateMemberDetails(membershipId, {
         userDisplayName: trimmedName,
         phone,
-        userEmail: email,
+        // The deployed rules do not let an admin write e-mail yet.
+        ...(FEATURES.managedMembers ? { userEmail: email } : {}),
         ...(parsed ? { birthDate: parsed } : {}),
       });
       const nextAddress = address.trim();
-      if (user && nextAddress !== storedAddress.trim()) {
+      if (FEATURES.managedMembers && user && nextAddress !== storedAddress.trim()) {
         await setMemberAddress({ tenantId: membership.tenantId, memberId: membership.userId, address: nextAddress, updatedBy: user.uid });
       }
       toast.success('Bilgiler güncellendi');
@@ -124,21 +128,29 @@ export default function EditMember() {
       contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.md, paddingBottom: spacing.lg }}>
       <Text variant="h3">Üye bilgilerini düzenle</Text>
 
-      <Text variant="label" tone="sub">
-        Bu üyeyi sen ekledin, bilgilerini sen yönetirsin.
-      </Text>
+      {FEATURES.managedMembers ? (
+        <Text variant="label" tone="sub">
+          Bu üyeyi sen ekledin, bilgilerini sen yönetirsin.
+        </Text>
+      ) : membership.userEmail ? (
+        <Text variant="label" tone="sub">
+          {membership.userEmail} — e-posta üyenin kendi hesabına ait, buradan değiştirilemez.
+        </Text>
+      ) : null}
 
       <TextField placeholder="Ad Soyad" value={name} onChangeText={setName} autoCapitalize="words" />
       <TextField placeholder="Telefon" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-      <TextField
-        placeholder="E-posta"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-      />
-      {!emailValid && (
+      {FEATURES.managedMembers && (
+        <TextField
+          placeholder="E-posta"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          autoComplete="email"
+          keyboardType="email-address"
+        />
+      )}
+      {FEATURES.managedMembers && !emailValid && (
         <Text variant="helper" style={{ color: colors.danger }}>
           E-posta adresi geçersiz görünüyor.
         </Text>
@@ -160,12 +172,14 @@ export default function EditMember() {
           18 yaşından küçük üyeler elle yönetilemez: veli onayı için uygulamadan katılmaları gerekiyor.
         </Text>
       )}
-      <TextField
-        placeholder="Adres"
-        value={address}
-        onChangeText={(v) => setAddress(v.slice(0, MEMBER_ADDRESS_MAX))}
-        multiline
-      />
+      {FEATURES.managedMembers && (
+        <TextField
+          placeholder="Adres"
+          value={address}
+          onChangeText={(v) => setAddress(v.slice(0, MEMBER_ADDRESS_MAX))}
+          multiline
+        />
+      )}
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={!canSave} onPress={save} />
     </KeyboardAwareScroll>

@@ -100,6 +100,17 @@ yapılmadı. Antrenörün telefon/doğum tarihini görmesi kapatılmadı: bunlar
 `tenant_memberships`'te antrenöre okunuyordu, kullanıcı isteğinde yok. Sentetik üyeye
 QR/üye kartı verilmedi; salona 6 haneli kodla girer.
 
+**Güncelleme (aynı gün, sonra).** Kullanıcı kararı: elle üye özelliği **Firebase'e
+deploy edilmeyecek**, Cloudflare'e yazılacak. Ama üyelik rolleri Firestore
+kurallarının tamamının dayanağı olduğundan özellik tek başına taşınamıyor; plan
+"paralel kur, tek seferde geç" olarak düzeltildi (`docs/CLOUDFLARE-GECIS.md`).
+Deploy edilmemiş arka uca bağlı ekranlar bir sonraki build'de eski davranışı
+bozacağı için `src/data/features.ts` bayrağıyla (`managedMembers: false`) kapatıldı:
+"Üye ekle", yönetici özel notu, adres alanı ve "yönetici yalnızca kendi eklediğini
+düzenler" kuralı kapalıyken görünmüyor, yönetici eski gibi tüm üyelerin ad/telefon/
+doğum tarihini düzenleyebiliyor. Aşağıdaki (1) ve (2) maddeleri bu yüzden şimdilik
+**geçersiz**: kurallar yayında değil.
+
 **Açık.** (1) **Davranış değişikliği:** yönetici artık kendi hesabıyla katılan veya
 marte06'dan taşınan üyenin adını/telefonunu/doğum tarihini/boyunu düzeltemiyor
 (eskiden herkes için açıktı; WEB-6'daki hatalı adlar bu yolla düzeltiliyordu).

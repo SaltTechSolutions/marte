@@ -10,6 +10,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { MemberContactCard } from '@/components/MemberContactCard';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
+import { FEATURES } from '@/data/features';
 import { markRenewalHandled, watchMyRenewalRequest } from '@/data/firebase/renewalRequestRepo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Stepper } from '@/components/Stepper';
@@ -414,7 +415,7 @@ export default function AdminMemberDetail() {
       ) : null}
 
       <MemberNoteCard tenantId={tenantId} memberId={memberId} />
-      <MemberNoteCard tenantId={tenantId} memberId={memberId} kind="admin" />
+      {FEATURES.managedMembers && <MemberNoteCard tenantId={tenantId} memberId={memberId} kind="admin" />}
 
       <Text variant="label" tone="sub" style={{ marginTop: 4 }}>
         PAKETLER
