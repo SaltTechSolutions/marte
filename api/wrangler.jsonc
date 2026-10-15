@@ -1,0 +1,11 @@
+{
+  // F0 scaffold: nothing here is deployed. Staging gets its own D1 (separate
+  // database_id) before any deploy; migrations always run before the Worker.
+  "name": "gymentra-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-06",
+  "vars": { "FIREBASE_PROJECT_ID": "tarabyamarte" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "gymentra-prod", "database_id": "REPLACE_ON_CREATE", "migrations_dir": "migrations" }
+  ]
+}

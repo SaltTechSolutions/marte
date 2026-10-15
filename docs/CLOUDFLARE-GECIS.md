@@ -35,7 +35,7 @@ kullanım küçük).
   karşılığı yok:** 31 tetikleyicinin her biri, tetikleyen yazmayı yapan uçta
   açıkça çağrılır ya da kuyruğa atılır. Bu en çok dikkat isteyen kısım.
 - **Webhook:** RevenueCat → Worker.
-- **Giriş:** karar bekliyor (aşağıda, madde 2). Önerilen: Firebase Auth kimlik
+- **Giriş:** KARARA BAĞLANDI (15 Ekim 2026): Firebase Auth kimlik
   sağlayıcı olarak kalır, Worker ID token'ı JWKS ile doğrular. **Çıkış yolunu
   açık tutan tasarım şartı:** D1 Firebase uid'ine bağlanmaz. Her kişinin iç
   kimliği (`users.id`) vardır, `identities(provider, subject, user_id)` tablosu
@@ -107,7 +107,7 @@ birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
    Ders doluluğu ve üye kartı en çok canlı olması gereken yerler; oralarda
    yoklama aralığı kısa tutulur, değişiklikte push sinyaliyle anında yenilenir.
    Durable Object + WebSocket gerekirse sonradan eklenir.
-2. **Giriş:** F1–F4 boyunca Firebase Auth kalsın mı (önerim), yoksa baştan mı?
+2. ~~**Giriş:**~~ **KARARA BAĞLANDI: Firebase Auth kalır** (15 Ekim 2026); Worker ID token'ı JWKS ile doğrular, D1 iç `users.id` kullanır.
 3. ~~**Alan adı:**~~ **KARARA BAĞLANDI: `api.gymentra.salt-tech-apps.com`.**
 4. ~~**Mevcut hazır özellik (elle üye, özel not, adres):**~~ **KARARA BAĞLANDI
    (15 Ekim 2026): Firebase'e deploy edilmeyecek, Cloudflare'e yazılacak.** Ama
@@ -116,3 +116,12 @@ birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
    kapalı; kod ve arka uç testleri (kurallar 251, fonksiyon 141) taşınacak
    davranışın belirtimi olarak duruyor.
 5. **Sıra:** yeni özellik geliştirmeyi taşıma süresince durduralım mı?
+
+## F0 durumu (15 Ekim 2026)
+
+`api/` iskeleti kuruldu, **deploy edilmedi**: Hono Worker, `migrations/0001_init.sql`
+(28 koleksiyon → 29 tablo, bkz. `docs/D1-SEMA.md`), Firebase ID token doğrulama
+(JWKS, fail-closed), router düzeyinde rol kapısı, uçlar `/v1/me`, elle üye
+oluşturma, yönetici notu. 7 test geçiyor. Testler gerçek workerd/D1 değil,
+`node:sqlite` üzerinde koşar (`api/test/d1shim.ts`); D1 sınırları staging D1'de
+ayrıca doğrulanmalı. Sırada F1: salt-okunur uçlar ve kural testlerinin portu.

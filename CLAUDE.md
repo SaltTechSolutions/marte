@@ -19,6 +19,7 @@ commit'le aynı iş: koda dokunup deftere dokunmamak, işi yarım bırakmaktır.
 |---|---|---|
 | `apps/gymentra-mobile` | Expo SDK 57 / React Native mobil uygulama | `AGENTS.md` (uzun ve bağlayıcı) |
 | `apps/gymentra-site` | Statik site: gizlilik, koşullar, hesap silme | — |
+| `api` | Cloudflare Worker (Hono + D1) — Firebase'den taşıma, F0 iskeleti, deploy yok | `docs/CLOUDFLARE-GECIS.md`, `docs/D1-SEMA.md` |
 | `backend` | Firebase: Functions, kurallar, seed/backfill | `backend/CLAUDE.md` |
 | `packages/rig` | Hareket figürü motoru, kare editörü, denetim | `packages/rig/CLAUDE.md` + `README.md` |
 | `docs` | Plan, şema, mağaza notları, **karar defteri** | — |

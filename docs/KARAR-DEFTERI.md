@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — Cloudflare geçişi F0: D1 şeması ve Worker iskeleti
+
+**Yapıldı.** `api/` altında Hono Worker iskeleti, 28 Firestore koleksiyonunu karşılayan D1 migration'ı, Firebase ID token (JWKS) doğrulaması, rol kapısı ve üç örnek uç (`/v1/me`, elle üye, yönetici notu); 7 test. Deploy yok.
+
+**Karar.** Firebase Auth kalır; D1 iç `users.id` ile çalışır, `identities(provider, subject)` eşler. Elle üyeler kimliksiz `mm…` id'dir. `member_entitlements` ve `trainer_busy_slots` D1'de ayna tablo değil (görünüm/sorgu): aynalar Firestore kural kısıtının artığıydı. Enum'lar baştan CHECK ile tam yazıldı (sonradan değişirse tablo yeniden kurulur).
+
+**Bilerek yapılmadı.** `vitest-pool-workers` kullanılmadı: iskelette sürüm kırılganlığı getirir; testler `node:sqlite` shim'i üzerinde. Bunun D1 limitlerini (batch boyutu, CPU) göstermediği biliniyor. Hiçbir şey deploy edilmedi, D1 oluşturulmadı (`database_id` yer tutucu).
+
+**Açık.** Staging D1 + gerçek workerd testi; kalan 25 koleksiyonun uçları; kural testlerinin (251) API testine portu; Firestore → D1 veri taşıma betiği; iki commit hâlâ push edilmedi.
+
+**Nerede.** `api/`, `docs/D1-SEMA.md`, `docs/CLOUDFLARE-GECIS.md`.
+
 ## 2026-10-15 — Yeni logo: eğik halter, Volt paleti (build'e girmedi)
 
 **Yapıldı.** Eski logo (parlayan kalp atışı çizgisi, iki beyaz nokta, gri
