@@ -185,3 +185,103 @@ describe('F1 reads (member records)', () => {
     expect((await get('/v1/tenants/t1/members/u-mem/address', 'fb-trn')).status).toBe(403);
   });
 });
+
+describe('F1 reads (catalog, requests, membership rows)', () => {
+  const get = async (path: string, sub: string) => call(path, { token: await sign(sub) });
+  const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
+  beforeEach(async () => {
+    await run(`INSERT INTO users (id, created_at) VALUES ('u-oth',1), ('u-par',1)`);
+    await run(`INSERT INTO identities VALUES ('firebase','fb-oth','u-oth'), ('firebase','fb-par','u-par')`);
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t1','u-oth','active','["member"]',1)`);
+    await run(`INSERT INTO gym_packages (id, tenant_id, data) VALUES ('g1','t1','{"name":"Aylık"}')`);
+    await run(`INSERT INTO promotions (id, tenant_id, data) VALUES ('pr1','t1','{"kind":"percentDiscount"}')`);
+    await run(`INSERT INTO package_change_requests (id, tenant_id, member_id, data, effective_at, expires_at, status, created_at) VALUES
+      ('r1','t1','u-mem','{}',1,2,'pending',1), ('r2','t1','u-oth','{}',1,2,'pending',2)`);
+    await run(`INSERT INTO program_templates (id, tenant_id, data, updated_at) VALUES ('gl',NULL,'{"n":1}',1), ('mine','t1','{"n":2}',1)`);
+    await run(`INSERT INTO tenants (id, code, name, created_at) VALUES ('t2','T2','Other',1)`);
+    await run(`INSERT INTO program_templates (id, tenant_id, data, updated_at) VALUES ('theirs','t2','{"n":3}',1)`);
+  });
+  it('packages: members; promotions: staff only', async () => {
+    expect((await get('/v1/tenants/t1/packages', 'fb-mem')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/packages', 'fb-new')).status).toBe(403);
+    expect((await get('/v1/tenants/t1/promotions', 'fb-mem')).status).toBe(403);
+    expect((await get('/v1/tenants/t1/promotions', 'fb-admin')).status).toBe(200);
+  });
+  it('change requests: a member sees only their own, staff see all', async () => {
+    const own = (await (await get('/v1/tenants/t1/package-change-requests', 'fb-mem')).json()) as { id: string }[];
+    expect(own.map((x) => x.id)).toEqual(['r1']);
+    const all = (await (await get('/v1/tenants/t1/package-change-requests', 'fb-admin')).json()) as unknown[];
+    expect(all).toHaveLength(2);
+  });
+  it('program templates: global + own gyms only, never another gym', async () => {
+    const ids = ((await (await get('/v1/program-templates', 'fb-mem')).json()) as { id: string }[]).map((x) => x.id).sort();
+    expect(ids).toEqual(['gl', 'mine']);
+  });
+  it('membership row: self/staff/guardian ok; stranger gets 404', async () => {
+    await run(`UPDATE memberships SET guardian_id='u-par', guardian_status='pending' WHERE member_id='u-mem'`);
+    expect((await get('/v1/tenants/t1/members/u-mem', 'fb-mem')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem', 'fb-par')).status).toBe(200);
+    expect((await get('/v1/tenants/t1/members/u-mem', 'fb-oth')).status).toBe(404);
+    const kids = (await (await get('/v1/me/children', 'fb-par')).json()) as { guardianStatus: string }[];
+    expect(kids[0].guardianStatus).toBe('pending');
+  });
+});
+
+describe('F2 membership lifecycle', () => {
+  const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
+  const send = async (method: string, path: string, sub: string, body?: object) =>
+    call(path, { method, token: await sign(sub), body: body ? JSON.stringify(body) : undefined });
+  const cnt = async () => (await db.prepare(`SELECT active_member_count m, active_admin_count a FROM tenants WHERE id='t1'`).first()) as { m: number; a: number };
+  const status = async (id: string) => ((await db.prepare(`SELECT status s FROM memberships WHERE member_id = ?`).bind(id).first()) as { s: string } | null)?.s;
+
+  it('bootstrap is idempotent and maps the subject once', async () => {
+    const a = await send('POST', '/v1/me/bootstrap', 'fb-new', { displayName: 'Yeni' });
+    const b = await send('POST', '/v1/me/bootstrap', 'fb-new');
+    const ua = ((await a.json()) as { userId: string }).userId;
+    expect(((await b.json()) as { userId: string }).userId).toBe(ua);
+    expect(await db.prepare(`SELECT count(*) c FROM identities WHERE subject = 'fb-new'`).first()).toEqual({ c: 1 });
+  });
+  it('join → pending; approve counts a seat; duplicate join is 409', async () => {
+    const { userId } = (await (await send('POST', '/v1/me/bootstrap', 'fb-new')).json()) as { userId: string };
+    expect((await send('POST', '/v1/tenants/t1/join', 'fb-new')).status).toBe(201);
+    expect((await send('POST', '/v1/tenants/t1/join', 'fb-new')).status).toBe(409);
+    expect(await status(userId)).toBe('pending');
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-mem', { status: 'active' })).status).toBe(403);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(200);
+    expect(await cnt()).toMatchObject({ m: 1 });
+  });
+  it('free-tier cap blocks approval and leaves no phantom seat', async () => {
+    const { userId } = (await (await send('POST', '/v1/me/bootstrap', 'fb-new')).json()) as { userId: string };
+    await send('POST', '/v1/tenants/t1/join', 'fb-new');
+    await run(`UPDATE tenants SET active_member_count = 10`);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(409);
+    expect(await status(userId)).toBe('pending');
+    expect(await cnt()).toMatchObject({ m: 10 });
+    await run(`UPDATE tenants SET subscription_status = 'active'`);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(200);
+  });
+  it('a minor needs an approved guardian before activation', async () => {
+    const { userId } = (await (await send('POST', '/v1/me/bootstrap', 'fb-new')).json()) as { userId: string };
+    await send('POST', '/v1/tenants/t1/join', 'fb-new');
+    await run(`UPDATE memberships SET birth_date = ? WHERE member_id = ?`, Date.now() - 10 * 365 * 86_400_000, userId);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(409);
+    await run(`UPDATE memberships SET guardian_status = 'approved' WHERE member_id = ?`, userId);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(200);
+  });
+  it('admin seat cap is 3', async () => {
+    const { userId } = (await (await send('POST', '/v1/me/bootstrap', 'fb-new')).json()) as { userId: string };
+    await send('POST', '/v1/tenants/t1/join', 'fb-new');
+    await run(`UPDATE memberships SET roles = '["admin"]' WHERE member_id = ?`, userId);
+    await run(`UPDATE tenants SET active_admin_count = 3`);
+    expect((await send('PUT', `/v1/tenants/t1/members/${userId}/status`, 'fb-admin', { status: 'active' })).status).toBe(409);
+  });
+  it('leave frees the seat; rejoin resets to pending member; last admin cannot leave', async () => {
+    await run(`UPDATE tenants SET active_member_count = 2, active_admin_count = 1`);
+    expect((await send('POST', '/v1/tenants/t1/leave', 'fb-admin')).status).toBe(409);
+    expect((await send('POST', '/v1/tenants/t1/leave', 'fb-mem')).status).toBe(200);
+    expect(await status('u-mem')).toBe('left');
+    expect(await cnt()).toMatchObject({ m: 1 });
+    expect((await send('POST', '/v1/tenants/t1/join', 'fb-mem')).status).toBe(201);
+    expect(await status('u-mem')).toBe('pending');
+  });
+});

@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F1 kapandı, F2 başladı: üyelik yaşam döngüsü
+
+**Yapıldı.** F1: paket kataloğu, promosyon, paket değişim ve yenileme talepleri, program şablonları, tek üyelik satırı, veli çocukları. F2: kimlik bootstrap (`/me/bootstrap`, idempotent), katılma/yeniden katılma, onay/ret/askı, ayrılma. Tüm sınırlar (10 üye, 3 yönetici, reşit olmayan + veli onayı) onay `UPDATE`'inin içinde; sayaç yalnız satır değiştiyse artar. `docs/KURAL-TEST-MATRISI.md` üretildi. 25 test, staging'e deploy edildi.
+
+**Karar.** Program şablonlarında Firestore'daki sızıntı (her giriş yapan her salonun şablonunu okuyordu) **taşınmadı**: global + kendi salonları. Üyelik satırı olmayana ve başkasına aynı 404.
+
+**Bilerek yapılmadı.** Rol/izin atama, `checkin`, not/adres/duyuru/yenileme yazmaları ve veli akışı bu turda yok; matriste "bekliyor". Son yönetici ayrılamaz kuralı kurallardaki karşılığı doğrulanmadan eklendi (güvenli yön), kural testiyle karşılaştırılacak.
+
+**Açık.** Matriste 250/251 farkı; çoğu satır hâlâ "bekliyor". Gerçek token ile canlı test yok; yarış testleri workerd'de koşmadı. Owner'ın yeni salon kurması (`ownerUid` istisnası) ve salon oluşturma ucu yok.
+
+**Nerede.** `api/src/membership.ts`, `api/src/reads3.ts`, `docs/KURAL-TEST-MATRISI.md`.
+
 ## 2026-10-15 — F1 okuma uçları tamamlandı (staging)
 
 **Yapıldı.** `api/src/reads2.ts`: üye kayıtları (paketler, program, antrenman günlüğü, ölçüm, ödeme, PT), antrenör takvimi ve paylaşımlı takvim, kimliksiz meşgul slotlar, müsaitlik, duyurular, personel üye listesi, antrenör notu, yönetici notu, adres. Yetkiler `firestore.rules` okuma kurallarından birebir çıkarıldı (ödeme: üye/yönetici/onaylı veli; antrenör göremez). 15 test, staging'e deploy edildi.
