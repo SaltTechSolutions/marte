@@ -9,7 +9,9 @@ export async function setAdminNote(c: C) {
   const tenantId = c.req.param('tenantId')!;
   const memberId = c.req.param('memberId')!;
   const body = await c.req.json().catch(() => null) as { text?: unknown } | null;
-  const text = typeof body?.text === 'string' ? body.text.trim() : '';
+  // Only an explicit string deletes; malformed input is a 400, never a silent delete.
+  if (typeof body?.text !== 'string') return c.json({ error: 'text required' }, 400);
+  const text = body.text.trim();
   if (text.length > 2000) return c.json({ error: 'text too long' }, 400);
 
   const exists = await c.env.DB.prepare(

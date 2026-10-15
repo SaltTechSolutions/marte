@@ -125,3 +125,27 @@ birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
 oluşturma, yönetici notu. 7 test geçiyor. Testler gerçek workerd/D1 değil,
 `node:sqlite` üzerinde koşar (`api/test/d1shim.ts`); D1 sınırları staging D1'de
 ayrıca doğrulanmalı. Sırada F1: salt-okunur uçlar ve kural testlerinin portu.
+
+## Codex ortak değerlendirmesi ve F1–F5 sırası (15 Ekim 2026)
+
+0001 şeması çapraz modelle gözden geçirildi; bulgular `0002_codex_review_fixes.sql` ile kapandı
+(üyelik `left`, kredi `cancelled/revoked`, bileşik FK'ler, PT iptal alanları, global şablon,
+`user_settings`, tekillik ve indeksler). **Karar değişti:** elle üyeler de `users` satırı alır
+(kimliksiz), böylece `member_id` hep doğrulanabilir. Kota artık tek atomik yazımda.
+
+Sıra: **F1** okuma uçları + kimlik bootstrap (kodla salon bulma, `/me`, paket/hak, ders, PT, program, ölçüm,
+ödeme okumaları; busy-slot yanıtında üye kimliği yok) → **F2** 251 kural testinin matris
+eşlemesi (kaynak test → işlem → API testi, atlama yok, gerçek workerd/D1'de) + temel yazmalar →
+**F3** iş mantığı: paket→kredi→PT/grup rezervasyonu→iptal/iade→teklif/dondurma→hesap silme→webhook;
+kritik hak değişimleri **senkron**, push/e-posta transactional outbox → Queue; cron'lar parçalı,
+yeniden çalıştırılabilir, `Europe/Istanbul` → **F4** dry-run'lı Firestore→D1 aktarım betiği
+(deterministik uid→id, mutabakat: sayılar, ödeme toplamı, kredi bakiyesi) + mobilde 38 dosyalık
+ortak veri arayüzü ve 49 dinleyicinin envanteri → **F5** tek kesim: eski istemciler Firebase'e
+yazamaz (zorunlu güncelleme), webhook tamponu, önceden tanımlı eşiklerle izleme.
+
+Riskli kararlar: (1) kesimden sonra eski sürümleri çalışır bırakmak — **hayır**, tek yazma otoritesi;
+(2) `batch()` tek başına atomiklik sayılmaz — koşullu SQL + yarış testi; (3) hak/finans alanları
+JSON'a gömülmez; (4) kredi/kota/iade senkron, yalnız ertelenebilir etkiler Queue'ya; (5) rollback:
+D1 yazmaları açılmadan önce mümkün, sonrası yalnız hazırlanmış ters aktarım ya da ileri düzeltme —
+DNS geri almak rollback değildir. **Açık:** codex export envanterinde 19 callable/23 trigger/6 scheduler
+saydı, plan 28/31/9 diyor; kapsam F1 başında doğrulanacak.

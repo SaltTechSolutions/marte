@@ -54,31 +54,41 @@ export async function createManagedMember(c: C) {
     birth = parsed;
   }
 
-  const tenant = await c.env.DB.prepare(
-    `SELECT subscription_status, active_member_count FROM tenants WHERE id = ?`,
-  ).bind(tenantId).first<{ subscription_status: string | null; active_member_count: number }>();
-  if (!tenant) return c.json({ error: 'not found' }, 404);
-  if (tenant.subscription_status !== 'active' && tenant.active_member_count >= FREE_MEMBER_LIMIT) {
-    return c.json({ error: 'member limit' }, 429);
-  }
+  const exists = await c.env.DB.prepare(`SELECT 1 AS x FROM tenants WHERE id = ?`).bind(tenantId).first();
+  if (!exists) return c.json({ error: 'not found' }, 404);
 
   const memberId = newManagedMemberId();
   const now = Date.now();
-  // One batch: membership, optional address and the seat counter commit together.
+  // The seat cap is enforced inside the write itself: the counter bump only
+  // matches while there is room, and the membership insert only happens if that
+  // bump changed a row (guard via the user row's own subselect). Two parallel
+  // requests cannot both pass a stale read.
   const stmts = [
+    c.env.DB.prepare(
+      `UPDATE tenants SET active_member_count = active_member_count + 1
+       WHERE id = ? AND (subscription_status = 'active' OR active_member_count < ?)`,
+    ).bind(tenantId, FREE_MEMBER_LIMIT),
+    c.env.DB.prepare(
+      `INSERT INTO users (id, display_name, email, created_at)
+       SELECT ?, ?, ?, ? WHERE changes() = 1`,
+    ).bind(memberId, name, email ?? null, now),
     c.env.DB.prepare(
       `INSERT INTO memberships (tenant_id, member_id, status, roles, display_name, email, phone,
          birth_date, managed, created_by, requested_at, approved_at)
-       VALUES (?, ?, 'active', '["member"]', ?, ?, ?, ?, 1, ?, ?, ?)`,
+       SELECT ?, ?, 'active', '["member"]', ?, ?, ?, ?, 1, ?, ?, ? WHERE EXISTS (SELECT 1 FROM users WHERE id = ?)`,
     ).bind(tenantId, memberId, name, email ?? null, phone ?? null, birth?.getTime() ?? null,
-      c.get('userId'), now, now),
-    c.env.DB.prepare(`UPDATE tenants SET active_member_count = active_member_count + 1 WHERE id = ?`).bind(tenantId),
+      c.get('userId'), now, now, memberId),
   ];
   if (address) {
     stmts.push(c.env.DB.prepare(
-      `INSERT INTO member_addresses (tenant_id, member_id, address, updated_by, updated_at) VALUES (?, ?, ?, ?, ?)`,
-    ).bind(tenantId, memberId, address, c.get('userId'), now));
+      `INSERT INTO member_addresses (tenant_id, member_id, address, updated_by, updated_at)
+       SELECT ?, ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM memberships WHERE tenant_id = ? AND member_id = ?)`,
+    ).bind(tenantId, memberId, address, c.get('userId'), now, tenantId, memberId));
   }
   await c.env.DB.batch(stmts);
+  const created = await c.env.DB.prepare(
+    `SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id = ?`,
+  ).bind(tenantId, memberId).first();
+  if (!created) return c.json({ error: 'member limit' }, 429);
   return c.json({ memberId }, 201);
 }

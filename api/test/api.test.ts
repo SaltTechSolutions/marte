@@ -77,6 +77,7 @@ describe('managed members', () => {
     const m = await db.prepare(`SELECT managed, created_by, status FROM memberships WHERE member_id = ?`).bind(memberId).first();
     expect(m).toMatchObject({ managed: 1, created_by: 'u-admin', status: 'active' });
     expect(await db.prepare(`SELECT 1 x FROM identities WHERE user_id = ?`).bind(memberId).first()).toBeNull();
+    expect(await db.prepare(`SELECT display_name n FROM users WHERE id = ?`).bind(memberId).first()).toEqual({ n: 'Ayşe' });
     expect(await db.prepare(`SELECT address FROM member_addresses WHERE member_id = ?`).bind(memberId).first()).toEqual({ address: 'Cad. 1' });
     expect(await db.prepare(`SELECT active_member_count c FROM tenants WHERE id='t1'`).first()).toEqual({ c: 1 });
   });
@@ -86,6 +87,13 @@ describe('managed members', () => {
     expect((await post('fb-admin', { email: 'nope' })).status).toBe(400);
     await db.prepare(`UPDATE tenants SET active_member_count = 10`).run();
     expect((await post('fb-admin', {})).status).toBe(429);
+    expect(await db.prepare(`SELECT count(*) c FROM memberships WHERE managed = 1`).first()).toEqual({ c: 0 });
+  });
+  it('the cap holds under parallel requests (one seat left, two callers)', async () => {
+    await db.prepare(`UPDATE tenants SET active_member_count = 9`).run();
+    const [a, b] = await Promise.all([post('fb-admin', {}), post('fb-admin', {})]);
+    expect([a.status, b.status].sort()).toEqual([201, 429]);
+    expect(await db.prepare(`SELECT active_member_count c FROM tenants`).first()).toEqual({ c: 10 });
   });
 });
 
@@ -100,5 +108,7 @@ describe('admin note', () => {
     expect((await put('fb-admin', '  ')).status).toBe(200);
     expect(await db.prepare(`SELECT 1 x FROM member_admin_notes`).first()).toBeNull();
     expect((await put('fb-admin', 'x', 'ghost')).status).toBe(404);
+    const bad = await call('/v1/tenants/t1/members/u-mem/admin-note', { method: 'PUT', body: JSON.stringify({ text: 123 }), token: await sign('fb-admin') });
+    expect(bad.status).toBe(400);
   });
 });

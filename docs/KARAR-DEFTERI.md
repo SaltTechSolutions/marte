@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — Staging D1 ve codex ile şema/plan incelemesi
+
+**Yapıldı.** `gymentra-staging` D1 oluşturuldu (0001 + 0002 uygulandı; `wrangler.jsonc` `env.staging`). Codex ile 0001 incelendi, bulgular 0002 ve kod düzeltmeleriyle kapandı; 8 test geçiyor.
+
+**Karar.** Elle üyeler de `users` satırı alır. Kota artık tek atomik yazımda (`changes()` kapısı). Kritik hak/kredi işleri senkron, yalnız ertelenebilir etkiler outbox→Queue. Eski istemciler kesimden sonra Firebase'e yazamaz.
+
+**Bilerek yapılmadı.** 0001'i yerinde düzenlemek: uygulanmış migration değişmez. Prod D1 oluşturmak: henüz gerekmiyor.
+
+**Açık.** Test shim'i istekleri sıralı çalıştırır; yarış testinin gerçek kanıtı staging workerd'de. Callable/trigger sayıları (codex 19/23/6, plan 28/31/9) doğrulanmalı. Kalan JSON'dan sütuna taşınacak alanlar (classes, paketler, promosyon, ödeme, tenant abonelik) F1'de, uç yazılırken.
+
+**Nerede.** `api/migrations/0002_*.sql`, `docs/CLOUDFLARE-GECIS.md`.
+
 ## 2026-10-15 — Cloudflare geçişi F0: D1 şeması ve Worker iskeleti
 
 **Yapıldı.** `api/` altında Hono Worker iskeleti, 28 Firestore koleksiyonunu karşılayan D1 migration'ı, Firebase ID token (JWKS) doğrulaması, rol kapısı ve üç örnek uç (`/v1/me`, elle üye, yönetici notu); 7 test. Deploy yok.
