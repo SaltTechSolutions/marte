@@ -112,3 +112,32 @@ describe('admin note', () => {
     expect(bad.status).toBe(400);
   });
 });
+
+describe('F1 reads', () => {
+  const get = async (path: string, sub: string) => call(path, { token: await sign(sub) });
+  beforeEach(async () => {
+    await db.prepare(`UPDATE tenants SET branding = '{"color":"#C8FF2E"}' WHERE id = 't1'`).run();
+    await db.prepare(`INSERT INTO users (id, created_at) VALUES ('u-other', 1)`).run();
+    await db.prepare(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t1','u-other','active','["member"]',1)`).run();
+    await db.prepare(`INSERT INTO member_credits (id, tenant_id, member_id, kind, source, source_package_id, total, used, starts_at, expires_at, status)
+      VALUES ('c1','t1','u-mem','ptLesson','purchase','p1',10,2,1,9999999999999,'active')`).run();
+    await db.prepare(`INSERT INTO classes (id, tenant_id, data, starts_at) VALUES ('k1','t1','{"name":"Pilates"}', 9999999999999)`).run();
+  });
+  it('tenant by code is a safe DTO', async () => {
+    const res = await get('/v1/tenants/by-code/t1', 'fb-new');
+    expect(await res.json()).toEqual({ id: 't1', code: 'T1', name: 'Gym', branding: { color: '#C8FF2E' } });
+    expect((await get('/v1/tenants/by-code/nope', 'fb-new')).status).toBe(404);
+  });
+  it('classes need an active membership', async () => {
+    expect((await get('/v1/tenants/t1/classes', 'fb-new')).status).toBe(403);
+    const ok = (await (await get('/v1/tenants/t1/classes', 'fb-mem')).json()) as { name: string }[];
+    expect(ok[0].name).toBe('Pilates');
+  });
+  it('credits: self and staff only, never another member', async () => {
+    const own = (await (await get('/v1/tenants/t1/members/u-mem/credits', 'fb-mem')).json()) as { used: number }[];
+    expect(own[0].used).toBe(2);
+    expect((await get('/v1/tenants/t1/members/u-mem/credits', 'fb-admin')).status).toBe(200);
+    await db.prepare(`INSERT INTO identities VALUES ('firebase','fb-other','u-other')`).run();
+    expect((await get('/v1/tenants/t1/members/u-mem/credits', 'fb-other')).status).toBe(403);
+  });
+});

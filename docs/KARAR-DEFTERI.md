@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — API staging'e deploy edildi, F1 ilk dilim
+
+**Yapıldı.** `gymentra-api-staging` Worker'ı deploy edildi (`https://gymentra-api-staging.tarkan-cicek.workers.dev`, staging D1'e bağlı). F1 ilk dilim: salon kodu → güvenli DTO, ders listesi (aktif üye), kredi okuma (kendisi ya da personel). 11 test.
+
+**Karar.** Okuma uçları tenant üyeliğini router'da arar; başkasının kredisi 403.
+
+**Bilerek yapılmadı.** Özel alan adı (`api.gymentra.salt-tech-apps.com`) bağlanmadı: cutover'a kadar workers.dev yeterli, ISS engeli yalnız kullanıcıya görünen adreste önemli.
+
+**Açık.** Canlı ortamda GEÇERLİ bir Firebase token ile doğrulama yapılmadı (yalnız sahte token → 401 ve healthz görüldü); gerçek token testi kullanıcı girişi gerektirir. Kalan okuma uçları (paket atamaları, PT, program, ölçüm, ödeme).
+
+**Nerede.** `api/src/reads.ts`.
+
 ## 2026-10-15 — Staging D1 ve codex ile şema/plan incelemesi
 
 **Yapıldı.** `gymentra-staging` D1 oluşturuldu (0001 + 0002 uygulandı; `wrangler.jsonc` `env.staging`). Codex ile 0001 incelendi, bulgular 0002 ve kod düzeltmeleriyle kapandı; 8 test geçiyor.
