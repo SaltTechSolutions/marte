@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-15 — F2 yazmaları: rol atama, not, adres, duyuru, yenileme, push
+
+**Yapıldı.** `api/src/writes.ts`: rol/izin atama (yönetici sınırı atomik, kendini düşürme yok, sayaç aynı batch'te), antrenör notu, adres (üye ya da managed için yönetici), kendi/managed ayrıntı düzenleme (reşit olmayan reddi), duyuru, yenileme talebi akışı, push token. Migration `0003` (push `platform`) staging'e uygulandı, Worker deploy edildi. 32 test. Matris güncellendi.
+
+**Karar.** Push token cihaza aittir: aynı token başka hesapla gelirse son girene taşınır (Firestore'da belge sahibi değişemiyordu). Gerçek hesaplı üyenin adresini yönetici yazamaz (kural gibi); e-posta üye tarafında düzenlenmez (sağlayıcıya ait).
+
+**Bilerek yapılmadı.** Check-in, ders/rezervasyon, program ve ölçüm yazmaları, ödeme, paket işlemleri, veli akışı: F3 (hak/finans) ya da sıradaki F2 turu. Duyuru güncelleme (kuralda da kapalı).
+
+**Açık.** Matriste hâlâ çok satır "bekliyor" (check-in, classes, PT, programlar, ölçümler, ödemeler, veli). Her yazma ucu `firestore.rules.test.ts` satırlarına tek tek eşlenmedi, yalnız grup düzeyinde: F2 kapanmadan satır düzeyi eşleme şart. Gerçek token ve workerd doğrulaması yok.
+
+**Nerede.** `api/src/writes.ts`, `api/migrations/0003_push_platform.sql`.
+
 ## 2026-10-15 — F1 kapandı, F2 başladı: üyelik yaşam döngüsü
 
 **Yapıldı.** F1: paket kataloğu, promosyon, paket değişim ve yenileme talepleri, program şablonları, tek üyelik satırı, veli çocukları. F2: kimlik bootstrap (`/me/bootstrap`, idempotent), katılma/yeniden katılma, onay/ret/askı, ayrılma. Tüm sınırlar (10 üye, 3 yönetici, reşit olmayan + veli onayı) onay `UPDATE`'inin içinde; sayaç yalnız satır değiştiyse artar. `docs/KURAL-TEST-MATRISI.md` üretildi. 25 test, staging'e deploy edildi.

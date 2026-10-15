@@ -285,3 +285,103 @@ describe('F2 membership lifecycle', () => {
     expect(await status('u-mem')).toBe('pending');
   });
 });
+
+describe('F2 writes', () => {
+  const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
+  const one = async (q: string, ...a: unknown[]) => await db.prepare(q).bind(...a).first<any>();
+  const send = async (method: string, path: string, sub: string, body?: object) =>
+    call(path, { method, token: await sign(sub), body: body ? JSON.stringify(body) : undefined });
+  beforeEach(async () => {
+    await run(`INSERT INTO users (id, created_at) VALUES ('u-trn',1)`);
+    await run(`INSERT INTO identities VALUES ('firebase','fb-trn','u-trn')`);
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t1','u-trn','active','["trainer"]',1)`);
+    await run(`UPDATE tenants SET active_member_count = 3, active_admin_count = 1`);
+  });
+
+  it('roles: admin only; no self-demotion; admin cap 3 on grant; counter follows', async () => {
+    const path = '/v1/tenants/t1/members/u-trn/roles';
+    expect((await send('PUT', path, 'fb-mem', { roles: ['admin'] })).status).toBe(403);
+    expect((await send('PUT', path, 'fb-trn', { roles: ['admin'] })).status).toBe(403);
+    expect((await send('PUT', path, 'fb-admin', { roles: ['superuser'] })).status).toBe(400);
+    expect((await send('PUT', '/v1/tenants/t1/members/u-admin/roles', 'fb-admin', { roles: ['member'] })).status).toBe(409);
+    await run(`UPDATE tenants SET active_admin_count = 3`);
+    expect((await send('PUT', path, 'fb-admin', { roles: ['admin'] })).status).toBe(409);
+    await run(`UPDATE tenants SET active_admin_count = 1`);
+    expect((await send('PUT', path, 'fb-admin', { roles: ['trainer', 'admin'], permissions: ['checkin'] })).status).toBe(200);
+    expect((await one(`SELECT active_admin_count c FROM tenants`)).c).toBe(2);
+    expect((await send('PUT', path, 'fb-admin', { roles: ['trainer'] })).status).toBe(200);
+    expect((await one(`SELECT active_admin_count c FROM tenants`)).c).toBe(1);
+  });
+
+  it('trainer note: staff write/delete, members denied, empty rejected', async () => {
+    const path = '/v1/tenants/t1/members/u-mem/note';
+    expect((await send('PUT', path, 'fb-mem', { text: 'x' })).status).toBe(403);
+    expect((await send('PUT', path, 'fb-trn', { text: '  ' })).status).toBe(400);
+    expect((await send('PUT', path, 'fb-trn', { text: 'diz' })).status).toBe(200);
+    expect((await one(`SELECT text t FROM member_notes`)).t).toBe('diz');
+    expect((await send('DELETE', path, 'fb-trn')).status).toBe(200);
+    expect(await one(`SELECT 1 x FROM member_notes`)).toBeNull();
+  });
+
+  it('address: own, or admin for a MANAGED member only', async () => {
+    const own = '/v1/tenants/t1/members/u-mem/address';
+    expect((await send('PUT', own, 'fb-mem', { address: 'Ev 1' })).status).toBe(200);
+    expect((await send('PUT', own, 'fb-admin', { address: 'x' })).status).toBe(403);   // real account: gym may not write it
+    expect((await send('PUT', own, 'fb-trn', { address: 'x' })).status).toBe(403);
+    await run(`UPDATE memberships SET managed = 1 WHERE member_id = 'u-mem'`);
+    expect((await send('PUT', own, 'fb-admin', { address: 'Yeni' })).status).toBe(200);
+    expect((await send('PUT', own, 'fb-admin', { address: 'a'.repeat(301) })).status).toBe(400);
+    expect((await send('DELETE', own, 'fb-admin')).status).toBe(200);
+  });
+
+  it('details: member edits own, not e-mail; admin only for managed and never a minor', async () => {
+    const path = '/v1/tenants/t1/members/u-mem/details';
+    expect((await send('PATCH', path, 'fb-mem', { phone: '555', heightCm: 180 })).status).toBe(200);
+    expect((await send('PATCH', path, 'fb-mem', { email: 'a@b.co' })).status).toBe(400);
+    expect((await send('PATCH', path, 'fb-mem', { heightCm: 50 })).status).toBe(400);
+    expect((await send('PATCH', path, 'fb-admin', { phone: '1' })).status).toBe(403);
+    await run(`UPDATE memberships SET managed = 1 WHERE member_id = 'u-mem'`);
+    expect((await send('PATCH', path, 'fb-admin', { email: 'a@b.co' })).status).toBe(200);
+    expect((await send('PATCH', path, 'fb-admin', { birthDate: Date.now() - 10 * 365 * 86_400_000 })).status).toBe(400);
+    expect((await send('PATCH', path, 'fb-trn', { phone: '1' })).status).toBe(403);
+  });
+
+  it('announcements: admin create/delete, scoped by gym', async () => {
+    expect((await send('POST', '/v1/tenants/t1/announcements', 'fb-mem', { title: 'x', body: '' })).status).toBe(403);
+    expect((await send('POST', '/v1/tenants/t1/announcements', 'fb-admin', { title: '', body: '' })).status).toBe(400);
+    const res = await send('POST', '/v1/tenants/t1/announcements', 'fb-admin', { title: 'Tatil', body: 'Kapalı' });
+    const { id } = (await res.json()) as { id: string };
+    await run(`INSERT INTO tenants (id, code, name, created_at) VALUES ('t2','T2','O',1)`);
+    // an admin of ANOTHER gym cannot delete it through their own tenant path
+    await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t2','u-admin','active','["admin"]',1)`);
+    await send('DELETE', `/v1/tenants/t2/announcements/${id}`, 'fb-admin');
+    expect(await one(`SELECT 1 x FROM announcements WHERE id = ?`, id)).not.toBeNull();
+    await send('DELETE', `/v1/tenants/t1/announcements/${id}`, 'fb-admin');
+    expect(await one(`SELECT 1 x FROM announcements WHERE id = ?`, id)).toBeNull();
+  });
+
+  it('renewal: one pending, withdraw, resubmit, admin handles', async () => {
+    const p = '/v1/tenants/t1/renewal-request';
+    expect((await send('POST', p, 'fb-mem', { note: 'yenilemek istiyorum' })).status).toBe(201);
+    expect((await send('POST', p, 'fb-mem', {})).status).toBe(409);
+    await send('POST', `${p}/withdraw`, 'fb-mem');
+    expect((await one(`SELECT status s FROM renewal_requests`)).s).toBe('withdrawn');
+    expect((await send('POST', p, 'fb-mem', {})).status).toBe(201);
+    expect((await send('POST', `/v1/tenants/t1/renewal-requests/t1_u-mem/handle`, 'fb-trn')).status).toBe(403);
+    await send('POST', `/v1/tenants/t1/renewal-requests/t1_u-mem/handle`, 'fb-admin');
+    expect((await one(`SELECT status s FROM renewal_requests`)).s).toBe('handled');
+    expect((await send('POST', p, 'fb-new', {})).status).toBe(403);
+  });
+
+  it('push token: member of the gym only, valid shape; moves to the latest signer', async () => {
+    const tok = 'ExponentPushToken[abc]';
+    expect((await send('PUT', '/v1/me/push-token', 'fb-mem', { token: 'nope', platform: 'ios', tenantId: 't1' })).status).toBe(400);
+    expect((await send('PUT', '/v1/me/push-token', 'fb-mem', { token: tok, platform: 'web', tenantId: 't1' })).status).toBe(400);
+    expect((await send('PUT', '/v1/me/push-token', 'fb-mem', { token: tok, platform: 'ios', tenantId: 'zzz' })).status).toBe(403);
+    expect((await send('PUT', '/v1/me/push-token', 'fb-mem', { token: tok, platform: 'ios', tenantId: 't1' })).status).toBe(200);
+    expect((await send('PUT', '/v1/me/push-token', 'fb-trn', { token: tok, platform: 'ios', tenantId: 't1' })).status).toBe(200);
+    expect((await one(`SELECT user_id u FROM push_tokens`)).u).toBe('u-trn');
+    await send('DELETE', `/v1/me/push-token?token=${encodeURIComponent(tok)}`, 'fb-mem');   // not the owner now
+    expect(await one(`SELECT 1 x FROM push_tokens`)).not.toBeNull();
+  });
+});
