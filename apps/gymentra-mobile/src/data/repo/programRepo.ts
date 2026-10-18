@@ -15,4 +15,3 @@ export const setProgramStatus = impl.setProgramStatus;
 export const watchActiveProgramForMember = impl.watchActiveProgramForMember;
 export const watchActiveProgramsForTenant = impl.watchActiveProgramsForTenant;
 export const watchProgramsForTenant = impl.watchProgramsForTenant;
-export type * from '../firebase/programRepo';

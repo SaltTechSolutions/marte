@@ -10,4 +10,3 @@ export const grantCalendarShare = impl.grantCalendarShare;
 export const revokeCalendarShare = impl.revokeCalendarShare;
 export const watchSharesIGranted = impl.watchSharesIGranted;
 export const watchSharesGrantedToMe = impl.watchSharesGrantedToMe;
-export type * from '../firebase/calendarShareRepo';

@@ -7,4 +7,3 @@ const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const uploadMemberPhoto = impl.uploadMemberPhoto;
 export const deleteMemberPhoto = impl.deleteMemberPhoto;
-export type * from '../firebase/memberPhotoRepo';

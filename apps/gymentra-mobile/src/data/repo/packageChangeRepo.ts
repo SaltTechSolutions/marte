@@ -12,4 +12,4 @@ export const watchPackageChangeRequest = impl.watchPackageChangeRequest;
 export const getPackageChangeRequest = impl.getPackageChangeRequest;
 export const respondToPackageChangeRequest = impl.respondToPackageChangeRequest;
 export const cancelPackageChangeRequest = impl.cancelPackageChangeRequest;
-export type * from '../firebase/packageChangeRepo';
+export type { PackageChangeResponseOutcome } from '../firebase/packageChangeRepo';

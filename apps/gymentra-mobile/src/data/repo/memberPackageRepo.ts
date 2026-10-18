@@ -17,4 +17,4 @@ export const watchTenantMemberPackages = impl.watchTenantMemberPackages;
 export const watchMemberCredits = impl.watchMemberCredits;
 export const freezeMemberPackage = impl.freezeMemberPackage;
 export const cancelPackageAssignment = impl.cancelPackageAssignment;
-export type * from '../firebase/memberPackageRepo';
+export type { CancellationAccess } from '../firebase/memberPackageRepo';

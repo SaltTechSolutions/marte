@@ -9,4 +9,3 @@ export const MEMBER_ADMIN_NOTE_MAX = impl.MEMBER_ADMIN_NOTE_MAX;
 export const memberAdminNoteId = impl.memberAdminNoteId;
 export const watchMemberAdminNote = impl.watchMemberAdminNote;
 export const setMemberAdminNote = impl.setMemberAdminNote;
-export type * from '../firebase/memberAdminNoteRepo';

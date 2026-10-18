@@ -7,4 +7,3 @@ const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const watchProgramTemplates = impl.watchProgramTemplates;
 export const getProgramTemplate = impl.getProgramTemplate;
-export type * from '../firebase/programTemplateRepo';

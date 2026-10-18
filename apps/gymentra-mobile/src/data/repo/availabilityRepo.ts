@@ -11,4 +11,3 @@ export const setTrainerAvailability = impl.setTrainerAvailability;
 export const hasAnyAvailability = impl.hasAnyAvailability;
 export const watchTrainerBusySlotsForDay = impl.watchTrainerBusySlotsForDay;
 export const computeFreeSlots = impl.computeFreeSlots;
-export type * from '../firebase/availabilityRepo';

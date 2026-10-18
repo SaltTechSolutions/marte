@@ -13,4 +13,4 @@ export const checkInByShortCode = impl.checkInByShortCode;
 export const confirmCheckInDespiteWarning = impl.confirmCheckInDespiteWarning;
 export const watchMyCheckins = impl.watchMyCheckins;
 export const watchTodayCheckins = impl.watchTodayCheckins;
-export type * from '../firebase/checkinRepo';
+export type { CheckInWarnReason } from '../firebase/checkinRepo';

@@ -11,4 +11,3 @@ export const requestRenewal = impl.requestRenewal;
 export const withdrawRenewal = impl.withdrawRenewal;
 export const watchPendingRenewals = impl.watchPendingRenewals;
 export const markRenewalHandled = impl.markRenewalHandled;
-export type * from '../firebase/renewalRequestRepo';

@@ -6,4 +6,3 @@ import { BACKEND } from '../backend';
 const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const reportExercise = impl.reportExercise;
-export type * from '../firebase/exerciseReportRepo';

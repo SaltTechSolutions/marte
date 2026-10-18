@@ -10,4 +10,3 @@ export const memberAddressId = impl.memberAddressId;
 export const watchMemberAddress = impl.watchMemberAddress;
 export const getMemberAddress = impl.getMemberAddress;
 export const setMemberAddress = impl.setMemberAddress;
-export type * from '../firebase/memberAddressRepo';

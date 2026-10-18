@@ -16,4 +16,3 @@ export const updateTenantOpeningHours = impl.updateTenantOpeningHours;
 export const getTenantContact = impl.getTenantContact;
 export const updateTenantContact = impl.updateTenantContact;
 export const uploadTenantLogo = impl.uploadTenantLogo;
-export type * from '../firebase/tenantRepo';

@@ -7,4 +7,3 @@ const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const watchUserSettings = impl.watchUserSettings;
 export const setNotificationPreference = impl.setNotificationPreference;
-export type * from '../firebase/userSettingsRepo';

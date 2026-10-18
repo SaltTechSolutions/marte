@@ -15,4 +15,3 @@ export const watchSessionsForTenant = impl.watchSessionsForTenant;
 export const reassignSession = impl.reassignSession;
 export const setSessionStatus = impl.setSessionStatus;
 export const cancelPtSession = impl.cancelPtSession;
-export type * from '../firebase/ptSessionRepo';

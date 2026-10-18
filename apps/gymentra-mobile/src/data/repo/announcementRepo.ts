@@ -12,4 +12,3 @@ export const watchAnnouncements = impl.watchAnnouncements;
 export const isLive = impl.isLive;
 export const createAnnouncement = impl.createAnnouncement;
 export const deleteAnnouncement = impl.deleteAnnouncement;
-export type * from '../firebase/announcementRepo';

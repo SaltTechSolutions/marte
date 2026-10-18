@@ -7,4 +7,3 @@ const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const registerPushToken = impl.registerPushToken;
 export const unregisterPushToken = impl.unregisterPushToken;
-export type * from '../firebase/pushTokenRepo';

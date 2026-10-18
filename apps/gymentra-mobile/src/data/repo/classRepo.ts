@@ -18,4 +18,4 @@ export const bookGroupClassWithCredit = impl.bookGroupClassWithCredit;
 export const cancelGroupClassWithCredit = impl.cancelGroupClassWithCredit;
 export const createClassSeries = impl.createClassSeries;
 export const deleteClassSeriesFrom = impl.deleteClassSeriesFrom;
-export type * from '../firebase/classRepo';
+export type { GroupBookingResult } from '../firebase/classRepo';

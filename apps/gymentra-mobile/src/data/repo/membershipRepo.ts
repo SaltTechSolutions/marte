@@ -27,4 +27,3 @@ export const leaveTenant = impl.leaveTenant;
 export const requestGuardian = impl.requestGuardian;
 export const respondToGuardian = impl.respondToGuardian;
 export const watchMyChildren = impl.watchMyChildren;
-export type * from '../firebase/membershipRepo';

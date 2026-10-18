@@ -12,4 +12,3 @@ export const saveExerciseLogs = impl.saveExerciseLogs;
 export const completeWorkoutLog = impl.completeWorkoutLog;
 export const watchWorkoutLogsForMember = impl.watchWorkoutLogsForMember;
 export const watchCompletedThisWeek = impl.watchCompletedThisWeek;
-export type * from '../firebase/workoutLogRepo';

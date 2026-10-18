@@ -11,4 +11,4 @@ export const setPromotionActive = impl.setPromotionActive;
 export const getPromotion = impl.getPromotion;
 export const watchPromotionsForTenant = impl.watchPromotionsForTenant;
 export const isPromotionUsable = impl.isPromotionUsable;
-export type * from '../firebase/promotionRepo';
+export type { PromotionDraft } from '../firebase/promotionRepo';

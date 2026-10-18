@@ -13,4 +13,4 @@ export const setPackageActive = impl.setPackageActive;
 export const createPackageVersion = impl.createPackageVersion;
 export const getGymPackage = impl.getGymPackage;
 export const watchPackagesForTenant = impl.watchPackagesForTenant;
-export type * from '../firebase/packageRepo';
+export type { PackageDraft } from '../firebase/packageRepo';

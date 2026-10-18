@@ -7,4 +7,3 @@ const impl: typeof fb = BACKEND === 'api' ? api : fb;
 
 export const addMeasurement = impl.addMeasurement;
 export const watchMeasurements = impl.watchMeasurements;
-export type * from '../firebase/measurementRepo';

@@ -13,4 +13,3 @@ export const watchPaymentsForTenant = impl.watchPaymentsForTenant;
 export const watchPaymentsForMember = impl.watchPaymentsForMember;
 export const submitGroupPaymentNotice = impl.submitGroupPaymentNotice;
 export const reversePayment = impl.reversePayment;
-export type * from '../firebase/paymentRepo';
