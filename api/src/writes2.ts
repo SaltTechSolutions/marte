@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
+import { bookClass, cancelBooking, deleteClass } from './groupClasses';
 import type { Env, Vars } from './types';
 
 type App = { Bindings: Env; Variables: Vars };
@@ -85,56 +86,12 @@ writes2.put('/tenants/:tenantId/classes/:id', async (c) => {
     .bind(JSON.stringify(parsed.data), parsed.startsAt, cls.id, c.req.param('tenantId')).run();
   return c.json({ ok: true });
 });
-writes2.delete('/tenants/:tenantId/classes/:id', async (c) => {
-  const cls = await loadClass(c);
-  if (!cls) return c.json({ ok: true });
-  if (!mayEditClass(await rolesOf(c), c.get('userId'), cls.data)) return forbidden(c);
-  // Refunds for credit-paid bookings are F3 (refundOnClassCancelled); bookings cascade.
-  await c.env.DB.prepare(`DELETE FROM classes WHERE id = ? AND tenant_id = ?`).bind(cls.id, c.req.param('tenantId')).run();
-  return c.json({ ok: true });
-});
+// Deleting a class refunds credit-paid bookings, notifies and cascades in one batch (F3, groupClasses.ts).
+writes2.delete('/tenants/:tenantId/classes/:id', deleteClass);
 
-// ---- group-class booking (unlimited-entitlement path only; credit-paid booking is F3) ----
-async function bookingFor(c: Ctx): Promise<{ who: string } | Response> {
-  const tenantId = c.req.param('tenantId')!;
-  const uid = c.get('userId');
-  const r = await rolesOf(c);
-  if (!uid || !r.length) return forbidden(c);
-  const who = ((await body(c)).memberId as string | undefined) ?? uid;
-  if (who === uid) return { who };
-  const link = await c.env.DB.prepare(
-    `SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id = ? AND guardian_id = ? AND guardian_status = 'approved'`,
-  ).bind(tenantId, who, uid).first();
-  return link ? { who } : forbidden(c);
-}
-writes2.post('/tenants/:tenantId/classes/:id/book', async (c) => {
-  const f = await bookingFor(c);
-  if (f instanceof Response) return f;
-  const cls = await loadClass(c);
-  if (!cls) return c.json({ error: 'not found' }, 404);
-  const tenantId = c.req.param('tenantId')!;
-  const now = Date.now();
-  // Entitlement, capacity and a live membership are all checked inside the insert itself.
-  await c.env.DB.prepare(
-    `INSERT INTO class_bookings (tenant_id, class_id, member_id, created_at)
-     SELECT ?1, ?2, ?3, ?4
-     WHERE EXISTS (SELECT 1 FROM member_packages WHERE tenant_id = ?1 AND member_id = ?3 AND status = 'active' AND ends_at > ?4
-                   AND json_extract(data, '$.entitlements.groupClasses.unlimited') = 1)
-       AND EXISTS (SELECT 1 FROM memberships WHERE tenant_id = ?1 AND member_id = ?3 AND status = 'active')
-       AND (SELECT count(*) FROM class_bookings WHERE class_id = ?2) < (SELECT json_extract(data, '$.capacity') FROM classes WHERE id = ?2)
-     ON CONFLICT DO NOTHING`,
-  ).bind(tenantId, cls.id, f.who, now).run();
-  const done = await c.env.DB.prepare(`SELECT 1 AS x FROM class_bookings WHERE class_id = ? AND member_id = ?`).bind(cls.id, f.who).first();
-  return done ? c.json({ ok: true }, 201) : c.json({ error: 'not eligible or class full' }, 409);
-});
-writes2.delete('/tenants/:tenantId/classes/:id/book', async (c) => {
-  const f = await bookingFor(c);
-  if (f instanceof Response) return f;
-  // Credit-backed bookings are refunded by the F3 cancel flow, never by a bare delete.
-  await c.env.DB.prepare(`DELETE FROM class_bookings WHERE class_id = ? AND member_id = ? AND tenant_id = ? AND credit_id IS NULL`)
-    .bind(c.req.param('id'), f.who, c.req.param('tenantId')).run();
-  return c.json({ ok: true });
-});
+// ---- group-class booking: unlimited entitlement or one credit; waitlist routes live in groupClasses.ts ----
+writes2.post('/tenants/:tenantId/classes/:id/book', bookClass);
+writes2.delete('/tenants/:tenantId/classes/:id/book', cancelBooking);
 
 // ---- programs & templates (staff) ----
 writes2.post('/tenants/:tenantId/programs', async (c) => {

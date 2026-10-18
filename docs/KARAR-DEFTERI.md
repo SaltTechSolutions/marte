@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-18 — F3 tamam (sunucu tarafı): PT, grup dersi, paket yaşam döngüsü, tenant/veli/hesap/faturalama, outbox, cron
+
+**Yapıldı.** Beş paralel dilim (PT oturumları; kredili ders/bekleme listesi/iade/yoklama; paket değişim-iptal-dondurma ve işler; tenant/ayar/iletişim/veli/hesap silme/RevenueCat; veri taşıma aracı) birleştirildi: `api/src/{pt,groupClasses,packageLifecycle,tenants,guardians,account,billing}.ts`, migration `0004, 0010, 0020, 0030, 0040`. **Transactional outbox** (`outbox` tablosu + `deliverOutbox`: Expo push, Resend e-posta, kiralama + üstel geri çekilme, 8 denemeden sonra `dead`) ve **Cron Trigger**'lar (dakikalık outbox, 15 dk hatırlatma, 00:05 İstanbul günlük paket işleri) bağlandı. Türkçe hata mesajı katmanı (`errorMessages.ts`): kodlar sürer, `message` Türkçe eklenir; bilinmeyen kod statü bazlı Türkçe yedeğe düşer. Matris: **250 satır, 228 eşlendi, 22 N/A, 0 F3, 0 GAP**. Staging D1'e migration'lar uygulandı ve Worker (cron'lu) deploy edildi.
+
+**Karar.** (1) Testler artık **iki motorda** koşuyor: `node:sqlite` ve `REAL_D1=1` ile workerd'in kendi D1 motoru (Miniflare). Gerçek motor iki gerçek hata buldu: aynı milisaniyedeki iki katılma/yenileme isteği ayırt edilemiyordu (`created_at` karşılaştırması → `RETURNING`). (2) Paket atama, değişim teklifi parası ve iade tutarı sunucuda hesaplanır; istemci yalnız seçer. (3) Hesap silme: ödeme kayıtları anonimleştirilerek saklanır, `users` satırı mezar taşı olarak kalır; Firebase Auth kullanıcısını silmek D1'den yapılamaz (yanıt `authDeletionRequired`). (4) Bekleme listesinden terfi eden üye de kredi öder (Firebase bedavaya terfi ettiriyordu). (5) Zaman dilimi `tenants.settings.timeZone`, varsayılan Europe/Istanbul; Firebase UTC çalışıyordu.
+
+**Bilerek yapılmadı.** Şifre sıfırlama (Firebase Auth kalıyor) ve logo/fotoğraf yükleme (R2 bağlantısı ve imzalı URL kararı gerekir); `seedDefaultPackages`; salondan üye çıkarma ucu. Canlı Firebase token ile uçtan uca koşu.
+
+**Açık.** `tenant_id` sayaçları ve `frozen_until` veri aktarımında doldurulmalı. Çoğu SQL gerçek D1 motorunda koştu ama **gerçek ağ/limit** (batch boyutu, CPU, eşzamanlı istek) staging'de ölçülmedi. Kullanıcı mesajlarının Türkçe metin incelemesi. `RESEND_API_KEY`, `REVENUECAT_WEBHOOK_SECRET` secret'ları tanımlı değil (webhook 503 döner, e-posta satırları yeniden dener). Mobil istemcinin API'ye geçişi (38 dosya) başlamadı; ortak istemci ve yoklama izleyicisi (`src/data/api/`) hazır.
+
+**Nerede.** `api/`, `docs/KURAL-TEST-MATRISI.md`, `apps/gymentra-mobile/src/data/api/`.
+
 ## 2026-10-15 — F3 ilk dilim: paket kataloğu, promosyon ve atama (sunucuda)
 
 **Yapıldı.** `api/src/packages.ts`: paket kataloğu (kullanımdaki paket yalnız `isActive`/`sortOrder` değiştirir, kontrol yazımın içinde tekrarlanır), promosyon CRUD (`redeemed` istemciden yazılamaz), ve **atama sunucuda**: indirim/bonus hesabı, `member_packages` + hak/kredi satırları + kullanım sayacı tek batch; promosyon tüketimi kapıdır, tükenmişse hiçbir şey yazılmaz. Firestore'da bu hesap istemcideydi (`assignPackageToMember`). 269 test, matris satırları güncellendi (192→203 eşlendi).

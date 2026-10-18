@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
+import { creditStatements, promoUsableSql, recountPackage, renewalResolution, usablePaymentSql } from './pkgSupport';
 import type { Env, Vars } from './types';
 
 type App = { Bindings: Env; Variables: Vars };
@@ -107,8 +108,11 @@ packages.post('/tenants/:tenantId/members/:memberId/packages', async (c) => {
   const memberId = c.req.param('memberId')!;
   const b = await body(c);
   const now = Date.now();
+  if (b.startsAt !== undefined && !(typeof b.startsAt === 'number' && Number.isSafeInteger(b.startsAt) && b.startsAt > 0)) return bad(c, 'startsAt');
   const startsAt = typeof b.startsAt === 'number' ? b.startsAt : now;
   if (typeof b.packageId !== 'string') return bad(c, 'packageId');
+  if (b.paymentId !== undefined && b.paymentId !== null && typeof b.paymentId !== 'string') return bad(c, 'paymentId');
+  const paymentId: string | null = typeof b.paymentId === 'string' ? b.paymentId : null;
 
   const m = await c.env.DB.prepare(`SELECT display_name FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'active'`)
     .bind(tenantId, memberId).first<{ display_name: string | null }>();
@@ -117,6 +121,11 @@ packages.post('/tenants/:tenantId/members/:memberId/packages', async (c) => {
   if (!pr) return c.json({ error: 'package not found' }, 404);
   const pkg = JSON.parse(pr.data);
   if (pkg.isActive !== true) return c.json({ error: 'package inactive' }, 409);
+  // The payment this sale is booked against: a confirmed, non-reversed charge of THIS member in THIS gym.
+  // (Re-checked inside the write below: a reversal landing in between must not slip through.)
+  if (paymentId && !(await c.env.DB.prepare(`SELECT ${usablePaymentSql('?1', '?2', '?3')} AS ok`).bind(paymentId, tenantId, memberId).first<{ ok: number }>())?.ok) {
+    return c.json({ error: 'payment is not a confirmed charge of this member' }, 409);
+  }
 
   let promo: { id: string; name: string; kind: string; value: number } | null = null;
   if (typeof b.promotionId === 'string') {
@@ -137,35 +146,40 @@ packages.post('/tenants/:tenantId/members/:memberId/packages', async (c) => {
     listPrice: pkg.price, ...(promo ? { promotionId: promo.id, promotionName: promo.name, bonusDays: fx.bonusDays, bonusLessons: fx.bonusLessons } : {}),
     frozenDays: 0, freezes: [], memberName: m.display_name ?? '',
   };
-  const credit = (kind: string, source: string, total: number, expiresAt: number) =>
-    c.env.DB.prepare(
-      `INSERT INTO member_credits (id, tenant_id, member_id, kind, source, source_package_id, total, used, starts_at, expires_at, status)
-       SELECT ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'active' WHERE EXISTS (SELECT 1 FROM member_packages WHERE id = ?)`,
-    ).bind(newId('cr'), tenantId, memberId, kind, source, id, total, startsAt, expiresAt, id);
+  // Everything the sale depends on, re-checked INSIDE the first write that can take effect. With a
+  // promotion that is the redemption UPDATE (the package row only exists if it matched, and the
+  // redemption must not be spent on a sale that then fails); without one it is the package INSERT.
+  // Optimistic lock on the catalog row: the price/terms we computed from must still be the stored ones.
+  const gate = (m: string, t: string, pk: string, raw: string, pay: string) =>
+    `EXISTS (SELECT 1 FROM memberships WHERE tenant_id = ${t} AND member_id = ${m} AND status = 'active')
+     AND EXISTS (SELECT 1 FROM gym_packages WHERE id = ${pk} AND tenant_id = ${t} AND data = ${raw} AND json_extract(data, '$.isActive') = 1)
+     AND (${pay} IS NULL OR ${usablePaymentSql(pay, t, m)})`;
 
   const stmts: D1PreparedStatement[] = [];
   if (promo) {
-    // Redemption is the gate: the package row below only exists if this UPDATE matched.
     stmts.push(c.env.DB.prepare(
       `UPDATE promotions SET data = json_set(data, '$.redeemed', COALESCE(json_extract(data, '$.redeemed'), 0) + 1)
-       WHERE id = ? AND tenant_id = ? AND COALESCE(json_extract(data, '$.redeemed'), 0) < COALESCE(json_extract(data, '$.maxRedemptions'), 1000000000)`,
-    ).bind(promo.id, tenantId));
+       WHERE id = ?1 AND tenant_id = ?2 AND COALESCE(json_extract(data, '$.redeemed'), 0) < COALESCE(json_extract(data, '$.maxRedemptions'), 1000000000)
+         AND ${gate('?3', '?2', '?4', '?5', '?6')}`,
+    ).bind(promo.id, tenantId, memberId, b.packageId, pr.data, paymentId));
   }
   stmts.push(c.env.DB.prepare(
     `INSERT INTO member_packages (id, tenant_id, member_id, package_id, final_price, starts_at, ends_at, status, payment_id, data, assigned_at, assigned_by)
-     SELECT ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ? ${promo ? 'WHERE changes() = 1' : ''}`,
-  ).bind(id, tenantId, memberId, b.packageId, fx.finalPrice, startsAt, endsAt, typeof b.paymentId === 'string' ? b.paymentId : null, JSON.stringify(row), now, c.get('userId')));
-  if (pkg.kind === 'lessons' && lessonCount > 0) stmts.push(credit('ptLesson', 'purchase', lessonCount, endsAt));
-  if (pkg.kind === 'membership') {
-    const gc = pkg.entitlements?.groupClasses, pt = pkg.entitlements?.ptLessons;
-    if (gc && !gc.unlimited && gc.count && gc.periodDays) stmts.push(credit('groupClass', 'entitlement', gc.count, startsAt + gc.periodDays * DAY));
-    if (pt?.count && pt.periodDays) stmts.push(credit('ptLesson', 'entitlement', pt.count, startsAt + pt.periodDays * DAY));
-  }
-  stmts.push(c.env.DB.prepare(
-    `UPDATE gym_packages SET active_assignment_count = (SELECT count(*) FROM member_packages WHERE package_id = ? AND status IN ('active','frozen')) WHERE id = ?`,
-  ).bind(b.packageId, b.packageId));
+     SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, 'active', ?8, ?9, ?10, ?11
+     WHERE ${promo ? 'changes() = 1' : gate('?3', '?2', '?4', '?12', '?8')}`,
+  ).bind(id, tenantId, memberId, b.packageId, fx.finalPrice, startsAt, endsAt, paymentId, JSON.stringify(row), now, c.get('userId'), ...(promo ? [] : [pr.data])));
+  stmts.push(...creditStatements(c.env.DB, { tenantId, memberId, assignmentId: id, pkg, startsAt, endsAt, lessonCount }));
+  stmts.push(recountPackage(c.env.DB, tenantId, b.packageId));
+  // Firebase resolveRenewalOnAssignment: this sale answers an open renewal request (adjacent pair, keep last).
+  stmts.push(...renewalResolution(c.env.DB, { tenantId, memberId, assignmentId: id, packageName: pkg.name, by: c.get('userId'), now }));
   await c.env.DB.batch(stmts);
 
   const made = await c.env.DB.prepare(`SELECT 1 AS x FROM member_packages WHERE id = ?`).bind(id).first();
-  return made ? c.json({ id, finalPrice: fx.finalPrice, endsAt }, 201) : c.json({ error: 'promotion exhausted' }, 409);
+  if (made) return c.json({ id, finalPrice: fx.finalPrice, endsAt }, 201);
+  // Nothing was written. Say why, from the state that won.
+  if (promo) {
+    const stillOk = await c.env.DB.prepare(`SELECT ${promoUsableSql('?1', '?2', '?3', '?4')} AS ok`).bind(promo.id, tenantId, now, b.packageId).first<{ ok: number }>();
+    if (!stillOk?.ok) return c.json({ error: 'promotion exhausted' }, 409);
+  }
+  return c.json({ error: 'assignment conflict: member, package or payment changed; retry' }, 409);
 });

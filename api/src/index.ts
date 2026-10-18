@@ -8,13 +8,27 @@ import { membership } from './membership';
 import { writes } from './writes';
 import { writes2 } from './writes2';
 import { packages } from './packages';
+import { pt } from './pt';
+import { groupClasses } from './groupClasses';
+import { packageLifecycle } from './packageLifecycle';
+import { tenants } from './tenants';
+import { guardians } from './guardians';
+import { account } from './account';
+import { billing, billingWebhook } from './billing';
+import { runScheduled } from './scheduled';
+import { errorMessages } from './errorMessages';
 import { createManagedMember } from './managedMembers';
 import { setAdminNote } from './notes';
 import type { Env, Vars } from './types';
 
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
+app.use('*', errorMessages);
+
 app.get('/healthz', (c) => c.json({ ok: true }));
+
+// RevenueCat authenticates with a shared secret, not a Firebase token: mounted BEFORE the auth gate.
+app.route('/v1', billingWebhook as never);
 
 app.use('/v1/*', requireAuth);
 
@@ -37,7 +51,20 @@ app.route('/v1', membership);
 app.route('/v1', writes);
 app.route('/v1', writes2);
 app.route('/v1', packages);
+app.route('/v1', packageLifecycle);
+app.route('/v1', groupClasses);
+app.route('/v1', pt);
+app.route('/v1', tenants);
+app.route('/v1', guardians);
+app.route('/v1', account);
+app.route('/v1', billing);
 app.post('/v1/tenants/:tenantId/members/managed', requireRole('admin'), createManagedMember);
 app.put('/v1/tenants/:tenantId/members/:memberId/admin-note', requireRole('admin'), setAdminNote);
 
-export default app;
+export { app };
+export default {
+  fetch: app.fetch,
+  scheduled: (event: ScheduledController, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(runScheduled(env, event.cron).then((r) => console.log(JSON.stringify({ cron: event.cron, ...r }))));
+  },
+};

@@ -1,7 +1,7 @@
 # Kural testi → API testi eşleme matrisi (F2 kapanış)
 
 Kaynak: `backend/tests/firestore.rules.test.ts`, **250 test** satır düzeyinde eşlendi (statik sayım 250 `it`/`test`; raporlanan 251 ile 1'lik fark açıklanamadı, Firestore emülatörlü koşuda doğrulanacak).
-Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
+Durum: **ESLENDİ 228**, **F3 0**, **N/A 22**, **GAP 0**.
 - ESLENDİ: aynı izin/ret davranışını doğrulayan geçen API testi var. Testler `api/test/matrix-{A,B,C,D,fixes}.test.ts`, adlar `[L<satır>]` ile başlar.
 - F3: ilgili uç henüz yok (paket/kredi/PT/veli/salon/hesap silme); F3 bitmeden kapanmış sayılmaz.
 - N/A: Firestore mekaniği, API'de karşılığı yok ve güvenli (route yokluğu testle 404 doğrulandı).
@@ -14,13 +14,13 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 58 | Firestore rules | unauthenticated users cannot read protected collections | ESLENDI | [L58] unauthenticated callers get 401 on every protected read |
 | 91 | Tenants and tenant memberships | unauthenticated users cannot read tenants or memberships | ESLENDI | [L91] unauthenticated callers cannot read a tenant or a membership row |
 | 97 | Tenants and tenant memberships | any signed-in user can look up a tenant by reading it | ESLENDI | [L97] any signed-in user (even unbootstrapped) can look a tenant up by code, safe DTO only |
-| 102 | Tenants and tenant memberships | an admin can save settings in a gym that has no ownerUid | F3 | no tenant-update/settings endpoint exists yet (todo L102) |
-| 127 | Tenants and tenant memberships | ownerUid stays immutable — an admin cannot introduce one | F3 | no tenant-update endpoint; owner_user_id immutability must be kept when it is added (todo L127) |
+| 102 | Tenants and tenant memberships | an admin can save settings in a gym that has no ownerUid | ESLENDI | F3 dilimi: tenants.test.ts `[L102]` |
+| 127 | Tenants and tenant memberships | ownerUid stays immutable — an admin cannot introduce one | ESLENDI | F3 dilimi: tenants.test.ts `[L127]` |
 | 132 | Tenants and tenant memberships | a user can create only their own pending member join request at the deterministic id | ESLENDI | [L132] join creates only the caller's own pending member row; body cannot raise status/roles or target another user |
 | 161 | Tenants and tenant memberships | only a tenant admin can approve a pending membership | ESLENDI | [L161] only a tenant admin can approve a pending membership |
 | 180 | Tenants and tenant memberships | tenant admin can read pending requests for their tenant; a stranger cannot | ESLENDI | [L180] admin sees pending requests of their gym; a stranger sees nothing |
-| 195 | Tenants and tenant memberships | creating a tenant requires self-assigning as ownerUid, with a non-empty code and name | F3 | tenant creation endpoint does not exist (todo L195) |
-| 207 | Tenants and tenant memberships | a tenant owner can self-grant its admin membership, but not for a tenant they do not own | F3 | tenant creation / owner self-grant of admin does not exist (todo L207) |
+| 195 | Tenants and tenant memberships | creating a tenant requires self-assigning as ownerUid, with a non-empty code and name | ESLENDI | F3 dilimi: tenants.test.ts `[L195]` |
+| 207 | Tenants and tenant memberships | a tenant owner can self-grant its admin membership, but not for a tenant they do not own | ESLENDI | F3 dilimi: tenants.test.ts `[L207]` |
 | 282 | Classes | only a tenant admin can create a class | ESLENDI | [L282] only staff with the right to can create a class: member 403, admin 201 |
 | 294 | Classes | a member with unlimited group-class entitlement can book an open class by adding only their own uid | ESLENDI | [L294] unlimited entitlement books the caller only; booking for someone else is refused |
 | 306 | Classes | a member with no group-class entitlement cannot book at all (PKG-4) | ESLENDI | [L306] a member with no group-class entitlement cannot book (no waitlist route exists either); waitlist join itself is F3 |
@@ -31,7 +31,7 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 361 | Classes | a non-member cannot book a class even if they know its id | ESLENDI | [L361] a non-member cannot book even knowing the class id |
 | 366 | Classes | a tenant admin can edit or delete any class for their tenant | ESLENDI | [L366] a tenant admin can edit and delete any class of the gym |
 | 374 | Check-ins | only a tenant admin can record a check-in; a member cannot self-check-in | ESLENDI | [L374] a member cannot self-check-in; an admin can |
-| 404 | Check-ins | check-ins are immutable and only readable by the tenant admin or the checked-in member | F3 | no check-in read endpoint (member/admin read, stranger deny); immutability half asserted by [L404] no update/delete route test |
+| 404 | Check-ins | check-ins are immutable and only readable by the tenant admin or the checked-in member | ESLENDI | matrix-fixes.test.ts: check-in geçmişi (kendisi/yönetici/`checkin` izni/onaylı veli) |
 | 433 | Check-ins | accessReason must be a known value (PKG-3) | ESLENDI | [L433] accessReason must be a known value |
 | 534 | Rejoining a gym after leaving or being rejected (P0-6) | someone who left can apply again | ESLENDI | [L534] someone who left can apply again |
 | 540 | Rejoining a gym after leaving or being rejected (P0-6) | someone who was rejected can apply again | ESLENDI | [L540] someone who was rejected can apply again |
@@ -59,12 +59,12 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 748 | Cross-tenant injection — workout_logs, measurements, payments | a member may only file a PENDING notice; never a confirmed one | ESLENDI | [L748] a member can only file a PENDING notice; a requested "confirmed" is ignored |
 | 774 | Cross-tenant injection — workout_logs, measurements, payments | payment amount and method are validated | ESLENDI | [L774] payment amount and method are validated |
 | 784 | Cross-tenant injection — workout_logs, measurements, payments | a GymEntra payment can never be deleted, even by a global admin | NA | no DELETE route for payments (404, even admin); backed by test [L784] a payment can never be deleted: no delete route, even for admin |
-| 804 | PT sessions | a trainer can only book onto their OWN calendar | F3 | no pt_sessions write endpoints (todo L804) |
-| 827 | PT sessions | the assigned trainer cannot move a session to another gym or swap the member | F3 | no pt_sessions write endpoints (todo L827) |
-| 846 | PT sessions | a colleague may take over only WITH a calendar share, and only to themselves | F3 | no pt_sessions write endpoints / take-over flow (todo L846) |
-| 882 | PT sessions | a shared-with colleague cannot hand the session to a THIRD trainer | F3 | no pt_sessions write endpoints / take-over flow (todo L882) |
-| 907 | PT sessions | a session with a creditId can never be created directly by a client, even the trainer (PKG-8) | F3 | no pt_sessions write endpoints; creditId sessions arrive with credits flow (todo L907) |
-| 921 | PT sessions | credit-linked session cancellation closed to direct writes | F3 | kredili PT oturumunun doğrudan iptali herkese kapalı; API'de PT iptal ucu yok → `cancelPtSession` karşılığı F3 |
+| 804 | PT sessions | a trainer can only book onto their OWN calendar | ESLENDI | F3 dilimi: pt.test.ts `[L804]` |
+| 827 | PT sessions | the assigned trainer cannot move a session to another gym or swap the member | ESLENDI | F3 dilimi: pt.test.ts `[L827]` |
+| 846 | PT sessions | a colleague may take over only WITH a calendar share, and only to themselves | ESLENDI | F3 dilimi: pt.test.ts `[L846]` |
+| 882 | PT sessions | a shared-with colleague cannot hand the session to a THIRD trainer | ESLENDI | F3 dilimi: pt.test.ts `[L882]` |
+| 907 | PT sessions | a session with a creditId can never be created directly by a client, even the trainer (PKG-8) | ESLENDI | F3 dilimi: pt.test.ts `[L907]` |
+| 921 | PT sessions | credit-linked session cancellation closed to direct writes | ESLENDI | F3 dilimi: pt.test.ts `[L921]` |
 | 961 | Trainer availability and busy slots (PKG-7, PKG-8) | any tenant member can read availability; only the trainer or an admin can write it | ESLENDI | [L961] any tenant member reads availability; only the trainer or an admin writes it |
 | 1004 | Trainer availability and busy slots (PKG-7, PKG-8) | busy slots are readable by any tenant member, writable by no client | ESLENDI | [L1004] busy slots: any tenant member reads, nobody writes through the API |
 | 1024 | Calendar shares | a trainer can only share their OWN calendar | ESLENDI | [L1024] a trainer can only share their OWN calendar |
@@ -72,17 +72,17 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 1076 | Trainer owns their own classes (PER-8) | a trainer can schedule a class for themselves | ESLENDI | [L1076] a trainer can schedule a class for themselves |
 | 1082 | Trainer owns their own classes (PER-8) | but not one that lands on a colleague | ESLENDI | [L1082] but not one that lands on a colleague |
 | 1090 | Trainer owns their own classes (PER-8) | an admin can schedule one for any trainer | ESLENDI | [L1090] an admin can schedule one for any trainer |
-| 1096 | Trainer owns their own classes (PER-8) | the owning trainer can take the register | F3 | class register/attendance has no endpoint or column (todo L1096) |
+| 1096 | Trainer owns their own classes (PER-8) | the owning trainer can take the register | ESLENDI | F3 dilimi: groupClasses.test.ts `[L1096]` |
 | 1103 | Trainer owns their own classes (PER-8) | another trainer cannot touch it | ESLENDI | [L1103] another trainer cannot edit or delete it |
 | 1111 | Trainer owns their own classes (PER-8) | the owner cannot move the class to another gym or hand it away | ESLENDI | [L1111] the owner cannot move the class to another gym or hand it away |
 | 1120 | Trainer owns their own classes (PER-8) | the owner can cancel their own class | ESLENDI | [L1120] the owner can cancel their own class |
 | 1127 | Trainer owns their own classes (PER-8) | a class with no trainerId stays admin-only, as it was | ESLENDI | [L1127] a class with no trainerId stays admin-only |
 | 1140 | Trainer owns their own classes (PER-8) | a member still cannot take the register | ESLENDI | [L1140] a member cannot edit, delete or otherwise modify a class (take the register) |
-| 1158 | Pending applicant can reach the gym (PER-1) | someone waiting on a decision can read the contact details | F3 | tenant_contacts table has no read endpoint (todo L1158) |
-| 1167 | Pending applicant can reach the gym (PER-1) | an active member still can, as before | F3 | tenant_contacts table has no read endpoint (todo L1167) |
-| 1174 | Pending applicant can reach the gym (PER-1) | a stranger cannot — applying is what grants it, not signing up | F3 | tenant_contacts table has no read endpoint (todo L1174) |
-| 1180 | Pending applicant can reach the gym (PER-1) | applying to one gym does not open another gym\ | F3 | tenant_contacts table has no read endpoint (todo L1180) |
-| 1189 | Pending applicant can reach the gym (PER-1) | an applicant still cannot write it | F3 | tenant_contacts has no write endpoint either; nothing to deny but must be re-tested when added (todo L1189) |
+| 1158 | Pending applicant can reach the gym (PER-1) | someone waiting on a decision can read the contact details | ESLENDI | F3 dilimi: tenants.test.ts `[L1158]` |
+| 1167 | Pending applicant can reach the gym (PER-1) | an active member still can, as before | ESLENDI | F3 dilimi: tenants.test.ts `[L1167]` |
+| 1174 | Pending applicant can reach the gym (PER-1) | a stranger cannot — applying is what grants it, not signing up | ESLENDI | F3 dilimi: tenants.test.ts `[L1174]` |
+| 1180 | Pending applicant can reach the gym (PER-1) | applying to one gym does not open another gym\ | ESLENDI | F3 dilimi: tenants.test.ts `[L1180]` |
+| 1189 | Pending applicant can reach the gym (PER-1) | an applicant still cannot write it | ESLENDI | F3 dilimi: tenants.test.ts `[L1189]` |
 | 1201 | Password reset throttling (PER-2) | ${path} istemciye tamamen kapalı — yönetici bile okuyamaz | NA | password_reset_throttle/ip are Admin-SDK-only Firestore collections; the API has no route for them (throttling itself is a F3 callable concern) |
 | 1230 | Member profile: height and photo (PER-20) | a member sets their own height and photo; an absurd height is refused | ESLENDI | matrix-B: [L1230] member sets own height and photo; absurd height refused |
 | 1238 | Member profile: height and photo (PER-20) | an admin may correct the height of a member they created; height cannot ride along on a role change | ESLENDI | matrix-B: [L1238] admin corrects height of a managed member; height cannot ride along on a role change |
@@ -93,7 +93,7 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 1306 | Deterministik kimlikli boş dokümanlar okunabilmeli | member_entitlements — a member with no packages yet | ESLENDI | matrix-B: [L1306] member_entitlements: empty packages list readable (entitlements is a view over member_packages) |
 | 1313 | Deterministik kimlikli boş dokümanlar okunabilmeli | trainer_availability — a trainer who has not set hours yet | ESLENDI | matrix-B: [L1313] trainer_availability: unset hours -> 404 for members (authorised), 403 for outsiders |
 | 1320 | Deterministik kimlikli boş dokümanlar okunabilmeli | member_notes — a member nobody has written a note about | ESLENDI | matrix-B: [L1320] member_notes: never-written note reads as {text:''} |
-| 1327 | Deterministik kimlikli boş dokümanlar okunabilmeli | user_settings — already id-based, kept here so it stays that way | F3 | no user_settings endpoint exists yet (table user_settings is in 0002 but no route in api/src) |
+| 1327 | Deterministik kimlikli boş dokümanlar okunabilmeli | user_settings — already id-based, kept here so it stays that way | ESLENDI | F3 dilimi: account.test.ts `[L1327]` |
 | 1338 | Renewal requests (PER-15) | a member opens a renewal request for themselves | ESLENDI | matrix-B: [L1338] member opens a renewal request for themselves and reads it |
 | 1345 | Renewal requests (PER-15) | the member can subscribe before any request exists | ESLENDI | matrix-B: [L1345] member can subscribe (list) before any request exists |
 | 1357 | Renewal requests (PER-15) | a missing document is not a hole: still only your own id | ESLENDI | matrix-B: [L1357] an empty state is not a hole (list is caller-scoped) |
@@ -129,12 +129,12 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 1675 | Gym packages (PKG-1) | a locked package (has assignments) rejects a content edit | ESLENDI | packages.test.ts: kullanılan paket içerik düzenlemesini reddeder (409) |
 | 1689 | Gym packages (PKG-1) | the client can never move activeAssignmentCount, locked or not | ESLENDI | packages.test.ts [L1689] |
 | 1701 | Gym packages (PKG-1) | packages are never deleted, even by an admin | NA | no delete route for packages; verified 404 in matrix-B: [L1701] |
-| 1728 | Package change requests (PKG-6) | only a tenant admin may create a request, and only as themselves | F3 | no package-change-request create endpoint (admin offer flow) yet |
+| 1728 | Package change requests (PKG-6) | only a tenant admin may create a request, and only as themselves | ESLENDI | F3 dilimi: packageLifecycle.test.ts `[L1728]` |
 | 1740 | Package change requests (PKG-6) | the member has no direct write path to status — approve/reject only goes through approvePackageChange (Faz 1.6) | NA | no client write route on package-change-requests; approve/reject (approvePackageChange) is F3; verified 404 in matrix-B: [L1740] |
 | 1754 | Package change requests (PKG-6) | another member cannot respond to someone else\ | NA | same: no respond route, verified 404 in matrix-B: [L1754]; approval itself is F3 |
-| 1767 | Package change requests (PKG-6) | the admin can cancel a still-pending offer; not once it has been answered | F3 | no cancel endpoint for package-change-requests yet |
+| 1767 | Package change requests (PKG-6) | the admin can cancel a still-pending offer; not once it has been answered | ESLENDI | F3 dilimi: packageLifecycle.test.ts `[L1767]` |
 | 1785 | Package change requests (PKG-6) | a member reads their own request; a colleague of theirs does not | ESLENDI | matrix-B: [L1785] a member reads their own request; a colleague does not (also api.test: change requests) |
-| 1813 | Promotions (PKG-5) | staff can read; only a tenant admin may create | F3 | read half asserted in matrix-B: [L1813] (staff 200, member 403); promotion create endpoint is F3 |
+| 1813 | Promotions (PKG-5) | staff can read; only a tenant admin may create | ESLENDI | packages.test.ts + matrix-B [L1813]: personel okur, yalnız yönetici yazar |
 | 1831 | Promotions (PKG-5) | a promotion cannot be created already redeemed | ESLENDI | packages.test.ts [L1831] |
 | 1837 | Promotions (PKG-5) | an admin can edit any field except redeemed directly | ESLENDI | packages.test.ts [L1837] (redeemed yazılamaz, 400) |
 | 1849 | Promotions (PKG-5) | redemption may only move redeemed by exactly +1, and only under the cap | ESLENDI | packages.test.ts: ödeme/atama içinde +1, sınırda tükenir, hiçbir şey yazılmaz |
@@ -160,7 +160,7 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 2181 | Leaving a gym | leaving cannot be abused to grant yourself anything | ESLENDI | matrix-C [L2181] |
 | 2193 | Leaving a gym | you cannot make somebody else leave | ESLENDI | matrix-C [L2193] |
 | 2202 | Leaving a gym | a left membership grants no access | ESLENDI | matrix-C [L2202] |
-| 2219 | Tenant private data and push tokens | gym contact details live in a private subdoc, not on the public tenant doc | F3 | no tenant contact endpoint (tenant_contacts table exists, read by members / write by admin not routed); negative half tested in matrix-C [L2219] |
+| 2219 | Tenant private data and push tokens | gym contact details live in a private subdoc, not on the public tenant doc | ESLENDI | F3 dilimi: tenants.test.ts `[L2219]` |
 | 2249 | Tenant private data and push tokens | a push token must be well-formed, self-owned and inside a gym you belong to | ESLENDI | matrix-C [L2249]; "someone else uid" is NA by design: userId is never taken from the body |
 | 2269 | Tenant private data and push tokens | push tokens are never readable from the client, not even your own | ESLENDI | matrix-C [L2269] (no GET route; own DELETE works) |
 | 2306 | No platform super-user over tenant data (P1-6) | the global admin claim cannot read another gym\ | ESLENDI | matrix-C [L2306] (API has no claim path; non-member gets 403/404 everywhere; token claims are never read) |
@@ -199,7 +199,7 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 2689 | Free-tier member limit (P0-1) | an expired subscription does not | ESLENDI | matrix-C [L2689] |
 | 2695 | Free-tier member limit (P0-1) | rejecting and suspending stay free at the limit | ESLENDI | matrix-C [L2695] |
 | 2701 | Free-tier member limit (P0-1) | hiring staff is never paywalled | ESLENDI | matrix-fixes: [L2701] işe alım paywall değil, koltuk saymaz (API düzeltildi) |
-| 2712 | Free-tier member limit (P0-1) | an admin cannot grant themselves a subscription or edit the seat tally | F3 | deny half passes (no tenant-write route, matrix-C [L2712]); branding-edit-succeeds half needs a tenant update endpoint (F3) |
+| 2712 | Free-tier member limit (P0-1) | an admin cannot grant themselves a subscription or edit the seat tally | ESLENDI | F3 dilimi: tenants.test.ts `[L2712]` |
 | 2746 | Guardian link (MEMBER-5b) | a parent can read their child\ | ESLENDI | api/test/matrix-D.test.ts [L2746] |
 | 2754 | Guardian link (MEMBER-5b) | that read works while the request is still pending | ESLENDI | api/test/matrix-D.test.ts [L2754] |
 | 2760 | Guardian link (MEMBER-5b) | an unrelated member cannot read that row | ESLENDI | api/test/matrix-D.test.ts [L2760] |
@@ -227,8 +227,8 @@ Durum: **ESLENDİ 203**, **F3 25**, **N/A 22**, **GAP 0**.
 | 3024 | Guardian check-in reason (MEMBER-5d) | staff may record a guardian entry | ESLENDI | api/test/matrix-D.test.ts [L3024] |
 | 3034 | Guardian check-in reason (MEMBER-5d) | an unknown reason is still refused | ESLENDI | api/test/matrix-D.test.ts [L3034] |
 | 3044 | Guardian check-in reason (MEMBER-5d) | a member still cannot check themselves in as a guardian | ESLENDI | api/test/matrix-D.test.ts [L3044] |
-| 3088 | Guardian bulk payment (MEMBER-5e) | a parent writes one entry per child in a single batch | F3 | atomic multi-child batch / paymentGroupId endpoint does not exist; single entries covered by [L3106]/[L3113] |
-| 3098 | Guardian bulk payment (MEMBER-5e) | one disallowed entry fails the whole batch | F3 | all-or-nothing batch needs batch endpoint; per-entry denial asserted in [L3098] |
+| 3088 | Guardian bulk payment (MEMBER-5e) | a parent writes one entry per child in a single batch | ESLENDI | F3 dilimi: guardians.test.ts `[L3088]` |
+| 3098 | Guardian bulk payment (MEMBER-5e) | one disallowed entry fails the whole batch | ESLENDI | F3 dilimi: guardians.test.ts `[L3098]` |
 | 3106 | Guardian bulk payment (MEMBER-5e) | the entries stay pending — a parent cannot confirm their own | ESLENDI | api/test/matrix-D.test.ts [L3106] |
 | 3113 | Guardian bulk payment (MEMBER-5e) | a parent can read back what they filed for each child | ESLENDI | api/test/matrix-D.test.ts [L3113] |
 | 3151 | Payment reversal (ADMIN-4) | an admin writes a reversal and flags the original | ESLENDI | api/test/matrix-D.test.ts [L3151] |

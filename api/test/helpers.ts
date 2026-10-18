@@ -3,6 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import app from '../src/index';
 import { __setKeyResolver } from '../src/auth';
 import { makeDb } from './d1shim';
+import { makeRealDb } from './d1real';
 
 export const PROJECT = 'proj-test';
 
@@ -15,7 +16,7 @@ export async function harness() {
   const { publicKey, privateKey } = await generateKeyPair('RS256');
   const keys = createLocalJWKSet({ keys: [{ ...(await exportJWK(publicKey)), alg: 'RS256', kid: 'k1' }] });
   __setKeyResolver(() => keys);
-  const db = makeDb();
+  const db = process.env.REAL_D1 ? await makeRealDb() : makeDb();
   const run = (q: string, ...a: unknown[]) => db.prepare(q).bind(...a).run();
   const one = async (q: string, ...a: unknown[]) => await db.prepare(q).bind(...a).first<any>();
   const sign = (sub: string, aud = PROJECT) =>

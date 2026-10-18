@@ -181,13 +181,13 @@ writes.post('/tenants/:tenantId/renewal-request', async (c) => {
   const u = await c.env.DB.prepare(`SELECT display_name FROM users WHERE id = ?`).bind(uid).first<any>();
   const id = `${tenantId}_${uid}`;
   const now = Date.now();
-  await c.env.DB.prepare(
+  // RETURNING yields a row only when the insert/upsert actually wrote (a second pending request matches nothing).
+  const written = await c.env.DB.prepare(
     `INSERT INTO renewal_requests (id, tenant_id, member_id, member_name, status, note, created_at) VALUES (?, ?, ?, ?, 'pending', ?, ?)
      ON CONFLICT (id) DO UPDATE SET status = 'pending', note = excluded.note, created_at = excluded.created_at, handled_at = NULL, handled_by = NULL
-     WHERE renewal_requests.status != 'pending'`,
-  ).bind(id, tenantId, uid, u?.display_name ?? null, typeof note === 'string' ? note : null, now).run();
-  const row = await c.env.DB.prepare(`SELECT created_at FROM renewal_requests WHERE id = ?`).bind(id).first<any>();
-  return row?.created_at === now ? c.json({ id }, 201) : c.json({ error: 'already pending' }, 409);
+     WHERE renewal_requests.status != 'pending' RETURNING id`,
+  ).bind(id, tenantId, uid, u?.display_name ?? null, typeof note === 'string' ? note : null, now).first<any>();
+  return written ? c.json({ id }, 201) : c.json({ error: 'already pending' }, 409);
 });
 writes.post('/tenants/:tenantId/renewal-request/withdraw', async (c) => {
   const uid = c.get('userId');

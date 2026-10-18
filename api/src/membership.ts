@@ -43,20 +43,19 @@ membership.post('/tenants/:tenantId/join', async (c) => {
   if (!t) return c.json({ error: 'not found' }, 404);
   const u = await c.env.DB.prepare(`SELECT display_name, email FROM users WHERE id = ?`).bind(uid).first<any>();
   const now = Date.now();
-  await c.env.DB.batch([
-    c.env.DB.prepare(
-      `INSERT INTO memberships (tenant_id, member_id, status, roles, display_name, email, requested_at)
-       VALUES (?, ?, 'pending', '["member"]', ?, ?, ?)
-       ON CONFLICT (tenant_id, member_id) DO UPDATE SET status = 'pending', roles = '["member"]', permissions = '[]',
-         approved_at = NULL, left_at = NULL, requested_at = excluded.requested_at,
-         guardian_id = NULL, guardian_name = NULL, guardian_status = NULL
-       WHERE memberships.status IN ('left','rejected')`,
-    ).bind(tenantId, uid, u?.display_name ?? null, u?.email ?? null, now),
-  ]);
-  const row = await c.env.DB.prepare(`SELECT status, requested_at FROM memberships WHERE tenant_id = ? AND member_id = ?`)
-    .bind(tenantId, uid).first<{ status: string; requested_at: number }>();
-  // A row that was already pending/active/suspended is left untouched: 409, never a silent reset.
-  if (!row || row.requested_at !== now) return c.json({ error: 'already a member', status: row?.status }, 409);
+  // RETURNING yields a row only when the row was inserted or reset (left/rejected); anything else is untouched.
+  const written = await c.env.DB.prepare(
+    `INSERT INTO memberships (tenant_id, member_id, status, roles, display_name, email, requested_at)
+     VALUES (?, ?, 'pending', '["member"]', ?, ?, ?)
+     ON CONFLICT (tenant_id, member_id) DO UPDATE SET status = 'pending', roles = '["member"]', permissions = '[]',
+       approved_at = NULL, left_at = NULL, requested_at = excluded.requested_at,
+       guardian_id = NULL, guardian_name = NULL, guardian_status = NULL
+     WHERE memberships.status IN ('left','rejected') RETURNING member_id`,
+  ).bind(tenantId, uid, u?.display_name ?? null, u?.email ?? null, now).first();
+  if (!written) {
+    const row = await c.env.DB.prepare(`SELECT status FROM memberships WHERE tenant_id = ? AND member_id = ?`).bind(tenantId, uid).first<{ status: string }>();
+    return c.json({ error: 'already a member', status: row?.status }, 409);
+  }
   return c.json({ status: 'pending' }, 201);
 });
 

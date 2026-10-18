@@ -96,7 +96,7 @@ describe('A: classes and booking', () => {
     await h.addUser('u-bare', ['member']);
     await seedClass('open', { name: 'HIIT', capacity: 10 });
     expect((await h.send('POST', '/v1/tenants/t1/classes/open/book', 'fb-bare')).status).toBe(409);
-    expect((await h.send('POST', '/v1/tenants/t1/classes/open/waitlist', 'fb-bare')).status).toBe(404);
+    expect((await h.send('POST', '/v1/tenants/t1/classes/open/waitlist', 'fb-bare')).status).toBe(409);   // F3: the waitlist route exists and refuses without an entitlement
     expect(await h.one(`SELECT count(*) c FROM class_bookings`)).toEqual({ c: 0 });
   });
 
@@ -379,14 +379,6 @@ describe('A: cross-tenant injection (logs, measurements, payments)', () => {
   });
 });
 
-describe('A: PT sessions (F3: no pt_sessions write endpoints yet)', () => {
-  it.todo('[L804] F3: trainer books only onto their OWN calendar');
-  it.todo('[L827] F3: assigned trainer cannot move a session to another gym or swap the member');
-  it.todo('[L846] F3: colleague takes over only WITH a calendar share, and only to themselves');
-  it.todo('[L882] F3: shared-with colleague cannot hand the session to a THIRD trainer');
-  it.todo('[L907] F3: a session with a creditId can never be created directly by a client');
-});
-
 describe('A: availability, busy slots, calendar shares', () => {
   beforeEach(async () => {
     await h.addUser('u-t1', ['trainer']);
@@ -459,7 +451,6 @@ describe('A: trainer owns their own classes (PER-8)', () => {
     expect((await h.send('POST', '/v1/tenants/t1/classes', 'fb-admin', klass({ trainerId: 'u-t9' }))).status).toBe(201);
   });
 
-  it.todo('[L1096] F3: owning trainer taking the register (attendance) has no endpoint or column');
 
   it('[L1103] another trainer cannot edit or delete it', async () => {
     await seedClass('c5', klass());
@@ -499,16 +490,4 @@ describe('A: trainer owns their own classes (PER-8)', () => {
     expect((await h.send('DELETE', '/v1/tenants/t1/classes/c8', 'fb-mem')).status).toBe(403);
     expect((await cdata('c8')).attendance).toBeUndefined();
   });
-});
-
-describe('A: F3 / not-yet-existing endpoints', () => {
-  it.todo('[L102] F3: tenant settings save (PATCH tenant) by an admin of a gym without owner');
-  it.todo('[L127] F3: tenant ownerUid stays immutable once a tenant-update route exists');
-  it.todo('[L195] F3: tenant creation requires self as owner, non-empty code and name');
-  it.todo('[L207] F3: tenant owner self-grants admin membership; a stranger cannot');
-  it.todo('[L1158] F3: pending applicant reads gym contact details (tenant_contacts has no route)');
-  it.todo('[L1167] F3: active member reads gym contact details');
-  it.todo('[L1174] F3: stranger cannot read gym contact details');
-  it.todo('[L1180] F3: applying to one gym does not open another gym\'s contact details');
-  it.todo('[L1189] F3: an applicant cannot write the gym contact details');
 });
