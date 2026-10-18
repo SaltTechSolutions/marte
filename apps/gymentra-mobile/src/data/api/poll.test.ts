@@ -9,7 +9,7 @@ vi.mock('react-native', () => ({
   },
 }));
 
-const { pollWatch, invalidate } = await import('./poll');
+const { pollWatch, invalidate, stopAllPollers } = await import('./poll');
 
 beforeEach(() => { vi.useFakeTimers(); state.current = 'active'; listeners.length = 0; });
 afterEach(() => vi.useRealTimers());
@@ -68,6 +68,17 @@ describe('pollWatch', () => {
     stop();
     await vi.advanceTimersByTimeAsync(10_000);
     expect(f).toHaveBeenCalledTimes(1);
+    expect(listeners).toHaveLength(0);
+  });
+
+  it('stopAllPollers() ends every poller at once (sign-out)', async () => {
+    const f = vi.fn(async () => 1);
+    pollWatch('a', f, vi.fn(), undefined, { intervalMs: 1000, jitter: 0 });
+    pollWatch('b', f, vi.fn(), undefined, { intervalMs: 1000, jitter: 0 });
+    await vi.advanceTimersByTimeAsync(0);
+    stopAllPollers();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(f).toHaveBeenCalledTimes(2);
     expect(listeners).toHaveLength(0);
   });
 });

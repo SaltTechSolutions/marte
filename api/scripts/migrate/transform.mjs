@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Firestore export -> D1 INSERT statements. Pure transformation: no network, no Firebase, no wrangler.
 //
-//   node transform.mjs --in EXPORT_DIR --out SQL_DIR [--money-scale 1] [--chunk 500] [--no-verify]
+//   node transform.mjs --in EXPORT_DIR --out SQL_DIR [--money-scale 100] [--chunk 500] [--no-verify]
 //
 // Library use: transformAll(exportDir | {collection: docs[]} | Map, opts) -> { sql, resetSql, idMap, report, rows }
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -67,7 +67,7 @@ export function readExportDir(dir) {
 const normalise = (input) => (typeof input === 'string' ? readExportDir(input) : input instanceof Map ? Object.fromEntries(input) : input);
 
 export function transformAll(input, options = {}) {
-  const opts = { moneyScale: 1, migrationsDir: DEFAULT_MIGRATIONS_DIR, ...options };
+  const opts = { moneyScale: 100, migrationsDir: DEFAULT_MIGRATIONS_DIR, ...options };
   if (!Number.isInteger(opts.moneyScale) || opts.moneyScale < 1) throw new Error('moneyScale must be a positive integer (1 = as stored, 100 = lira to kurus)');
   const data = normalise(input);
   const schema = opts.schema ?? loadSchema(opts.migrationsDir);
@@ -187,7 +187,7 @@ export function formatReport(report) {
 async function main() {
   const { values } = parseArgs({
     options: {
-      in: { type: 'string' }, out: { type: 'string' }, migrations: { type: 'string' }, 'money-scale': { type: 'string', default: '1' },
+      in: { type: 'string' }, out: { type: 'string' }, migrations: { type: 'string' }, 'money-scale': { type: 'string', default: '100' },
       chunk: { type: 'string', default: '500' }, 'no-verify': { type: 'boolean', default: false }, db: { type: 'string' }, env: { type: 'string' }, help: { type: 'boolean' },
     },
   });

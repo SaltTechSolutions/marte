@@ -19,11 +19,17 @@ export interface PollOptions {
 const DEFAULT_INTERVAL = 30_000;
 const MAX_BACKOFF = 5 * 60_000;
 
-interface Poller { key: string; refresh: () => void }
+interface Poller { key: string; refresh: () => void; stop: () => void }
 const active = new Set<Poller>();
 
 export function invalidate(prefix = ''): void {
   active.forEach((p) => p.key.startsWith(prefix) && p.refresh());
+}
+
+/** Stops every poller (sign-out): a screen that never unsubscribed must not keep polling as the next account. */
+export function stopAllPollers(): void {
+  active.forEach((p) => p.stop());
+  active.clear();
 }
 
 export function pollWatch<T>(
@@ -76,14 +82,15 @@ export function pollWatch<T>(
     }
   }
 
-  const poller: Poller = { key, refresh: () => schedule(0) };
-  active.add(poller);
-  const sub = AppState.addEventListener('change', (s) => { if (s === 'active') poller.refresh(); });
-  schedule(0);
-  return () => {
+  const stop = () => {
     stopped = true;
     if (timer) clearTimeout(timer);
     active.delete(poller);
     sub.remove();
   };
+  const poller: Poller = { key, refresh: () => schedule(0), stop };
+  active.add(poller);
+  const sub = AppState.addEventListener('change', (s) => { if (s === 'active') poller.refresh(); });
+  schedule(0);
+  return stop;
 }

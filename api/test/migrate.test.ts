@@ -26,7 +26,9 @@ const U = {
 const MM = 'mm0123456789abcdef0123';
 const T0 = 1750000000000; const D = 86_400_000; const NOW = 1790000000000;
 
-const run = () => transformAll(FIX);
+// Most assertions below are written in as-stored numbers; the production default (100, kuruş) is pinned in the money test.
+const AS_STORED = { moneyScale: 1 };
+const run = () => transformAll(FIX, AS_STORED);
 async function loaded() {
   const r = run();
   const db = makeDb();
@@ -48,29 +50,29 @@ describe('migration tool: contract with the migrations', () => {
   it('fails loudly when a written column disappears from the migrations', () => {
     const schema = structuredClone(loadSchema(DEFAULT_MIGRATIONS_DIR));
     schema.get('memberships')!.delete('left_at');
-    expect(() => transformAll(FIX, { schema })).toThrow(SchemaMismatchError);
-    expect(() => transformAll(FIX, { schema })).toThrow(/memberships\.left_at/);
+    expect(() => transformAll(FIX, { ...AS_STORED, schema })).toThrow(SchemaMismatchError);
+    expect(() => transformAll(FIX, { ...AS_STORED, schema })).toThrow(/memberships\.left_at/);
   });
 
   it('fails loudly when a new NOT NULL column without a default appears, or a written table is gone', () => {
     const withNew = structuredClone(loadSchema(DEFAULT_MIGRATIONS_DIR));
     withNew.get('payments')!.set('tax_code', { notnull: true, hasDefault: false, pk: false, type: 'TEXT' });
-    expect(() => transformAll(FIX, { schema: withNew })).toThrow(/payments\.tax_code.*NOT NULL without a default/);
+    expect(() => transformAll(FIX, { ...AS_STORED, schema: withNew })).toThrow(/payments\.tax_code.*NOT NULL without a default/);
     const noTable = structuredClone(loadSchema(DEFAULT_MIGRATIONS_DIR));
     noTable.delete('identities');
-    expect(() => transformAll(FIX, { schema: noTable })).toThrow(/table "identities"/);
+    expect(() => transformAll(FIX, { ...AS_STORED, schema: noTable })).toThrow(/table "identities"/);
   });
 
   it('a new nullable column or a new table is not an error, but a new table is announced in the report', () => {
     const schema = schemaFromSql([...readMigrations(DEFAULT_MIGRATIONS_DIR), 'ALTER TABLE announcements ADD COLUMN pinned INTEGER; CREATE TABLE future_thing (id TEXT PRIMARY KEY);']);
-    const r = transformAll(FIX, { schema });
+    const r = transformAll(FIX, { ...AS_STORED, schema });
     expect(r.report.schemaNotes.join('\n')).toMatch(/future_thing/);
   });
 
   it('without class_waitlist / class_attendance the data is not lost: it stays in classes.data with internal ids', () => {
     const schema = structuredClone(loadSchema(DEFAULT_MIGRATIONS_DIR));
     schema.delete('class_waitlist'); schema.delete('class_attendance');
-    const r = transformAll(FIX, { schema });
+    const r = transformAll(FIX, { ...AS_STORED, schema });
     expect(r.rows.class_waitlist).toBeUndefined();
     const cls = r.rows.classes.find((c) => c.id === 'clsA1')!;
     const data = JSON.parse(cls.data as string);
@@ -107,7 +109,7 @@ describe('migration tool: applying the output', () => {
     expect(b.sql).toEqual(a.sql);
     expect(b.idMap).toEqual(a.idMap);
     const shuffled = Object.fromEntries(Object.entries(readExportDir(FIX)).map(([k, v]) => [k, [...v].reverse()]));
-    expect(transformAll(shuffled).sql).toEqual(a.sql);
+    expect(transformAll(shuffled, AS_STORED).sql).toEqual(a.sql);
     expect(a.idMap.users[U.m1]).toBe(iid(U.m1));
     expect(a.idMap.users[U.m1]).toMatch(/^u[0-9a-f]{20}$/);
   });
@@ -373,6 +375,8 @@ describe('migration tool: field mapping', () => {
     expect(d(r100, 'package_change_requests', 'pcr1')).toMatchObject({ priceDelta: 50000, currentSummary: { price: 150000 }, proposedSummary: { price: 200000 } });
     expect(d(r100, 'package_change_requests', 'pcr2').refundAmount).toBe(30000);
     expect(() => transformAll(FIX, { moneyScale: 0 })).toThrow();
+    // the default is kuruş (decision of 18 Oct 2026)
+    expect(row(transformAll(FIX), 'payments', 'pay1').amount).toBe(135000);
   });
 });
 
@@ -412,13 +416,13 @@ describe('migration tool: reconcile', () => {
     const dir = mkdtempSync(join(tmpdir(), 'd1dump-'));
     const write = () => { for (const c of CHECKS) { try { writeFileSync(join(dir, c.name + '.json'), asWrangler(sqlite.prepare(checkSql(c)).all())); } catch { /* table absent */ } } };
     write();
-    const ok = spawnSync(process.execPath, ['scripts/migrate/reconcile.mjs', '--export', FIX, '--d1', dir], { encoding: 'utf8' });
+    const ok = spawnSync(process.execPath, ['scripts/migrate/reconcile.mjs', '--export', FIX, '--d1', dir, '--money-scale', '1'], { encoding: 'utf8' });
     expect(ok.status, ok.stdout + ok.stderr).toBe(0);
     expect(ok.stdout).toMatch(/RECONCILE PASSED/);
     expect(ok.stdout).toMatch(/Excluded on purpose/);
     sqlite.exec(`DELETE FROM payments WHERE id = 'pay2'`);
     write();
-    const bad = spawnSync(process.execPath, ['scripts/migrate/reconcile.mjs', '--export', FIX, '--d1', dir], { encoding: 'utf8' });
+    const bad = spawnSync(process.execPath, ['scripts/migrate/reconcile.mjs', '--export', FIX, '--d1', dir, '--money-scale', '1'], { encoding: 'utf8' });
     expect(bad.status).toBe(1);
     expect(bad.stdout).toMatch(/FAIL\s+payments/);
     const cmds = spawnSync(process.execPath, ['scripts/migrate/reconcile.mjs', '--print-commands', '--db', 'gymentra-staging', '--env', 'staging', '--d1', dir], { encoding: 'utf8' });

@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
+import { invalidate } from '@/data/api/poll';
 import { registerPushToken } from '@/data/repo/pushTokenRepo';
 
 Notifications.setNotificationHandler({
@@ -99,6 +100,18 @@ export function PushNotificationSync() {
       cancelled = true;
     };
   }, [user, tenantId]);
+
+  // The push IS the live-data signal in API mode (no sockets): any notification that arrives while the
+  // app is open, or is tapped, refreshes every active poller at once. A no-op when nothing is polling
+  // (Firebase mode keeps its own snapshot listeners).
+  useEffect(() => {
+    const received = Notifications.addNotificationReceivedListener(() => invalidate(''));
+    const tapped = Notifications.addNotificationResponseReceivedListener(() => invalidate(''));
+    return () => {
+      received.remove();
+      tapped.remove();
+    };
+  }, []);
 
   // Notification taps. Separate from token registration and deliberately not
   // gated on a membership: a tap can arrive before the membership snapshot

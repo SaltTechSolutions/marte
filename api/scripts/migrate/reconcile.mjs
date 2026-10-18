@@ -3,7 +3,7 @@
 //
 //   1. node reconcile.mjs --print-commands --db gymentra-staging --env staging --d1 ./d1-dump     (prints, never runs)
 //   2. run the printed wrangler commands by hand; each writes one JSON file into ./d1-dump
-//   3. node reconcile.mjs --export ./export --d1 ./d1-dump [--money-scale 1] [--migrations ../../migrations]
+//   3. node reconcile.mjs --export ./export --d1 ./d1-dump [--money-scale 100] [--migrations ../../migrations]
 //
 // The SQL of each check and the way its expected value is computed from the migrated rows come from ONE
 // definition below, so they cannot drift apart. "Expected" is what transform.mjs emitted (after its documented
@@ -160,12 +160,12 @@ export function printCommands({ db, env, dir }) {
 function main() {
   const { values } = parseArgs({
     options: {
-      export: { type: 'string' }, d1: { type: 'string' }, 'money-scale': { type: 'string', default: '1' }, migrations: { type: 'string' },
+      export: { type: 'string' }, d1: { type: 'string' }, 'money-scale': { type: 'string', default: '100' }, migrations: { type: 'string' },
       'print-commands': { type: 'boolean', default: false }, db: { type: 'string' }, env: { type: 'string' }, help: { type: 'boolean' },
     },
   });
   if (values.help || !values.d1) {
-    console.log('usage:\n  node reconcile.mjs --print-commands --db NAME [--env staging] --d1 DIR\n  node reconcile.mjs --export DIR --d1 DIR [--money-scale 1] [--migrations DIR]');
+    console.log('usage:\n  node reconcile.mjs --print-commands --db NAME [--env staging] --d1 DIR\n  node reconcile.mjs --export DIR --d1 DIR [--money-scale 100] [--migrations DIR]');
     process.exit(values.help ? 0 : 2);
   }
   const dir = resolve(values.d1);

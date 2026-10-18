@@ -156,14 +156,13 @@ olmalı, çünkü adım 6'daki döküm ancak o zaman tutarlıdır.
 
 ## Alan eşleme kararları (sahibin dikkatine)
 
-1. **Para birimi — karar bekliyor.** `docs/D1-SEMA.md` ve `0001_init.sql` "tam sayı **kuruş**" der;
-   ama uygulama tutarları **lira** olarak girer ve gösterir (`₺${n}`), API `amount` için tam sayı
-   ister ve üst sınırı `100_000_000` yapar. `docs/SCHEMA.md` birim yazmaz. Araç varsayılan olarak
-   **olduğu gibi kopyalar** (`--money-scale 1`, yani D1'de lira); kesirli tutar (ör. `99.5`) D1'in
-   tamsayı sütununa girmez, `invalid` olur. Kuruş istenirse `--money-scale 100` (tüm tutarlar:
-   `payments.amount`, `member_packages.final_price`, `data` içinde `price`, `listPrice`,
-   `priceDelta`, `refundAmount`, `currentSummary.price`, `proposedSummary.price` ve yalnızca
-   `amountDiscount` promosyonun `value`'su). `reconcile.mjs` aynı bayrağı alır.
+1. **Para birimi — karara bağlandı (18 Ekim 2026): D1 ve API'de tam sayı KURUŞ.** Uygulama tutarları lira
+   olarak girer ve gösterir; istemci sınırda 100 ile çarpar/böler. Bu yüzden araç varsayılan olarak
+   **`--money-scale 100`** kullanır: Firestore'daki lira değerleri (`99.5` dahil) kuruşa çevrilir (tüm tutarlar:
+   `payments.amount`, `member_packages.final_price`, `data` içinde `price`, `listPrice`, `priceDelta`,
+   `refundAmount`, `currentSummary.price`, `proposedSummary.price` ve yalnızca `amountDiscount`
+   promosyonun `value`'su). `reconcile.mjs` aynı bayrağı alır ve aynı varsayılana sahiptir. `--money-scale 1`
+   yalnızca özel durumlar içindir; üretimde kullanma. Kuruştan küçük kesir (`99.505`) `invalid` olur.
 2. **Orphan = dışlanır.** İstisna: `memberDeletedAt` işaretli ödemeler (hesabı silinmiş üyenin
    anonimleştirilmiş defter satırı) **tutulur**; üyelik satırı yoktur, `member_id` tutarlı iç
    kimliktir. Bunun dışında üyeliği olmayan üyenin her kaydı orphan'dır.

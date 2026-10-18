@@ -16,5 +16,12 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/data/api/**/*.test.ts",
+    "src/data/api/*TestKit.ts",
+    "src/data/api/pkgTestUtil.ts",
+    "src/data/api/testWorld.ts"
   ]
 }

@@ -1,6 +1,8 @@
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { app } from '@/services/firebase';
+import { BACKEND } from '@/data/backend';
+import { app, auth } from '@/services/firebase';
 
 const functions = getFunctions(app, 'europe-west1');
 
@@ -22,6 +24,20 @@ const functions = getFunctions(app, 'europe-west1');
  * left, and the member waited for an e-mail that was never coming.
  */
 export async function requestPasswordReset(email: string): Promise<{ retryAfterSeconds?: number }> {
+  if (BACKEND === 'api') {
+    // The Cloud Function (custom Turkish mail from our domain + per-address/IP throttling) goes away with
+    // Firebase Functions. Firebase Auth itself still sends the reset mail and rate-limits it: the template
+    // language/sender are set in the Firebase console (Authentication > Templates). Same non-disclosure rule:
+    // an unknown address looks exactly like a sent one.
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === 'auth/too-many-requests') return { retryAfterSeconds: 300 };
+      if (code !== 'auth/user-not-found' && code !== 'auth/invalid-email') throw e;
+    }
+    return {};
+  }
   const call = httpsCallable<{ email: string }, { ok: boolean; retryAfterSeconds?: number }>(
     functions,
     'requestPasswordReset',

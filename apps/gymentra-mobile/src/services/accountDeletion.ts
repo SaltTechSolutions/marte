@@ -1,21 +1,45 @@
+import { deleteUser } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-import { app } from './firebase';
+import { apiPost } from '@/data/api/client';
+import { BACKEND } from '@/data/backend';
+import { deleteMemberPhoto } from '@/data/repo/memberPhotoRepo';
+
+import { app, auth } from './firebase';
 
 // Functions are deployed to europe-west1, same as the rest of the project.
 const functions = getFunctions(app, 'europe-west1');
 
+/** What `POST /v1/me/delete-account` answers (api/src/account.ts). */
+interface ApiDeletion {
+  deleted: boolean;
+  authDeletionRequired?: boolean;
+  alreadyDeleted?: boolean;
+}
+
 /**
  * Deletes the signed-in user's account and personal data.
  *
- * Server-side on purpose: security rules deliberately forbid the client from
- * deleting measurements/workout logs/payments, so a phone in the wrong hands
- * can't rewrite history. See `deleteMyAccount` in backend/functions.
- *
- * Throws with `failed-precondition` when the caller is the only remaining
- * admin of a gym — deleting them would leave it unmanageable.
+ * Firebase mode: one callable (`deleteMyAccount`) that does everything server-side.
+ * API mode: the Worker erases the D1 data (and refuses with `failed-precondition` when the caller is the
+ * only admin of a gym); the identity and the photo live outside D1, so the client finishes the job:
+ * the profile photo (Storage, best effort) and the Firebase Auth user itself. Auth deletion needs a
+ * recent sign-in; if Firebase asks for one, the error propagates with `auth/requires-recent-login` and
+ * the SAME call can simply be repeated after signing in again - the Worker answers `alreadyDeleted`.
  */
 export async function deleteMyAccount(): Promise<void> {
-  const call = httpsCallable<void, { deleted: boolean }>(functions, 'deleteMyAccount');
-  await call();
+  if (BACKEND !== 'api') {
+    const call = httpsCallable<void, { deleted: boolean }>(functions, 'deleteMyAccount');
+    await call();
+    return;
+  }
+  const res = await apiPost<ApiDeletion>('/me/delete-account', { confirm: true });
+  const user = auth.currentUser;
+  if (!res.deleted && !res.alreadyDeleted) return;
+  try {
+    await deleteMemberPhoto();
+  } catch {
+    // The photo is best effort: the personal data is already gone from D1.
+  }
+  if (user) await deleteUser(user);
 }

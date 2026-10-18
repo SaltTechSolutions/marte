@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { signOut } from 'firebase/auth';
 
 import { unregisterPushToken } from '@/data/repo/pushTokenRepo';
+import { resetApiState } from '@/data/api/resetApiState';
 import { resetSharedWatches } from '@/data/firebase/sharedWatch';
 
 import { clearMembershipCache } from './membershipCache';
@@ -44,6 +45,7 @@ export async function signOutAndForget(): Promise<void> {
   // Drop shared listeners and their cached rows, so the next account on this
   // device never sees the previous one's data replayed.
   resetSharedWatches();
+  resetApiState();
 
   await signOut(auth);
 }
