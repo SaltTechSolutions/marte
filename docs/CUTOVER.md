@@ -29,7 +29,7 @@ Dondurma penceresi süresince Firebase yazmaları kapalı olmalı (Adım 4'ün k
 
 ## 4. Kesim günü sırası — ONAY
 1. Mağazada yeni sürüm yayında ve yeterli kullanıcıda (Play kademeli artış/App Store aşamalı yayın). Eşik: aktif kullanıcıların çoğu yeni sürümde.
-2. **Dondurma:** `backend/firestore.rules` `allow write: if false` (salt-okunur) sürümünü deploy et → eski istemciler yazamaz, "güncelle" uyarısı görür (uyarı metni mobilde hazır olmalı: eski sürümde bir `minVersion` kontrolü yoksa bu adım kullanıcıya hata gibi görünür — **bu yüzden yeni sürüm yayından ÖNCE eski sürüme OTA ile "güncelle" ekranı gönderilmeli**).
+2. **Dondurma:** `backend/firestore.rules` `allow write: if false` (salt-okunur) sürümünü deploy et → eski istemciler yazamaz, "güncelle" uyarısı görür (**Uygulamada bugün bir zorunlu-güncelleme/`minVersion` mekanizması YOK** — kodda aranıp bulunamadı. Bu adım eski sürümde "izin reddedildi" hataları olarak görünür. Kesimden önce, şu an mağazada olan sürüme OTA ile (yalnız iOS; Android güncellemesi durduruldu, bkz. memory) bir "Uygulamayı güncelle" ekranı göndermek ya da kullanıcı sayısı çok azken bunu kabul etmek **ayrı bir karardır**.)
 3. Son export → transform → üretim D1'e uygula → `reconcile.mjs` PASS.
 4. RevenueCat webhook adresini `https://api.gymentra.salt-tech-apps.com/v1/webhooks/revenuecat` yap.
 5. Duman testi (yönetici + üye + antrenör hesabıyla). Cron'lar ve outbox izleme.
