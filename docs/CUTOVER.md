@@ -40,6 +40,9 @@ Dondurma penceresi süresince Firebase yazmaları kapalı olmalı (Adım 4'ün k
 - D1 yazmaları açıldıktan sonra otomatik geri dönüş **yok**: ters aktarım betiği yazılmadı. Seçenekler: bakım modu + ileri düzeltme, ya da D1 Time Travel ile kesim anına dönüp o andan sonraki yazmaları kaybetmek. DNS'i geri almak rollback değildir.
 - Bu yüzden Adım 4.2–4.3 arasındaki pencere kısa ve kesimden önce staging'de bir prova şarttır.
 
+## 5b. Gizlilik metinleri — kesimle AYNI gün (yayından önce yanlış olur)
+- `apps/gymentra-site/privacy/index.html` (satır ~43, ~81, ~95) ve `apps/gymentra-mobile/APP_PRIVACY.md` (satır ~112): veri işleyen taraf Cloudflare (Workers, D1, R2; AB/EEUR bölgesi) olur, Firebase yalnız **Authentication**'dır; Firestore/Storage ibareleri kalkar. ASC App Privacy ve Play Data safety etiketlerinde işleyici adı değişmez (veri türleri aynı) ama gözden geçir. `pb-privacy-legal` playbook'unu yükle.
+
 ## 6. Kesim sonrası
 - [ ] 48 saat: hata oranı, kuyruk gecikmesi (`outbox` `pending`/`dead` sayısı), kredi bakiyesi sapması, 5xx.
 - [ ] Firebase proje: Auth hariç servisleri kapat; Firestore dökümünü sakla (silme ayrı onay).

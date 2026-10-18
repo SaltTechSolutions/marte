@@ -23,3 +23,10 @@ sütunu (sorgulanan alanlar ayrı sütun).
 Çevrimiçi tutarlılık: Firestore tetikleyicilerinin işi (sayaç, ayna, push) uç
 içinde `db.batch()` ya da Queue'ya gider; `reconcileMirrors` yerine CHECK ve
 tek-batch yazım tercih edilir.
+
+## Sonradan eklenen tablolar (migration 0004–0051)
+
+`outbox` (push/e-posta için transactional outbox), `class_waitlist`, `class_attendance`, `billing_events`, `txn_abort_guard` ve
+`pt_batch_abort` (bir `db.batch()` içinde CHECK ihlaliyle tüm batch'i geri alma düzeneği), `user_settings`, `tenant_contacts`.
+`memberships.short_code` veritabanı tetikleyicisiyle atanır (`0051`). `pt_sessions` `no-show` durumunu `0050` ile aldı.
+Medya (profil fotoğrafı, salon logosu) D1'de değil R2'de (`MEDIA` bağlaması); D1 yalnız URL'yi tutar.

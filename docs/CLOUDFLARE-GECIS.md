@@ -149,3 +149,7 @@ JSON'a gömülmez; (4) kredi/kota/iade senkron, yalnız ertelenebilir etkiler Qu
 D1 yazmaları açılmadan önce mümkün, sonrası yalnız hazırlanmış ters aktarım ya da ileri düzeltme —
 DNS geri almak rollback değildir. **Açık:** codex export envanterinde 19 callable/23 trigger/6 scheduler
 saydı, plan 28/31/9 diyor; kapsam F1 başında doğrulanacak.
+
+## Durum (18 Ekim 2026)
+
+F0–F4 teknik olarak tamam, **kesim (F5) bekliyor**: sunucu (`api/`, 590 test iki D1 motorunda), veri taşıma aracı, mobil API modu (`EXPO_PUBLIC_BACKEND=api`, 735 test), medya (R2), cron + outbox staging'de çalışıyor. Henüz yapılmayanlar sahibinin onayını/hesabını ister ve `docs/CUTOVER.md`'de sıralı: üretim D1/R2/secret'lar/alan adı, geçerli Firebase hesabıyla cihazda uçtan uca deneme, mağaza sürümü, dondurma + veri taşıma + mutabakat, eski istemcilerin kesilmesi.
