@@ -10,7 +10,7 @@ import { ListSkeleton } from '@/components/ListSkeleton';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchPackagesForTenant } from '@/data/firebase/packageRepo';
+import { watchPackagesForTenant } from '@/data/repo/packageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

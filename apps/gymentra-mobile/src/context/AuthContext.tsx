@@ -1,8 +1,8 @@
 import { onAuthStateChanged, User } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
-import { getActiveMemberships, watchMembership } from '@/data/firebase/membershipRepo';
-import { getTenant, watchTenant } from '@/data/firebase/tenantRepo';
+import { getActiveMemberships, watchMembership } from '@/data/repo/membershipRepo';
+import { getTenant, watchTenant } from '@/data/repo/tenantRepo';
 import { primaryRole, selectMembership } from '@/data/membership';
 import { MembershipRole, Tenant, TenantMembership } from '@/data/types';
 import { loadActiveRole, saveActiveRole } from '@/services/activeRole';

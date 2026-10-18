@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
-import { registerPushToken } from '@/data/firebase/pushTokenRepo';
+import { registerPushToken } from '@/data/repo/pushTokenRepo';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({

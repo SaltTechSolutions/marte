@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
-import { getTenant } from '@/data/firebase/tenantRepo';
+import { getTenant } from '@/data/repo/tenantRepo';
 import { ROLE_LABEL } from '@/data/membership';
 import { Tenant, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

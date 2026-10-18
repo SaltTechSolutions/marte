@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import { ErrorNotice } from '@/components/ErrorNotice';
 
 import { useAuth } from '@/context/AuthContext';
-import { setNotificationPreference, watchUserSettings } from '@/data/firebase/userSettingsRepo';
+import { setNotificationPreference, watchUserSettings } from '@/data/repo/userSettingsRepo';
 import { reportError } from '@/data/errors';
 import { NOTIFICATION_CATEGORIES, NotificationCategory } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

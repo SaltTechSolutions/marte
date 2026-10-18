@@ -8,7 +8,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
-import { respondToPackageChangeRequest, watchPackageChangeRequest } from '@/data/firebase/packageChangeRepo';
+import { respondToPackageChangeRequest, watchPackageChangeRequest } from '@/data/repo/packageChangeRepo';
 import { entitlementRows } from '@/data/entitlementRows';
 import { PackageChangeRequest } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

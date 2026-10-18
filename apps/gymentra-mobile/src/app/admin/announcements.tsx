@@ -19,7 +19,7 @@ import {
   deleteAnnouncement,
   isLive,
   watchAnnouncements,
-} from '@/data/firebase/announcementRepo';
+} from '@/data/repo/announcementRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { Announcement } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

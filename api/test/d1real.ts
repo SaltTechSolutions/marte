@@ -2,6 +2,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const MIGRATIONS = fileURLToPath(new URL('../migrations/', import.meta.url));
 
 /**
  * The same migrations on workerd's own D1 engine (Miniflare) instead of node:sqlite. Opt-in:
@@ -51,8 +54,8 @@ export async function makeRealDb(): Promise<D1Database> {
     await d.batch([d.prepare('PRAGMA defer_foreign_keys = ON'), ...results.map((r) => d.prepare(`DELETE FROM "${r.name}"`))]);
     return facade(d);
   }
-  for (const f of readdirSync('migrations').sort()) {
-    for (const s of statements(readFileSync(`migrations/${f}`, 'utf8'))) await d.prepare(s).run();
+  for (const f of readdirSync(MIGRATIONS).sort()) {
+    for (const s of statements(readFileSync(MIGRATIONS + f, 'utf8'))) await d.prepare(s).run();
   }
   return facade(d);
 }

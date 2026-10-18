@@ -9,7 +9,7 @@ import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
+import { watchActiveTrainers } from '@/data/repo/membershipRepo';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 

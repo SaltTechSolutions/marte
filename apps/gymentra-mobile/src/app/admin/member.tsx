@@ -11,13 +11,13 @@ import { ListSkeleton } from '@/components/ListSkeleton';
 import { MemberContactCard } from '@/components/MemberContactCard';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { FEATURES } from '@/data/features';
-import { markRenewalHandled, watchMyRenewalRequest } from '@/data/firebase/renewalRequestRepo';
+import { markRenewalHandled, watchMyRenewalRequest } from '@/data/repo/renewalRequestRepo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Stepper } from '@/components/Stepper';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { getMembership } from '@/data/firebase/membershipRepo';
-import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/firebase/programRepo';
+import { getMembership } from '@/data/repo/membershipRepo';
+import { findOrCreateDraftProgram, watchActiveProgramForMember } from '@/data/repo/programRepo';
 import { programSummary } from '@/data/program';
 import {
   CancellationAccess,
@@ -25,7 +25,7 @@ import {
   freezeMemberPackage,
   watchMemberCredits,
   watchMemberPackages,
-} from '@/data/firebase/memberPackageRepo';
+} from '@/data/repo/memberPackageRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { MemberCredit, MemberPackage, Program, RenewalRequest, TenantMembership } from '@/data/types';
 import { TextField } from '@/components/TextField';

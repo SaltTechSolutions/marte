@@ -10,8 +10,8 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { Screen } from '@/components/Screen';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchMembership } from '@/data/firebase/membershipRepo';
-import { getTenantContact } from '@/data/firebase/tenantRepo';
+import { watchMembership } from '@/data/repo/membershipRepo';
+import { getTenantContact } from '@/data/repo/tenantRepo';
 import { auth } from '@/services/firebase';
 import { useAppTheme } from '@/theme/ThemeContext';
 

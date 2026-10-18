@@ -8,7 +8,7 @@ import { Button } from '@/components/Button';
 import { Stepper } from '@/components/Stepper';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { Text } from '@/components/Text';
-import { completeWorkoutLog, getRecentLogs, saveExerciseLogs, watchWorkoutLog } from '@/data/firebase/workoutLogRepo';
+import { completeWorkoutLog, getRecentLogs, saveExerciseLogs, watchWorkoutLog } from '@/data/repo/workoutLogRepo';
 import { exerciseById, exerciseByName } from '@/data/exerciseLibrary';
 import { formatLastTime, lastTimeFor } from '@/data/program';
 import { WorkoutLog } from '@/data/types';

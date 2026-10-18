@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { membershipId } from '@/data/firebase/membershipRepo';
+import { membershipId } from '@/data/repo/membershipRepo';
 import { auth } from '@/services/firebase';
 import { useAppTheme } from '@/theme/ThemeContext';
 

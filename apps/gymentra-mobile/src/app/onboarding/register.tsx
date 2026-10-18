@@ -16,7 +16,7 @@ import { LegalConsentNotice } from '@/components/LegalLinks';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
 import { requestPasswordReset } from '@/data/firebase/authRepo';
-import { getActiveMemberships } from '@/data/firebase/membershipRepo';
+import { getActiveMemberships } from '@/data/repo/membershipRepo';
 import { primaryRole, ROLE_HOME } from '@/data/membership';
 import { auth } from '@/services/firebase';
 import { isAppleSignInAvailable, signInWithApple, signInWithGoogle } from '@/services/socialAuth';

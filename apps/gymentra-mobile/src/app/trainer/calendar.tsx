@@ -12,9 +12,9 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { watchSharesGrantedToMe } from '@/data/firebase/calendarShareRepo';
+import { watchSharesGrantedToMe } from '@/data/repo/calendarShareRepo';
 import { isStaff } from '@/data/membership';
-import { watchActiveMembers } from '@/data/firebase/membershipRepo';
+import { watchActiveMembers } from '@/data/repo/membershipRepo';
 import {
   cancelPtSession,
   createPtSession,
@@ -22,7 +22,7 @@ import {
   setSessionStatus,
   watchSessionsForTenant,
   watchSessionsForTrainer,
-} from '@/data/firebase/ptSessionRepo';
+} from '@/data/repo/ptSessionRepo';
 import { PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';

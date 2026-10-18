@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { signOut } from 'firebase/auth';
 
-import { unregisterPushToken } from '@/data/firebase/pushTokenRepo';
+import { unregisterPushToken } from '@/data/repo/pushTokenRepo';
 import { resetSharedWatches } from '@/data/firebase/sharedWatch';
 
 import { clearMembershipCache } from './membershipCache';

@@ -19,7 +19,7 @@ import {
   confirmCheckInDespiteWarning,
   CheckInWarnReason,
   WARN_MESSAGE,
-} from '@/data/firebase/checkinRepo';
+} from '@/data/repo/checkinRepo';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
 import { hapticError, hapticSuccess } from '@/utils/haptics';

@@ -12,7 +12,7 @@ import { TimeStepper } from '@/components/TimeStepper';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { setTrainerAvailability, watchTrainerAvailability } from '@/data/firebase/availabilityRepo';
+import { setTrainerAvailability, watchTrainerAvailability } from '@/data/repo/availabilityRepo';
 import { gymWindowFor } from '@/data/openingHours';
 import { AvailabilityException, DayHours, TimeWindow, Weekday } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

@@ -19,7 +19,7 @@ import {
   getGymPackage,
   PackageDraft,
   updateGymPackage,
-} from '@/data/firebase/packageRepo';
+} from '@/data/repo/packageRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage, PackageKind } from '@/data/types';

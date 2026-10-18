@@ -11,7 +11,7 @@ import { ListGroup, ListRow } from '@/components/ListRow';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { isStaff, tenantIdIf } from '@/data/membership';
-import { watchProgramsForTenant } from '@/data/firebase/programRepo';
+import { watchProgramsForTenant } from '@/data/repo/programRepo';
 import { allProgramExercises, programDays } from '@/data/program';
 import { Program } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

@@ -27,8 +27,8 @@ import {
   deleteClassSeriesFrom,
   updateClass,
   watchClassesForTenant,
-} from '@/data/firebase/classRepo';
-import { watchActiveTrainers } from '@/data/firebase/membershipRepo';
+} from '@/data/repo/classRepo';
+import { watchActiveTrainers } from '@/data/repo/membershipRepo';
 import { gymWindowForDate } from '@/data/openingHours';
 import { ClassSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

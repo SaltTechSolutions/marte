@@ -9,7 +9,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { ListGroup, ListRow } from '@/components/ListRow';
 import { MemberAvatar } from '@/components/MemberAvatar';
-import { watchPendingRenewals } from '@/data/firebase/renewalRequestRepo';
+import { watchPendingRenewals } from '@/data/repo/renewalRequestRepo';
 import { SwipeableRow } from '@/components/SwipeableRow';
 import { Text } from '@/components/Text';
 import { TextField } from '@/components/TextField';
@@ -22,7 +22,7 @@ import {
   removeMemberFromTenant,
   watchActiveMembers,
   watchPendingRequests,
-} from '@/data/firebase/membershipRepo';
+} from '@/data/repo/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { FEATURES } from '@/data/features';

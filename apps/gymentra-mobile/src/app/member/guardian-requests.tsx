@@ -13,7 +13,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { respondToGuardian, watchMyChildren } from '@/data/firebase/membershipRepo';
+import { respondToGuardian, watchMyChildren } from '@/data/repo/membershipRepo';
 import { TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';

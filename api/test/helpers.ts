@@ -30,6 +30,13 @@ export async function harness() {
       headers: { 'content-type': 'application/json', ...(sub ? { Authorization: `Bearer ${await sign(sub)}` } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     }), { DB: db, FIREBASE_PROJECT_ID: PROJECT });
+  /** Same as send() but takes an already-signed token's SUBJECT as `fb-…` and a raw JSON string body: for the mobile client contract tests. */
+  const sendRaw = async (method: string, path: string, tokenOrSub: string, body?: string) =>
+    app.fetch(new Request(`http://x${path}`, {
+      method,
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${tokenOrSub.startsWith('fb-') ? await sign(tokenOrSub) : tokenOrSub}` },
+      body,
+    }), { DB: db, FIREBASE_PROJECT_ID: PROJECT });
   /** Adds a user with a Firebase identity and, optionally, an active membership in t1. */
   const addUser = async (id: string, roles: string[] | null = ['member'], extra: { permissions?: string[]; status?: string } = {}) => {
     await run(`INSERT INTO users (id, display_name, created_at) VALUES (?, ?, 1)`, id, id);
@@ -44,5 +51,5 @@ export async function harness() {
   await run(`INSERT INTO tenants (id, code, name, created_at) VALUES ('t1','T1','Gym',1)`);
   await run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES
     ('t1','u-admin','active','["admin"]',1), ('t1','u-mem','active','["member"]',1)`);
-  return { db, run, one, send, sign, addUser };
+  return { db, run, one, send, sendRaw, sign, addUser };
 }

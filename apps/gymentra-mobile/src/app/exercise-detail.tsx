@@ -9,7 +9,7 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { reportExercise } from '@/data/firebase/exerciseReportRepo';
+import { reportExercise } from '@/data/repo/exerciseReportRepo';
 import { isStaff, tenantIdIf } from '@/data/membership';
 import { ExerciseReportReason } from '@/data/types';
 

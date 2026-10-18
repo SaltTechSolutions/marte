@@ -16,7 +16,7 @@ import {
   watchActiveAdmins,
   watchActiveMembers,
   watchActiveTrainers,
-} from '@/data/firebase/membershipRepo';
+} from '@/data/repo/membershipRepo';
 import { reportError } from '@/data/errors';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { ADMIN_SEAT_LIMIT } from '@/data/seats';

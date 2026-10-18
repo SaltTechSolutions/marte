@@ -12,7 +12,7 @@ import { TextField } from '@/components/TextField';
 import { EXERCISES, Exercise, exerciseById, exerciseByName, exerciseNames } from '@/data/exerciseLibrary';
 import { LIBRARY_GROUPS } from '@/data/exerciseGroups';
 import { useAuth } from '@/context/AuthContext';
-import { watchActiveProgramForMember } from '@/data/firebase/programRepo';
+import { watchActiveProgramForMember } from '@/data/repo/programRepo';
 import { allProgramExercises } from '@/data/program';
 import { Program } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';

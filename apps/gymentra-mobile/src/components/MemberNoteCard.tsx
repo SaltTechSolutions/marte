@@ -3,8 +3,8 @@ import { View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { MEMBER_ADMIN_NOTE_MAX, setMemberAdminNote, watchMemberAdminNote } from '@/data/firebase/memberAdminNoteRepo';
-import { MEMBER_NOTE_MAX, setMemberNote, watchMemberNote } from '@/data/firebase/memberNoteRepo';
+import { MEMBER_ADMIN_NOTE_MAX, setMemberAdminNote, watchMemberAdminNote } from '@/data/repo/memberAdminNoteRepo';
+import { MEMBER_NOTE_MAX, setMemberNote, watchMemberNote } from '@/data/repo/memberNoteRepo';
 import { MemberNote } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 

@@ -13,9 +13,9 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { computeFreeSlots, hasAnyAvailability, watchTrainerAvailability, watchTrainerBusySlotsForDay } from '@/data/firebase/availabilityRepo';
-import { bookPtSessions } from '@/data/firebase/ptSessionRepo';
-import { watchMemberCredits } from '@/data/firebase/memberPackageRepo';
+import { computeFreeSlots, hasAnyAvailability, watchTrainerAvailability, watchTrainerBusySlotsForDay } from '@/data/repo/availabilityRepo';
+import { bookPtSessions } from '@/data/repo/ptSessionRepo';
+import { watchMemberCredits } from '@/data/repo/memberPackageRepo';
 import { MemberCredit, TrainerAvailability, TrainerBusySlot } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 

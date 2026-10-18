@@ -7,7 +7,7 @@ import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchProgramTemplates } from '@/data/firebase/programTemplateRepo';
+import { watchProgramTemplates } from '@/data/repo/programTemplateRepo';
 import { ProgramTemplate } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 

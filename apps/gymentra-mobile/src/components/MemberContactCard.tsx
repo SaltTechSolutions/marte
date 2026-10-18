@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { watchMemberAddress } from '@/data/firebase/memberAddressRepo';
+import { watchMemberAddress } from '@/data/repo/memberAddressRepo';
 import { FEATURES } from '@/data/features';
 import { MemberAddress, TenantMembership } from '@/data/types';
 

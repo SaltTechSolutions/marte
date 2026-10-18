@@ -9,7 +9,7 @@ import { Text } from '@/components/Text';
 import { useToast } from '@/components/Toast';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/context/AuthContext';
-import { createTenantWithOwner, updateTenantBranding, uploadTenantLogo } from '@/data/firebase/tenantRepo';
+import { createTenantWithOwner, updateTenantBranding, uploadTenantLogo } from '@/data/repo/tenantRepo';
 import { auth } from '@/services/firebase';
 import { onColorFor } from '@/theme/contrast';
 import { useAppTheme } from '@/theme/ThemeContext';

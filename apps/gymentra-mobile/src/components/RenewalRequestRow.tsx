@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { requestRenewal, watchMyRenewalRequest, withdrawRenewal } from '@/data/firebase/renewalRequestRepo';
+import { requestRenewal, watchMyRenewalRequest, withdrawRenewal } from '@/data/repo/renewalRequestRepo';
 import { RenewalRequest } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 

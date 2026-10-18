@@ -17,9 +17,9 @@ import {
   cancelBooking,
   cancelGroupClassWithCredit,
   watchClassesForTenant,
-} from '@/data/firebase/classRepo';
-import { watchMemberEntitlements } from '@/data/firebase/memberPackageRepo';
-import { cancelPtSession, watchSessionsForMember } from '@/data/firebase/ptSessionRepo';
+} from '@/data/repo/classRepo';
+import { watchMemberEntitlements } from '@/data/repo/memberPackageRepo';
+import { cancelPtSession, watchSessionsForMember } from '@/data/repo/ptSessionRepo';
 import { cancellationConsequence, formatDeadline, sessionOutcome } from '@/utils/cancellation';
 import { toGymClass } from '@/data/classDisplay';
 import { ClassSession, GymClass, MemberEntitlementsCache, PtSession } from '@/data/types';

@@ -28,7 +28,7 @@ import {
   updateTenantCancellationHours,
   updateTenantIdentity,
   uploadTenantLogo,
-} from '@/data/firebase/tenantRepo';
+} from '@/data/repo/tenantRepo';
 import { DEFAULT_CANCELLATION_HOURS, Tenant, TenantBranding } from '@/data/types';
 import { reportError } from '@/data/errors';
 import { shiftHue } from '@/theme/deriveColor';

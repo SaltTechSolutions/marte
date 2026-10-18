@@ -19,23 +19,23 @@ describe('api client', () => {
 
   it('maps failures to the callable-style codes errors.ts trusts, keeping the server message', async () => {
     __setApiTransport((async () => res(409, { error: 'x', message: 'Yeterli ders kredin yok — 2 kaldı, 3 gerekiyor.' })) as never, async () => 'tok');
-    const e = await apiGet('/x').catch((x) => x);
+    const e: any = await apiGet('/x').catch((x) => x);
     expect(e).toBeInstanceOf(ApiError);
     expect(e.code).toBe('functions/failed-precondition');
     expect(e.message).toBe('Yeterli ders kredin yok — 2 kaldı, 3 gerekiyor.');
     expect(e.apiCode).toBe('x');
     for (const [s, c] of [[400, 'invalid-argument'], [401, 'unauthenticated'], [403, 'permission-denied'], [404, 'not-found'], [500, 'internal']] as const) {
       __setApiTransport((async () => res(s, { error: 'e' })) as never, async () => 'tok');
-      expect((await apiGet('/x').catch((x) => x)).code).toBe(`functions/${c}`);
+      expect(((await apiGet('/x').catch((x) => x)) as any).code).toBe(`functions/${c}`);
     }
   });
 
   it('network failure is untrusted (internal); no token is a 401 without any request', async () => {
     __setApiTransport((async () => { throw new Error('offline'); }) as never, async () => 'tok');
-    expect((await apiGet('/x').catch((x) => x)).code).toBe('functions/internal');
+    expect(((await apiGet('/x').catch((x) => x)) as any).code).toBe('functions/internal');
     const f = vi.fn();
     __setApiTransport(f as never, async () => null);
-    expect((await apiGet('/x').catch((x) => x)).code).toBe('functions/unauthenticated');
+    expect(((await apiGet('/x').catch((x) => x)) as any).code).toBe('functions/unauthenticated');
     expect(f).not.toHaveBeenCalled();
   });
 });

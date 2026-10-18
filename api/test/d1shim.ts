@@ -1,5 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
+import { fileURLToPath } from 'node:url';
+
+const MIGRATIONS = fileURLToPath(new URL('../migrations/', import.meta.url));
 
 /**
  * Minimal D1 stand-in over node:sqlite so route logic runs against the real
@@ -9,7 +12,7 @@ import { DatabaseSync } from 'node:sqlite';
 export function makeDb(): D1Database {
   const sql = new DatabaseSync(':memory:');
   sql.exec('PRAGMA foreign_keys = ON');
-  for (const f of readdirSync('migrations').sort()) sql.exec(readFileSync(`migrations/${f}`, 'utf8'));
+  for (const f of readdirSync(MIGRATIONS).sort()) sql.exec(readFileSync(MIGRATIONS + f, 'utf8'));
 
   const stmt = (query: string, args: unknown[] = []) => ({
     bind: (...a: unknown[]) => stmt(query, a),

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Alert, Pressable, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
-import { leaveTenant } from '@/data/firebase/membershipRepo';
+import { leaveTenant } from '@/data/repo/membershipRepo';
 import { canManageGym } from '@/data/membership';
 import { useAppTheme } from '@/theme/ThemeContext';
 

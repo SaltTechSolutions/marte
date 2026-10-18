@@ -6,8 +6,8 @@ import { GymLogo } from '@/components/GymLogo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
-import { watchMyCheckins } from '@/data/firebase/checkinRepo';
-import { membershipId } from '@/data/firebase/membershipRepo';
+import { watchMyCheckins } from '@/data/repo/checkinRepo';
+import { membershipId } from '@/data/repo/membershipRepo';
 import { useAppTheme } from '@/theme/ThemeContext';
 
 /**

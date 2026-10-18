@@ -10,7 +10,7 @@ import { TimeStepper } from '@/components/TimeStepper';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
-import { updateTenantOpeningHours } from '@/data/firebase/tenantRepo';
+import { updateTenantOpeningHours } from '@/data/repo/tenantRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { DayHours, OpeningHours, Tenant } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
