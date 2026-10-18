@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-18 — Üye profil fotoğrafı kaldırıldı; 12 hazır avatar
+
+**Yapıldı.** Üye profil fotoğrafı özelliği tamamen kaldırıldı (yükleme, silme, `/me/photo`, `photo_url` okuma/yazma, mobil repo'lar). Yerine `scripts/avatars.py`'den üretilen 12 hazır avatar geldi (`rock, strength, tempo, rhythm, balance, breath, shield, spark, pass, unity, summit, trail` = Kaya, Güç, Tempo, Ritim, Denge, Nefes, Kalkan, Atak, Pas, Birlik, Zirve, Rota): yüzsüz, düz geometrik, tek renk, 34 px'te okunur; set önerisi codex ile birlikte seçildi. `memberships.avatar_id` (migration `0052`), `PATCH …/details {avatarId|null}` (üye kendisi; yönetici yalnız elle eklenen üye için), roster/üyelik/check-in DTO'larında `avatarId`. Mobilde `AvatarGlyph`, `MemberAvatar`, `AvatarPicker` (3x4, radiogroup, seçili = halka + onay işareti), profil ve yönetici ekranlarına bağlandı; `FEATURES.avatars = BACKEND === 'api'` (Firebase modunda baş harfler). Veri taşıma `photoUrl`'u taşımaz. `backend/scripts/delete_member_photos.cjs` mevcut fotoğrafları siler (dry-run varsayılan, `--apply` ile; ÇALIŞTIRILMADI).
+
+**Karar.** İnsan için hiçbir görsel yükleme yok; yalnız salon logosu R2'de kalır. Avatar kimliği yalnız API'de doğrulanır (`api/src/avatars.ts`), mobil katalogla aynı olduğunu bir test denetler. Seçili durum yalnız renkle değil halka + onay işaretiyle (renk körlüğü). Gizlilik metinleri (site + `APP_PRIVACY.md`) repoda güncellendi; site yeni sürüm yayındayken deploy edilmeli, ASC/Play'deki "Fotoğraflar" beyanı o zaman kaldırılır.
+
+**Bilerek yapılmadı.** Avatarı Firebase moduna taşımak (kural/alan yok; kesim sürümü API modunda). `docs/plan.md`'deki tarihî PER-20 kaydı düzeltilmedi (geçmiş kaydı). Kullanıcı yüklemesi olmadığı için görsel moderasyon gerekmiyor.
+
+**Açık.** Mevcut Storage fotoğraflarının silinmesi sahibin komutunu bekliyor. Avatar seçici hiçbir cihazda/simülatörde görülmedi (yalnız tip, lint, test). Avatarlar yalnız `avatars.py`'de düzenlenir; yeni avatar eklemek API listesini de (`api/src/avatars.ts`) gerektirir.
+
+**Nerede.** `apps/gymentra-mobile/{scripts/avatars.py,assets/avatars,src/components/Avatar*.tsx,src/utils/avatars.ts}`, `api/src/avatars.ts`, `api/migrations/0052_avatar.sql`.
+
 ## 2026-10-18 — Fotoğraf ve logo yükleme R2'ye taşındı (staging'de gerçek R2 doğrulandı)
 
 **Yapıldı.** `api/src/media.ts`: `POST/DELETE /v1/me/photo`, `POST /v1/tenants/:t/logo` (yönetici), herkese açık `GET /media/*`. Anahtarlar tahmin edilemez (128 bit rastgele; eski Firebase token'lı URL'lerin karşılığı), görsel türü **baytlara bakılarak** (JPEG/PNG/WebP imzası) belirlenir, 1 MB sınırı, kişi/salon başına tek güncel görsel, `nosniff` + `sandbox` CSP. Hesap silinince fotoğraf nesneleri de silinir. Mobil: `uploadMemberPhoto/deleteMemberPhoto/uploadTenantLogo` API uygulamaları (`imageTools.ts` yerel modülleri tembel yükler). `gymentra-media-staging` kovası oluşturuldu; `wrangler r2 object put` ile konan nesne Worker'dan 200 + doğru başlıklarla okundu.

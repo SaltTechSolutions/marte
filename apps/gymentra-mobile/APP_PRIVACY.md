@@ -34,7 +34,6 @@ Her satır için Apple üç şey soruyor: **amaç**, **kimliğe bağlı mı**,
 | Contact Info | **Physical Address** | Üye profili (isteğe bağlı). **Yalnızca kişinin kendisi ve salonun yöneticisi görür**, antrenör göremez. *(14 Ekim 2026'da eklendi)* | `member_addresses.address` |
 | Health & Fitness | **Health** | Kilo, göğüs/bel/kol ölçüsü, boy | `MeasurementEntry`, `heightCm` |
 | Health & Fitness | **Fitness** | Antrenman kayıtları (hareket, set, ağırlık, süre), salona giriş kayıtları | `WorkoutLog`, `checkins` |
-| User Content | Photos or Videos | Profil fotoğrafı | `uploadMemberPhoto` |
 | User Content | Other User Content | Antrenörün üye hakkındaki notu, **yöneticinin özel üye notu** (yalnızca yöneticiler görür, üye görmez), salon duyuruları | `member_notes`, `member_admin_notes`, `announcements` |
 | Identifiers | User ID | Firebase kullanıcı kimliği | Firebase Auth |
 | Identifiers | Device ID | Bildirim jetonu | `pushTokenRepo` |
@@ -90,7 +89,6 @@ Google'ın kategorileri Apple'ınkiyle birebir örtüşmüyor. Karşılıklar:
 | User ID | Kişisel bilgiler → Kullanıcı kimlikleri *(tek "paylaşılan" kalem — Firebase)* |
 | Health | Sağlık ve fitness → Sağlık bilgisi |
 | Fitness | Sağlık ve fitness → Fitness bilgisi |
-| Photos or Videos | Fotoğraflar ve videolar → **Fotoğraflar** *(isteğe bağlı)* |
 | Other User Content | Uygulama etkinliği → **Kullanıcı tarafından oluşturulan diğer içerikler** |
 | Purchase History, Other Financial Info | Finansal bilgiler → İşlem geçmişi |
 | Device ID | Cihaz veya diğer kimlikler |
@@ -112,3 +110,5 @@ Apple, SDK'ların topladığını da senin beyanına dahil ediyor:
 - **Firebase** (Auth, Firestore, Storage) — yukarıdaki verilerin saklandığı yer.
 - **Sentry** — yalnızca çökme verisi, kimliğe bağlı değil.
 - **RevenueCat** — abonelik durumu ve satın alma geçmişi.
+
+> **18 Ekim 2026:** profil fotoğrafı kaldırıldı (üyeler 12 hazır avatardan seçer). App Store 'Photos or Videos' ve Play 'Photos and videos' beyanları, bu sürüm yayınlanınca ve eski sürümler kalmayınca **kaldırılmalı** (konsol işi; salon logosu kişisel veri değildir).

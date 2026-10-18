@@ -107,7 +107,7 @@ reads3.get('/tenants/:tenantId/members/:memberId', async (c) => {
   if (!allowed) return c.json({ error: 'not found' }, 404);
   return c.json({ memberId: row.member_id, tenantId, status: row.status, roles: JSON.parse(row.roles),
     permissions: JSON.parse(row.permissions), displayName: row.display_name, email: row.email, phone: row.phone,
-    birthDate: row.birth_date, heightCm: row.height_cm, photoUrl: row.photo_url, shortCode: row.short_code,
+    birthDate: row.birth_date, heightCm: row.height_cm, avatarId: row.avatar_id, shortCode: row.short_code,
     managed: !!row.managed, guardianId: row.guardian_id, guardianName: row.guardian_name,
     guardianStatus: row.guardian_status, guardianConsentAt: row.guardian_consent_at, guardianConsentVersion: row.guardian_consent_version,
     requestedAt: row.requested_at, approvedAt: row.approved_at, leftAt: row.left_at, createdBy: row.created_by });

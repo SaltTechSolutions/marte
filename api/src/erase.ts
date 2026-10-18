@@ -81,7 +81,7 @@ export function eraseStatements(db: D1Database, o: EraseOptions): { stmts: D1Pre
   add(`DELETE FROM memberships WHERE member_id = ?1${T()} AND NOT EXISTS (
          SELECT 1 FROM pt_sessions s WHERE s.tenant_id = memberships.tenant_id AND (s.member_id = memberships.member_id OR s.trainer_id = memberships.member_id))`, true);
   add(`UPDATE memberships SET status = 'left', left_at = ?2, roles = '["member"]', permissions = '[]', display_name = 'Silinmiş üye',
-         email = NULL, phone = NULL, birth_date = NULL, height_cm = NULL, photo_url = NULL, short_code = NULL,
+         email = NULL, phone = NULL, birth_date = NULL, height_cm = NULL, photo_url = NULL, avatar_id = NULL, short_code = NULL,
          guardian_id = NULL, guardian_name = NULL, guardian_status = NULL, guardian_consent_at = NULL, guardian_consent_version = NULL
        WHERE member_id = ?1${T()}`);
   return { stmts, deleteIdx };

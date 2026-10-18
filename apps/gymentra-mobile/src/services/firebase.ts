@@ -22,7 +22,7 @@ export const auth: Auth = initializeAuth(app, {
 
 export const db: Firestore = initializeFirestore(app, {});
 
-// No Firebase Storage client on purpose: logo and photo uploads go through the
-// `uploadTenantLogo` / `uploadMemberPhoto` callables (Admin SDK), so nothing
+// No Firebase Storage client on purpose: the logo upload goes through the
+// `uploadTenantLogo` callable (Admin SDK), so nothing
 // reads `storage` and `firebase/storage` would only be dead weight in the
 // bundle and one more service started at launch (DEN-11).

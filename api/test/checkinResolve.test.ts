@@ -23,7 +23,7 @@ async function world() {
   await h.addUser('u-fd', ['member'], { permissions: ['checkin'] });
   await h.addUser('u-tr', ['trainer']);
   await h.addUser('u-a', ['member']);       // the people being scanned
-  await h.run(`UPDATE memberships SET display_name = 'Ayşe', short_code = '111111', photo_url = 'https://img/a.jpg' WHERE member_id = 'u-a'`);
+  await h.run(`UPDATE memberships SET display_name = 'Ayşe', short_code = '111111', avatar_id = 'rock' WHERE member_id = 'u-a'`);
   await h.run(`UPDATE memberships SET display_name = 'Mem', short_code = '222222' WHERE member_id = 'u-mem'`);
   await h.run(`INSERT INTO gym_packages (id, tenant_id, data) VALUES ('pk1','t1','{}')`);
   return h;
@@ -36,7 +36,7 @@ describe('POST checkins/resolve: the decision, without recording', () => {
     const r = await resolve(h, 'fb-admin', { memberId: 'u-a' });
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ decision: 'ok', access: 'ok', accessReason: 'ok', packageLabel: 'Aylık',
-      member: { id: 'u-a', name: 'Ayşe', photoUrl: 'https://img/a.jpg', shortCode: '111111' } });
+      member: { id: 'u-a', name: 'Ayşe', avatarId: 'rock', shortCode: '111111' } });
     expect(await h.one(`SELECT count(*) c FROM checkins`)).toEqual({ c: 0 });        // resolving never records
   });
 

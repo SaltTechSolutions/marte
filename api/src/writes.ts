@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
+import { isAvatarId } from './avatars';
 import { ADMIN_LIMIT } from './membership';
 import type { Env, Vars } from './types';
 
@@ -120,7 +121,7 @@ writes.delete('/tenants/:tenantId/members/:memberId/address', async (c) => {
 });
 
 // ---- own / managed details ----
-const DETAIL_FIELDS: Record<string, string> = { displayName: 'display_name', phone: 'phone', birthDate: 'birth_date', heightCm: 'height_cm', photoUrl: 'photo_url', email: 'email' };
+const DETAIL_FIELDS: Record<string, string> = { displayName: 'display_name', phone: 'phone', birthDate: 'birth_date', heightCm: 'height_cm', avatarId: 'avatar_id', email: 'email' };
 /**
  * A member edits their own name/phone/birth date/height/photo; an admin edits a
  * MANAGED member's (plus e-mail) and never makes them a minor. Email on a real
@@ -147,6 +148,8 @@ writes.patch('/tenants/:tenantId/members/:memberId/details', async (c) => {
     if (k === 'email' && !(typeof v === 'string' && v.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))) return bad(c, 'email');
     // null clears the height (an absent height is a valid state, an absurd one is not).
     if (k === 'heightCm' && v !== null && !(typeof v === 'number' && v >= 100 && v <= 250)) return bad(c, 'heightCm');
+    // null clears the avatar (initials are shown again); anything else must be one of the predefined ids.
+    if (k === 'avatarId' && v !== null && !isAvatarId(v)) return bad(c, 'avatarId');
     if (k === 'birthDate') {
       if (typeof v !== 'number' || v > Date.now()) return bad(c, 'birthDate');
       if (asAdmin && v + 6575 * 86_400_000 > Date.now()) return bad(c, 'minor');

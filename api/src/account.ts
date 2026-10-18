@@ -69,7 +69,7 @@ account.post('/me/delete-account', async (c) => {
   const uid = c.get('userId');
   const subject = c.get('subject');
   // No identity row: nothing left in D1 (never bootstrapped, or an earlier call already finished). Idempotent.
-  if (!uid) return c.json({ deleted: true, alreadyDeleted: true, authDeletionRequired: true, subject, photoUrls: [] });
+  if (!uid) return c.json({ deleted: true, alreadyDeleted: true, authDeletionRequired: true, subject });
 
   const db = c.env.DB;
   const soleAdmin = async () => !!(await db.prepare(`SELECT ${SOLE_ADMIN_SQL} AS x`).bind(uid).first<{ x: number }>())?.x;
@@ -81,7 +81,6 @@ account.post('/me/delete-account', async (c) => {
     `SELECT DISTINCT member_id FROM pt_sessions WHERE trainer_id = ? AND status = 'scheduled' AND starts_at >= ?`,
   ).bind(uid, now).all<{ member_id: string }>();
   const { results: kids } = await db.prepare(`SELECT DISTINCT member_id FROM memberships WHERE guardian_id = ? AND managed = 0`).bind(uid).all<{ member_id: string }>();
-  const { results: photos } = await db.prepare(`SELECT DISTINCT photo_url FROM memberships WHERE member_id = ? AND photo_url IS NOT NULL`).bind(uid).all<{ photo_url: string }>();
 
   const run = (sql: string, ...binds: unknown[]) => db.prepare(sql).bind(...binds);
   const stmts: D1PreparedStatement[] = [
@@ -115,20 +114,11 @@ account.post('/me/delete-account', async (c) => {
     if (await soleAdmin()) return c.json({ error: 'sole admin of a gym; appoint another admin first' }, 409);
     throw e;
   }
-  // The profile photo lives in R2, outside the D1 batch. Best effort and idempotent: a failure here must not
-  // turn a completed erasure into an error (the keys are unguessable and no row points at them any more).
-  try {
-    const list = await c.env.MEDIA.list({ prefix: `members/${uid}/` });
-    if (list.objects.length) await c.env.MEDIA.delete(list.objects.map((o) => o.key));
-  } catch (e) {
-    console.error('photo cleanup failed', e);
-  }
   return c.json({
     deleted: true,
     // The Firebase Auth user is outside D1. The caller (app) must delete it (or an operator must, by `subject`).
     authDeletionRequired: true,
     subject,
     // Profile photos live in object storage, not in D1; they are listed so the storage layer can erase them.
-    photoUrls: photos.map((p) => p.photo_url),
   });
 });

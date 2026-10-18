@@ -6,7 +6,7 @@ import type { Env, Vars } from './types';
 type App = { Bindings: Env; Variables: Vars };
 type Ctx = import('hono').Context<App>;
 
-/** Authenticated uploads. */
+/** Authenticated uploads (gym logos only: member profile photos were removed, 18 Oct 2026). */
 export const media = new Hono<App>();
 /** Public image reads — mounted BEFORE the auth gate (an <Image> cannot send a token). */
 export const mediaPublic = new Hono<{ Bindings: Env }>();
@@ -51,22 +51,6 @@ async function wipe(c: Ctx, prefix: string, keep?: string) {
   if (old.length) await c.env.MEDIA.delete(old);
 }
 
-media.post('/me/photo', async (c) => {
-  const uid = c.get('userId');
-  if (!uid) return c.json({ error: 'bootstrap required' }, 409);
-  const res = await put(c, `members/${uid}`, ((await c.req.json().catch(() => null)) as { base64?: unknown } | null)?.base64);
-  if (res.status !== 200) return res;
-  const { key } = (await res.clone().json()) as { key: string };
-  await wipe(c, `members/${uid}`, key);          // one current photo per person
-  return res;
-});
-
-media.delete('/me/photo', async (c) => {
-  const uid = c.get('userId');
-  if (uid) await wipe(c, `members/${uid}`);
-  return c.json({ ok: true });
-});
-
 media.post('/tenants/:tenantId/logo', async (c) => {
   const tenantId = c.req.param('tenantId')!;
   if (!(await rolesIn(c.env.DB, tenantId, c.get('userId'))).includes('admin')) return c.json({ error: 'forbidden' }, 403);
@@ -79,7 +63,7 @@ media.post('/tenants/:tenantId/logo', async (c) => {
 
 mediaPublic.get('/media/*', async (c) => {
   const key = new URL(c.req.url).pathname.replace(/^\/(?:v1\/)?media\//, '');
-  if (!/^(members|tenants)\/[A-Za-z0-9_-]+\/[0-9a-f]{32}\.(jpg|png|webp)$/.test(key)) return c.json({ error: 'not found' }, 404);
+  if (!/^tenants\/[A-Za-z0-9_-]+\/[0-9a-f]{32}\.(jpg|png|webp)$/.test(key)) return c.json({ error: 'not found' }, 404);
   const obj = await c.env.MEDIA.get(key);
   if (!obj) return c.json({ error: 'not found' }, 404);
   return new Response(obj.body, {

@@ -18,7 +18,7 @@ export const checkins = new Hono<App>();
 export const DUPLICATE_WINDOW_MINUTES = 60;
 
 export type MemberRef = { memberId?: unknown; shortCode?: unknown; subject?: unknown };
-export type MemberRow = { member_id: string; status: string; display_name: string | null; email: string | null; photo_url: string | null; short_code: string | null };
+export type MemberRow = { member_id: string; status: string; display_name: string | null; email: string | null; avatar_id: string | null; short_code: string | null };
 
 const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
@@ -30,7 +30,7 @@ const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null
 export async function findMember(db: D1Database, tenantId: string, ref: MemberRef): Promise<MemberRow | null | undefined> {
   const named = [str(ref.memberId), str(ref.shortCode), str(ref.subject)].filter(Boolean);
   if (named.length !== 1) return undefined;
-  const cols = `m.member_id, m.status, m.display_name, m.email, m.photo_url, m.short_code`;
+  const cols = `m.member_id, m.status, m.display_name, m.email, m.avatar_id, m.short_code`;
   const memberId = str(ref.memberId), shortCode = str(ref.shortCode), subject = str(ref.subject);
   const row = memberId
     ? await db.prepare(`SELECT ${cols} FROM memberships m WHERE m.tenant_id = ? AND m.member_id = ?`).bind(tenantId, memberId).first<MemberRow>()
@@ -124,7 +124,7 @@ checkins.post('/tenants/:tenantId/checkins/resolve', async (c: Ctx) => {
   const m = await findMember(c.env.DB, tenantId, body);
   if (m === undefined) return c.json({ error: 'memberId, shortCode or subject required' }, 400);
   if (m === null) return c.json({ decision: 'not-found' });
-  const member = { id: m.member_id, name: m.display_name || m.email || m.member_id, photoUrl: m.photo_url, shortCode: m.short_code };
+  const member = { id: m.member_id, name: m.display_name || m.email || m.member_id, avatarId: m.avatar_id, shortCode: m.short_code };
   if (m.status !== 'active') return c.json({ decision: 'inactive', member });
 
   const now = Date.now();

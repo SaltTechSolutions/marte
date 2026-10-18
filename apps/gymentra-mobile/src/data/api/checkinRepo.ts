@@ -26,7 +26,7 @@ interface Resolution {
   decision: Decision;
   access?: 'ok' | 'warn';
   accessReason?: CheckInAccessReason;
-  member?: { id: string; name: string; photoUrl: string | null; shortCode: string | null };
+  member?: { id: string; name: string; avatarId: string | null; shortCode: string | null };
   packageLabel?: string | null;
   warnReason?: CheckInWarnReason;
   lastCheckinAt?: number;

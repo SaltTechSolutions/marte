@@ -3,7 +3,6 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import { apiPost } from '@/data/api/client';
 import { BACKEND } from '@/data/backend';
-import { deleteMemberPhoto } from '@/data/repo/memberPhotoRepo';
 
 import { app, auth } from './firebase';
 
@@ -22,9 +21,8 @@ interface ApiDeletion {
  *
  * Firebase mode: one callable (`deleteMyAccount`) that does everything server-side.
  * API mode: the Worker erases the D1 data (and refuses with `failed-precondition` when the caller is the
- * only admin of a gym); the identity and the photo live outside D1, so the client finishes the job:
- * the profile photo (Storage, best effort) and the Firebase Auth user itself. Auth deletion needs a
- * recent sign-in; if Firebase asks for one, the error propagates with `auth/requires-recent-login` and
+ * only admin of a gym); the identity lives outside D1, so the client finishes the job by deleting the
+ * Firebase Auth user itself. Auth deletion needs a recent sign-in; if Firebase asks for one, the error propagates with `auth/requires-recent-login` and
  * the SAME call can simply be repeated after signing in again - the Worker answers `alreadyDeleted`.
  */
 export async function deleteMyAccount(): Promise<void> {
@@ -36,10 +34,5 @@ export async function deleteMyAccount(): Promise<void> {
   const res = await apiPost<ApiDeletion>('/me/delete-account', { confirm: true });
   const user = auth.currentUser;
   if (!res.deleted && !res.alreadyDeleted) return;
-  try {
-    await deleteMemberPhoto();
-  } catch {
-    // The photo is best effort: the personal data is already gone from D1.
-  }
   if (user) await deleteUser(user);
 }

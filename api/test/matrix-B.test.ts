@@ -22,10 +22,10 @@ describe('matrix B: profile (PER-20)', () => {
     const h = await world();
     const p = '/v1/tenants/t1/members/u-mem/details';
     expect((await h.send('PATCH', p, 'fb-mem', { heightCm: 178 })).status).toBe(200);
-    expect((await h.send('PATCH', p, 'fb-mem', { photoUrl: 'https://x/avatar.jpg?token=t' })).status).toBe(200);
+    expect((await h.send('PATCH', p, 'fb-mem', { avatarId: 'summit' })).status).toBe(200);
     expect((await h.send('PATCH', p, 'fb-mem', { heightCm: 12 })).status).toBe(400);
-    const row = await h.one(`SELECT height_cm, photo_url FROM memberships WHERE member_id = 'u-mem'`);
-    expect(row).toEqual({ height_cm: 178, photo_url: 'https://x/avatar.jpg?token=t' });
+    const row = await h.one(`SELECT height_cm, avatar_id FROM memberships WHERE member_id = 'u-mem'`);
+    expect(row).toEqual({ height_cm: 178, avatar_id: 'summit' });
   });
 
   it('[L1238] admin corrects height of a managed member; height cannot ride along on a role change', async () => {

@@ -165,12 +165,11 @@ export interface TenantMembership {
   /** The admin who added a `managed` member. */
   createdBy?: string;
   /**
-   * Tokenised download URL of the member's own photo. The Storage object is
-   * unreadable by rule; the token in the URL is what grants access, so the
-   * roster can render it without a cross-service rule. Uploaded through the
-   * `uploadMemberPhoto` callable, downscaled on the phone first.
+   * One of the predefined faceless avatars (`data/avatars.generated.ts`), or
+   * unset: initials are shown. There are no member photos (decision of
+   * 18 Oct 2026). Only the Worker stores it; Firebase mode never carries it.
    */
-  photoUrl?: string;
+  avatarId?: string | null;
   /**
    * Under-18 members are linked to a parent who is themselves a real member of
    * the gym (decision 1) — the parent pays, books and cancels on the child's

@@ -1,6 +1,6 @@
 /**
  * Device-side image preparation for uploads. The native modules are required lazily so a client without
- * them (an old Expo Go) loses only photo/logo upload, never the whole app at startup. Isolated in its own
+ * them (an old Expo Go) loses only logo upload, never the whole app at startup. Isolated in its own
  * module so tests can replace it (`vi.mock('./imageTools')`) instead of loading native code.
  */
 export async function resizeToJpeg(localUri: string, size: number, quality: number): Promise<{ uri: string; base64: string }> {

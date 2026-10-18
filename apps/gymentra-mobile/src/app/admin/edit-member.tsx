@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { AccessGuard } from '@/components/AccessGuard';
+import { AvatarPicker } from '@/components/AvatarPicker';
 import { Button } from '@/components/Button';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { ListSkeleton } from '@/components/ListSkeleton';
@@ -42,6 +43,7 @@ export default function EditMember() {
   const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [address, setAddress] = useState('');
+  const [avatarId, setAvatarId] = useState<string | null>(null);
   // What was stored when the form opened: a blank field is only a deletion if
   // there was something to delete, and deleting a missing document is refused.
   const [storedAddress, setStoredAddress] = useState('');
@@ -56,6 +58,7 @@ export default function EditMember() {
         setPhone(m.phone ?? '');
         setEmail(m.userEmail ?? '');
         setBirthDate(formatBirthDate(m.birthDate));
+        setAvatarId(m.avatarId ?? null);
         if (FEATURES.managedMembers) {
           getMemberAddress(m.tenantId, m.userId)
             .then((a) => {
@@ -97,6 +100,7 @@ export default function EditMember() {
   const isMinor = FEATURES.managedMembers && parsedBirth !== null && ageFrom(parsedBirth) < 18;
   const emailValid = email.trim() === '' || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
   const canSave = trimmedName.length > 0 && birthDateValid && !isMinor && emailValid && !saving;
+  const showAvatar = FEATURES.avatars && membership.managed === true;
 
   const save = async () => {
     if (!canSave) return;
@@ -109,6 +113,8 @@ export default function EditMember() {
         // The deployed rules do not let an admin write e-mail yet.
         ...(FEATURES.managedMembers ? { userEmail: email } : {}),
         ...(parsed ? { birthDate: parsed } : {}),
+        // Only a hand-added member's avatar is the gym's to set; only sent when changed.
+        ...(showAvatar && avatarId !== (membership.avatarId ?? null) ? { avatarId } : {}),
       });
       const nextAddress = address.trim();
       if (FEATURES.managedMembers && user && nextAddress !== storedAddress.trim()) {
@@ -180,6 +186,15 @@ export default function EditMember() {
           multiline
         />
       )}
+
+      {showAvatar ? (
+        <>
+          <Text variant="label" tone="sub">
+            AVATAR
+          </Text>
+          <AvatarPicker value={avatarId} onChange={setAvatarId} disabled={saving} />
+        </>
+      ) : null}
 
       <Button label={saving ? '…' : 'Kaydet'} critical disabled={!canSave} onPress={save} />
     </KeyboardAwareScroll>

@@ -1,3 +1,4 @@
+import { assertAvatarId } from '@/utils/avatars';
 import { formatBirthDate } from '@/utils/birthDate';
 
 import { MembershipPermission, MembershipRole, TenantMembership } from '../types';
@@ -199,7 +200,8 @@ export function setMembershipRoles(membershipDocId: string, roles: MembershipRol
  *
  * GAP(api): `heightCm: null` (clear) is not accepted by `PATCH .../details` (height must be 100-250). When the
  * height is already unset, clearing it is a no-op and nothing is sent; when it is set, this throws instead of
- * silently keeping the old value. `photoUrl: null` is fine.
+ * silently keeping the old value. `avatarId: null` is fine (back to initials); an id outside the catalogue is
+ * refused here with a sentence, before any request.
  */
 export async function updateMemberDetails(
   membershipDocId: string,
@@ -209,9 +211,10 @@ export async function updateMemberDetails(
     phone?: string;
     birthDate?: Date | null;
     heightCm?: number | null;
-    photoUrl?: string | null;
+    avatarId?: string | null;
   },
 ): Promise<void> {
+  if (details.avatarId !== undefined) assertAvatarId(details.avatarId);
   const { tenantId, personId } = splitDocId(membershipDocId);
   const memberId = await toInternalId(personId);
   const patch: Record<string, unknown> = {};
@@ -219,7 +222,7 @@ export async function updateMemberDetails(
   if (details.userEmail !== undefined) patch.email = details.userEmail.trim();
   if (details.phone !== undefined) patch.phone = details.phone.trim();
   if (details.birthDate !== undefined && details.birthDate !== null) patch.birthDate = birthDateToMs(details.birthDate);
-  if (details.photoUrl !== undefined) patch.photoUrl = details.photoUrl;
+  if (details.avatarId !== undefined) patch.avatarId = details.avatarId;
   if (typeof details.heightCm === 'number') patch.heightCm = details.heightCm;
   if (details.heightCm === null) {
     const current = await fetchMemberDto(tenantId, memberId);

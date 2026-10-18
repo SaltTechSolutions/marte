@@ -18,7 +18,7 @@ export interface MemberDto {
   phone?: string | null;
   birthDate?: number | null;
   heightCm?: number | null;
-  photoUrl?: string | null;
+  avatarId?: string | null;
   shortCode?: string | null;
   managed?: boolean;
   guardianId?: string | null;
@@ -90,7 +90,7 @@ export function mapMembership(tenantId: string, dto: MemberDto, label: TenantLab
     heightCm: dto.heightCm ?? undefined,
     managed: dto.managed === true ? true : undefined,
     createdBy: toAppId(dto.createdBy),
-    photoUrl: str(dto.photoUrl),
+    avatarId: str(dto.avatarId),
     guardianId: toAppId(dto.guardianId),
     guardianName: str(dto.guardianName),
     guardianStatus: dto.guardianStatus ?? undefined,
@@ -147,7 +147,7 @@ export async function hydrate(tenantId: string, rows: MemberDto[]): Promise<Memb
       }
       // The roster row is the fresher source for the live fields; the detail fills what the roster lacks.
       out[i] = { ...hit.dto, status: r.status, roles: r.roles, displayName: r.displayName, email: r.email,
-        phone: r.phone, birthDate: r.birthDate, photoUrl: r.photoUrl, managed: r.managed, shortCode: r.shortCode };
+        phone: r.phone, birthDate: r.birthDate, avatarId: r.avatarId, managed: r.managed, shortCode: r.shortCode };
     }
   };
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, todo.length) }, worker));

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 
 import { AccessGuard } from '@/components/AccessGuard';
+import { AvatarPicker } from '@/components/AvatarPicker';
 import { Button } from '@/components/Button';
 import { KeyboardAwareScroll } from '@/components/FormScreen';
 import { Text } from '@/components/Text';
@@ -10,7 +11,8 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { reportError } from '@/data/errors';
 import { MEMBER_ADDRESS_MAX } from '@/data/repo/memberAddressRepo';
-import { countActiveMembers, createManagedMember } from '@/data/repo/membershipRepo';
+import { FEATURES } from '@/data/features';
+import { countActiveMembers, createManagedMember, updateMemberDetails } from '@/data/repo/membershipRepo';
 import { canManageGym } from '@/data/membership';
 import { canActivateAnotherMember } from '@/data/seats';
 import { useAppTheme } from '@/theme/ThemeContext';
@@ -38,6 +40,7 @@ export default function AddMember() {
   const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [address, setAddress] = useState('');
+  const [avatarId, setAvatarId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   if (!canManageGym(activeMembership)) {
@@ -62,7 +65,7 @@ export default function AddMember() {
         router.push('/paywall');
         return;
       }
-      const { memberId } = await createManagedMember({
+      const { memberId, membershipId } = await createManagedMember({
         tenantId,
         name: trimmedName,
         phone,
@@ -70,7 +73,18 @@ export default function AddMember() {
         birthDate: parsedBirth,
         address,
       });
-      toast.success(`${trimmedName} eklendi`);
+      let avatarSaved = true;
+      if (FEATURES.avatars && avatarId) {
+        // A second call: the creation route takes no avatar. The member already exists, so a failure here must not
+        // read as "not added" (the admin would add them twice) - say what is missing and carry on to the member.
+        try {
+          await updateMemberDetails(membershipId, { avatarId });
+        } catch (e) {
+          avatarSaved = false;
+          reportError(e, toast, `${trimmedName} eklendi ama avatarı kaydedilemedi; üye ekranından tekrar seçebilirsin.`);
+        }
+      }
+      if (avatarSaved) toast.success(`${trimmedName} eklendi`);
       router.replace({ pathname: '/admin/member', params: { memberId, memberName: trimmedName } });
     } catch (e) {
       // The server's refusals (seat limit, under-18) are written for the admin.
@@ -127,6 +141,15 @@ export default function AddMember() {
         onChangeText={(v) => setAddress(v.slice(0, MEMBER_ADDRESS_MAX))}
         multiline
       />
+
+      {FEATURES.avatars ? (
+        <>
+          <Text variant="label" tone="sub">
+            AVATAR (İSTEĞE BAĞLI)
+          </Text>
+          <AvatarPicker value={avatarId} onChange={setAvatarId} disabled={saving} />
+        </>
+      ) : null}
 
       <Button label={saving ? '…' : 'Üyeyi ekle'} disabled={!canSave} onPress={save} />
     </KeyboardAwareScroll>

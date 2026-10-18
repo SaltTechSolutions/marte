@@ -294,7 +294,7 @@ export default function RegisterScreen() {
 
         <View style={{ flex: 1 }} />
         <Text variant="label" tone="sub" style={{ textAlign: 'center', marginBottom: spacing.lg }}>
-          Doğum günü, fotoğraf vs. SONRA sorulur
+          Doğum günü, avatar vs. SONRA sorulur
         </Text>
       </View>
     </FormScreen>

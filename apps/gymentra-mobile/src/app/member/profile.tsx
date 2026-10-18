@@ -17,8 +17,8 @@ import { MemberAvatar } from '@/components/MemberAvatar';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
 import { watchMeasurements } from '@/data/repo/measurementRepo';
-import { deleteMemberPhoto, uploadMemberPhoto } from '@/data/repo/memberPhotoRepo';
-import * as ImagePicker from 'expo-image-picker';
+import { AvatarPicker } from '@/components/AvatarPicker';
+import { FEATURES } from '@/data/features';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { RoleSwitcher } from '@/components/RoleSwitcher';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -50,7 +50,8 @@ export default function MemberProfile() {
   const { user, activeMembership, activeTenant, refreshMembership } = useAuth();
   const displayName = user?.displayName || user?.email || 'Üye';
   const toast = useToast();
-  const [photoBusy, setPhotoBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [pickingAvatar, setPickingAvatar] = useState(false);
   const [entries, setEntries] = useState<MeasurementEntry[]>([]);
   // The measurement, package-offer and children listeners feed rows that are
   // hidden when empty, so a dropped one looked exactly like "nothing pending" —
@@ -70,32 +71,17 @@ export default function MemberProfile() {
     return watchMeasurements(activeMembership.tenantId, user.uid, setEntries, onError);
   }, [user, activeMembership, retryKey]);
 
-  const pickPhoto = async () => {
+  // Saved the moment an avatar is tapped: one choice, nothing else to fill in, and the card above shows the result.
+  const chooseAvatar = async (avatarId: string | null) => {
     if (!activeMembership) return;
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.9 });
-    if (res.canceled || !res.assets[0]) return;
-    setPhotoBusy(true);
+    setAvatarBusy(true);
     try {
-      const url = await uploadMemberPhoto(res.assets[0].uri);
-      await updateMemberDetails(activeMembership.id, { photoUrl: url });
+      await updateMemberDetails(activeMembership.id, { avatarId });
       await refreshMembership();
     } catch (e) {
-      reportError(e, toast, 'Fotoğraf yüklenemedi, tekrar dene.');
+      reportError(e, toast, 'Avatar kaydedilemedi, tekrar dene.');
     } finally {
-      setPhotoBusy(false);
-    }
-  };
-  const removePhoto = async () => {
-    if (!activeMembership) return;
-    setPhotoBusy(true);
-    try {
-      await deleteMemberPhoto();
-      await updateMemberDetails(activeMembership.id, { photoUrl: null });
-      await refreshMembership();
-    } catch (e) {
-      reportError(e, toast, 'Fotoğraf kaldırılamadı, tekrar dene.');
-    } finally {
-      setPhotoBusy(false);
+      setAvatarBusy(false);
     }
   };
 
@@ -144,33 +130,19 @@ export default function MemberProfile() {
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <Card style={{ alignItems: 'center', gap: 6, paddingVertical: spacing.lg }}>
-        <MemberAvatar name={displayName} photoUrl={activeMembership?.photoUrl} size={72} />
+        <MemberAvatar name={displayName} avatarId={activeMembership?.avatarId} size={72} />
         <Text variant="h3">{displayName}</Text>
-        {activeMembership ? (
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <Pressable
-              onPress={pickPhoto}
-              disabled={photoBusy}
-              hitSlop={8}
-              accessibilityRole="button"
-              style={{ minHeight: 44, justifyContent: 'center' }}>
-              <Text variant="label" weight="700" style={{ color: colors.pText }}>
-                {photoBusy ? '…' : activeMembership.photoUrl ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}
-              </Text>
-            </Pressable>
-            {activeMembership.photoUrl ? (
-              <Pressable
-                onPress={removePhoto}
-                disabled={photoBusy}
-                hitSlop={8}
-                accessibilityRole="button"
-                style={{ minHeight: 44, justifyContent: 'center' }}>
-                <Text variant="label" weight="700" tone="sub">
-                  Kaldır
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+        {FEATURES.avatars && activeMembership ? (
+          <Pressable
+            onPress={() => setPickingAvatar((v) => !v)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: pickingAvatar }}
+            style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text variant="label" weight="700" style={{ color: colors.pText }}>
+              {pickingAvatar ? 'Kapat' : activeMembership.avatarId ? 'Avatarı değiştir' : 'Avatar seç'}
+            </Text>
+          </Pressable>
         ) : null}
         {user?.email && displayName !== user.email ? (
           <Text variant="label" tone="sub">
@@ -179,6 +151,15 @@ export default function MemberProfile() {
         ) : null}
         {activeMembership?.status === 'active' && <StatusBadge label={`${tenantName} · Aktif üyelik`} tone="ok" />}
       </Card>
+
+      {FEATURES.avatars && activeMembership && pickingAvatar ? (
+        <Card style={{ gap: spacing.sm }}>
+          <Text variant="label" tone="sub">
+            AVATARIN
+          </Text>
+          <AvatarPicker value={activeMembership.avatarId} onChange={chooseAvatar} disabled={avatarBusy} />
+        </Card>
+      ) : null}
 
       {failed ? (
         <ErrorNotice

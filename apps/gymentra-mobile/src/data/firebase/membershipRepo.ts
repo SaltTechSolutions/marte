@@ -304,17 +304,19 @@ export async function updateMemberDetails(
     phone?: string;
     birthDate?: Date | null;
     heightCm?: number | null;
-    photoUrl?: string | null;
+    /** Part of the shared signature only: Firestore has no field for it (see `FEATURES.avatars`), so passing it throws. */
+    avatarId?: string | null;
   },
 ): Promise<void> {
+  // The screens hide the picker in this mode; a caller that got here anyway must not believe it was saved.
+  if (details.avatarId !== undefined) throw new Error('avatars are not stored by the Firebase backend');
   const patch: Record<string, unknown> = {};
   if (details.userDisplayName !== undefined) patch.userDisplayName = details.userDisplayName.trim();
   if (details.userEmail !== undefined) patch.userEmail = details.userEmail.trim();
   if (details.phone !== undefined) patch.phone = details.phone.trim();
   if (details.birthDate !== undefined && details.birthDate !== null) patch.birthDate = details.birthDate;
-  // `null` clears: a removed photo or height must not leave the old value behind.
+  // `null` clears: a removed height must not leave the old value behind.
   if (details.heightCm !== undefined) patch.heightCm = details.heightCm === null ? deleteField() : details.heightCm;
-  if (details.photoUrl !== undefined) patch.photoUrl = details.photoUrl === null ? deleteField() : details.photoUrl;
   if (Object.keys(patch).length === 0) return;
   await updateDoc(doc(db, 'tenant_memberships', membershipDocId), patch);
 }

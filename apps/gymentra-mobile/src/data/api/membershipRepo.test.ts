@@ -246,13 +246,9 @@ describe('updateMemberDetails', () => {
     expect([m!.birthDate!.getMonth(), m!.birthDate!.getDate()]).toEqual([4, 21]);
   });
 
-  it('clearing a height that is not set is a no-op; clearing one that is set fails loudly; photo can be cleared', async () => {
+  it('clearing a height that is not set is a no-op; clearing one that is set fails loudly', async () => {
     const id = 't1_fb-mem';
     await repo.updateMemberDetails(id, { heightCm: null });                          // nothing to clear: no error, no request
-    await repo.updateMemberDetails(id, { photoUrl: 'https://img.example/a.jpg' });
-    expect((await repo.getMembership('t1', 'fb-mem'))!.photoUrl).toBe('https://img.example/a.jpg');
-    await repo.updateMemberDetails(id, { photoUrl: null });
-    expect((await repo.getMembership('t1', 'fb-mem'))!.photoUrl).toBeUndefined();
     await repo.updateMemberDetails(id, { heightCm: 180 });
     expect((await refusal(repo.updateMemberDetails(id, { heightCm: null }))).message).toMatch(/GAP\(api\)/);
     expect((await repo.getMembership('t1', 'fb-mem'))!.heightCm).toBe(180);

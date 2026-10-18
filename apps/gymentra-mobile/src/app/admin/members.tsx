@@ -285,7 +285,7 @@ export default function AdminMembers() {
         requests.map((r) => (
           <View key={r.id} style={{ backgroundColor: colors.surf, borderWidth: 1, borderColor: colors.line, borderRadius: radius.md, padding: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11 }}>
-              <MemberAvatar name={requesterLabel(r)} photoUrl={r.photoUrl} size={40} />
+              <MemberAvatar name={requesterLabel(r)} avatarId={r.avatarId} size={40} />
               <View style={{ flex: 1 }}>
                 <Text variant="helper" weight="700" numberOfLines={1}>
                   {requesterLabel(r)}
@@ -400,7 +400,7 @@ export default function AdminMembers() {
             <ListRow
               last={i === visibleMembers.length - 1}
               onPress={() => router.push({ pathname: '/admin/member', params: { memberId: m.userId, memberName: requesterLabel(m) } })}>
-              <MemberAvatar name={requesterLabel(m)} photoUrl={m.photoUrl} size={32} />
+              <MemberAvatar name={requesterLabel(m)} avatarId={m.avatarId} size={32} />
               <View style={{ flex: 1 }}>
                 <Text variant="helper" weight="700" numberOfLines={1}>
                   {requesterLabel(m)}

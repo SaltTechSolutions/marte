@@ -102,7 +102,7 @@ describe('deleteMyAccount', () => {
     await seed(h);
     const r = await del(h, 'fb-del');
     expect(r.status).toBe(200);
-    expect(await h.json(r)).toEqual({ deleted: true, authDeletionRequired: true, subject: 'fb-del', photoUrls: ['https://img/del.jpg', 'https://img/del2.jpg'] });
+    expect(await h.json(r)).toEqual({ deleted: true, authDeletionRequired: true, subject: 'fb-del' });
 
     // ---- erased
     for (const [t, col] of [

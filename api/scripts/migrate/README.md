@@ -218,7 +218,7 @@ olmalı, çünkü adım 6'daki döküm ancak o zaman tutarlıdır.
 - Silinmiş Firebase hesaplarını ayırt etmek `--with-auth` ister; yoksa bir push token / ayar / veli
   uid'i için "hesap hâlâ var mı" bilinmez ve satır açılır.
 - Mikrosaniye/nanosaniye Timestamp hassasiyeti ms'ye indirilir.
-- Profil fotoğrafı dosyaları (Firebase Storage) taşınmaz; `photo_url` olduğu gibi kalır. R2 geçişi ayrı iş.
+- Profil fotoğrafları **kaldırıldı** (18 Ekim 2026): `photo_url` taşınmaz (NULL), Storage dosyaları taşınmaz; üyeler hazır avatarlardan seçer. Mevcut fotoğrafların silinmesi için `backend/scripts/delete_member_photos.cjs` (dry-run varsayılan).
 - Firebase Auth kimlik sağlayıcı olarak kalır; parola/oturum taşınmaz.
 - Ters aktarım (D1 -> Firestore) yok.
 - Dökümün, dondurma dışında tutarlı olduğu varsayılamaz.

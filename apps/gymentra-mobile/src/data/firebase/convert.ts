@@ -72,7 +72,6 @@ export function membershipFromDoc(snap: QueryDocumentSnapshot | DocumentSnapshot
     heightCm: data.heightCm,
     managed: data.managed === true ? true : undefined,
     createdBy: data.createdBy,
-    photoUrl: data.photoUrl,
     guardianId: data.guardianId,
     guardianName: data.guardianName,
     guardianStatus: data.guardianStatus,

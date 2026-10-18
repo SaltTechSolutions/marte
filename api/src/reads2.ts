@@ -196,12 +196,12 @@ reads2.get('/tenants/:tenantId/members', async (c) => {
   const roles = await rolesIn(c.env.DB, c.req.param('tenantId')!, c.get('userId'));
   if (!isStaff(roles)) return c.json({ error: 'forbidden' }, 403);
   const { results } = await c.env.DB.prepare(
-    `SELECT member_id, status, roles, permissions, display_name, email, phone, birth_date, height_cm, photo_url, managed, short_code,
+    `SELECT member_id, status, roles, permissions, display_name, email, phone, birth_date, height_cm, avatar_id, managed, short_code,
             requested_at, approved_at, left_at, created_by, guardian_id, guardian_name, guardian_status, guardian_consent_at, guardian_consent_version
      FROM memberships WHERE tenant_id = ? ORDER BY display_name, member_id LIMIT ?`,
   ).bind(c.req.param('tenantId'), limitOf(c, 500, 1000)).all<any>();
   return c.json(results.map((r) => ({ memberId: r.member_id, status: r.status, roles: JSON.parse(r.roles), permissions: JSON.parse(r.permissions),
-    displayName: r.display_name, email: r.email, phone: r.phone, birthDate: r.birth_date, heightCm: r.height_cm, photoUrl: r.photo_url,
+    displayName: r.display_name, email: r.email, phone: r.phone, birthDate: r.birth_date, heightCm: r.height_cm, avatarId: r.avatar_id,
     managed: !!r.managed, shortCode: r.short_code, requestedAt: r.requested_at, approvedAt: r.approved_at, leftAt: r.left_at, createdBy: r.created_by,
     guardianId: r.guardian_id, guardianName: r.guardian_name, guardianStatus: r.guardian_status,
     guardianConsentAt: r.guardian_consent_at, guardianConsentVersion: r.guardian_consent_version })));

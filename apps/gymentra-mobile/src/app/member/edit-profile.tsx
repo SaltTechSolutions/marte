@@ -21,7 +21,7 @@ import { Card } from '@/components/Card';
  * The member correcting their own details (MEMBER-2, and the precondition for
  * MEMBER-5's under-18 handling).
  *
- * The sign-up screen has always promised that birth date and photo would be
+ * The sign-up screen has always promised that birth date and avatar would be
  * asked for "later"; until now that later never came, so no member who joined
  * through the app had a birth date at all. Only the migrated marte06 records
  * did — which is why nothing age-related could be built on top of it.

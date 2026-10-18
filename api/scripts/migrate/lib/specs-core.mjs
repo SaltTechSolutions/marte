@@ -152,7 +152,8 @@ export const memberships = {
     tenant_id: (v) => v.tenantId, member_id: (v) => v.memberId, status: (v) => v.status,
     roles: (v) => JSON.stringify(v.roles), permissions: (v) => JSON.stringify(v.permissions),
     display_name: (v) => v.displayName, email: (v) => v.email, phone: (v) => v.phone,
-    birth_date: (v) => v.birthDate, height_cm: (v) => v.height, photo_url: (v) => v.photoUrl, short_code: (v) => v.shortCode,
+    birth_date: (v) => v.birthDate, height_cm: (v) => v.height, // Profile photos were removed (18 Oct 2026): the old URLs are NOT carried over; members pick an avatar.
+    photo_url: () => null, short_code: (v) => v.shortCode,
     managed: (v) => (v.managed ? 1 : 0), created_by: (v) => v.createdBy,
     guardian_id: (v) => v.guardianId, guardian_name: (v) => v.guardianName, guardian_status: (v) => v.guardianStatus,
     guardian_consent_at: (v) => v.guardianConsentAt, guardian_consent_version: (v) => v.guardianConsentVersion,
