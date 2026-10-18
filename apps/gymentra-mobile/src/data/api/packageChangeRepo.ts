@@ -4,7 +4,6 @@ import type { GymPackage, MemberPackage, PackageChangeKind, PackageChangeRequest
 import { ApiError, apiGet, apiPost } from './client';
 import { selfInternalId, toInternalId } from './membershipIdentity';
 import { packageChangeRequestFromDto } from './pkgDto';
-import { localized } from './pkgErrors';
 import { computeProratedRefund } from './pkgPure';
 import { inTenantOf, knownTenant, pkgInvalidate, rememberTenant } from './pkgTenant';
 import { invalidate } from './poll';
@@ -20,9 +19,9 @@ export { computeProratedRefund };
 
 type Raw = Record<string, any>;
 
-async function fetchRequests(tenantId: string): Promise<PackageChangeRequest[]> {
+async function fetchRequests(tenantId: string, query = ''): Promise<PackageChangeRequest[]> {
   await selfInternalId();
-  const rows = await apiGet<Raw[]>(`/tenants/${tenantId}/package-change-requests`);
+  const rows = await apiGet<Raw[]>(`/tenants/${tenantId}/package-change-requests${query}`);
   const list = rows.map((r) => packageChangeRequestFromDto(r, tenantId));
   rememberTenant('changeRequest', list, tenantId);
   return list;
@@ -67,18 +66,16 @@ export async function createPackageChangeRequest(params: {
   createdBy: string;
 }): Promise<void> {
   const { tenantId, memberId, kind, current, proposedPackage, proposedPromotion, note, effectiveInDays = 0, expiresInDays = 3 } = params;
-  await localized(
-    apiPost(`/tenants/${tenantId}/package-change-requests`, {
-      memberId: await toInternalId(memberId),
-      kind,
-      proposedPackageId: proposedPackage.id,
-      ...(current ? { currentPackageAssignmentId: current.assignmentId } : {}),
-      ...(proposedPromotion ? { proposedPromotionId: proposedPromotion.id } : {}),
-      ...(note ? { note } : {}),
-      effectiveInDays,
-      expiresInDays,
-    }),
-  );
+  await apiPost(`/tenants/${tenantId}/package-change-requests`, {
+    memberId: await toInternalId(memberId),
+    kind,
+    proposedPackageId: proposedPackage.id,
+    ...(current ? { currentPackageAssignmentId: current.assignmentId } : {}),
+    ...(proposedPromotion ? { proposedPromotionId: proposedPromotion.id } : {}),
+    ...(note ? { note } : {}),
+    effectiveInDays,
+    expiresInDays,
+  });
   refreshed(tenantId);
 }
 
@@ -91,10 +88,8 @@ export function watchPendingPackageChangeRequests(
 ) {
   return watchPoll(
     `t:${tenantId}:pkgchg:pending:${memberId}`,
-    async () =>
-      (await fetchRequests(tenantId))
-        .filter((r) => r.memberId === memberId && r.status === 'pending')
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()),
+    // Filtered by the Worker (newest first); a member's own scope is never widened by `memberId`.
+    async () => fetchRequests(tenantId, `?memberId=${encodeURIComponent(await toInternalId(memberId))}&status=pending`),
     onChange,
     onError,
   );
@@ -121,7 +116,7 @@ export async function getPackageChangeRequest(requestId: string): Promise<Packag
  */
 export async function respondToPackageChangeRequest(requestId: string, approve: boolean): Promise<PackageChangeResponseOutcome> {
   return inTenantOf('changeRequest', requestId, async (tenantId) => {
-    const res = await localized(apiPost<{ status: PackageChangeResponseOutcome }>(`/tenants/${tenantId}/package-change-requests/${requestId}/respond`, { approve }));
+    const res = await apiPost<{ status: PackageChangeResponseOutcome }>(`/tenants/${tenantId}/package-change-requests/${requestId}/respond`, { approve });
     // An approval replaces a holding, moves credits and entitlements and may book a refund row.
     pkgInvalidate(tenantId, 'pkgchg', 'packages', 'credits', 'entitlements', 'promotions', 'payments', 'renewal');
     invalidate('t:?:pkgchg');
@@ -135,7 +130,7 @@ export async function cancelPackageChangeRequest(requestId: string): Promise<voi
     'changeRequest',
     requestId,
     async (tenantId) => {
-      await localized(apiPost(`/tenants/${tenantId}/package-change-requests/${requestId}/cancel`));
+      await apiPost(`/tenants/${tenantId}/package-change-requests/${requestId}/cancel`);
       refreshed(tenantId);
     },
     { adminOnly: true },

@@ -3,7 +3,6 @@ import type { GymPackage, PackageEntitlements, PackageKind } from '../types';
 import type { PackageDraft } from '../firebase/packageRepo';
 import { ApiError, apiGet, apiPost, apiPut } from './client';
 import { gymPackageFromDto } from './pkgDto';
-import { localized } from './pkgErrors';
 import { toApiMoney } from './pkgMoney';
 import { canEditPackage } from './pkgPure';
 import { inTenantOf, pkgInvalidate, rememberTenant } from './pkgTenant';
@@ -13,8 +12,8 @@ import { watchPoll } from './pkgWatch';
  * The gym's package catalog over the Worker (`/tenants/:t/packages`).
  *
  * Server rules this layer relies on: a package in use (`activeAssignmentCount > 0`) accepts only
- * `isActive` / `sortOrder` changes; a package NOT in use is replaced as a whole and must therefore be sent
- * whole (including `isActive`), unlike Firestore's field-merge `updateDoc`.
+ * `isActive` / `sortOrder` changes (409 otherwise); a package NOT in use takes a PARTIAL body merged over the
+ * stored one (a `null` removes a key) and the merged result is validated. A lost race is a 409, not a silent ok.
  */
 export { canEditPackage };
 
@@ -52,13 +51,6 @@ async function fetchCatalog(tenantId: string): Promise<GymPackage[]> {
   return list;
 }
 
-/** The catalog row, or a 404 ApiError (so `inTenantOf` moves on to the next gym). */
-async function findPackage(tenantId: string, packageId: string): Promise<GymPackage> {
-  const found = (await fetchCatalog(tenantId)).find((p) => p.id === packageId);
-  if (!found) throw new ApiError(404, 'Aradığın kayıt bulunamadı.');
-  return found;
-}
-
 /** Fire-and-forget by design in the Firebase repo; here the caller is the gym's new admin, so it is plain admin writes. */
 export async function seedDefaultPackages(tenantId: string): Promise<void> {
   await Promise.all(
@@ -72,80 +64,59 @@ export async function createGymPackage(tenantId: string, draft: PackageDraft): P
   pkgInvalidate(tenantId, 'packages');
 }
 
+/** Optional draft fields the edit form may have cleared: sent as `null` so the Worker's merge removes them. */
+const clearable = (draft: PackageDraft) => ({
+  durationDays: draft.durationDays ?? null,
+  lessonCount: draft.lessonCount ?? null,
+  lessonValidityDays: draft.lessonValidityDays ?? null,
+  freezePolicy: draft.freezePolicy ?? null,
+});
+
 /**
- * Edits a package's content in place — only valid while `canEditPackage` is true (the Worker enforces the
- * same lock and answers 409 otherwise). `isActive` / `sortOrder` are carried over from the stored row
- * because the Worker replaces the whole package.
+ * Edits a package's content in place - only valid while `canEditPackage` is true (the Worker enforces the same
+ * lock and answers 409 with a Turkish message otherwise). `isActive` / `sortOrder` are not part of an edit.
  */
 export async function updateGymPackage(packageId: string, draft: PackageDraft): Promise<void> {
   await inTenantOf(
     'package',
     packageId,
     async (tenantId) => {
-      const existing = await findPackage(tenantId, packageId);
-      await localized(apiPut(`/tenants/${tenantId}/packages/${packageId}`, { ...wire(draft), isActive: existing.isActive, sortOrder: existing.sortOrder }));
+      await apiPut(`/tenants/${tenantId}/packages/${packageId}`, { ...wire(draft), ...clearable(draft) });
       pkgInvalidate(tenantId, 'packages');
     },
     { adminOnly: true },
   );
 }
 
-/**
- * Retire / re-offer a package. A package in use accepts the bare toggle; one that is not in use is replaced
- * whole by the Worker, so it is re-sent with its stored content.
- */
+/** Retire / re-offer a package (allowed for a package in use as well). */
 export async function setPackageActive(packageId: string, isActive: boolean): Promise<void> {
   await inTenantOf(
     'package',
     packageId,
     async (tenantId) => {
-      const existing = await findPackage(tenantId, packageId);
-      const body: Record<string, unknown> = existing.activeAssignmentCount > 0 ? { isActive } : packageBody(existing, isActive);
-      await apiPut(`/tenants/${tenantId}/packages/${packageId}`, body);
+      await apiPut(`/tenants/${tenantId}/packages/${packageId}`, { isActive });
       pkgInvalidate(tenantId, 'packages');
     },
     { adminOnly: true },
   );
 }
 
-function packageBody(p: GymPackage, isActive: boolean): Record<string, unknown> {
-  return {
-    name: p.name,
-    kind: p.kind,
-    price: toApiMoney(p.price),
-    ...(p.durationDays != null ? { durationDays: p.durationDays } : {}),
-    ...(p.lessonCount != null ? { lessonCount: p.lessonCount } : {}),
-    ...(p.lessonValidityDays != null ? { lessonValidityDays: p.lessonValidityDays } : {}),
-    entitlements: p.entitlements,
-    ...(p.freezePolicy ? { freezePolicy: p.freezePolicy } : {}),
-    ...(p.supersedesId ? { supersedesId: p.supersedesId } : {}),
-    sortOrder: p.sortOrder,
-    isActive,
-  };
-}
-
 /**
  * Replaces a locked package with a new version carrying the edited content; the old one is retired, not
- * deleted (existing holders keep pointing at it).
- *
- * NOT atomic (GAP(api): the Worker has no single "new version" route; Firebase did this in one batch).
- * The new version is created FIRST and the old one retired second, so a failure in between leaves two
- * active versions (visible, harmless, fixable) and never a catalog with nothing sellable.
+ * deleted (existing holders keep pointing at it). One atomic Worker call (`POST …/packages/:id/version`):
+ * the successor lands with `supersedesId`, and only then is the old version switched off.
  */
 export async function createPackageVersion(previous: GymPackage, draft: PackageDraft): Promise<void> {
   const { tenantId } = previous;
-  await apiPost(`/tenants/${tenantId}/packages`, { ...wire(draft), isActive: true, sortOrder: previous.sortOrder, supersedesId: previous.id });
-  try {
-    await apiPut(`/tenants/${tenantId}/packages/${previous.id}`, { isActive: false });
-  } finally {
-    pkgInvalidate(tenantId, 'packages');
-  }
+  await apiPost(`/tenants/${tenantId}/packages/${previous.id}/version`, { ...wire(draft), isActive: true, sortOrder: previous.sortOrder });
+  pkgInvalidate(tenantId, 'packages');
 }
 
 /** One-shot fetch for the edit form (null when the package does not exist). */
 export async function getGymPackage(packageId: string): Promise<GymPackage | null> {
   try {
-    return await inTenantOf('package', packageId, (tenantId) => findPackage(tenantId, packageId));
+    return await inTenantOf('package', packageId, async (tenantId) =>
+      gymPackageFromDto(await apiGet<Raw>(`/tenants/${tenantId}/packages/${packageId}`), tenantId));
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return null;
     throw e;

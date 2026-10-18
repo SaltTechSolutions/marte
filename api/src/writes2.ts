@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
+import { findMember } from './checkins';
 import { bookClass, cancelBooking, deleteClass } from './groupClasses';
 import type { Env, Vars } from './types';
 
@@ -26,21 +27,27 @@ async function canCheckIn(c: Ctx): Promise<boolean> {
   return !!row && (JSON.parse(row.roles).includes('admin') || JSON.parse(row.permissions).includes('checkin'));
 }
 
+/**
+ * Records a visit. The member is named by `memberId` (internal id) or `subject` (the Firebase uid the card QR holds,
+ * resolved inside THIS gym only). Who may: admin or an active holder of the delegated 'checkin' permission.
+ */
 writes2.post('/tenants/:tenantId/checkins', async (c) => {
   if (!(await canCheckIn(c))) return forbidden(c);
   const b = await body(c);
   const reasons = ['ok', 'guardian', 'no-package', 'no-session-today', 'frozen'];
-  if (typeof b.memberId !== 'string' || !reasons.includes(b.accessReason as string)) return bad(c, 'bad check-in');
+  if (!reasons.includes(b.accessReason as string)) return bad(c, 'bad check-in');
   const tenantId = c.req.param('tenantId')!;
-  if (!(await isMember(c, tenantId, b.memberId))) return c.json({ error: 'not found' }, 404);
+  const m = await findMember(c.env.DB, tenantId, { memberId: b.memberId, subject: b.subject });
+  if (m === undefined) return bad(c, 'bad check-in');
+  if (m === null) return c.json({ error: 'not found' }, 404);
   const id = newId('ci');
   await c.env.DB.prepare(`INSERT INTO checkins (id, tenant_id, member_id, data, created_at) VALUES (?, ?, ?, ?, ?)`)
-    .bind(id, tenantId, b.memberId, JSON.stringify({ accessReason: b.accessReason, by: c.get('userId') }), Date.now()).run();
+    .bind(id, tenantId, m.member_id, JSON.stringify({ accessReason: b.accessReason, by: c.get('userId') }), Date.now()).run();
   return c.json({ id }, 201);
 });
 
 // ---- classes ----
-const classData = (b: Record<string, unknown>): { startsAt: number; data: Record<string, unknown> } | null => {
+export const classData = (b: Record<string, unknown>): { startsAt: number; data: Record<string, unknown> } | null => {
   const { startsAt, ...rest } = b;
   const cap = rest.capacity;
   if (typeof startsAt !== 'number' || typeof cap !== 'number' || !Number.isInteger(cap) || cap < 1 || cap > 500) return null;

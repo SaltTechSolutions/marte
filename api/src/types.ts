@@ -1,5 +1,9 @@
 export type Env = {
   DB: D1Database;
+  /** R2 bucket for profile photos and gym logos. */
+  MEDIA: R2Bucket;
+  /** Origin used in media URLs (the custom domain); falls back to the request origin. */
+  PUBLIC_BASE_URL?: string;
   FIREBASE_PROJECT_ID: string;
   /** Resend API key (secret). Without it e-mail outbox rows retry, then die: never silently dropped. */
   RESEND_API_KEY?: string;

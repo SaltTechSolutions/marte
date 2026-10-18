@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 
+import { eraseStatements, ADMIN_ROLE } from './erase';
 import { abortIf, readBody, type App } from './guarded';
 import { outboxStatement } from './outbox';
 
@@ -57,7 +58,6 @@ account.patch('/me/settings', async (c) => {
 //             stays as a scrubbed 'left' tombstone only where a retained PT session still references it.
 // The Firebase Auth user cannot be deleted from D1: the response says so and the caller must finish it.
 // ---------------------------------------------------------------------------------------------
-const ADMIN_ROLE = (alias: string) => `EXISTS (SELECT 1 FROM json_each(${alias}.roles) WHERE value = 'admin')`;
 /** True for every gym where `?` is an active admin and no OTHER active admin exists. */
 const SOLE_ADMIN_SQL = `EXISTS (SELECT 1 FROM memberships m WHERE m.member_id = ? AND m.status = 'active' AND ${ADMIN_ROLE('m')}
   AND NOT EXISTS (SELECT 1 FROM memberships o WHERE o.tenant_id = m.tenant_id AND o.member_id != m.member_id AND o.status = 'active' AND ${ADMIN_ROLE('o')}))`;
@@ -84,7 +84,6 @@ account.post('/me/delete-account', async (c) => {
   const { results: photos } = await db.prepare(`SELECT DISTINCT photo_url FROM memberships WHERE member_id = ? AND photo_url IS NOT NULL`).bind(uid).all<{ photo_url: string }>();
 
   const run = (sql: string, ...binds: unknown[]) => db.prepare(sql).bind(...binds);
-  const mine = (table: string) => run(`DELETE FROM ${table} WHERE member_id = ?`, uid);
   const stmts: D1PreparedStatement[] = [
     // Re-checked INSIDE the batch: two admins deleting at once cannot both pass a stale read.
     abortIf(db, SOLE_ADMIN_SQL, uid),
@@ -101,67 +100,10 @@ account.post('/me/delete-account', async (c) => {
       body: 'Ebeveynin hesabını sildi. Başka bir ebeveyn seçebilirsin.', data: { screen: '/member/edit-profile' },
     }, `account-deleted:${uid}:children`));
   }
+  // Every gym's rows (shared with "an admin removes one person from one gym", see erase.ts).
+  stmts.push(...eraseStatements(db, { uid, now }).stmts);
   stmts.push(
-    // Seat and admin tallies first: they are read off memberships that are about to go.
-    run(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id IN
-           (SELECT tenant_id FROM memberships WHERE member_id = ? AND status = 'active'
-              AND EXISTS (SELECT 1 FROM json_each(memberships.roles) WHERE value = 'member'))`, uid),
-    run(`UPDATE tenants SET active_admin_count = MAX(active_admin_count - 1, 0) WHERE id IN
-           (SELECT tenant_id FROM memberships WHERE member_id = ? AND status = 'active' AND ${ADMIN_ROLE('memberships')})`, uid),
-    // The packages this person held stop counting toward their package's in-use tally.
-    run(`UPDATE gym_packages SET active_assignment_count =
-           (SELECT count(*) FROM member_packages mp WHERE mp.tenant_id = gym_packages.tenant_id AND mp.package_id = gym_packages.id
-              AND mp.status IN ('active','frozen') AND mp.member_id != ?1)
-         WHERE id IN (SELECT package_id FROM member_packages WHERE member_id = ?1)`, uid),
-    // A trainer leaving: their upcoming sessions are cancelled WITH the lesson given back to the member.
-    run(`UPDATE member_credits SET
-           used = MAX(used - (SELECT count(*) FROM pt_sessions s WHERE s.credit_id = member_credits.id AND s.trainer_id = ?1
-                              AND s.status = 'scheduled' AND s.starts_at >= ?2), 0),
-           status = CASE WHEN status = 'exhausted' AND expires_at > ?2 THEN 'active' ELSE status END
-         WHERE id IN (SELECT credit_id FROM pt_sessions WHERE trainer_id = ?1 AND status = 'scheduled' AND starts_at >= ?2 AND credit_id IS NOT NULL)`, uid, now),
-    run(`UPDATE pt_sessions SET status = 'cancelled', cancelled_at = ?2, cancelled_by = ?1, cancelled_by_role = 'system',
-           refund_outcome = CASE WHEN credit_id IS NULL THEN 'no-credit' ELSE 'refunded' END, updated_at = ?2
-         WHERE trainer_id = ?1 AND status = 'scheduled' AND starts_at >= ?2`, uid, now),
-    // A member leaving: upcoming sessions are cancelled (the slot frees), past ones stay for the trainer's calendar.
-    run(`UPDATE pt_sessions SET status = 'cancelled', cancelled_at = ?2, cancelled_by = ?1, cancelled_by_role = 'system',
-           refund_outcome = 'void', updated_at = ?2
-         WHERE member_id = ?1 AND status = 'scheduled' AND starts_at >= ?2`, uid, now),
-    // Credits are deleted below; a retained session must not point at them.
-    run(`UPDATE pt_sessions SET credit_id = NULL WHERE member_id = ? AND credit_id IS NOT NULL`, uid),
-    mine('class_waitlist'),
-    mine('class_bookings'),            // class_attendance marks go with them (ON DELETE CASCADE)
-    mine('member_credits'),
-    mine('member_packages'),
-    mine('checkins'),
-    mine('programs'),
-    mine('measurements'),
-    mine('workout_logs'),
-    mine('member_notes'),
-    mine('member_admin_notes'),
-    mine('member_addresses'),
-    mine('renewal_requests'),
-    mine('package_change_requests'),
-    run(`DELETE FROM calendar_shares WHERE owner_trainer_id = ?1 OR viewer_trainer_id = ?1`, uid),
-    run(`DELETE FROM trainer_availability WHERE trainer_id = ?`, uid),
-    run(`DELETE FROM push_tokens WHERE user_id = ?`, uid),
     run(`DELETE FROM user_settings WHERE user_id = ?`, uid),
-    // Children of a deleted parent lose a consent authority that no longer exists (Firebase left it dangling).
-    run(`UPDATE memberships SET guardian_id = NULL, guardian_name = NULL, guardian_status = NULL,
-           guardian_consent_at = NULL, guardian_consent_version = NULL WHERE guardian_id = ?`, uid),
-    // Ledger: anonymised, never deleted. Also the payer's name on entries this person filed for others.
-    run(`UPDATE payments SET data = json_remove(json_set(data, '$.memberName', 'Silinmiş üye', '$.memberDeletedAt', ?2), '$.note') WHERE member_id = ?1`, uid, now),
-    run(`UPDATE payments SET data = json_remove(data, '$.submittedByName') WHERE json_extract(data, '$.submittedBy') = ?`, uid),
-    // Names stamped on gym content this person authored.
-    run(`UPDATE announcements SET created_by_name = NULL WHERE created_by = ?`, uid),
-    run(`UPDATE exercise_reports SET reported_by_name = NULL WHERE reported_by = ?`, uid),
-    run(`UPDATE member_notes SET updated_by_name = NULL WHERE updated_by = ?`, uid),
-    // Memberships: gone, except where a retained PT session still needs the row (as member or as trainer).
-    run(`DELETE FROM memberships WHERE member_id = ? AND NOT EXISTS (
-           SELECT 1 FROM pt_sessions s WHERE s.tenant_id = memberships.tenant_id AND (s.member_id = memberships.member_id OR s.trainer_id = memberships.member_id))`, uid),
-    run(`UPDATE memberships SET status = 'left', left_at = ?2, roles = '["member"]', permissions = '[]', display_name = 'Silinmiş üye',
-           email = NULL, phone = NULL, birth_date = NULL, height_cm = NULL, photo_url = NULL, short_code = NULL,
-           guardian_id = NULL, guardian_name = NULL, guardian_status = NULL, guardian_consent_at = NULL, guardian_consent_version = NULL
-         WHERE member_id = ?1`, uid, now),
     // Unlinking the provider subject is what makes the person unreachable; the users row is the anonymous anchor.
     run(`DELETE FROM identities WHERE user_id = ?`, uid),
     run(`UPDATE users SET display_name = 'Silinmiş üye', email = NULL WHERE id = ?`, uid),
@@ -172,6 +114,14 @@ account.post('/me/delete-account', async (c) => {
   } catch (e) {
     if (await soleAdmin()) return c.json({ error: 'sole admin of a gym; appoint another admin first' }, 409);
     throw e;
+  }
+  // The profile photo lives in R2, outside the D1 batch. Best effort and idempotent: a failure here must not
+  // turn a completed erasure into an error (the keys are unguessable and no row points at them any more).
+  try {
+    const list = await c.env.MEDIA.list({ prefix: `members/${uid}/` });
+    if (list.objects.length) await c.env.MEDIA.delete(list.objects.map((o) => o.key));
+  } catch (e) {
+    console.error('photo cleanup failed', e);
   }
   return c.json({
     deleted: true,

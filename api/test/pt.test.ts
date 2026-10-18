@@ -142,7 +142,7 @@ describe('PT: bookPtSessions', () => {
     // the existing read endpoints (reads2.ts) see the new session and its frozen deadline
     const mine = (await (await getFull('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-trn')).json()) as any[];
     expect(mine.map((x) => [x.id, x.memberId, x.creditId, x.cancellationDeadlineAt])).toEqual([[s.id, 'u-mem', 'c1', s.cancellation_deadline_at]]);
-    expect(await (await getFull('/v1/tenants/t1/trainers/u-trn/busy', 'fb-mem2')).json()).toEqual([{ startsAt: slot, durationMinutes: 60 }]);
+    expect(await (await getFull('/v1/tenants/t1/trainers/u-trn/busy', 'fb-mem2')).json()).toEqual([{ startsAt: slot, durationMinutes: 60, status: 'scheduled' }]);
   });
 
   it('the last lesson flips the credit to exhausted; the next booking has nothing to spend', async () => {
@@ -633,7 +633,7 @@ describe('PT: hand-over and take-over', () => {
     expect(mine.status).toBe(200);
     expect(((await mine.json()) as any[]).map((s) => [s.id, s.trainerId, s.originalTrainerId])).toEqual([['s1', 'u-trn2', 'u-trn']]);
     expect(((await (await get('/v1/tenants/t1/trainers/u-trn/busy', 'fb-mem')).json()) as any[])).toEqual([]);
-    expect(((await (await get('/v1/tenants/t1/trainers/u-trn2/busy', 'fb-mem')).json()) as any[])).toEqual([{ startsAt: at(D, 10), durationMinutes: 60 }]);
+    expect(((await (await get('/v1/tenants/t1/trainers/u-trn2/busy', 'fb-mem')).json()) as any[])).toEqual([{ startsAt: at(D, 10), durationMinutes: 60, status: 'scheduled' }]);
   });
 });
 

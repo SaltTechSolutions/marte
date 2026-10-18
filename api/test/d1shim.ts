@@ -18,16 +18,19 @@ export function makeDb(): D1Database {
     bind: (...a: unknown[]) => stmt(query, a),
     first: async () => (sql.prepare(query).get(...(args as never[])) as never) ?? null,
     all: async () => ({ results: sql.prepare(query).all(...(args as never[])) as never[] }),
-    run: async () => { sql.prepare(query).run(...(args as never[])); return {}; },
+    run: async () => { const r = sql.prepare(query).run(...(args as never[])); return { success: true, meta: { changes: Number(r.changes) } }; },
     _run: () => sql.prepare(query).run(...(args as never[])),
   });
   return {
     prepare: (q: string) => stmt(q),
     batch: async (list: ReturnType<typeof stmt>[]) => {
       sql.exec('BEGIN');
-      try { list.forEach((s) => s._run()); sql.exec('COMMIT'); }
-      catch (e) { sql.exec('ROLLBACK'); throw e; }
-      return [];
+      try {
+        // Like D1: one result per statement, each with meta.changes.
+        const out = list.map((s) => ({ success: true, results: [], meta: { changes: Number(s._run().changes) } }));
+        sql.exec('COMMIT');
+        return out;
+      } catch (e) { sql.exec('ROLLBACK'); throw e; }
     },
     exec: async (q: string) => { sql.exec(q); return {}; },
   } as unknown as D1Database;

@@ -17,10 +17,12 @@ const newId = (p: string) => p + [...crypto.getRandomValues(new Uint8Array(10))]
 const posInt = (v: unknown) => typeof v === 'number' && Number.isInteger(v) && v > 0;
 
 // ---- catalog ----
+/** Money in the API is INTEGER KURUŞ (1 TL = 100): a package price above this is a typo, not a price. */
+export const MAX_PRICE = 100_000_000;
 function parsePackage(b: Record<string, any>): Record<string, unknown> | string {
   if (typeof b.name !== 'string' || !b.name.trim() || b.name.length > 100) return 'name';
   if (b.kind !== 'membership' && b.kind !== 'lessons') return 'kind';
-  if (typeof b.price !== 'number' || !Number.isInteger(b.price) || b.price < 0) return 'price';
+  if (typeof b.price !== 'number' || !Number.isInteger(b.price) || b.price < 0 || b.price > MAX_PRICE) return 'price';
   if (typeof b.entitlements?.gymAccess !== 'boolean') return 'entitlements.gymAccess';
   if (typeof b.isActive !== 'boolean') return 'isActive';
   if (b.kind === 'membership' && !posInt(b.durationDays)) return 'durationDays';
@@ -39,52 +41,112 @@ packages.post('/tenants/:tenantId/packages', async (c) => {
   return c.json({ id }, 201);
 });
 
-/** A package in use is frozen except for isActive / sortOrder: its terms were sold to someone. */
+/**
+ * A package in use is frozen except for isActive / sortOrder: its terms were sold to someone.
+ * A package NOT in use takes a partial body: it is merged over the stored data (a `null` removes a key) and the
+ * MERGED result is validated like a create. The write repeats both checks (not in use, data unchanged): losing a
+ * race with an assignment or another edit is a 409, never a silent `ok`.
+ */
 packages.put('/tenants/:tenantId/packages/:id', async (c) => {
   if (!(await isAdmin(c))) return forbidden(c);
   const tenantId = c.req.param('tenantId')!;
+  const id = c.req.param('id')!;
   const row = await c.env.DB.prepare(`SELECT data, active_assignment_count n FROM gym_packages WHERE id = ? AND tenant_id = ?`)
-    .bind(c.req.param('id'), tenantId).first<{ data: string; n: number }>();
+    .bind(id, tenantId).first<{ data: string; n: number }>();
   if (!row) return c.json({ error: 'not found' }, 404);
   const b = await body(c);
+  const stored = JSON.parse(row.data) as Record<string, unknown>;
   let next: Record<string, unknown>;
   if (row.n > 0) {
     const allowed = ['isActive', 'sortOrder', 'updatedAt'];
     if (Object.keys(b).some((k) => !allowed.includes(k))) return c.json({ error: 'package in use: only isActive/sortOrder can change' }, 409);
-    next = { ...JSON.parse(row.data), ...b, updatedAt: Date.now() };
+    next = { ...stored, ...b, updatedAt: Date.now() };
   } else {
-    const data = parsePackage(b);
+    const merged = Object.fromEntries(Object.entries({ ...stored, ...b }).filter(([, v]) => v !== null));
+    const data = parsePackage(merged);
     if (typeof data === 'string') return bad(c, data);
-    next = { ...data, createdAt: JSON.parse(row.data).createdAt, updatedAt: Date.now() };
+    next = { ...data, createdAt: stored.createdAt, updatedAt: Date.now() };
   }
-  // The in-use check is repeated inside the write: an assignment racing this edit wins.
-  await c.env.DB.prepare(`UPDATE gym_packages SET data = ? WHERE id = ? AND tenant_id = ? AND (active_assignment_count = 0 OR ? = 1)`)
-    .bind(JSON.stringify(next), c.req.param('id'), tenantId, row.n > 0 ? 1 : 0).run();
-  return c.json({ ok: true });
+  const won = await c.env.DB.prepare(
+    `UPDATE gym_packages SET data = ? WHERE id = ? AND tenant_id = ? AND data = ? AND (active_assignment_count = 0 OR ? = 1) RETURNING id`,
+  ).bind(JSON.stringify(next), id, tenantId, row.data, row.n > 0 ? 1 : 0).first();
+  if (won) return c.json({ ok: true });
+  const now = await c.env.DB.prepare(`SELECT active_assignment_count n FROM gym_packages WHERE id = ? AND tenant_id = ?`).bind(id, tenantId).first<{ n: number }>();
+  return c.json({ error: now && now.n > 0 ? 'package in use: only isActive/sortOrder can change' : 'package changed; retry' }, 409);
+});
+
+/**
+ * New version of a catalog package: the successor is created from the body (same validation as create, `supersedesId`
+ * pointing back) and the old one is switched off, in ONE batch. The old package keeps its assignments and its terms.
+ */
+packages.post('/tenants/:tenantId/packages/:id/version', async (c) => {
+  if (!(await isAdmin(c))) return forbidden(c);
+  const tenantId = c.req.param('tenantId')!;
+  const oldId = c.req.param('id')!;
+  const old = await c.env.DB.prepare(`SELECT 1 AS x FROM gym_packages WHERE id = ? AND tenant_id = ?`).bind(oldId, tenantId).first();
+  if (!old) return c.json({ error: 'not found' }, 404);
+  const data = parsePackage(await body(c));
+  if (typeof data === 'string') return bad(c, data);
+  const id = newId('gp');
+  const now = Date.now();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO gym_packages (id, tenant_id, data) SELECT ?, ?, ? WHERE EXISTS (SELECT 1 FROM gym_packages WHERE id = ? AND tenant_id = ?)`,
+    ).bind(id, tenantId, JSON.stringify({ ...data, supersedesId: oldId, createdAt: now }), oldId, tenantId),
+    // Only when the successor really landed: the old version never goes dark without a replacement.
+    c.env.DB.prepare(
+      `UPDATE gym_packages SET data = json_set(data, '$.isActive', json('false'), '$.updatedAt', ?)
+       WHERE id = ? AND tenant_id = ? AND EXISTS (SELECT 1 FROM gym_packages WHERE id = ? AND tenant_id = ?)`,
+    ).bind(now, oldId, tenantId, id, tenantId),
+  ]);
+  const made = await c.env.DB.prepare(`SELECT 1 AS x FROM gym_packages WHERE id = ?`).bind(id).first();
+  return made ? c.json({ id }, 201) : c.json({ error: 'not found' }, 404);
 });
 
 // ---- promotions ----
 const PROMO_KINDS = ['percentDiscount', 'amountDiscount', 'bonusDays', 'bonusLessons'];
+/**
+ * Shared by create and update (update validates the MERGED result). Returns the failing field, or null.
+ * amountDiscount.value is money: integer kuruş. maxRedemptions is a positive integer or absent (no cap).
+ */
+function promotionProblem(d: Record<string, any>): string | null {
+  if (typeof d.name !== 'string' || !d.name.trim()) return 'name';
+  if (!PROMO_KINDS.includes(d.kind)) return 'kind';
+  if (typeof d.value !== 'number' || !(d.value > 0)) return 'value';
+  if (d.kind === 'percentDiscount' && d.value > 100) return 'percent > 100';
+  if (d.kind !== 'percentDiscount' && !Number.isInteger(d.value)) return 'value (whole number)';
+  if (!Array.isArray(d.appliesTo)) return 'appliesTo';
+  if (typeof d.isActive !== 'boolean') return 'isActive';
+  if (d.maxRedemptions !== undefined && d.maxRedemptions !== null && !posInt(d.maxRedemptions)) return 'maxRedemptions';
+  return null;
+}
 packages.post('/tenants/:tenantId/promotions', async (c) => {
   if (!(await isAdmin(c))) return forbidden(c);
   const b = await body(c);
-  if (typeof b.name !== 'string' || !b.name.trim() || !PROMO_KINDS.includes(b.kind) || typeof b.value !== 'number' || !(b.value > 0)
-      || !Array.isArray(b.appliesTo) || typeof b.isActive !== 'boolean') return bad(c, 'bad promotion');
-  if (b.kind === 'percentDiscount' && b.value > 100) return bad(c, 'percent > 100');
+  const problem = promotionProblem(b);
+  if (problem) return bad(c, problem === 'percent > 100' ? problem : 'bad promotion');
   const { id: _i, tenantId: _t, redeemed: _r, ...data } = b;
   const id = newId('pr');
   await c.env.DB.prepare(`INSERT INTO promotions (id, tenant_id, data) VALUES (?, ?, ?)`)
     .bind(id, c.req.param('tenantId'), JSON.stringify({ ...data, redeemed: 0, createdAt: Date.now() })).run();
   return c.json({ id }, 201);
 });
+/** Partial update (RFC 7396 merge: `null` removes a key, e.g. `maxRedemptions: null` lifts the cap); the merged result must be a valid promotion. */
 packages.put('/tenants/:tenantId/promotions/:id', async (c) => {
   if (!(await isAdmin(c))) return forbidden(c);
+  const tenantId = c.req.param('tenantId')!;
   const b = await body(c);
   if ('redeemed' in b) return bad(c, 'redeemed is server-owned');   // the only writer is assignment
+  const row = await c.env.DB.prepare(`SELECT data FROM promotions WHERE id = ? AND tenant_id = ?`).bind(c.req.param('id'), tenantId).first<{ data: string }>();
+  if (!row) return c.json({ error: 'not found' }, 404);
   const { id: _i, tenantId: _t, ...patch } = b;
-  await c.env.DB.prepare(`UPDATE promotions SET data = json_patch(data, ?) WHERE id = ? AND tenant_id = ?`)
-    .bind(JSON.stringify(patch), c.req.param('id'), c.req.param('tenantId')).run();
-  return c.json({ ok: true });
+  const merged = Object.fromEntries(Object.entries({ ...JSON.parse(row.data), ...patch }).filter(([, v]) => v !== null));
+  const problem = promotionProblem(merged);
+  if (problem) return bad(c, problem === 'percent > 100' ? problem : 'bad promotion');
+  // json_patch on the CURRENT row (not an overwrite): a redemption that lands meanwhile keeps its +1.
+  const done = await c.env.DB.prepare(`UPDATE promotions SET data = json_patch(data, ?) WHERE id = ? AND tenant_id = ? RETURNING id`)
+    .bind(JSON.stringify(patch), c.req.param('id'), tenantId).first();
+  return done ? c.json({ ok: true }) : c.json({ error: 'not found' }, 404);
 });
 packages.delete('/tenants/:tenantId/promotions/:id', async (c) => {
   if (!(await isAdmin(c))) return forbidden(c);

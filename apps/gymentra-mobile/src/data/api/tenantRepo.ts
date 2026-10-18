@@ -5,14 +5,23 @@ import type { WatchErrorHandler } from '../firebase/watch';
 import { ApiError, apiGet, apiPatch, apiPost, apiPut } from './client';
 import { ensureSelfInternalId, selfInternalId, toAppId } from './membershipIdentity';
 import { watchPoll } from './membershipWatch';
+import { dropTemp, resizeToJpeg } from './imageTools';
 import { invalidate } from './poll';
 import { seedDefaultPackages } from './packageRepo';
 
-// Logo upload needs object storage (R2 + signed URL) that the Worker does not have yet, so this one function
-// keeps using the existing Firebase callable. Caveat for the lead: that callable authorises the caller against
-// FIRESTORE memberships, which stop being maintained once the app runs on the Worker. It must either learn to
-// ask the Worker (or read D1) or be replaced by an R2 route; see the report.
-export { uploadTenantLogo } from '../firebase/tenantRepo';
+/** Same size the Firebase path used: a gym logo is never drawn larger than a list avatar. */
+const LOGO_SIZE = 512;
+
+/** Resize to a 512 px JPEG on the device, send the bytes to the Worker (R2), delete the temp copy. Returns the public URL. */
+export async function uploadTenantLogo(tenantId: string, localUri: string): Promise<string> {
+  const resized = await resizeToJpeg(localUri, LOGO_SIZE, 0.85);
+  try {
+    const res = await apiPost<{ url: string }>(`/tenants/${encodeURIComponent(tenantId)}/logo`, { base64: resized.base64, contentType: 'image/jpeg' });
+    return res.url;
+  } finally {
+    await dropTemp(resized.uri);
+  }
+}
 
 /** `GET /tenants/by-code/:code` (public DTO) or `GET /tenants/:t/settings` (members and applicants). */
 interface TenantDto {

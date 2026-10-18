@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
 import { abortIf, EMAIL_RE, nameOf, newId, outboxIfChanged, readBody, type App } from './guarded';
+import { formatTl } from './format';
 import { outboxStatement } from './outbox';
 
 /**
@@ -179,7 +180,6 @@ guardians.post('/tenants/:tenantId/payments/group', async (c) => {
        AND EXISTS (SELECT 1 FROM json_each(memberships.roles) WHERE value = 'admin')`,
   ).bind(tenantId, uid).all<{ member_id: string }>();
   const total = amounts.reduce((s, a) => s + a, 0);
-  const tl = (total / 100).toLocaleString('tr-TR', { maximumFractionDigits: 2 });
 
   const payments = ids.map((memberId, i) => ({ id: newId('pay'), memberId, amount: amounts[i] }));
   const stmts: D1PreparedStatement[] = [
@@ -199,7 +199,7 @@ guardians.post('/tenants/:tenantId/payments/group', async (c) => {
   if (admins.length) {
     stmts.push(outboxStatement(c.env.DB, 'push', {
       userIds: admins.map((a) => a.member_id), category: 'payments', title: 'Yeni ödeme bildirimi',
-      body: `${submitter ?? 'Bir üye'} · ${ids.length} kişi · ₺${tl} onayını bekliyor.`,
+      body: `${submitter ?? 'Bir üye'} · ${ids.length} kişi · ${formatTl(total)} onayını bekliyor.`,
       data: { screen: 'admin/payments', paymentGroupId: groupId },
     }, `payment-group:${groupId}`));
   }

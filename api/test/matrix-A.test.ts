@@ -405,7 +405,7 @@ describe('A: availability, busy slots, calendar shares', () => {
     const busy = '/v1/tenants/t1/trainers/u-t1/busy';
     const res = await h.send('GET', busy, 'fb-mem');
     expect(res.status).toBe(200);
-    expect(Object.keys(((await res.json()) as object[])[0]).sort()).toEqual(['durationMinutes', 'startsAt']);
+    expect(Object.keys(((await res.json()) as object[])[0]).sort()).toEqual(['durationMinutes', 'startsAt', 'status']);
     await h.addUser('u-out', null);
     expect((await h.send('GET', busy, 'fb-out')).status).toBe(403);
     for (const m of ['POST', 'PUT', 'PATCH', 'DELETE']) {

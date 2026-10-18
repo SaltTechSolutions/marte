@@ -52,7 +52,7 @@ describe('working hours', () => {
       weekly: { mon: [{ start: '09:00', end: '12:00' }], wed: [{ start: '14:00', end: '16:00' }] },
       exceptions: [{ date: '2030-01-07', closed: true }],
     });
-    expect(seen[1]!.updatedAt).toBeInstanceOf(Date);
+    expect(seen[1]!.updatedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);   // the stored time, not a placeholder
     expect(repo.hasAnyAvailability(seen[1])).toBe(true);
     // 2030-01-14 is a Monday: 09:00-12:00 in 45 minute slots = 4 slots
     expect(repo.computeFreeSlots(seen[1]!, new Date(2030, 0, 14), [], new Date(2030, 0, 1))).toHaveLength(4);
@@ -98,12 +98,14 @@ describe('busy slots of a day', () => {
 
   it('lists that day only, without identity, cancelled ones left out', async () => {
     await session('a', noon()); await session('b', noon() + 3_600_000); await session('gone', noon() + 7_200_000, 'cancelled');
+    await w.h.run(`UPDATE pt_sessions SET status = 'completed' WHERE id = 'b'`);
     await session('nextday', noon() + DAY); await session('other', noon(), 'scheduled', 'u-trn2');
     const seen: TrainerBusySlot[][] = [];
     const stop = repo.watchTrainerBusySlotsForDay('t1', 'u-trn', day, (s) => seen.push(s));
     await vi.waitFor(() => expect(seen.length).toBe(1));
     expect(seen[0].map((s) => s.date.getTime())).toEqual([noon(), noon() + 3_600_000]);
     expect(seen[0][0]).toEqual({ date: new Date(noon()), durationMinutes: 60, status: 'scheduled' });
+    expect(seen[0][1].status).toBe('completed');                 // the real status now
     expect(Object.keys(seen[0][0]).sort()).toEqual(['date', 'durationMinutes', 'status']);   // no member, no credit
 
     // the free-slot computation consumes exactly this shape

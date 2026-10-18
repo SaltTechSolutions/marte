@@ -42,7 +42,7 @@ interface ClassDto {
   [extra: string]: unknown;
 }
 interface Occupancy { classId: string; booked: number; waitlisted: number }
-interface MyBooking { classId: string; startsAt: number; status: 'booked' | 'waitlisted'; since: number; paidWithCredit: boolean }
+interface MyBooking { classId: string; startsAt: number; status: 'booked' | 'waitlisted'; since: number; paidWithCredit: boolean; waitlistPosition?: number }
 interface Roster {
   capacity: number;
   booked: { memberId: string; name: string | null; paidWithCredit: boolean; bookedAt: number; attendance: 'present' | 'absent' | null }[];
@@ -95,7 +95,9 @@ async function loadSessions(
   const mode: RosterMode = q.staffOnly && !(await isStaffIn(tenantId, me)) ? 'none' : q.rosters;
   const mineQuery = who ? `&memberId=${encodeURIComponent(who)}` : '';
   const [classes, occupancy, mine] = await Promise.all([
-    apiGet<ClassDto[]>(`/tenants/${tenantId}/classes?from=${q.from}`),
+    apiGet<ClassDto[]>(
+      `/tenants/${tenantId}/classes?from=${q.from}${q.to !== undefined ? `&to=${q.to}` : ''}${trainerInternal ? `&trainerId=${encodeURIComponent(trainerInternal)}` : ''}`,
+    ),
     apiGet<Occupancy[]>(`/tenants/${tenantId}/class-occupancy?from=${q.from}`),
     apiGet<MyBooking[]>(`/tenants/${tenantId}/class-bookings?from=${q.from}${mineQuery}`),
   ]);
@@ -103,10 +105,9 @@ async function loadSessions(
   const myId = toAppId(who ?? me.userId ?? '');
   const occ = new Map(occupancy.map((o) => [o.classId, o]));
   const seat = new Map(mine.map((m) => [m.classId, m.status]));
+  const position = new Map(mine.map((m) => [m.classId, m.waitlistPosition]));
 
-  let list = classes.filter(
-    (c) => c.startsAt >= q.from && (q.to === undefined || c.startsAt < q.to) && (!trainerInternal || c.trainerId === trainerInternal),
-  );
+  let list = classes;   // the window and the coach are filtered by the Worker
   if (q.onlyMine) list = list.filter((c) => seat.get(c.id) === 'booked');
   if (q.limit !== undefined) list = list.slice(0, q.limit);
   list.forEach((c) => dtoCache.set(c.id, c));
@@ -141,9 +142,13 @@ async function loadSessions(
     } else {
       const status = seat.get(c.id);
       booked = status === 'booked' ? [myId, ...placeholders(c.id, o.booked - 1, 'b')] : placeholders(c.id, o.booked, 'b');
-      // GAP(api): my place in the queue is not served (`class-bookings` has `since`, not a position), so I am
-      // listed LAST. The "#n" in "Bekleme listesinde #n" is therefore only right when I joined last.
-      waitlist = status === 'waitlisted' ? [...placeholders(c.id, o.waitlisted - 1, 'w'), myId] : placeholders(c.id, o.waitlisted, 'w');
+      // My place in the queue is the Worker's `waitlistPosition` (1-based); the others stay opaque placeholders.
+      waitlist = placeholders(c.id, o.waitlisted, 'w');
+      if (status === 'waitlisted') {
+        const at = Math.min(Math.max((position.get(c.id) ?? o.waitlisted) - 1, 0), Math.max(o.waitlisted - 1, 0));
+        waitlist = [...waitlist.slice(0, at), myId, ...waitlist.slice(at + 1)];
+        if (!waitlist.includes(myId)) waitlist = [myId];
+      }
     }
     return {
       id: c.id,
@@ -377,14 +382,9 @@ export async function cancelGroupClassWithCredit(classId: string, memberId?: str
   return cancelFor(classId, memberId);
 }
 
-const newSeriesId = () => `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-
 /**
- * Creates a weekly repeat of the same class (PER-10 / PKG-9). `weeks` counts occurrences INCLUDING the first.
- *
- * GAP(api): the Worker has no series route, so this is N single creates. Firestore made the term all-or-nothing
- * with one batch; here a failure part-way removes the occurrences already created (best effort) and rethrows, so
- * a half-built term is not left behind unless that clean-up fails too.
+ * Creates a weekly repeat of the same class (PER-10 / PKG-9). `weeks` counts occurrences INCLUDING the first, so 1 is an
+ * ordinary single class. One Worker call: the series exists completely or not at all (the Worker allows 1..52).
  */
 export async function createClassSeries(
   params: NewClass,
@@ -395,21 +395,20 @@ export async function createClassSeries(
     await createClass(params);
     return { created: 1 };
   }
-
-  const seriesId = newSeriesId();
-  const made: string[] = [];
-  try {
-    for (let i = 0; i < count; i += 1) {
-      const date = new Date(params.date);
-      date.setDate(date.getDate() + i * 7);
-      made.push(await createOne({ ...params, date }, seriesId));
-    }
-  } catch (e) {
-    await Promise.allSettled(made.map((id) => apiDelete(`/tenants/${params.tenantId}/classes/${id}`)));
-    refresh(params.tenantId, 'classes');
-    throw e;
-  }
-  return { created: count, seriesId };
+  const { ids, seriesId } = await localized(
+    apiPost<{ ids: string[]; seriesId: string }>(`/tenants/${params.tenantId}/classes/series`, {
+      name: params.name,
+      ...(params.trainerId ? { trainerId: await toInternalId(params.trainerId) } : {}),
+      trainerName: params.trainerName,
+      startsAt: params.date.getTime(),
+      durationMinutes: params.durationMinutes,
+      capacity: params.capacity,
+      repeat: { everyDays: 7, count },
+    }),
+  );
+  rememberTenant('class', ids.map((id) => ({ id })), params.tenantId);
+  refresh(params.tenantId, 'classes');
+  return { created: ids.length, seriesId };
 }
 
 /** Cancels the rest of a repeating class, from `fromDate` onward (forward-only: classes that ran keep their register). */
@@ -418,17 +417,11 @@ export async function deleteClassSeriesFrom(
   seriesId: string,
   fromDate: Date,
 ): Promise<{ deleted: number }> {
-  const classes = await apiGet<ClassDto[]>(`/tenants/${tenantId}/classes?from=${fromDate.getTime()}`);
-  const doomed = classes.filter((c) => c.seriesId === seriesId && c.startsAt >= fromDate.getTime());
-  let deleted = 0;
   try {
-    for (const c of doomed) {
-      await localized(apiDelete(`/tenants/${tenantId}/classes/${c.id}`));
-      dtoCache.delete(c.id);
-      deleted += 1;
-    }
+    const r = await localized(apiDelete<{ deleted: number }>(`/tenants/${tenantId}/classes/series/${encodeURIComponent(seriesId)}?from=${fromDate.getTime()}`));
+    return { deleted: r.deleted };
   } finally {
+    dtoCache.clear();
     refresh(tenantId);
   }
-  return { deleted };
 }

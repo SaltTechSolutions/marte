@@ -80,6 +80,8 @@ describe('booking a lesson (bookPtSessions)', () => {
       durationMinutes: 60, status: 'scheduled', creditId: 'cr1',
     });
     expect(list[0].cancellationDeadlineAt).toBeInstanceOf(Date);
+    expect(list[0].createdAt.getTime()).toBeGreaterThan(Date.now() - 60_000);   // real created/updated times from the Worker
+    expect(list[0].updatedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);
     expect(list[0].cancelledAt).toBeUndefined();
     expect(list[0].originalTrainerId).toBeUndefined();
   });
@@ -88,14 +90,14 @@ describe('booking a lesson (bookPtSessions)', () => {
     await credit('cr1', { total: 1 });
     const outside = await repo.bookPtSessions({ tenantId: 't1', trainerId: 'u-trn', slots: [new Date(at(3, 15))] }).catch((e) => e);
     expect(outside.code).toBe('functions/failed-precondition');
-    expect(outside.message).toBe('Seçtiğin saat antrenörün çalışma saatleri dışında.');
+    expect(outside.message).toBe('Seçtiğin saat antrenörün çalışma saatleri dışında.');   // the Worker's sentence
 
     await seedSession('other', { member: 'u-admin', start: at(3, 10) });
     const taken = await repo.bookPtSessions({ tenantId: 't1', trainerId: 'u-trn', slots: [new Date(at(3, 10))] }).catch((e) => e);
-    expect(taken.message).toBe('Seçtiğin saat az önce doldu, başka bir saat seç.');
+    expect(taken.message).toBe('Bu saat dolu. Başka bir saat seç.');
 
     const noCredit = await repo.bookPtSessions({ tenantId: 't1', trainerId: 'u-trn', slots: [new Date(at(3, 11)), new Date(at(3, 12))] }).catch((e) => e);
-    expect(noCredit.message).toBe('Seçtiğin tarih için geçerli ders kredin yok.');
+    expect(noCredit.message).toBe('Bu randevu için kullanılabilir ders hakkın yok.');
     expect(await creditRow('cr1')).toMatchObject({ used: 0 });      // all or nothing
 
     const notTrainer = await repo.bookPtSessions({ tenantId: 't1', trainerId: 'u-mem', slots: [new Date(at(3, 11))] }).catch((e) => e);
@@ -157,8 +159,8 @@ describe('cancelling (cancelPtSession)', () => {
     const forbidden: any = await repo.cancelPtSession('s1').catch((e) => e);
     expect(forbidden.code).toBe('functions/permission-denied');
     as('fb-mem');
-    expect(((await repo.cancelPtSession('gone').catch((e) => e)) as any).message).toBe('Randevu zaten iptal edilmiş.');
-    expect(((await repo.cancelPtSession('done').catch((e) => e)) as any).message).toBe('Tamamlanmış randevu iptal edilemez.');
+    expect(((await repo.cancelPtSession('gone').catch((e) => e)) as any).message).toBe('Bu randevu zaten iptal edilmiş.');
+    expect(((await repo.cancelPtSession('done').catch((e) => e)) as any).message).toBe('Bu randevu zaten tamamlanmış.');
   });
 });
 
@@ -207,7 +209,7 @@ describe('createPtSession (staff)', () => {
     expect(list[0]).toMatchObject({ memberId: 'u-mem', durationMinutes: 45, status: 'scheduled', trainerName: 'Mert Antrenör' });
     expect(list[0].creditId).toBeUndefined();
     const clash: any = await repo.createPtSession({ tenantId: 't1', trainerId: 'u-trn', memberId: 'u-admin', date: new Date(at(4, 9, 30)), durationMinutes: 30 }).catch((e) => e);
-    expect(clash.message).toBe('Seçtiğin saat antrenörün başka bir randevusuyla çakışıyor.');
+    expect(clash.message).toBe('Bu saat, antrenörün başka bir randevusuyla çakışıyor.');
   });
 
   it("a coach cannot write onto someone else's calendar; an admin can", async () => {
@@ -221,16 +223,26 @@ describe('createPtSession (staff)', () => {
 });
 
 describe('status and hand-over', () => {
-  it('setSessionStatus: completed and cancelled go through; no-show is a named gap', async () => {
+  it('setSessionStatus: completed, cancelled and no-show go through; nothing moves a session back to scheduled', async () => {
     await seedSession('s1'); await seedSession('s2', { start: at(3, 11) }); await seedSession('s3', { start: at(3, 12) });
+    await credit('cr1', { used: 1 }); await seedSession('past', { start: Date.now() - 2 * HOUR, credit: 'cr1' });
     as('fb-trn');
-    await firstValue<L>((cb, err) => repo.watchSessionsForTrainer('t1', 'u-trn', wide, cb, err as never));
+    await firstValue<L>((cb, err) => repo.watchSessionsForTrainer('t1', 'u-trn', { from: new Date(Date.now() - DAY), to: new Date(Date.now() + 30 * DAY) }, cb, err as never));
     await repo.setSessionStatus('s1', 'completed');
     expect((await rowOf('s1')).status).toBe('completed');
     await repo.setSessionStatus('s2', 'cancelled');
     expect(await rowOf('s2')).toMatchObject({ status: 'cancelled', cancelled_by_role: 'trainer', refund_outcome: 'no-credit' });
-    await expect(repo.setSessionStatus('s3', 'no-show')).rejects.toThrow(/GAP\(api\).*no-show/);
-    expect((await rowOf('s3')).status).toBe('scheduled');
+    // "Gelmedi": only once it has started, and the lesson is NOT given back
+    const early: any = await repo.setSessionStatus('s3', 'no-show').catch((e) => e);
+    expect(early.code).toBe('functions/failed-precondition');
+    expect(early.message).toBe('Henüz başlamamış bir randevu "gelmedi" olarak işaretlenemez.');
+    await repo.setSessionStatus('past', 'no-show');
+    expect(await rowOf('past')).toMatchObject({ status: 'no-show' });
+    expect(await creditRow('cr1')).toMatchObject({ used: 1 });
+    const list = await firstValue<L>((cb, err) => repo.watchSessionsForTrainer('t1', 'u-trn', { from: new Date(Date.now() - DAY), to: new Date(Date.now() + 30 * DAY) }, cb, err as never), (l) => l.some((s) => s.status === 'no-show'));
+    expect(list.find((s) => s.id === 'past')).toMatchObject({ status: 'no-show', creditId: 'cr1' });
+    expect(list.find((s) => s.id === 'past')!.creditRefunded).toBeUndefined();
+    await expect(repo.setSessionStatus('s3', 'scheduled')).rejects.toThrow(/cannot be set/);
     const again: any = await repo.setSessionStatus('s1', 'completed').catch((e) => e);
     expect(again.code).toBe('functions/failed-precondition');
   });

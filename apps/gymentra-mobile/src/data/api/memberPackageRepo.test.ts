@@ -176,15 +176,23 @@ describe('reads: holdings, credits, entitlements', () => {
     await expect(credits('ptLesson')).rejects.toMatchObject({ code: 'functions/permission-denied' });
   });
 
-  it('getMemberPackage: re-reads a listed assignment, null once it is gone, and states the gap for an id never listed', async () => {
+  it('getMemberPackage: by id from the Worker (gym found on its own); null for an unknown id, a deleted one, or somebody else\'s', async () => {
     const pkg = await mkPackage(monthly());
     await assign(pkg);
     const [mp] = await holdings();
-    expect((await repo.getMemberPackage(mp.id))?.id).toBe(mp.id);
+    forgetTenants();
+    expect(await repo.getMemberPackage(mp.id)).toMatchObject({ id: mp.id, tenantId: 't1', memberId: 'u-mem', packageName: 'Aylık', assignedBy: 'u-admin' });
+    w.signInAs('fb-mem');
+    expect((await repo.getMemberPackage(mp.id))?.id).toBe(mp.id);       // the holder reads their own
+    await w.h.addUser('u-x', ['member']);
+    w.signInAs('fb-x');
+    forgetTenants();
+    expect(await repo.getMemberPackage(mp.id)).toBeNull();              // another member: same answer as "missing"
+    w.signInAs('fb-admin');
+    expect(await repo.getMemberPackage('mp-never-listed')).toBeNull();
     await w.h.run(`DELETE FROM member_credits`);
     await w.h.run(`DELETE FROM member_packages`);
     expect(await repo.getMemberPackage(mp.id)).toBeNull();
-    await expect(repo.getMemberPackage('mp-never-listed')).rejects.toThrow(/GAP\(api\)/);
   });
 
   it('watchMemberEntitlements: cache shape from the live package, null with none and once it has lapsed; unchanged polls are not re-delivered', async () => {
@@ -225,10 +233,23 @@ describe('reads: holdings, credits, entitlements', () => {
     liveCredits.stop();
   });
 
-  it('watchTenantMemberPackages is an explicit GAP: the screen\'s error callback gets a clear Error, never an empty list', async () => {
+  it('watchTenantMemberPackages: every member\'s holdings of the gym, latest-ending first, with memberId and assignedBy; staff only; live', async () => {
+    const monthlyPkg = await mkPackage(monthly());
+    const pack = await mkPackage(tenPack());
+    await w.h.addUser('u-two', ['member']);
+    await assign(monthlyPkg);
+    await assign(pack, { memberId: 'u-two' });
+    const live = collect<MP[]>((ok, err) => repo.watchTenantMemberPackages('t1', ok, err as never));
+    await live.until(1);
+    expect(live.values[0].map((p) => [p.packageName, p.memberId, p.assignedBy])).toEqual([['10 ders', 'u-two', 'u-admin'], ['Aylık', 'u-mem', 'u-admin']]);
+    expect(live.values[0][0]).toMatchObject({ tenantId: 't1', kind: 'lessons', status: 'active' });
+    await assign(monthlyPkg, { memberId: 'u-two' });
+    await live.until(2);
+    expect(live.values[1]).toHaveLength(3);
+    live.stop();
+    w.signInAs('fb-mem');
     const e = await nextValue<unknown>((ok, err) => repo.watchTenantMemberPackages('t1', ok as never, err as never)).catch((x) => x);
-    expect(String((e as Error).message)).toMatch(/GAP\(api\).*member-packages/);
-    expect(() => repo.watchTenantMemberPackages('t1', () => {})).toThrow(/GAP\(api\)/);
+    expect(e).toMatchObject({ code: 'functions/permission-denied' });
   });
 });
 
@@ -259,9 +280,9 @@ describe('freezeMemberPackage', () => {
     const short = await repo.freezeMemberPackage(mp.id, 1).catch((x) => x);
     expect(short).toMatchObject({ code: 'functions/failed-precondition', message: 'Bir dondurma en az 3 gün olmalı.' });
     await repo.freezeMemberPackage(mp.id, 5);
-    expect(await repo.freezeMemberPackage(mp.id, 5).catch((x) => x)).toMatchObject({ message: 'Paket zaten dondurulmuş.' });
+    expect(await repo.freezeMemberPackage(mp.id, 5).catch((x) => x)).toMatchObject({ message: 'Bu paket zaten dondurulmuş.' });
     await w.h.run(`UPDATE member_packages SET status = 'active', frozen_until = NULL WHERE id = ?`, mp.id);   // what the daily sweep does
-    expect(await repo.freezeMemberPackage(mp.id, 5).catch((x) => x)).toMatchObject({ message: 'Dondurma hakkı doldu (en fazla 1 kez).' });
+    expect(await repo.freezeMemberPackage(mp.id, 5).catch((x) => x)).toMatchObject({ message: 'Dondurma hakkın doldu (en fazla 1 kez dondurulabilir).' });
     w.signInAs('fb-mem');
     expect(await repo.freezeMemberPackage(mp.id, 5).catch((x) => x)).toMatchObject({ code: 'functions/permission-denied' });
   });
@@ -334,6 +355,7 @@ describe('person ids: the screens hold the Firebase uid, the Worker the internal
     (auth as { currentUser: unknown }).currentUser = { uid: 'FIREBASE-UID-ADMIN' };
     await assign(pkg);
     const [mp] = await holdings();
+    expect(mp.assignedBy).toBe('FIREBASE-UID-ADMIN');
     await repo.cancelPackageAssignment(mp.id, 'bitir', 'until-end');
     expect((await holdings())[0].cancelledBy).toBe('FIREBASE-UID-ADMIN');
     (auth as { currentUser: unknown }).currentUser = { uid: 'FIREBASE-UID-MEM' };
@@ -341,7 +363,7 @@ describe('person ids: the screens hold the Firebase uid, the Worker the internal
     w.signInAs('fb-mem');
     const mine = await repo.getMemberPackages('t1', 'FIREBASE-UID-MEM');
     expect(mine).toHaveLength(1);
-    expect(mine[0]).toMatchObject({ memberId: 'FIREBASE-UID-MEM', cancelledBy: 'u-admin' });   // somebody else's id stays internal
+    expect(mine[0]).toMatchObject({ memberId: 'FIREBASE-UID-MEM', cancelledBy: 'u-admin', assignedBy: 'u-admin' });   // somebody else's id stays internal
     expect((await credits('ptLesson', 'FIREBASE-UID-MEM')).every((c) => c.memberId === 'FIREBASE-UID-MEM')).toBe(true);
     const ent = await nextValue<import('../types').MemberEntitlementsCache | null>((ok, err) => repo.watchMemberEntitlements('t1', 'FIREBASE-UID-MEM', ok, err as never));
     expect(ent).toMatchObject({ memberId: 'FIREBASE-UID-MEM', tenantId: 't1' });

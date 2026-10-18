@@ -149,7 +149,7 @@ describe('scanning (checkInByMembershipId)', () => {
 
   it('a warning is NOT written; staff confirm it and the SHOWN reason is the recorded one', async () => {
     const out = await repo.checkInByMembershipId('t1', 't1_u-mem');
-    expect(out).toEqual({ ok: true, name: 'Ali Üye', access: 'warn', packageLabel: null, warnReason: 'no-package', membershipDocId: 't1_u-mem' });
+    expect(out).toEqual({ ok: true, name: 'Ali Üye', access: 'warn', packageLabel: null, warnReason: 'no-package', membershipDocId: 't1_u-mem' });   // the payload as scanned
     expect(await visits()).toEqual([]);
     expect(await repo.confirmCheckInDespiteWarning('t1', 't1_u-mem', 'no-package')).toEqual({ ok: true, name: 'Ali Üye' });
     expect(await visits()).toMatchObject([{ accessReason: 'no-package' }]);
@@ -175,11 +175,34 @@ describe('scanning (checkInByMembershipId)', () => {
     expect(await visits()).toEqual([]);
   });
 
-  it('KNOWN GAP: a front-desk helper who only holds the delegated permission cannot read the member, so the scan is "not-found"', async () => {
+  it('a front-desk helper who only holds the delegated "checkin" permission scans like staff (the Worker decides and records)', async () => {
     await w.h.addUser('u-desk', ['member'], { permissions: ['checkin'] });
     await pkg('u-mem');
     as('fb-desk');
-    expect(await repo.checkInByMembershipId('t1', 't1_u-mem')).toEqual({ ok: false, reason: 'not-found' });
+    expect(await repo.checkInByMembershipId('t1', 't1_u-mem')).toEqual({ ok: true, name: 'Ali Üye', access: 'ok', packageLabel: 'Aylık Üyelik' });
+    expect(await visits()).toMatchObject([{ accessReason: 'ok', by: 'u-desk' }]);
+    expect(await repo.checkInByShortCode('t1', '123456')).toEqual({ ok: false, reason: 'already-checked-in' });
+  });
+
+  it('a member card carries the Firebase uid: it resolves for staff (subject); a hand-added member\'s internal id resolves too', async () => {
+    await pkg('u-mem');
+    // the card of the member whose Firebase subject is fb-mem (internal u-mem)
+    expect(await repo.checkInByMembershipId('t1', 't1_fb-mem')).toMatchObject({ ok: true, name: 'Ali Üye', access: 'ok' });
+    expect((await visits())[0].accessReason).toBe('ok');
+    await w.h.run(`INSERT INTO users (id, display_name, created_at) VALUES ('mm1','El Üye',1)`);
+    await w.h.run(`INSERT INTO memberships (tenant_id, member_id, status, roles, display_name, managed, requested_at) VALUES ('t1','mm1','active','["member"]','El Üye',1,1)`);
+    const warn: any = await repo.checkInByMembershipId('t1', 't1_mm1');
+    expect(warn).toMatchObject({ ok: true, name: 'El Üye', access: 'warn', warnReason: 'no-package', membershipDocId: 't1_mm1' });
+    expect(await repo.confirmCheckInDespiteWarning('t1', warn.membershipDocId, 'no-package')).toEqual({ ok: true, name: 'El Üye' });
+    // a Firebase uid that belongs to nobody in this gym is simply not found
+    expect(await repo.checkInByMembershipId('t1', 't1_fb-nobody')).toEqual({ ok: false, reason: 'not-found' });
+  });
+
+  it('someone outside the gym cannot use the door check', async () => {
+    await w.h.addUser('u-out', null);
+    as('fb-out');
+    const e: any = await repo.checkInByMembershipId('t1', 't1_u-mem').catch((x) => x);
+    expect(e.code).toBe('functions/permission-denied');
   });
 });
 
@@ -243,15 +266,36 @@ describe('a member\'s own history (watchMyCheckins)', () => {
   });
 });
 
-describe('gym-wide lists are a named gap; the wording is the app\'s', () => {
-  it('today\'s count and list give the screen its error callback, never a made-up 0 / empty list', () => {
-    const onChange = vi.fn(); const onError = vi.fn();
-    repo.watchTodayCheckinCount('t1', onChange, onError);
-    repo.watchTodayCheckins('t1', onChange, onError);
-    expect(onError).toHaveBeenCalledTimes(2);
-    expect(onError.mock.calls[0][0].message).toMatch(/^GAP\(api\): GET \/tenants\/:t\/checkins\?from=/);
-    expect(onChange).not.toHaveBeenCalled();
-    expect(() => repo.watchTodayCheckinCount('t1', onChange)).toThrow(/GAP\(api\)/);
+describe('gym-wide lists (admin / "checkin" holders)', () => {
+  const visit = (id: string, member: string, at: number) =>
+    w.h.run(`INSERT INTO checkins (id, tenant_id, member_id, data, created_at) VALUES (?, 't1', ?, '{"accessReason":"ok"}', ?)`, id, member, at);
+  const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
+
+  it('today\'s count and list: only today, newest first, person ids as the app knows them', async () => {
+    await visit('a', 'u-mem', startOfToday() + 1000); await visit('b', 'u-admin', startOfToday() + 5000); await visit('old', 'u-mem', startOfToday() - HOUR);
+    const count = await new Promise<number>((resolve, reject) => { const stop = repo.watchTodayCheckinCount('t1', (n) => { queueMicrotask(stop); resolve(n); }, reject as never); });
+    expect(count).toBe(2);
+    const list = await new Promise<any[]>((resolve, reject) => { const stop = repo.watchTodayCheckins('t1', (l) => { queueMicrotask(stop); resolve(l); }, reject as never); });
+    expect(list.map((e) => [e.id, e.userId])).toEqual([['b', 'u-admin'], ['a', 'u-mem']]);
+    expect(list[0].checkedInAt).toEqual(new Date(startOfToday() + 5000));
+  });
+
+  it('a new scan raises the count at once; a delegated "checkin" holder may read, a plain member may not', async () => {
+    await pkg('u-mem');
+    const seen: number[] = [];
+    const stop = repo.watchTodayCheckinCount('t1', (n) => seen.push(n));
+    await vi.waitFor(() => expect(seen).toEqual([0]));
+    await repo.checkInByMembershipId('t1', 't1_u-mem');
+    await vi.waitFor(() => expect(seen).toEqual([0, 1]), { timeout: 3000 });
+    stop();
+    await w.h.addUser('u-desk', ['member'], { permissions: ['checkin'] });
+    as('fb-desk');
+    resetSharedWatches();
+    expect(await new Promise<number>((resolve, reject) => { let stopIt = () => {}; stopIt = repo.watchTodayCheckinCount('t1', (n) => { queueMicrotask(stopIt); resolve(n); }, reject as never); })).toBe(1);
+    as('fb-mem');
+    resetSharedWatches();
+    const e: any = await new Promise((resolve) => { let stopIt = () => {}; stopIt = repo.watchTodayCheckins('t1', () => {}, (x) => { queueMicrotask(stopIt); resolve(x); }); });
+    expect(e.code).toBe('functions/permission-denied');
   });
 
   it('WARN_MESSAGE is the Firestore repo\'s own constant', () => {

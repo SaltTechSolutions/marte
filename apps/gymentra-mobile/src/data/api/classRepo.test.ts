@@ -183,6 +183,23 @@ describe('booking', () => {
   });
 });
 
+describe('waitlist position', () => {
+  it('shows my real place in the queue ("#n"), with the others as placeholders', async () => {
+    await seedClass('k1', { cap: 1 });
+    for (const u of ['u-m2', 'u-m3']) await unlimited(u);
+    await unlimited('u-mem'); await unlimited('u-admin');
+    await w.h.run(`INSERT INTO class_bookings (tenant_id, class_id, member_id, created_at) VALUES ('t1','k1','u-admin',1)`);
+    await w.h.run(`INSERT INTO class_waitlist (tenant_id, class_id, member_id, created_at) VALUES ('t1','k1','u-m2',10), ('t1','k1','u-m3',20), ('t1','k1','u-mem',30)`);
+    const [c] = await classes((l) => !!l[0]);
+    expect(c.waitlistUserIds).toHaveLength(3);
+    expect(c.waitlistUserIds.indexOf('u-mem')).toBe(2);                      // third in line -> "#3"
+    as('fb-m2');
+    resetSharedWatches();                                   // another account: no replay of the previous account's list
+    const [d] = await classes((l) => !!l[0]);
+    expect(d.waitlistUserIds.indexOf('u-m2')).toBe(0);
+  });
+});
+
 describe('my classes (watchMyUpcomingClasses)', () => {
   it('lists only the classes I am booked into, soonest first, with my id in the roster', async () => {
     await unlimited('u-mem');
@@ -322,22 +339,19 @@ describe('series', () => {
     expect(JSON.parse(rows[0].data)).toMatchObject({ name: 'Zumba', trainerId: 'u-trn', capacity: 20 });
   });
 
-  it('createClassSeries removes what it already made when a later occurrence fails (best-effort all-or-nothing)', async () => {
+  it('createClassSeries is one Worker call: all occurrences or none (a bad request leaves nothing behind)', async () => {
     as('fb-admin');
-    // The third create is refused: the transport answers 400 on week 3, the Worker never sees it.
-    const { __setApiTransport } = await import('./client');
-    let creates = 0;
-    __setApiTransport(
-      (async (url: string, init: RequestInit) => {
-        const u = new URL(String(url));
-        if (init.method === 'POST' && u.pathname.endsWith('/classes') && ++creates === 3) return new Response(JSON.stringify({ error: 'bad class' }), { status: 400 });
-        return w.h.sendRaw(init.method ?? 'GET', u.pathname + u.search, 'fb-admin', init.body as string | undefined);
-      }) as never,
-      async () => 'fb-admin',
-    );
-    const e: any = await repo.createClassSeries({ tenantId: 't1', name: 'Zumba', trainerName: 'Ece', date: new Date(Date.now() + DAY), durationMinutes: 60, capacity: 20 }, 4).catch((x) => x);
+    const params = { tenantId: 't1', name: 'Zumba', trainerName: 'Ece', date: new Date(Date.now() + DAY), durationMinutes: 60, capacity: 20 };
+    const e: any = await repo.createClassSeries({ ...params, capacity: 0 }, 4).catch((x) => x);
     expect(e.code).toBe('functions/invalid-argument');
+    expect(e.message).toBe('Ders bilgileri geçersiz. Ad, saat ve kontenjanı kontrol et.');
+    const tooLong: any = await repo.createClassSeries(params, 60).catch((x) => x);
+    expect(tooLong.message).toBe('Tekrar sayısı 1 ile 52 arasında olmalı.');
     expect((await w.h.one(`SELECT count(*) n FROM classes`)).n).toBe(0);
+    // a trainer may only make a series of their own
+    as('fb-trn');
+    const f: any = await repo.createClassSeries({ ...params, trainerId: 'u-trn2' }, 3).catch((x) => x);
+    expect(f.code).toBe('functions/permission-denied');
   });
 
   it('deleteClassSeriesFrom cancels this week and later, forward-only', async () => {

@@ -175,6 +175,13 @@ describe('check-in with the app id', () => {
     expect((await w.h.one(`SELECT member_id m FROM checkins`)).m).toBe('u-admin');
   });
 
+  it('the desk scans ANOTHER member\'s card (their Firebase uid) while holding its own Firebase uid', async () => {
+    await pkg('u-mem');
+    as('fb-admin');
+    expect(await checkin.checkInByMembershipId('t1', 't1_fb-mem')).toMatchObject({ ok: true, name: 'u-mem', access: 'ok' });
+    expect((await w.h.one(`SELECT member_id m FROM checkins`)).m).toBe('u-mem');
+  });
+
   it('another member by short code: the doc id carries their internal id (all a screen can know about them)', async () => {
     await w.h.run(`UPDATE memberships SET short_code = '123456' WHERE member_id = 'u-mem'`);
     as('fb-admin');

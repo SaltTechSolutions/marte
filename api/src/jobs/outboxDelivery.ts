@@ -34,7 +34,7 @@ async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
   if (dead.length) await db.batch(dead.map((t) => db.prepare(`DELETE FROM push_tokens WHERE token = ?`).bind(t)));
 }
 
-async function sendEmail(env: Env, p: any, doFetch: Fetch): Promise<void> {
+async function sendEmail(env: Omit<Env, 'MEDIA'>, p: any, doFetch: Fetch): Promise<void> {
   if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
   const res = await doFetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -50,7 +50,7 @@ async function sendEmail(env: Env, p: any, doFetch: Fetch): Promise<void> {
  * mid-delivery only delays the retry. Failures back off; after MAX_ATTEMPTS the row is 'dead'
  * (kept for inspection, never silently dropped).
  */
-export async function deliverOutbox(env: Env, now: number, limit = 50, doFetch: Fetch = fetch) {
+export async function deliverOutbox(env: Omit<Env, 'MEDIA'>, now: number, limit = 50, doFetch: Fetch = fetch) {
   const db = env.DB;
   const { results } = await db.prepare(
     `UPDATE outbox SET attempts = attempts + 1, next_attempt_at = ?

@@ -174,7 +174,7 @@ describe('F1 reads (member records)', () => {
     await db.prepare(`INSERT INTO calendar_shares VALUES ('t1','u-trn','u-oth',1)`).run();
     expect((await get('/v1/tenants/t1/trainers/u-trn/pt-sessions', 'fb-oth')).status).toBe(200);
     const busy = (await (await get('/v1/tenants/t1/trainers/u-trn/busy', 'fb-oth')).json()) as object[];
-    expect(Object.keys(busy[0]).sort()).toEqual(['durationMinutes', 'startsAt']);
+    expect(Object.keys(busy[0]).sort()).toEqual(['durationMinutes', 'startsAt', 'status']);
   });
   it('member list and notes are staff-only; address and admin note are admin-only', async () => {
     expect((await get('/v1/tenants/t1/members', 'fb-mem')).status).toBe(403);

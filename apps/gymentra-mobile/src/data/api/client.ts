@@ -11,12 +11,15 @@ export const API_BASE = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '
 export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
-  constructor(status: number, message: string, apiCode?: string) {
+  constructor(status: number, message: string, apiCode?: string, extra?: Record<string, unknown>) {
     super(message);
     this.status = status;
     this.code = codeFor(status);
     this.apiCode = apiCode;
+    this.extra = extra;
   }
+  /** The whole error body (e.g. `blocking`, `code` next to `error`), for logic that needs more than the message. */
+  extra?: Record<string, unknown>;
   /** The machine-readable code the API sent (`error` field), for logic that branches on it. */
   apiCode?: string;
 }
@@ -58,7 +61,7 @@ export async function apiFetch<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DE
   const json = text ? safeParse(text) : null;
   if (!res.ok) {
     const j = json as { error?: string; message?: string } | null;
-    throw new ApiError(res.status, j?.message ?? j?.error ?? `HTTP ${res.status}`, j?.error);
+    throw new ApiError(res.status, j?.message ?? j?.error ?? `HTTP ${res.status}`, j?.error, (j ?? undefined) as Record<string, unknown> | undefined);
   }
   return json as T;
 }

@@ -110,6 +110,23 @@ describe('createPackageChangeRequest', () => {
 });
 
 describe('reading offers', () => {
+  it('the pending list is filtered by the Worker: only that member\'s PENDING offers (not answered ones, not other members\')', async () => {
+    const { propose, basic } = await downgradeSetup();
+    await w.h.addUser('u-two', ['member']);
+    await propose();
+    await propose({ note: 'ikinci' });
+    await repo.createPackageChangeRequest({ tenantId: 't1', memberId: 'u-two', memberName: 'İki', kind: 'addon', proposedPackage: basic, createdBy: 'a' });
+    const first = (await pending())[1];
+    w.signInAs('fb-mem');
+    await repo.respondToPackageChangeRequest(first.id, false);
+    w.signInAs('fb-admin');
+    const mine = await pending();
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ memberId: 'u-mem', status: 'pending', note: 'ikinci' });
+    const theirs = await nextValue<Req[]>((ok, err) => repo.watchPendingPackageChangeRequests('t1', 'u-two', ok, err as never));
+    expect(theirs.map((r) => r.memberId)).toEqual(['u-two']);
+  });
+
   it('the member sees their pending offers newest first; getPackageChangeRequest / watchPackageChangeRequest by id; others get null', async () => {
     const { propose } = await downgradeSetup();
     await propose();
@@ -173,7 +190,7 @@ describe('respondToPackageChangeRequest', () => {
     expect(await repo.respondToPackageChangeRequest(r.id, false)).toBe('rejected');
     expect((await holdings()).map((p) => [p.id, p.status])).toEqual([[current.id, 'active']]);
     const again = await repo.respondToPackageChangeRequest(r.id, true).catch((x) => x);
-    expect(again).toMatchObject({ code: 'functions/failed-precondition', message: 'Bu teklif artık beklemede değil.' });
+    expect(again).toMatchObject({ code: 'functions/failed-precondition', message: 'Bu teklif artık beklemede değil: yanıtlanmış ya da geri çekilmiş.' });
   });
 
   it("'promotion-expired' is its own outcome, not a success: the swap is refused instead of being charged at full price", async () => {
@@ -205,7 +222,7 @@ describe('respondToPackageChangeRequest', () => {
     expect(await repo.respondToPackageChangeRequest(r.id, true).catch((x) => x)).toMatchObject({ code: 'functions/not-found' });
     w.signInAs('fb-mem');
     await w.h.run(`UPDATE package_change_requests SET expires_at = 1`);
-    expect(await repo.respondToPackageChangeRequest(r.id, true).catch((x) => x)).toMatchObject({ message: 'Teklifin süresi doldu.' });
+    expect(await repo.respondToPackageChangeRequest(r.id, true).catch((x) => x)).toMatchObject({ message: 'Bu teklifin süresi doldu. Yöneticiden yeni bir teklif isteyebilirsin.' });
   });
 });
 
@@ -218,7 +235,7 @@ describe('cancelPackageChangeRequest', () => {
     w.signInAs('fb-admin');
     await repo.cancelPackageChangeRequest(r.id);
     expect((await repo.getPackageChangeRequest(r.id))?.status).toBe('cancelled');
-    expect(await repo.cancelPackageChangeRequest(r.id).catch((x) => x)).toMatchObject({ message: 'Bu teklif artık beklemede değil.' });
+    expect(await repo.cancelPackageChangeRequest(r.id).catch((x) => x)).toMatchObject({ message: 'Bu teklif artık beklemede değil: yanıtlanmış ya da geri çekilmiş.' });
     w.signInAs('fb-mem');
     expect(await repo.respondToPackageChangeRequest(r.id, true).catch((x) => x)).toMatchObject({ code: 'functions/failed-precondition' });
     expect(await pending()).toEqual([]);

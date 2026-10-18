@@ -65,8 +65,96 @@ export const MESSAGES: Record<string, string> = {
   'name required': 'Ad gerekli.',
   'bad email': 'E-posta adresi geçersiz görünüyor.',
   'bad birthDate': 'Doğum tarihi geçerli değil.',
+  // ---- members and gym access ----
+  'no active membership': 'Bu işlem için salonda aktif bir üyeliğin olması gerekiyor.',
+  'no membership in this gym': 'Bu salonda bir üyeliğin yok.',
+  'no such request': 'Böyle bir onay isteği bulunamadı.',
+  'cannot remove yourself': 'Kendini salondan çıkaramazsın. Ayrılmak için "Salondan ayrıl" seçeneğini kullan.',
+  'last admin cannot be removed': 'Bu kişi salonun son yöneticisi. Çıkarmadan önce başka bir yönetici ata.',
+  'read-only field': 'Bu bilgi buradan değiştirilemez.',
+  // ---- packages, promotions, assignments ----
+  'package not found': 'Paket bulunamadı.',
+  'promotion not found': 'Kampanya bulunamadı.',
+  'package changed; retry': 'Paket az önce değişti. Lütfen sayfayı yenileyip tekrar dene.',
+  'cannot reverse': 'Bu ödeme düzeltilemedi: ya bu üyeye ait onaylı bir ödeme değil ya da zaten düzeltilmiş.',
+  // ---- package change offers ----
+  'current assignment is not an active package of this member': 'Değiştirilmek istenen paket artık üyenin aktif paketi değil.',
+  'member, package, current assignment or promotion changed; retry': 'Üyenin, paketin ya da kampanyanın bilgisi az önce değişti. Lütfen tekrar dene.',
+  'request is no longer pending': 'Bu teklif artık beklemede değil: yanıtlanmış ya da geri çekilmiş.',
+  'offer expired': 'Bu teklifin süresi doldu. Yöneticiden yeni bir teklif isteyebilirsin.',
+  'proposed package no longer exists': 'Teklif edilen paket artık mevcut değil.',
+  'the package to replace is no longer active': 'Değiştirilecek paket artık aktif değil. Yöneticiden yeni bir teklif iste.',
+  'promotion changed; retry': 'Kampanya bilgisi az önce değişti. Lütfen tekrar dene.',
+  'package, promotion or current assignment changed; retry': 'Paket, kampanya ya da mevcut paketin az önce değişti. Lütfen tekrar dene.',
+  // ---- cancelling an assignment ----
+  'assignment already cancelled': 'Bu paket zaten geri alınmış.',
+  'assignment already ended or already marked to end': 'Bu paket zaten bitmiş ya da bitişi için işaretlenmiş.',
+  'an appointment was booked on this package meanwhile; cancel it first': 'Bu pakete az önce bir randevu alındı. Önce randevuyu iptal et.',
+  'assignment changed; retry': 'Paket bilgisi az önce değişti. Lütfen tekrar dene.',
+  // ---- freezing ----
+  'only a membership package can be frozen': 'Yalnızca üyelik paketleri dondurulabilir.',
+  'package is already frozen': 'Bu paket zaten dondurulmuş.',
+  'only an active package can be frozen': 'Yalnızca aktif bir paket dondurulabilir.',
+  'an ended package cannot be frozen': 'Bitmiş ya da bitişi için işaretlenmiş bir paket dondurulamaz.',
+  'this package has no freeze right': 'Bu paketin dondurma hakkı yok.',
+  'an expired package cannot be frozen': 'Süresi dolmuş bir paket dondurulamaz.',
+  'days (max 365)': 'En fazla 365 gün dondurulabilir.',
+  // ---- personal training ----
+  'slot_taken': 'Bu saat dolu. Başka bir saat seç.',
+  'slot_overlap': 'Bu saat, antrenörün başka bir randevusuyla çakışıyor.',
+  'no_credit': 'Bu randevu için kullanılabilir ders hakkın yok.',
+  'no_availability': 'Antrenör henüz çalışma saatlerini belirlemedi.',
+  'outside_availability': 'Seçtiğin saat antrenörün çalışma saatleri dışında.',
+  'trainer_unavailable': 'Seçilen antrenör şu an randevu veremiyor.',
+  'member_not_active': 'Üyenin üyeliği aktif değil.',
+  'conflict': 'İşlem sırasında kayıt değişti. Lütfen tekrar dene.',
+  'already_cancelled': 'Bu randevu zaten iptal edilmiş.',
+  'already_completed': 'Bu randevu zaten tamamlanmış.',
+  'already_no-show': 'Bu randevu zaten "gelmedi" olarak işaretlenmiş.',
+  'already_assigned': 'Randevu zaten bu antrenörde.',
+  'session_not_started': 'Henüz başlamamış bir randevu "gelmedi" olarak işaretlenemez.',
+  // ---- input a screen can plausibly send wrong ----
+  'days': 'Gün sayısı 1 ile 365 arasında olmalı.',
+  'reason': 'Gerekçe boş olamaz ve 500 karakteri geçemez.',
+  'slot in the past': 'Geçmiş bir saate randevu alınamaz.',
+  'duplicate slot': 'Aynı saat birden fazla kez seçilmiş.',
+  'a trainer cannot book themselves': 'Antrenör kendine randevu veremez.',
+  'viewer must be a trainer': 'Takvim yalnızca başka bir antrenörle paylaşılabilir.',
+  'percent > 100': 'Yüzde indirimi 100\'ü geçemez.',
+  'bad promotion': 'Kampanya bilgileri geçersiz. Ad, tür, değer, geçerli paketler ve etkin durumunu kontrol et.',
+  'value (whole number)': 'Bu kampanya türünde değer tam sayı olmalı.',
+  'maxRedemptions': 'Kullanım sınırı sıfırdan büyük bir tam sayı olmalı.',
+  'unreadable slot': 'Seçilen saat okunamadı. Lütfen tekrar seç.',
+  'at most 20 slots per request': 'Tek seferde en fazla 20 randevu alınabilir.',
+  'trainerId and slots required': 'Antrenör ve en az bir saat seçmelisin.',
+  'trainerId and memberId required': 'Antrenör ve üye seçmelisin.',
+  'durationMinutes': 'Süre geçersiz.',
+  'startsAt': 'Başlangıç zamanı geçersiz.',
+  'bad class': 'Ders bilgileri eksik ya da geçersiz (ad, kapasite ve zaman gerekli).',
+  'bad repeat': 'Tekrar ayarı geçersiz (en fazla 52 hafta).',
+  'bad roles': 'Seçilen roller geçersiz.',
+  'slotMinutes': 'Randevu süresi 30, 45, 60 ya da 90 dakika olmalı.',
+  'weekly': 'Haftalık çalışma saatleri geçersiz.',
+  'exceptions': 'İstisna günleri geçersiz.',
+  'title 1-80, body <= 600': 'Başlık 1–80, metin en fazla 600 karakter olmalı.',
+  'bad image': 'Görsel okunamadı ya da çok büyük. Başka bir görsel dene.',
   'invalid transition': 'Üyenin mevcut durumu bu değişikliğe izin vermiyor.',
 };
+
+/** Refusals whose English sentence carries a number: the Turkish one carries it too. */
+const DYNAMIC: [RegExp, (m: RegExpMatchArray) => string][] = [
+  [/^(\d+) upcoming appointment\(s\) are booked on this package; cancel them first$/, (m) => `Bu pakete bağlı ${m[1]} ileri tarihli randevu var. Önce onları iptal et.`],
+  [/^freeze quota used up \((\d+) times\)$/, (m) => `Dondurma hakkın doldu (en fazla ${m[1]} kez dondurulabilir).`],
+  [/^a freeze must be at least (\d+) days$/, (m) => `Bir dondurma en az ${m[1]} gün olmalı.`],
+];
+
+/** The Turkish sentence for an error code: exact entry, then the numbered ones, then nothing (the caller falls back by status). */
+export function messageFor(error: string | undefined): string | undefined {
+  if (!error) return undefined;
+  if (MESSAGES[error]) return MESSAGES[error];
+  for (const [re, f] of DYNAMIC) { const m = error.match(re); if (m) return f(m); }
+  return undefined;
+}
 
 export const errorMessages = createMiddleware(async (c, next) => {
   await next();
@@ -74,7 +162,7 @@ export const errorMessages = createMiddleware(async (c, next) => {
   if (res.status < 400 || !(res.headers.get('content-type') ?? '').includes('application/json')) return;
   const body = (await res.clone().json().catch(() => null)) as { error?: string; message?: string } | null;
   if (!body || typeof body !== 'object' || body.message) return;
-  const message = (body.error && MESSAGES[body.error]) || STATUS_FALLBACK[res.status];
+  const message = messageFor(body.error) || STATUS_FALLBACK[res.status];
   if (!message) return;
   const headers = new Headers(res.headers);
   headers.delete('content-length');

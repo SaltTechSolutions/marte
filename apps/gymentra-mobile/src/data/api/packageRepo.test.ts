@@ -114,6 +114,39 @@ describe('packageRepo over the Worker', () => {
     expect(await repo.createGymPackage('t1', monthly({ price: 10.005 })).catch((x) => x)).toMatchObject({ code: 'functions/invalid-argument', message: 'Tutar en fazla 2 ondalık basamak içerebilir.' });
   });
 
+  it('edits are partial on the Worker: cleared optional fields are removed, the merged result is validated, unknown ids are 404', async () => {
+    await repo.createGymPackage('t1', monthly());
+    const [p] = await catalog();
+    await repo.updateGymPackage(p.id, monthly({ freezePolicy: undefined, name: 'Sadece ad' }));
+    expect(await repo.getGymPackage(p.id)).toMatchObject({ name: 'Sadece ad', isActive: true, durationDays: 30 });
+    expect((await repo.getGymPackage(p.id))!.freezePolicy).toBeUndefined();
+    // membership -> lessons without lesson fields: the merged package is invalid
+    const bad = await repo.updateGymPackage(p.id, { name: 'x', kind: 'lessons', price: 10, entitlements: { gymAccess: false } }).catch((x) => x);
+    expect(bad).toMatchObject({ code: 'functions/invalid-argument' });
+    expect((await repo.getGymPackage(p.id))!.kind).toBe('membership');
+    expect(await repo.updateGymPackage('gp-nope', monthly()).catch((x) => x)).toMatchObject({ code: 'functions/not-found' });
+    expect(await repo.setPackageActive('gp-nope', false).catch((x) => x)).toMatchObject({ code: 'functions/not-found' });
+  });
+
+  it('createPackageVersion is atomic: an invalid draft leaves the old version active and creates nothing', async () => {
+    await repo.createGymPackage('t1', monthly());
+    const [old] = await catalog();
+    await sell(old.id);
+    const e = await repo.createPackageVersion(old, monthly({ durationDays: 0 })).catch((x) => x);
+    expect(e).toMatchObject({ code: 'functions/invalid-argument' });
+    const pkgs = await catalog();
+    expect(pkgs).toHaveLength(1);
+    expect(pkgs[0].isActive).toBe(true);
+  });
+
+  it('getGymPackage by id works for any member of the gym', async () => {
+    await repo.createGymPackage('t1', monthly());
+    const [p] = await catalog();
+    forgetTenants();
+    w.signInAs('fb-mem');
+    expect(await repo.getGymPackage(p.id)).toMatchObject({ id: p.id, name: 'Aylık', price: 1000 });
+  });
+
   it('getGymPackage: unknown id -> null', async () => {
     expect(await repo.getGymPackage('gp-nope')).toBeNull();
   });

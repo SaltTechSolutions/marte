@@ -23,12 +23,6 @@ async function fetchPromotions(tenantId: string): Promise<Promotion[]> {
   return list;
 }
 
-async function findPromotion(tenantId: string, promotionId: string): Promise<Promotion> {
-  const found = (await fetchPromotions(tenantId)).find((p) => p.id === promotionId);
-  if (!found) throw new ApiError(404, 'Aradığın kayıt bulunamadı.');
-  return found;
-}
-
 const body = (draft: PromotionDraft) => ({
   name: draft.name,
   kind: draft.kind,
@@ -49,15 +43,15 @@ export async function createPromotion(tenantId: string, draft: PromotionDraft): 
 }
 
 /**
- * The Worker merges the body into the stored promotion (JSON merge patch), so a cleared cap has to be sent
- * as an explicit `null` to remove it; leaving the key out would silently keep the old cap.
+ * The Worker merges the body into the stored promotion (JSON merge patch, 404 for an unknown id, the merged
+ * result is validated), so a cleared cap has to be sent as an explicit `null`; leaving the key out would keep
+ * the old cap.
  */
 export async function updatePromotion(promotionId: string, draft: PromotionDraft): Promise<void> {
   await inTenantOf(
     'promotion',
     promotionId,
     async (tenantId) => {
-      await findPromotion(tenantId, promotionId);   // the PUT answers 200 for an unknown id; the lookup makes it a 404
       await apiPut(`/tenants/${tenantId}/promotions/${promotionId}`, { ...body(draft), maxRedemptions: draft.maxRedemptions ?? null });
       pkgInvalidate(tenantId, 'promotions');
     },
@@ -70,7 +64,6 @@ export async function setPromotionActive(promotionId: string, isActive: boolean)
     'promotion',
     promotionId,
     async (tenantId) => {
-      await findPromotion(tenantId, promotionId);   // the PUT answers 200 for an unknown id; the lookup makes it a 404
       await apiPut(`/tenants/${tenantId}/promotions/${promotionId}`, { isActive });
       pkgInvalidate(tenantId, 'promotions');
     },
@@ -81,8 +74,9 @@ export async function setPromotionActive(promotionId: string, isActive: boolean)
 /** One-shot fetch for the edit form (null when the promotion does not exist). */
 export async function getPromotion(promotionId: string): Promise<Promotion | null> {
   try {
-    return await inTenantOf('promotion', promotionId, (tenantId) => findPromotion(tenantId, promotionId), {
-      miss: (e) => e.status === 404 || e.status === 403,   // a plain member of a gym may not list its promotions
+    return await inTenantOf('promotion', promotionId, async (tenantId) =>
+      promotionFromDto(await apiGet<Raw>(`/tenants/${tenantId}/promotions/${promotionId}`), tenantId), {
+      miss: (e) => e.status === 404 || e.status === 403,   // a plain member of a gym may not read promotions
     });
   } catch (e) {
     if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;

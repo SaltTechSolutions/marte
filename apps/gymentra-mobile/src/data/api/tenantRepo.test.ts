@@ -130,6 +130,6 @@ describe('settings writes', () => {
   });
 });
 
-it('logo upload stays on the Firebase callable', () => {
-  expect(repo.uploadTenantLogo).toBe(fbTenant.uploadTenantLogo);
+it('logo upload is the API implementation, not the Firebase callable (covered end to end in mediaRepos.test.ts)', () => {
+  expect(repo.uploadTenantLogo).not.toBe(fbTenant.uploadTenantLogo);
 });

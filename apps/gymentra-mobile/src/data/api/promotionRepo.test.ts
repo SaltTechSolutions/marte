@@ -64,6 +64,15 @@ describe('promotionRepo over the Worker', () => {
     expect(await repo.getPromotion('pr-nope')).toBeNull();
   });
 
+  it('getPromotion: staff read it by id; a plain member gets null (403), as before', async () => {
+    await repo.createPromotion('t1', draft());
+    const [p] = await list();
+    w.signInAs('fb-mem');
+    expect(await repo.getPromotion(p.id)).toBeNull();
+    w.signInAs('fb-admin');
+    expect((await repo.getPromotion(p.id))?.id).toBe(p.id);
+  });
+
   it('updatePromotion replaces the editable fields and a cleared cap really disappears', async () => {
     await repo.createPromotion('t1', draft({ maxRedemptions: 5, appliesTo: ['a', 'b'] }));
     const [p] = await list();
@@ -81,6 +90,15 @@ describe('promotionRepo over the Worker', () => {
     await repo.setPromotionActive(p.id, true);
     expect((await repo.getPromotion(p.id))?.isActive).toBe(true);
     await expect(repo.setPromotionActive('pr-nope', false)).rejects.toMatchObject({ code: 'functions/not-found' });
+  });
+
+  it('updates are validated on the Worker: unknown id is not-found, a merged invalid promotion is invalid-argument and changes nothing', async () => {
+    await repo.createPromotion('t1', draft());
+    const [p] = await list();
+    expect(await repo.updatePromotion('pr-nope', draft()).catch((x) => x)).toMatchObject({ code: 'functions/not-found' });
+    expect(await repo.setPromotionActive('pr-nope', true).catch((x) => x)).toMatchObject({ code: 'functions/not-found' });
+    expect(await repo.updatePromotion(p.id, draft({ value: 150 })).catch((x) => x)).toMatchObject({ code: 'functions/invalid-argument' });
+    expect((await repo.getPromotion(p.id))!.value).toBe(20);
   });
 
   it('writes invalidate the live list: a watcher sees the change without waiting for the next poll', async () => {

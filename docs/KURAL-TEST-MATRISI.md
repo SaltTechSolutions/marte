@@ -179,7 +179,7 @@ Durum: **ESLENDİ 228**, **F3 0**, **N/A 22**, **GAP 0**.
 | 2468 | Admin edits a member's basic details | an empty name or an oversized e-mail is rejected | ESLENDI | matrix-C [L2468] |
 | 2476 | Admin edits a member's basic details | a plain member cannot edit someone else | ESLENDI | matrix-C [L2476] |
 | 2484 | Admin edits a member's basic details | a member cannot stamp `managed` or `createdBy` on their own new row | ESLENDI | matrix-C [L2484] |
-| 2492 | Admin edits a member's basic details | deleting a membership stays closed to clients — removal goes through the callable | NA | no DELETE membership route on the API; removal belongs to account deletion (F3); matrix-C [L2492] asserts 404 and row survives |
+| 2492 | Admin edits a member's basic details | deleting a membership stays closed to clients — removal goes through the callable | ESLENDI | memberRemoval.test.ts: yönetici bir salondan çıkarır (DELETE /tenants/:t/members/:id), üye/antrenör 403, son yönetici 409 |
 | 2519 | A member edits their own details | name, phone and birth date | ESLENDI | matrix-C [L2519] |
 | 2530 | A member edits their own details | works while still pending approval | ESLENDI | matrix-C [L2530] |
 | 2537 | A member edits their own details | cannot self-approve through the profile path | ESLENDI | matrix-C [L2537] |

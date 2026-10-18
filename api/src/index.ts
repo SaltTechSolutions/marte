@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from './auth';
 import { reads } from './reads';
 import { reads2 } from './reads2';
 import { reads3 } from './reads3';
+import { reads4 } from './reads4';
+import { reads5 } from './reads5';
 import { membership } from './membership';
 import { writes } from './writes';
 import { writes2 } from './writes2';
@@ -14,7 +16,11 @@ import { packageLifecycle } from './packageLifecycle';
 import { tenants } from './tenants';
 import { guardians } from './guardians';
 import { account } from './account';
+import { memberRemoval } from './memberRemoval';
+import { checkins } from './checkins';
+import { classSeries } from './classSeries';
 import { billing, billingWebhook } from './billing';
+import { media, mediaPublic } from './media';
 import { runScheduled } from './scheduled';
 import { errorMessages } from './errorMessages';
 import { createManagedMember } from './managedMembers';
@@ -29,6 +35,7 @@ app.get('/healthz', (c) => c.json({ ok: true }));
 
 // RevenueCat authenticates with a shared secret, not a Firebase token: mounted BEFORE the auth gate.
 app.route('/v1', billingWebhook as never);
+app.route('/', mediaPublic as never);       // /media/* (public, unguessable keys)
 
 app.use('/v1/*', requireAuth);
 
@@ -47,6 +54,8 @@ app.get('/v1/me', async (c) => {
 app.route('/v1', reads);
 app.route('/v1', reads2);
 app.route('/v1', reads3);
+app.route('/v1', reads4);
+app.route('/v1', reads5);
 app.route('/v1', membership);
 app.route('/v1', writes);
 app.route('/v1', writes2);
@@ -57,7 +66,11 @@ app.route('/v1', pt);
 app.route('/v1', tenants);
 app.route('/v1', guardians);
 app.route('/v1', account);
+app.route('/v1', memberRemoval);
+app.route('/v1', checkins);
+app.route('/v1', classSeries);
 app.route('/v1', billing);
+app.route('/v1', media);
 app.post('/v1/tenants/:tenantId/members/managed', requireRole('admin'), createManagedMember);
 app.put('/v1/tenants/:tenantId/members/:memberId/admin-note', requireRole('admin'), setAdminNote);
 

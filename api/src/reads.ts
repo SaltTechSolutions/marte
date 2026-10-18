@@ -21,11 +21,17 @@ const requireMember = async (c: import('hono').Context<App>, next: () => Promise
   await next();
 };
 
-/** Classes are gym-wide: any active member may list them. */
+/** Classes are gym-wide: any active member may list them. `from` (default: yesterday) inclusive, `to` exclusive, `trainerId` filters. */
 reads.get('/tenants/:tenantId/classes', requireMember, async (c) => {
+  const from = Number(c.req.query('from') ?? Date.now() - 86_400_000);
+  const toQ = c.req.query('to');
+  const to = toQ === undefined || toQ === '' ? undefined : Number(toQ);
+  const trainerId = c.req.query('trainerId');
+  if (!Number.isFinite(from) || (to !== undefined && !Number.isFinite(to))) return c.json({ error: 'bad range' }, 400);
   const { results } = await c.env.DB.prepare(
-    `SELECT id, data, starts_at FROM classes WHERE tenant_id = ? AND starts_at >= ? ORDER BY starts_at LIMIT 200`,
-  ).bind(c.req.param('tenantId'), Number(c.req.query('from') ?? Date.now() - 86_400_000))
+    `SELECT id, data, starts_at FROM classes WHERE tenant_id = ? AND starts_at >= ?${to !== undefined ? ' AND starts_at < ?' : ''}
+       ${trainerId ? " AND json_extract(data, '$.trainerId') = ?" : ''} ORDER BY starts_at LIMIT 200`,
+  ).bind(...[c.req.param('tenantId'), from, ...(to !== undefined ? [to] : []), ...(trainerId ? [trainerId] : [])])
     .all<{ id: string; data: string; starts_at: number }>();
   return c.json(results.map((r) => ({ ...JSON.parse(r.data), id: r.id, startsAt: r.starts_at })));
 });

@@ -18,6 +18,22 @@ reads3.get('/tenants/:tenantId/packages', async (c) => {
   return c.json(results.map((r) => ({ ...parse(r.data), id: r.id, activeAssignmentCount: r.active_assignment_count })));
 });
 
+reads3.get('/tenants/:tenantId/packages/:id', async (c) => {
+  if (!(await roles(c)).length) return c.json({ error: 'forbidden' }, 403);
+  const r = await c.env.DB.prepare(`SELECT id, data, active_assignment_count FROM gym_packages WHERE id = ? AND tenant_id = ?`)
+    .bind(c.req.param('id'), c.req.param('tenantId')).first<any>();
+  if (!r) return c.json({ error: 'not found' }, 404);
+  return c.json({ ...parse(r.data), id: r.id, activeAssignmentCount: r.active_assignment_count });
+});
+
+reads3.get('/tenants/:tenantId/promotions/:id', async (c) => {
+  if (!isStaff(await roles(c))) return c.json({ error: 'forbidden' }, 403);
+  const r = await c.env.DB.prepare(`SELECT id, data FROM promotions WHERE id = ? AND tenant_id = ?`)
+    .bind(c.req.param('id'), c.req.param('tenantId')).first<any>();
+  if (!r) return c.json({ error: 'not found' }, 404);
+  return c.json({ ...parse(r.data), id: r.id });
+});
+
 reads3.get('/tenants/:tenantId/promotions', async (c) => {
   if (!isStaff(await roles(c))) return c.json({ error: 'forbidden' }, 403);
   const { results } = await c.env.DB.prepare(`SELECT id, data FROM promotions WHERE tenant_id = ? LIMIT 200`)
@@ -29,14 +45,22 @@ const reqRow = (r: any) => ({ ...parse(r.data), id: r.id, memberId: r.member_id,
   expiresAt: r.expires_at, appliedAt: r.applied_at, createdBy: r.created_by, createdAt: r.created_at,
   respondedAt: r.responded_at });
 
-/** Staff see every request; a member sees only their own. */
+const CHANGE_STATUSES = ['pending', 'approved', 'rejected', 'expired', 'cancelled'];
+
+/** Staff see every request; a member sees only their own. Filters: ?memberId= ?status= ?limit= (default 200, max 1000). */
 reads3.get('/tenants/:tenantId/package-change-requests', async (c) => {
   const r = await roles(c);
   if (!r.length) return c.json({ error: 'forbidden' }, 403);
-  const own = isStaff(r) ? '' : ' AND member_id = ?';
-  const args = [c.req.param('tenantId'), ...(isStaff(r) ? [] : [c.get('userId')])];
+  const staff = isStaff(r);
+  const memberId = c.req.query('memberId'), status = c.req.query('status');
+  if (status !== undefined && !CHANGE_STATUSES.includes(status)) return c.json({ error: 'bad status' }, 400);
+  const n = Number(c.req.query('limit'));
+  const limit = Number.isFinite(n) && n >= 1 ? Math.min(Math.floor(n), 1000) : 200;
+  // A member's own scope is not widened by ?memberId=: asking for someone else's simply matches nothing.
+  const conds = ['tenant_id = ?', ...(staff ? [] : ['member_id = ?']), ...(memberId ? ['member_id = ?'] : []), ...(status ? ['status = ?'] : [])];
+  const args = [c.req.param('tenantId'), ...(staff ? [] : [c.get('userId')]), ...(memberId ? [memberId] : []), ...(status ? [status] : []), limit];
   const { results } = await c.env.DB.prepare(
-    `SELECT * FROM package_change_requests WHERE tenant_id = ?${own} ORDER BY created_at DESC LIMIT 200`,
+    `SELECT * FROM package_change_requests WHERE ${conds.join(' AND ')} ORDER BY created_at DESC, id LIMIT ?`,
   ).bind(...args).all<any>();
   return c.json(results.map(reqRow));
 });
@@ -85,7 +109,8 @@ reads3.get('/tenants/:tenantId/members/:memberId', async (c) => {
     permissions: JSON.parse(row.permissions), displayName: row.display_name, email: row.email, phone: row.phone,
     birthDate: row.birth_date, heightCm: row.height_cm, photoUrl: row.photo_url, shortCode: row.short_code,
     managed: !!row.managed, guardianId: row.guardian_id, guardianName: row.guardian_name,
-    guardianStatus: row.guardian_status, requestedAt: row.requested_at, approvedAt: row.approved_at });
+    guardianStatus: row.guardian_status, guardianConsentAt: row.guardian_consent_at, guardianConsentVersion: row.guardian_consent_version,
+    requestedAt: row.requested_at, approvedAt: row.approved_at, leftAt: row.left_at, createdBy: row.created_by });
 });
 
 /** Children a user is (or is asking to become) guardian of. */

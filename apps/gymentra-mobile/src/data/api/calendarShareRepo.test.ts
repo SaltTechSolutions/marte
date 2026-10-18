@@ -39,7 +39,7 @@ describe('granting and revoking', () => {
     as('fb-trn');
     const notCoach: any = await repo.grantCalendarShare({ ...p, ownerTrainerId: 'u-trn', viewerTrainerId: 'u-mem' }).catch((e) => e);
     expect(notCoach.code).toBe('functions/invalid-argument');
-    expect(notCoach.message).toBe('Takvim yalnızca bir antrenörle paylaşılabilir.');
+    expect(notCoach.message).toBe('Takvim yalnızca başka bir antrenörle paylaşılabilir.');
     await repo.grantCalendarShare({ ...p, ownerTrainerId: 'u-trn', viewerTrainerId: 'u-trn2' });
     as('fb-trn2');
     expect(((await repo.revokeCalendarShare('t1', 'u-trn', 'u-trn2').catch((e) => e)) as any).code).toBe('functions/permission-denied');
@@ -54,16 +54,41 @@ describe('granting and revoking', () => {
   });
 });
 
-describe('the two lists are a named gap (the Worker has no read route)', () => {
-  it('the screen gets its error callback, never an empty list; without a callback it throws', () => {
-    const onChange = vi.fn(); const onError = vi.fn();
-    const unsubA = repo.watchSharesIGranted('t1', 'u-trn', onChange, onError);
-    const unsubB = repo.watchSharesGrantedToMe('t1', 'u-trn', onChange, onError);
-    expect(onError).toHaveBeenCalledTimes(2);
-    expect(onError.mock.calls[0][0].message).toMatch(/^GAP\(api\): GET \/tenants\/:t\/calendar-shares\?as=owner/);
-    expect(onError.mock.calls[1][0].message).toMatch(/as=viewer/);
-    expect(onChange).not.toHaveBeenCalled();
-    expect(() => { unsubA(); unsubB(); }).not.toThrow();
-    expect(() => repo.watchSharesIGranted('t1', 'u-trn', onChange)).toThrow(/GAP\(api\)/);
+describe('the lists', () => {
+  const sub = (fn: 'watchSharesIGranted' | 'watchSharesGrantedToMe', who: string) =>
+    new Promise<any[]>((resolve, reject) => {
+      const stop = repo[fn]('t1', who, (l) => { queueMicrotask(stop); resolve(l); }, reject as never);
+    });
+
+  it('"I granted" and "granted to me" are the caller\'s own side, with names and the Firestore document id', async () => {
+    await w.h.run(`UPDATE memberships SET display_name = 'Mert' WHERE member_id = 'u-trn'`);
+    await w.h.run(`UPDATE memberships SET display_name = 'Ece' WHERE member_id = 'u-trn2'`);
+    await w.h.run(`INSERT INTO calendar_shares (tenant_id, owner_trainer_id, viewer_trainer_id, created_at) VALUES ('t1','u-trn','u-trn2',1000)`);
+    as('fb-trn');
+    const mine = await sub('watchSharesIGranted', 'u-trn');
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ id: 't1_u-trn_u-trn2', tenantId: 't1', ownerTrainerId: 'u-trn', ownerTrainerName: 'Mert', viewerTrainerId: 'u-trn2' });
+    expect(mine[0].createdAt).toEqual(new Date(1000));
+    expect(await sub('watchSharesGrantedToMe', 'u-trn')).toEqual([]);
+    as('fb-trn2');
+    const toMe = await sub('watchSharesGrantedToMe', 'u-trn2');
+    expect(toMe.map((s) => [s.ownerTrainerId, s.ownerTrainerName, s.viewerTrainerId])).toEqual([['u-trn', 'Mert', 'u-trn2']]);
+    expect(await sub('watchSharesIGranted', 'u-trn2')).toEqual([]);
+  });
+
+  it('a grant shows in the owner\'s list at once (the list is invalidated by the write)', async () => {
+    as('fb-trn');
+    const seen: any[][] = [];
+    const stop = repo.watchSharesIGranted('t1', 'u-trn', (l) => seen.push(l));
+    await vi.waitFor(() => expect(seen.length).toBe(1));
+    await repo.grantCalendarShare({ tenantId: 't1', ownerTrainerId: 'u-trn', ownerTrainerName: 'Mert', viewerTrainerId: 'u-trn2' });
+    await vi.waitFor(() => expect(seen.length).toBe(2), { timeout: 3000 });
+    expect(seen[1].map((s) => s.viewerTrainerId)).toEqual(['u-trn2']);
+    stop();
+  });
+
+  it('a plain member cannot list shares (onError)', async () => {
+    const e: any = await sub('watchSharesIGranted', 'u-mem').catch((x) => x);
+    expect(e.code).toBe('functions/permission-denied');
   });
 });

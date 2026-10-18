@@ -31,6 +31,30 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-18 — Fotoğraf ve logo yükleme R2'ye taşındı (staging'de gerçek R2 doğrulandı)
+
+**Yapıldı.** `api/src/media.ts`: `POST/DELETE /v1/me/photo`, `POST /v1/tenants/:t/logo` (yönetici), herkese açık `GET /media/*`. Anahtarlar tahmin edilemez (128 bit rastgele; eski Firebase token'lı URL'lerin karşılığı), görsel türü **baytlara bakılarak** (JPEG/PNG/WebP imzası) belirlenir, 1 MB sınırı, kişi/salon başına tek güncel görsel, `nosniff` + `sandbox` CSP. Hesap silinince fotoğraf nesneleri de silinir. Mobil: `uploadMemberPhoto/deleteMemberPhoto/uploadTenantLogo` API uygulamaları (`imageTools.ts` yerel modülleri tembel yükler). `gymentra-media-staging` kovası oluşturuldu; `wrangler r2 object put` ile konan nesne Worker'dan 200 + doğru başlıklarla okundu.
+
+**Karar.** Görseller Worker üzerinden sunulur (özel alan adı gelince URL'ler o alandan; `PUBLIC_BASE_URL`). Eski Firebase Storage URL'leri veri aktarımında olduğu gibi kalır (Storage açık kaldığı sürece çalışır); yeni yüklemeler R2'ye gider.
+
+**Bilerek yapılmadı.** Firebase Storage'daki mevcut fotoğrafları R2'ye kopyalamak (kesimde Storage açık tutulursa gerekmez; kapatılacaksa ayrı bir taşıma işi). Görsel moderasyonu. Prod kovası (`gymentra-media-prod`) henüz oluşturulmadı.
+
+**Açık.** Photo URL'leri mutlak: alan adı değişirse `photo_url`/`logoUrl` değerleri eski adresi gösterir. Kısa kod artık veritabanı tetikleyicisinde (`0051`).
+
+**Nerede.** `api/src/media.ts`, `api/test/media.test.ts`, `apps/gymentra-mobile/src/data/api/{memberPhotoRepo,imageTools,mediaRepos.test}.ts`.
+
+## 2026-10-18 — Mobil istemci API moduna taşındı; para KURUŞ; kimlik sınırı; kısa kod tetikleyicisi
+
+**Yapıldı.** (1) **Geçiş katmanı:** `src/data/backend.ts` (`EXPO_PUBLIC_BACKEND=firebase|api`, varsayılan firebase) ve `src/data/repo/<ad>.ts`: ekranlar `@/data/repo/*` içe aktarır, katman `typeof firebase` ile tiplenmiş `api` ya da `firebase` uygulamasını seçer (imza uyumsuzluğu `tsc`'de patlar). 25 repo için `src/data/api/*` gerçek uygulamaları yazıldı; yoklama (`poll.ts`: aynı yük iletilmez, hata sırasında üstel geri çekilme, arka planda durur, `invalidate(önek)`), push gelince tüm yoklamalar tazelenir, çıkışta `resetApiState()` hepsini ve önbellekleri sıfırlar. (2) **Test düzeni:** mobil testler gerçek Worker'ı süreç içinde çalıştırır (`testWorld.ts`), yani istemci + sunucu birlikte sınanır; 62 dosya, 720+ test. (3) **API boşlukları kapandı:** gym geneli üye paketi/ödeme/check-in/PT listeleri, tek kayıt okumaları, `checkins/resolve` (QR `subject` = Firebase uid dahil), üye çıkarma, PT `no-show`, sınıf serisi, atomik paket sürümü, kısmi PUT'lar, Türkçe `message` katmanı + kod taraması testi. (4) **Kısa kod** artık veritabanı tetikleyicisinde (`0051`): hiçbir yol kodsuz üyelik üretemez. (5) API modunda hesap silme (Worker + Firebase Auth kullanıcısı + fotoğraf) ve şifre sıfırlama (Firebase Auth'un kendi e-postası).
+
+**Karar.** **Para: D1/API'de tam sayı KURUŞ** (18 Ekim'deki "TL" notunu geçersiz kılar). İstemci sınırda 100 ile çarpar/böler (`pkgMoney.ts`), ekran önizlemeleri lirada kalır; veri aktarımı varsayılanı `--money-scale 100`. **Kimlik sınırı:** ekranlar "ben" için Firebase uid'ini tutar (≈70 yerde karşılaştırılıyor); repo sınırında yalnız oturumdaki kişi için `toInternalId/toAppId` çevirir, başkalarının kimliği iç kimliktir. **Canlı veri:** yoklama + push sinyali, soket yok. Grup ödeme payları ekranın `splitAmount`'ından açık tutar olarak gönderilir (önizleme = saklanan).
+
+**Bilerek yapılmadı.** Fotoğraf/logo yükleme (R2 + imzalı URL kararı yok; Firebase callable'ları Storage'a yazmaya devam eder, `uploadTenantLogo` Firestore üyeliğine baktığı için Firestore kapanınca ÇALIŞMAZ). Zorunlu-güncelleme ekranı. Sentry'ye düşen izleyici hataları (`pollWatch` yalnız `onError` çağırır).
+
+**Açık.** `uploadTenantLogo` ve `deleteMemberPhoto/uploadMemberPhoto` kesimden önce Worker'a ya da Firebase Auth'a bağlı bir yola taşınmalı. Gerçek cihazda API modu hiç çalıştırılmadı; yalnız birim + süreç içi entegrasyon testleri var. `memberships.createdAt/updatedAt` gibi bazı DTO alanları yok sayılır (listede). QR kodu hâlâ Firebase uid taşır (`subject` ile çözülür). Kesim runbook'u: `docs/CUTOVER.md`.
+
+**Nerede.** `apps/gymentra-mobile/src/data/{backend.ts,repo,api}/`, `api/src/{checkins,memberRemoval,classSeries,reads5,erase,format}.ts`, `api/migrations/0050–0051`.
+
 ## 2026-10-18 — Veri aktarım aracı hazır (F4 ilk yarı), para birimi TL
 
 **Yapıldı.** `api/scripts/migrate/`: salt-okunur Firestore dışa aktarıcı, saf dönüştürücü (şemayı gerçek migration'lardan okur, uyumsuzlukta hata verir; deterministik `u`+sha256 kimlikler; orphan'lar sessizce atılmaz, rapora yazılır; sayaçlar yeniden hesaplanır), mutabakat (33 çek, PASS/FAIL), Türkçe runbook. 36 test. **Üretime hiçbir şey yazılmadı, Firebase'e bağlanılmadı.**

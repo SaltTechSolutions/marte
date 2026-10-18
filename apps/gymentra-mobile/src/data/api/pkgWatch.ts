@@ -14,15 +14,3 @@ export function watchPoll<T>(
 ): () => void {
   return pollWatch(key, fetcher, onChange, onError as ((e: unknown) => void) | undefined);
 }
-
-/**
- * A `watch*` whose data the Worker cannot serve yet. It must not hand the screen an empty list as if the
- * data were empty: the screen's error callback gets a clear Error (and the function returns a no-op
- * unsubscribe); with no callback it throws, which is loud on purpose.
- */
-export function unavailableWatch(what: string, onError?: WatchErrorHandler): () => void {
-  const error = new Error(`GAP(api): ${what}`);
-  if (!onError) throw error;
-  onError(error as never);
-  return () => {};
-}

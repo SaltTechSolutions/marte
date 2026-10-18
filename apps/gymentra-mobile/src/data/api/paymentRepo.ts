@@ -4,10 +4,9 @@ import { ApiError, apiGet, apiPost, apiPut } from './client';
 import { selfInternalId, toInternalId } from './membershipIdentity';
 import { paymentFromDto } from './pkgDto';
 import { splitAmount } from '@/utils/splitAmount';
-import { localized } from './pkgErrors';
 import { toApiMoney } from './pkgMoney';
 import { inTenantOf, pkgInvalidate, rememberTenant } from './pkgTenant';
-import { unavailableWatch, watchPoll } from './pkgWatch';
+import { watchPoll } from './pkgWatch';
 
 /**
  * The payment ledger over the Worker (`/tenants/:t/payments`, `…/payments/:id/decision`,
@@ -76,16 +75,26 @@ export async function rejectPayment(paymentId: string): Promise<void> {
 }
 
 /**
- * GAP(api): the admin's gym-wide ledger has no route (`GET /tenants/:t/payments?limit=200`, admin only, newest
- * first, each row with `memberId` and `memberName`); only the per-member list exists. Needed by the admin
- * payments screen, which is also where `confirmPayment` / `rejectPayment` get their ids.
+ * The admin's gym-wide ledger, newest first, capped at 200 like the Firebase listener
+ * (`GET /tenants/:t/payments`, admin only; every row carries `memberId` and `memberName`).
  */
 export function watchPaymentsForTenant(
-  _tenantId: string,
-  _onChange: (payments: Payment[]) => void,
+  tenantId: string,
+  onChange: (payments: Payment[]) => void,
   onError?: WatchErrorHandler,
 ) {
-  return unavailableWatch('watchPaymentsForTenant needs GET /tenants/:t/payments (gym-wide ledger) which the Worker does not have', onError);
+  return watchPoll(
+    `t:${tenantId}:payments:all`,
+    async () => {
+      await selfInternalId();
+      const rows = await apiGet<Raw[]>(`/tenants/${tenantId}/payments?limit=200`);
+      const list = rows.map((r) => paymentFromDto(r, tenantId, ''));
+      rememberTenant('payment', list, tenantId);
+      return list;
+    },
+    onChange,
+    onError,
+  );
 }
 
 /** A member's own payment history, newest first (self, the gym's admins, or an approved guardian). */
@@ -142,14 +151,12 @@ export async function submitGroupPaymentNotice(params: {
   if (shares.some((v) => v <= 0)) throw new Error('Her tutar sıfırdan büyük olmalı.');
 
   const ids = await Promise.all(params.children.map((c) => toInternalId(c.memberId)));
-  await localized(
-    apiPost<{ paymentGroupId: string; payments: { id: string; memberId: string; amount: number }[] }>(`/tenants/${params.tenantId}/payments/group`, {
-      method: params.method,
-      ...(params.note ? { note: params.note } : {}),
-      totalAmount: sumKurus,
-      entries: ids.map((memberId, i) => ({ memberId, amount: toApiMoney(shares[i]) })),
-    }),
-  );
+  await apiPost(`/tenants/${params.tenantId}/payments/group`, {
+    method: params.method,
+    ...(params.note ? { note: params.note } : {}),
+    totalAmount: sumKurus,
+    entries: ids.map((memberId, i) => ({ memberId, amount: toApiMoney(shares[i]) })),
+  });
   paymentsChanged(params.tenantId);
   return { shares };
 }
@@ -161,15 +168,13 @@ export async function submitGroupPaymentNotice(params: {
 export async function reversePayment(params: { payment: Payment; reason: string; reversedBy: string }): Promise<void> {
   const { payment, reason } = params;
   if (payment.reversedAt) throw new Error('Bu ödeme zaten düzeltilmiş.');
-  await localized(
-    apiPost(`/tenants/${payment.tenantId}/payments`, {
-      memberId: await toInternalId(payment.memberId),
-      amount: toApiMoney(payment.amount),
-      method: payment.method,
-      kind: 'reversal',
-      reversesPaymentId: payment.id,
-      reason,
-    }),
-  );
+  await apiPost(`/tenants/${payment.tenantId}/payments`, {
+    memberId: await toInternalId(payment.memberId),
+    amount: toApiMoney(payment.amount),
+    method: payment.method,
+    kind: 'reversal',
+    reversesPaymentId: payment.id,
+    reason,
+  });
   paymentsChanged(payment.tenantId);
 }

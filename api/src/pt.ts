@@ -5,6 +5,7 @@ import {
   computeCancellationDeadline, isBeforeDeadline, isWithinAvailability, tenantTimeFrom,
   type Availability, type TenantTime,
 } from './cancellationDeadline';
+import { outboxIfChanged } from './guarded';
 import { outboxStatement } from './outbox';
 import type { Env, Vars } from './types';
 
@@ -287,6 +288,7 @@ pt.post('/tenants/:tenantId/pt-sessions/:id/cancel', async (c) => {
   if (!s) return fail(c, 404, 'not found');
   if (s.status === 'cancelled') return fail(c, 409, 'already_cancelled');
   if (s.status === 'completed') return fail(c, 409, 'already_completed');
+  if (s.status === 'no-show') return fail(c, 409, 'already_no-show');
 
   let actor: Actor | null = s.member_id === uid ? 'member' : s.trainer_id === uid ? 'trainer' : null;
   if (!actor && (await rolesIn(db, tenantId, uid)).includes('admin')) actor = 'admin';
@@ -368,6 +370,39 @@ pt.post('/tenants/:tenantId/pt-sessions/:id/complete', async (c) => {
   ).bind(now, s.id, tenantId, s.trainer_id).run();
   const after = await db.prepare(`SELECT status, updated_at FROM pt_sessions WHERE id = ?`).bind(s.id).first<{ status: string; updated_at: number }>();
   return after?.status === 'completed' && after.updated_at === now ? c.json({ status: 'completed' }) : fail(c, 409, 'conflict');
+});
+
+/**
+ * The member did not turn up. Same audience as `complete` (the assigned trainer or an admin); only a session that has
+ * started (or is over) can be marked. The lesson is NOT given back: the slot was held and the credit stays spent, so
+ * there is no refund outcome. The member is told in the same batch.
+ */
+pt.post('/tenants/:tenantId/pt-sessions/:id/no-show', async (c) => {
+  const uid = c.get('userId');
+  const tenantId = c.req.param('tenantId')!;
+  const db = c.env.DB;
+  const roles = await rolesIn(db, tenantId, uid);
+  const s = await db.prepare(`SELECT id, trainer_id, member_id, starts_at, status, credit_id FROM pt_sessions WHERE id = ? AND tenant_id = ?`)
+    .bind(c.req.param('id'), tenantId).first<{ id: string; trainer_id: string; member_id: string; starts_at: number; status: string; credit_id: string | null }>();
+  const admin = roles.includes('admin');
+  if (!uid || !(admin || (canHoldPtSessions(roles) && s?.trainer_id === uid))) return fail(c, 403, 'forbidden');
+  if (!s) return fail(c, 404, 'not found');
+  if (s.status !== 'scheduled') return fail(c, 409, `already_${s.status}`);
+  const now = Date.now();
+  if (s.starts_at > now) return fail(c, 409, 'session_not_started');
+  const when = labelOf(s.starts_at, (await tenantTime(db, tenantId)).timeZone);
+  await db.batch([
+    db.prepare(
+      `UPDATE pt_sessions SET status = 'no-show', updated_at = ? WHERE id = ? AND tenant_id = ? AND status = 'scheduled' AND trainer_id = ? AND starts_at <= ?`,
+    ).bind(now, s.id, tenantId, s.trainer_id, now),
+    outboxIfChanged(db, 'push', {
+      userIds: [s.member_id], category: 'bookings', title: 'Randevuna katılmadın',
+      body: `${when} randevusuna katılmadığın için işaretlendi.${s.credit_id ? ' Ders hakkın kullanılmış sayıldı.' : ''}`,
+      data: { screen: 'member/index', sessionId: s.id },
+    }, `pt-no-show:${s.id}`),
+  ]);
+  const after = await db.prepare(`SELECT status, updated_at FROM pt_sessions WHERE id = ?`).bind(s.id).first<{ status: string; updated_at: number }>();
+  return after?.status === 'no-show' && after.updated_at === now ? c.json({ status: 'no-show' }) : fail(c, 409, 'conflict');
 });
 
 /**

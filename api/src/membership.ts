@@ -49,6 +49,7 @@ membership.post('/tenants/:tenantId/join', async (c) => {
      VALUES (?, ?, 'pending', '["member"]', ?, ?, ?)
      ON CONFLICT (tenant_id, member_id) DO UPDATE SET status = 'pending', roles = '["member"]', permissions = '[]',
        approved_at = NULL, left_at = NULL, requested_at = excluded.requested_at,
+       display_name = excluded.display_name, email = excluded.email,   -- a scrubbed tombstone (removed from the gym) must not keep its blank name
        guardian_id = NULL, guardian_name = NULL, guardian_status = NULL
      WHERE memberships.status IN ('left','rejected') RETURNING member_id`,
   ).bind(tenantId, uid, u?.display_name ?? null, u?.email ?? null, now).first();

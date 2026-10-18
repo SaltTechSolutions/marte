@@ -10,8 +10,11 @@ describe('error messages', () => {
     const h = await harness();
     const known = await h.send('POST', '/v1/tenants/t1/leave', 'fb-admin');          // last admin cannot leave
     expect(await known.json()).toMatchObject({ error: 'last admin cannot leave', message: MESSAGES['last admin cannot leave'] });
-    const unknown = await h.send('PUT', '/v1/tenants/t1/members/u-mem/roles', 'fb-admin', { roles: ['superuser'] });
-    expect(((await unknown.json()) as { message: string }).message).toBe(STATUS_FALLBACK[400]);
+    const unknown = await h.send('PUT', '/v1/tenants/t1/members/u-mem/address', 'fb-mem', { address: 'a'.repeat(400) });
+    const body = (await unknown.json()) as { error: string; message: string };
+    expect(unknown.status).toBe(400);
+    expect(MESSAGES[body.error]).toBeUndefined();                  // genuinely uncatalogued...
+    expect(body.message).toBe(STATUS_FALLBACK[400]);                // ...and still Turkish
     expect(await (await h.send('GET', '/healthz', null)).json()).toEqual({ ok: true });
     expect(((await (await h.send('GET', '/v1/me', null)).json()) as { message: string }).message).toBe(STATUS_FALLBACK[401]);
   });

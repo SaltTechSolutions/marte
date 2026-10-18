@@ -4,10 +4,9 @@ import type { WatchErrorHandler } from '../firebase/watch';
 import { ApiError, apiGet, apiPost } from './client';
 import { selfInternalId, toInternalId } from './membershipIdentity';
 import { entitlementsFromDto, entitlementsToCache, memberCreditFromDto, memberPackageFromDto } from './pkgDto';
-import { localized, localizePkgError } from './pkgErrors';
 import { applyPromotionEffect, memberEntitlementsId } from './pkgPure';
 import { inTenantOf, pkgInvalidate, rememberTenant } from './pkgTenant';
-import { unavailableWatch, watchPoll } from './pkgWatch';
+import { watchPoll } from './pkgWatch';
 
 /**
  * Member packages, credits and entitlements over the Worker.
@@ -21,18 +20,12 @@ export { applyPromotionEffect, memberEntitlementsId };
 
 type Raw = Record<string, any>;
 
-/** Holder (gym + member) of every assignment id we have read, for `getMemberPackage(id)` which carries neither. */
-const holders = new Map<string, { tenantId: string; memberId: string }>();
-
 async function fetchPackages(tenantId: string, memberId: string, limit: number): Promise<MemberPackage[]> {
   const internal = await toInternalId(memberId);
   await selfInternalId();   // primes the id translation used when mapping `cancelledBy` etc.
   const rows = await apiGet<Raw[]>(`/tenants/${tenantId}/members/${internal}/packages?limit=${limit}`);
   const list = rows.map((r) => memberPackageFromDto(r, tenantId, memberId));
-  list.forEach((p) => {
-    rememberTenant('memberPackage', p.id, tenantId);
-    holders.set(p.id, { tenantId, memberId });
-  });
+  rememberTenant('memberPackage', list, tenantId);
   return list;
 }
 
@@ -73,7 +66,7 @@ export async function assignPackageToMember(params: {
   } catch (e) {
     // The assign screen branches on this exact message (it has its own Turkish text for it).
     if (e instanceof ApiError && e.apiCode === 'promotion exhausted') throw new Error('PROMOTION_EXHAUSTED');
-    throw localizePkgError(e);
+    throw e;
   }
   pkgInvalidate(tenantId, 'packages', 'credits', 'entitlements', 'promotions', 'renewal');
 }
@@ -84,19 +77,19 @@ export async function getMemberPackages(tenantId: string, memberId: string): Pro
 }
 
 /**
- * GAP(api): the Worker has no `GET /tenants/:t/member-packages/:id`, and this function receives only the id.
- * It works for any assignment this device has already listed (the holder is remembered and the member's
- * list is re-read, so the answer is fresh); for an id it never saw it cannot know the gym or the member.
+ * One assignment by id (`GET /tenants/:t/member-packages/:id`: the member, gym staff or an approved guardian);
+ * null when it does not exist or is not the caller's to see (the Worker answers 404 for both). The id alone does
+ * not name the gym, so it comes from `pkgTenant`.
  */
 export async function getMemberPackage(memberPackageId: string): Promise<MemberPackage | null> {
-  const holder = holders.get(memberPackageId);
-  if (!holder) {
-    throw new Error(
-      'GAP(api): getMemberPackage(id) needs GET /tenants/:t/member-packages/:id (the Worker only lists a member\'s packages) and this assignment was never listed on this device.',
-    );
+  await selfInternalId();
+  try {
+    return await inTenantOf('memberPackage', memberPackageId, async (tenantId) =>
+      memberPackageFromDto(await apiGet<Raw>(`/tenants/${tenantId}/member-packages/${memberPackageId}`), tenantId));
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
   }
-  const all = await fetchPackages(holder.tenantId, holder.memberId, 200);
-  return all.find((p) => p.id === memberPackageId) ?? null;
 }
 
 /** One-shot version of `watchMemberCredits`. */
@@ -142,16 +135,27 @@ export function watchMemberPackages(
 }
 
 /**
- * GAP(api): the gym-wide list of every member's assignments (reports screen: "whose package runs out this
- * week") has no route; `GET /tenants/:t/members/:m/packages` is per member. Needs
- * `GET /tenants/:t/member-packages?limit=1000` (admin/trainer, newest-ending first, same DTO plus `memberId`).
+ * Every assignment in the gym, latest-ending first (`GET /tenants/:t/member-packages`, staff only) - the reporting
+ * screen's source. Deliberately unfiltered by `status`: a package that ended in July can still read `active`
+ * until the daily sweep, and the caller compares `endsAt`. Capped at 1000 like the Firebase listener.
  */
 export function watchTenantMemberPackages(
-  _tenantId: string,
-  _onChange: (packages: MemberPackage[]) => void,
+  tenantId: string,
+  onChange: (packages: MemberPackage[]) => void,
   onError?: WatchErrorHandler,
 ) {
-  return unavailableWatch('watchTenantMemberPackages needs GET /tenants/:t/member-packages (gym-wide list) which the Worker does not have', onError);
+  return watchPoll(
+    `t:${tenantId}:packages:all`,
+    async () => {
+      await selfInternalId();
+      const rows = await apiGet<Raw[]>(`/tenants/${tenantId}/member-packages?limit=1000`);
+      const list = rows.map((r) => memberPackageFromDto(r, tenantId));
+      rememberTenant('memberPackage', list, tenantId);
+      return list;
+    },
+    onChange,
+    onError,
+  );
 }
 
 /** One member's active quota balances of a kind, soonest-expiring first. */
@@ -175,7 +179,7 @@ export async function freezeMemberPackage(assignmentId: string, days: number): P
     'memberPackage',
     assignmentId,
     async (tenantId) => {
-      const res = await localized(apiPost<{ resumesAt: string }>(`/tenants/${tenantId}/member-packages/${assignmentId}/freeze`, { days }));
+      const res = await apiPost<{ resumesAt: string }>(`/tenants/${tenantId}/member-packages/${assignmentId}/freeze`, { days });
       pkgInvalidate(tenantId, 'packages', 'credits', 'entitlements');
       return { resumesAt: new Date(res.resumesAt) };
     },
@@ -192,7 +196,7 @@ export async function cancelPackageAssignment(assignmentId: string, reason: stri
     'memberPackage',
     assignmentId,
     async (tenantId) => {
-      await localized(apiPost(`/tenants/${tenantId}/member-packages/${assignmentId}/cancel`, { reason, access }));
+      await apiPost(`/tenants/${tenantId}/member-packages/${assignmentId}/cancel`, { reason, access });
       pkgInvalidate(tenantId, 'packages', 'credits', 'entitlements');
     },
     { adminOnly: true },

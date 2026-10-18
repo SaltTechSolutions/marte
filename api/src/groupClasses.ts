@@ -27,7 +27,7 @@ const bad = (c: Ctx, m: string) => c.json({ error: m }, 400);
 const forbidden = (c: Ctx) => c.json({ error: 'forbidden' }, 403);
 const istanbul = (ms: number, o: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', ...o }).format(ms);
 
-type ClassRow = { id: string; tenantId: string; data: Record<string, unknown>; startsAt: number };
+export type ClassRow = { id: string; tenantId: string; data: Record<string, unknown>; startsAt: number };
 
 async function loadClass(c: Ctx): Promise<ClassRow | null> {
   const tenantId = c.req.param('tenantId') ?? '';
@@ -316,11 +316,15 @@ export async function deleteClass(c: Ctx): Promise<Response> {
   if (!cls) return c.json({ ok: true });
   if (!mayEditClass(await rolesOf(c), c.get('userId'), cls.data)) return forbidden(c);
   const db = c.env.DB;
-  const now = Date.now();
+  await db.batch(deleteClassStatements(db, cls, Date.now()));
+  return c.json({ ok: true, refunds: await refundOutcomes(db, [cls.id]) });
+}
+
+/** The statements that delete one class with its refunds and notification (one batch; the series delete runs one per class). */
+export function deleteClassStatements(db: D1Database, cls: ClassRow, now: number): D1PreparedStatement[] {
   const name = typeof cls.data.name === 'string' ? cls.data.name : null;
   const when = istanbul(cls.startsAt, { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
-
-  const stmts: D1PreparedStatement[] = [
+  return [
     db.prepare(
       `INSERT INTO class_cancellation_refunds (id, tenant_id, class_id, class_name, class_date, member_id, credit_id, outcome, created_at)
        SELECT 'cx' || lower(hex(randomblob(10))), ?1, ?2, ?3, ?4, b.member_id, b.credit_id,
@@ -352,11 +356,15 @@ export async function deleteClass(c: Ctx): Promise<Response> {
     }, now),
     db.prepare(`DELETE FROM classes WHERE id = ? AND tenant_id = ?`).bind(cls.id, cls.tenantId),
   ];
-  await db.batch(stmts);
+}
 
-  const { results } = await db.prepare(`SELECT outcome, count(*) AS n FROM class_cancellation_refunds WHERE class_id = ? GROUP BY outcome`)
-    .bind(cls.id).all<{ outcome: string; n: number }>();
-  return c.json({ ok: true, refunds: Object.fromEntries(results.map((r) => [r.outcome, r.n])) });
+/** Refund markers of the given classes, counted by outcome. */
+export async function refundOutcomes(db: D1Database, classIds: string[]): Promise<Record<string, number>> {
+  if (!classIds.length) return {};
+  const { results } = await db.prepare(
+    `SELECT outcome, count(*) AS n FROM class_cancellation_refunds WHERE class_id IN (${classIds.map(() => '?').join(',')}) GROUP BY outcome`,
+  ).bind(...classIds).all<{ outcome: string; n: number }>();
+  return Object.fromEntries(results.map((r) => [r.outcome, r.n]));
 }
 
 // ---- register (attendance) ----
@@ -431,14 +439,17 @@ groupClasses.get('/tenants/:tenantId/class-bookings', async (c) => {
   if (who !== uid && !isStaff(r) && !(await approvedGuardian(c.env.DB, tenantId, who, uid))) return forbidden(c);
   const from = Number(c.req.query('from') ?? Date.now() - 86_400_000);
   const { results } = await c.env.DB.prepare(
-    `SELECT k.id AS class_id, k.starts_at, 'booked' AS status, b.created_at AS since, b.credit_id IS NOT NULL AS credit
+    `SELECT k.id AS class_id, k.starts_at, 'booked' AS status, b.created_at AS since, b.credit_id IS NOT NULL AS credit, NULL AS pos
        FROM class_bookings b JOIN classes k ON k.id = b.class_id WHERE b.tenant_id = ?1 AND b.member_id = ?2 AND k.starts_at >= ?3
      UNION ALL
-     SELECT k.id, k.starts_at, 'waitlisted', w.created_at, 0
+     SELECT k.id, k.starts_at, 'waitlisted', w.created_at, 0,
+            (SELECT count(*) FROM class_waitlist w2 WHERE w2.class_id = w.class_id
+               AND (w2.created_at < w.created_at OR (w2.created_at = w.created_at AND w2.rowid <= w.rowid)))
        FROM class_waitlist w JOIN classes k ON k.id = w.class_id WHERE w.tenant_id = ?1 AND w.member_id = ?2 AND k.starts_at >= ?3
      ORDER BY starts_at LIMIT 200`,
   ).bind(tenantId, who, from).all<any>();
-  return c.json(results.map((x: any) => ({ classId: x.class_id, startsAt: x.starts_at, status: x.status, since: x.since, paidWithCredit: !!x.credit })));
+  return c.json(results.map((x: any) => ({ classId: x.class_id, startsAt: x.starts_at, status: x.status, since: x.since, paidWithCredit: !!x.credit,
+    ...(x.status === 'waitlisted' ? { waitlistPosition: x.pos } : {}) })));
 });
 
 // ---- reminders (class half of sendClassReminders; the lead wires it to a cron) ----

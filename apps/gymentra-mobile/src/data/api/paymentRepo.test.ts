@@ -127,7 +127,7 @@ describe('reversePayment', () => {
     // the fresh copy is refused on the client, a stale one by the Worker
     await expect(repo.reversePayment({ payment: flagged, reason: 'x', reversedBy: 'a' })).rejects.toThrow('Bu ödeme zaten düzeltilmiş.');
     expect(await repo.reversePayment({ payment: orig, reason: 'x', reversedBy: 'a' }).catch((x) => x)).toMatchObject({
-      code: 'functions/failed-precondition', message: 'Bu ödeme zaten düzeltilmiş ya da düzeltilemez.',
+      code: 'functions/failed-precondition', message: 'Bu ödeme düzeltilemedi: ya bu üyeye ait onaylı bir ödeme değil ya da zaten düzeltilmiş.',
     });
     expect(await ledger()).toHaveLength(2);
   });
@@ -241,9 +241,31 @@ describe('person ids: the screens hold the Firebase uid, the Worker the internal
 });
 
 describe('watchPaymentsForTenant', () => {
-  it('is an explicit GAP (no gym-wide ledger route): error callback gets a clear Error, never an empty ledger', async () => {
+  it('the gym-wide ledger for the admin: newest first, every row with memberId and memberName, decimal amounts in lira; live; admin only', async () => {
+    await w.h.run(`UPDATE memberships SET display_name = 'Mem Ber' WHERE member_id = 'u-mem'`);
+    await w.h.run(`UPDATE memberships SET display_name = 'Ad Min' WHERE member_id = 'u-admin'`);
+    await record(250.5);
+    await new Promise((r) => setTimeout(r, 5));
+    await record(40, { memberId: 'u-admin' });
+    const live = collect<Payment[]>((ok, err) => repo.watchPaymentsForTenant('t1', ok, err as never));
+    await live.until(1);
+    expect(live.values[0].map((p) => [p.memberId, p.memberName, p.amount, p.status])).toEqual([
+      ['u-admin', 'Ad Min', 40, 'confirmed'], ['u-mem', 'Mem Ber', 250.5, 'confirmed'],
+    ]);
+    // a member's notice appears at once, pending, and the admin decides it by id (gym known from the ledger)
+    w.signInAs('fb-mem');
+    await notice(75.25);
+    w.signInAs('fb-admin');
+    await live.until(2);
+    const pend = live.values[1].find((p) => p.status === 'pending')!;
+    expect(pend).toMatchObject({ memberId: 'u-mem', memberName: 'Mem Ber', amount: 75.25 });
+    await repo.confirmPayment(pend.id);
+    await live.until(3);
+    expect(live.values[2].find((p) => p.id === pend.id)!.status).toBe('confirmed');
+    live.stop();
+    w.signInAs('fb-mem');
     const e = await nextValue<unknown>((ok, err) => repo.watchPaymentsForTenant('t1', ok as never, err as never)).catch((x) => x);
-    expect(String((e as Error).message)).toMatch(/GAP\(api\).*\/tenants\/:t\/payments/);
-    expect(() => repo.watchPaymentsForTenant('t1', () => {})).toThrow(/GAP\(api\)/);
+    expect(e).toMatchObject({ code: 'functions/permission-denied' });
   });
 });
+

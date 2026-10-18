@@ -311,10 +311,16 @@ describe('matrix C: admin edits a member\'s basic details', () => {
     expect(JSON.parse(row.r)).toEqual(['member']);
   });
 
-  it('[L2492] NA: deleting a membership has no client route (removal is the account-deletion flow, F3); row survives', async () => {
+  it('[L2492] removing a membership is an admin act through DELETE …/members/:id: admin removes, member/trainer 403, row gone', async () => {
     const { h } = await world();
-    expect((await h.send('DELETE', `${T1}/members/u-mm`, 'fb-admin')).status).toBe(404);
+    await h.addUser('u-coach', ['trainer']);
+    expect((await h.send('DELETE', `${T1}/members/u-mm`, 'fb-mem')).status).toBe(403);
+    expect((await h.send('DELETE', `${T1}/members/u-mm`, 'fb-coach')).status).toBe(403);
     expect(await h.one(`SELECT 1 x FROM memberships WHERE member_id = 'u-mm'`)).not.toBeNull();
+    const r = await h.send('DELETE', `${T1}/members/u-mm`, 'fb-admin');
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as { deleted: number }).deleted).toBeGreaterThanOrEqual(1);
+    expect(await h.one(`SELECT 1 x FROM memberships WHERE member_id = 'u-mm'`)).toBeNull();
   });
 });
 

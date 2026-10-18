@@ -24,6 +24,7 @@ describe('api client', () => {
     expect(e.code).toBe('functions/failed-precondition');
     expect(e.message).toBe('Yeterli ders kredin yok — 2 kaldı, 3 gerekiyor.');
     expect(e.apiCode).toBe('x');
+    expect(e.extra).toMatchObject({ error: 'x' });
     for (const [s, c] of [[400, 'invalid-argument'], [401, 'unauthenticated'], [403, 'permission-denied'], [404, 'not-found'], [500, 'internal']] as const) {
       __setApiTransport((async () => res(s, { error: 'e' })) as never, async () => 'tok');
       expect(((await apiGet('/x').catch((x) => x)) as any).code).toBe(`functions/${c}`);

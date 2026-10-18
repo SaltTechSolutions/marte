@@ -1,87 +1,62 @@
 import type { WatchErrorHandler } from '../firebase/watch';
 import { CheckInAccessReason, CheckInWarnReason } from '../types';
-import { ApiError, apiGet, apiPost } from './client';
-import { getRoster, live, localized, mapLimit, pid, refresh, unavailableWatch } from './classSupport';
-import { selfInternalId, toAppId, toInternalId } from './membershipIdentity';
-import { hasSessionToday } from './ptSessionRepo';
+import { apiGet, apiPost } from './client';
+import { live, localized, pid, refresh } from './classSupport';
+import { firebaseUid, selfInternalId, toAppId, toInternalId } from './membershipIdentity';
 
 // The screens' wording: identical to Firestore's by construction (same constant).
 export { WARN_MESSAGE } from '../firebase/checkinRepo';
 
 /**
- * Check-in on the Worker. The access DECISION stays on the client, exactly as with Firestore: it reads the
- * member's packages, credits and today's sessions (staff may read all of them) and applies the same rules in the
- * same order; only the record of the visit is a Worker write (`POST /tenants/:t/checkins`).
+ * Check-in on the Worker. The access DECISION is the Worker's (`POST /tenants/:t/checkins/resolve`, the Firestore
+ * client's rules in the same order, "today" read in the gym's time zone), so it works for every staff member AND for
+ * the delegated 'checkin' holders who may not read member records. Resolving never records; the visit is a second
+ * call (`POST /tenants/:t/checkins`), made here exactly where the Firestore repo wrote: at once for an `ok` entry, only
+ * after staff confirm for a warning.
  *
- * The scanned QR payload is the old membership document id `${tenantId}_${personId}` (the member card builds it from
- * the member's FIREBASE uid); the person id is the part after the gym prefix. A payload with another gym's prefix
- * reads as "wrong-tenant". Person ids are translated at this boundary (membershipIdentity.ts): my own Firebase uid
- * becomes my internal id, any other id is sent as it is.
- *
- * GAP(api): another member's QR carries THEIR Firebase uid and the Worker has no way to resolve a Firebase uid it
- * is not signed in as (D1 holds `identities(firebase, subject)`, no route exposes it to staff). Until
- * `POST /tenants/:t/checkins/resolve` (or a lookup by Firebase uid) exists, a scan only resolves when the payload
- * already holds an internal id (hand-added members) or the scanner's own uid; short codes work for everybody.
+ * The scanned QR payload is the old membership document id `${tenantId}_${personId}`. The member card builds it from
+ * the member's FIREBASE uid (real accounts) or the internal id (hand-added members). A payload with another gym's
+ * prefix reads as "wrong-tenant". Person ids are translated at this boundary (membershipIdentity.ts).
  */
 
 // ---- Worker shapes ------------------------------------------------------------------------------------------
 
-interface MemberDto {
-  memberId: string;
-  status: string;
-  displayName: string | null;
-  email: string | null;
-  guardianId: string | null;
-  guardianStatus: string | null;
+type Decision = 'ok' | 'guardian' | 'no-package' | 'no-session-today' | 'frozen' | 'duplicate' | 'inactive' | 'not-found';
+interface Resolution {
+  decision: Decision;
+  access?: 'ok' | 'warn';
+  accessReason?: CheckInAccessReason;
+  member?: { id: string; name: string; photoUrl: string | null; shortCode: string | null };
+  packageLabel?: string | null;
+  warnReason?: CheckInWarnReason;
+  lastCheckinAt?: number;
 }
-interface PackageDto {
-  id: string;
-  packageName?: string;
-  kind: 'membership' | 'lessons';
-  status: string;
-  startsAt: number;
-  endsAt: number;
-  entitlements?: { gymAccess?: boolean };
-}
-interface CreditDto { id: string; kind: string; sourcePackageId: string; total: number; used: number; expiresAt: number; status: string }
-interface CheckinDto { id: string; accessReason: CheckInAccessReason; createdAt: number }
+interface CheckinDto { id: string; memberId: string; memberName: string | null; accessReason: CheckInAccessReason | null; createdAt: number }
+type MemberRef = { memberId: string } | { shortCode: string } | { subject: string };
 
-const docId = (tenantId: string, memberId: string) => `${tenantId}_${memberId}`;
+const resolveRef = (tenantId: string, ref: MemberRef) => apiPost<Resolution>(`/tenants/${tenantId}/checkins/resolve`, ref);
 
-/** member id out of a scanned payload, or a verdict when the payload cannot belong to this gym. */
-function memberIdOf(tenantId: string, payload: string): string | 'wrong-tenant' {
+const docId = (tenantId: string, personId: string) => `${tenantId}_${personId}`;
+
+/** person id out of a scanned payload, or a verdict when the payload cannot belong to this gym. */
+function personIdOf(tenantId: string, payload: string): string | 'wrong-tenant' {
   const prefix = `${tenantId}_`;
   if (payload.startsWith(prefix)) return payload.slice(prefix.length);
   return payload.includes('_') ? 'wrong-tenant' : payload;
 }
 
-const nameOf = (m: MemberDto) => m.displayName || m.email || m.memberId;
-
-/** `memberId`: as the screen / the QR holds it (my Firebase uid, or an internal id). */
-async function getMember(tenantId: string, memberId: string): Promise<MemberDto | null> {
-  try {
-    return await apiGet<MemberDto>(`/tenants/${tenantId}/members/${await pid(memberId)}`);
-  } catch (e) {
-    if (e instanceof ApiError && e.status === 404) return null;
-    throw e;
-  }
-}
-
-const checkinsOf = async (tenantId: string, memberId: string) =>
-  apiGet<CheckinDto[]>(`/tenants/${tenantId}/members/${await pid(memberId)}/checkins?limit=200`);
-
 /**
- * A member re-scanned inside this window is treated as the same visit. Long enough to swallow an accidental
- * double-scan or a quick step outside, short enough that a genuine second visit still counts.
+ * Resolves what a card / doc id names. My own Firebase uid is my internal id; any other person is first tried as a
+ * Firebase uid (`subject`, what a member card carries), then as an internal id (hand-added members).
  */
-const DUPLICATE_WINDOW_MINUTES = 60;
-
-async function alreadyCheckedInRecently(tenantId: string, memberId: string): Promise<boolean> {
-  const cutoff = Date.now() - DUPLICATE_WINDOW_MINUTES * 60 * 1000;
-  return (await checkinsOf(tenantId, memberId)).some((c) => c.createdAt >= cutoff);
+async function resolvePerson(tenantId: string, personId: string): Promise<Resolution> {
+  const internal = await toInternalId(personId);
+  if (internal !== personId || personId === firebaseUid()) return resolveRef(tenantId, { memberId: internal });
+  const bySubject = await resolveRef(tenantId, { subject: personId });
+  return bySubject.decision === 'not-found' ? resolveRef(tenantId, { memberId: personId }) : bySubject;
 }
 
-// ---- the access decision (same rules, same order as the Firestore repo) -----------------------------------------------
+// ---- the access decision ------------------------------------------------------------------------------------------
 
 interface AccessResolution {
   access: 'ok' | 'warn';
@@ -91,92 +66,20 @@ interface AccessResolution {
   reason?: CheckInAccessReason;
 }
 
-const packagesOf = async (tenantId: string, memberId: string) =>
-  apiGet<PackageDto[]>(`/tenants/${tenantId}/members/${await pid(memberId)}/packages?limit=10`);
-
-const coversToday = (p: PackageDto, now: number) =>
-  p.kind === 'membership' && p.status === 'active' && p.entitlements?.gymAccess === true && p.startsAt <= now && p.endsAt >= now;
-
-const MINOR_YEARS = 18;
-
-/**
- * Any child of this member who currently holds an active membership package. Stops at the first match.
- *
- * GAP(api): the Worker has no "children of this guardian" read for staff (`/me/children` is the caller's own).
- * Composed instead: the roster's minors (birth date under 18, active) are each read once and kept when their guardian
- * link is this member's and approved. Only reached by a person with nothing of their own, so the cost is paid rarely.
- * Needed to drop the loop: `guardianId` + `guardianStatus` on the roster rows, or `GET …/members/:id/children`.
- */
-async function findChildWithActiveMembership(
-  tenantId: string,
-  guardianId: string,
-  now: number,
-): Promise<{ childName: string; packageName: string } | null> {
-  const adulthood = new Date(now);
-  adulthood.setFullYear(adulthood.getFullYear() - MINOR_YEARS);
-  const minors = (await getRoster(tenantId, 15_000)).filter(
-    (r) => r.status === 'active' && r.birthDate != null && r.birthDate > adulthood.getTime(),
-  );
-  const rows = await mapLimit(minors, 4, (r) => getMember(tenantId, r.memberId));
-  const children = rows.filter(
-    (m): m is MemberDto => m !== null && m.guardianId === guardianId && m.guardianStatus === 'approved' && m.status === 'active',
-  );
-  for (const child of children) {
-    const covering = (await packagesOf(tenantId, child.memberId)).find((p) => coversToday(p, now));
-    if (covering) return { childName: child.displayName || child.email || 'Çocuğu', packageName: covering.packageName ?? '' };
-  }
-  return null;
-}
+const toAccess = (r: Resolution): AccessResolution => {
+  if (r.access === 'ok') return { access: 'ok', packageLabel: r.packageLabel ?? null, warnReason: null, ...(r.decision === 'guardian' ? { reason: 'guardian' as const } : {}) };
+  return { access: 'warn', packageLabel: r.packageLabel ?? null, warnReason: r.warnReason ?? 'no-package' };
+};
 
 /**
  * PKG-3: does this member's package actually grant today's entry, and what should the screen say about it?
- * Read against the packages/credits every time; nothing is cached (a cache goes stale the moment a package expires).
+ * (The Worker's answer for `userId`; a person who was scanned within the last hour has no access decision to give,
+ * and neither has a missing / inactive one: those throw instead of inventing an answer.)
  */
 export async function resolveAccess(tenantId: string, userId: string): Promise<AccessResolution> {
-  const nowDate = new Date();
-  const now = nowDate.getTime();
-  userId = await toInternalId(userId);
-  const packages = await packagesOf(tenantId, userId);
-
-  // 1. A membership package that actually covers today.
-  const covering = packages.find((p) => coversToday(p, now));
-  if (covering) return { access: 'ok', packageLabel: covering.packageName ?? '', warnReason: null };
-
-  // 2. A booked session today is access on its own, independent of the credit's current status.
-  if (await hasSessionToday(tenantId, userId, nowDate)) {
-    const sourcePackage = packages.find((p) => p.kind === 'lessons' && p.endsAt >= now);
-    const label = sourcePackage?.packageName ?? 'Ders paketi';
-    return { access: 'ok', packageLabel: `${label} · bugün randevulu`, warnReason: null };
-  }
-
-  // 3. No booked session — a credit that's still usable but unspent today.
-  const credits = (await apiGet<CreditDto[]>(`/tenants/${tenantId}/members/${await pid(userId)}/credits`)).filter(
-    (c) => c.kind === 'ptLesson' && c.status === 'active',
-  );
-  const usable = credits.find((c) => c.total - c.used > 0 && c.expiresAt >= now);
-  if (usable) {
-    // The Worker has no single-package read; a package outside the newest ten falls back to the generic label.
-    const sourcePackage = packages.find((p) => p.id === usable.sourcePackageId);
-    return { access: 'warn', packageLabel: sourcePackage?.packageName ?? 'Ders paketi', warnReason: 'no-session-today' };
-  }
-
-  // 4. Frozen (any kind) — a paused package still names itself in the warning.
-  const frozen = packages.find((p) => p.status === 'frozen' && p.endsAt >= now);
-  if (frozen) return { access: 'warn', packageLabel: frozen.packageName ?? '', warnReason: 'frozen' };
-
-  // 5. A parent whose child holds an active membership (MEMBER-5b decision 3). Checked last on purpose.
-  const child = await findChildWithActiveMembership(tenantId, userId, now);
-  if (child) {
-    return {
-      access: 'ok',
-      packageLabel: `${child.childName} velisi · ${child.packageName}`,
-      warnReason: null,
-      reason: 'guardian',
-    };
-  }
-
-  // 6. Nothing at all.
-  return { access: 'warn', packageLabel: null, warnReason: 'no-package' };
+  const r = await resolvePerson(tenantId, userId);
+  if (!r.access) throw new Error(`Giriş kararı alınamadı (${r.decision}).`);
+  return toAccess(r);
 }
 
 // ---- recording a visit ---------------------------------------------------------------------------------------------------
@@ -192,90 +95,60 @@ type CheckInOutcome =
   | { ok: false; reason: 'not-found' | 'wrong-tenant' | 'inactive' | 'already-checked-in' };
 
 /**
- * Shared resolve-and-maybe-write path for both check-in routes. An `ok` access writes immediately; a `warn`
- * access does not — the screen shows staff the reason and, if they tap through, calls
- * `confirmCheckInDespiteWarning`. Denying is never silent and never automatic — a human decides.
+ * Shared resolve-and-maybe-write path for both check-in routes. An `ok` access writes immediately; a `warn` access
+ * does not — the screen shows staff the reason and, if they tap through, calls `confirmCheckInDespiteWarning`.
+ * Denying is never silent and never automatic — a human decides.
  */
-async function resolveAndCheckIn(tenantId: string, member: MemberDto): Promise<CheckInOutcome> {
-  await selfInternalId();   // primes toAppId for the doc id handed back
-  const name = nameOf(member);
-
-  if (await alreadyCheckedInRecently(tenantId, member.memberId)) {
-    return { ok: false, reason: 'already-checked-in' };
-  }
-
-  const resolution = await resolveAccess(tenantId, member.memberId);
-  if (resolution.access === 'ok') {
+async function decide(tenantId: string, r: Resolution, docIdOf: () => string): Promise<CheckInOutcome> {
+  if (r.decision === 'not-found' || !r.member) return { ok: false, reason: 'not-found' };
+  if (r.decision === 'inactive') return { ok: false, reason: 'inactive' };
+  if (r.decision === 'duplicate') return { ok: false, reason: 'already-checked-in' };
+  const a = toAccess(r);
+  if (a.access === 'ok') {
     // `reason` carries 'guardian' when the entry rests on a child's package.
-    await writeCheckIn(tenantId, member.memberId, resolution.reason ?? 'ok');
-    return { ok: true, name, access: 'ok', packageLabel: resolution.packageLabel };
+    await writeCheckIn(tenantId, r.member.id, a.reason ?? 'ok');
+    return { ok: true, name: r.member.name, access: 'ok', packageLabel: a.packageLabel };
   }
-  return {
-    ok: true,
-    name,
-    access: 'warn',
-    packageLabel: resolution.packageLabel,
-    warnReason: resolution.warnReason!,
-    membershipDocId: docId(tenantId, toAppId(member.memberId)),
-  };
+  return { ok: true, name: r.member.name, access: 'warn', packageLabel: a.packageLabel, warnReason: a.warnReason!, membershipDocId: docIdOf() };
 }
 
 /**
- * Records a front-desk scan of the member's QR (payload `${tenantId}_${memberId}`). Rejects a code from the wrong
+ * Records a front-desk scan of the member's QR (payload `${tenantId}_${personId}`). Rejects a code from the wrong
  * gym or an inactive member before anything is written.
- *
- * GAP(api): the member lookup and the package reads are staff routes (admin / trainer). A front-desk helper who
- * only holds the delegated 'checkin' permission can WRITE a check-in but cannot read the member or the packages,
- * so for them this answers "not-found". Needed: one server-side route doing lookup + decision + the 60-minute
- * duplicate rule for `canCheckIn` callers.
  */
 export async function checkInByMembershipId(tenantId: string, membershipId: string): Promise<CheckInOutcome> {
-  const memberId = memberIdOf(tenantId, membershipId);
-  if (memberId === 'wrong-tenant') return { ok: false, reason: 'wrong-tenant' };
-  const member = await getMember(tenantId, memberId);
-  if (!member) return { ok: false, reason: 'not-found' };
-  if (member.status !== 'active') return { ok: false, reason: 'inactive' };
-
-  return resolveAndCheckIn(tenantId, member);
+  const personId = personIdOf(tenantId, membershipId);
+  if (personId === 'wrong-tenant') return { ok: false, reason: 'wrong-tenant' };
+  return decide(tenantId, await resolvePerson(tenantId, personId), () => docId(tenantId, personId));
 }
 
 /**
- * Manual-entry check-in: staff types the member's short 6-digit code. Scoped to the gym, so another gym's code
- * is "not-found".
- *
- * GAP(api): looked up in the roster (`GET /tenants/:t/members`, newest-first by name, capped at 500 rows, staff
- * only). Needed: `GET /tenants/:t/members?shortCode=` (any `canCheckIn` caller, exact match).
+ * Manual-entry check-in: staff types the member's short 6-digit code. Scoped to the gym on the server, so another
+ * gym's code is "not-found" and nothing leaks.
  */
 export async function checkInByShortCode(tenantId: string, shortCode: string): Promise<CheckInOutcome> {
-  const find = async (maxAgeMs: number) => (await getRoster(tenantId, maxAgeMs)).find((r) => r.shortCode === shortCode);
-  // A member created a minute ago is not in a roster cached 15 s ago: look once more, fresh, before giving up.
-  const row = (await find(15_000)) ?? (await find(0));
-  if (!row) return { ok: false, reason: 'not-found' };
-  if (row.status !== 'active') return { ok: false, reason: 'inactive' };
-  const member = await getMember(tenantId, row.memberId);
-  if (!member) return { ok: false, reason: 'not-found' };
-
-  return resolveAndCheckIn(tenantId, member);
+  const r = await resolveRef(tenantId, { shortCode });
+  await selfInternalId();   // primes toAppId for the doc id handed back
+  return decide(tenantId, r, () => docId(tenantId, toAppId(r.member!.id)));
 }
 
 /**
- * Staff overrides a `warn` outcome — "kapıda ödeme yapıyor olabilir; kararı personel verir." Re-checks the
- * duplicate window but does not re-resolve access: the reason shown is the reason recorded.
+ * Staff overrides a `warn` outcome — "kapıda ödeme yapıyor olabilir; kararı personel verir." Re-checks the duplicate
+ * window (the pause between warning and tap is real time) but does not re-apply the access rules: the reason shown is
+ * the reason recorded.
  */
 export async function confirmCheckInDespiteWarning(
   tenantId: string,
   membershipDocId: string,
   warnReason: CheckInWarnReason,
 ): Promise<{ ok: true; name: string } | { ok: false; reason: 'already-checked-in' | 'not-found' }> {
-  const memberId = memberIdOf(tenantId, membershipDocId);
-  if (memberId === 'wrong-tenant') return { ok: false, reason: 'not-found' };
-  const member = await getMember(tenantId, memberId);
-  if (!member) return { ok: false, reason: 'not-found' };
-  if (await alreadyCheckedInRecently(tenantId, member.memberId)) {
-    return { ok: false, reason: 'already-checked-in' };
-  }
-  await writeCheckIn(tenantId, member.memberId, warnReason);
-  return { ok: true, name: nameOf(member) };
+  const personId = personIdOf(tenantId, membershipDocId);
+  if (personId === 'wrong-tenant') return { ok: false, reason: 'not-found' };
+  const r = await resolvePerson(tenantId, personId);
+  if (!r.member || r.decision === 'not-found' || r.decision === 'inactive') return { ok: false, reason: 'not-found' };
+  if (r.decision === 'duplicate') return { ok: false, reason: 'already-checked-in' };
+  await writeCheckIn(tenantId, r.member.id, warnReason);
+  return { ok: true, name: r.member.name };
 }
 
 // ---- live ------------------------------------------------------------------------------------------------------------------
@@ -294,7 +167,7 @@ export function watchMyCheckins(
   return live(
     `t:${tenantId}:checkins:mine:${userId}:${since.getTime()}`,
     async () =>
-      (await checkinsOf(tenantId, userId))
+      (await apiGet<CheckinDto[]>(`/tenants/${tenantId}/members/${await pid(userId)}/checkins?limit=200`))
         .filter((c) => c.createdAt >= since.getTime())
         .map((c) => new Date(c.createdAt))
         .sort((a, b) => b.getTime() - a.getTime()),
@@ -304,30 +177,41 @@ export function watchMyCheckins(
   );
 }
 
-/**
- * Live count of today's check-ins for a tenant — powers the admin dashboard's "live" stat.
- *
- * GAP(api): the Worker only lists check-ins PER MEMBER (`GET …/members/:id/checkins`); there is no gym-wide read.
- * Needed: `GET /tenants/:t/checkins?from=<ms>` (admin / delegated 'checkin') -> `[{ id, memberId, accessReason,
- * createdAt }]`. Until then the screen gets its error callback, never a made-up 0.
- */
-export function watchTodayCheckinCount(
-  _tenantId: string,
-  _onChange: (count: number) => void,
-  onError?: WatchErrorHandler,
-) {
-  return unavailableWatch('GET /tenants/:t/checkins?from= does not exist (gym-wide check-ins, today\'s count)', onError);
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
-/**
- * Today's check-ins for the whole gym — powers the admin's "who's in right now" list.
- *
- * GAP(api): same missing gym-wide check-in read as `watchTodayCheckinCount`.
- */
-export function watchTodayCheckins(
-  _tenantId: string,
-  _onChange: (entries: { id: string; userId: string; checkedInAt: Date }[]) => void,
+const todaysVisits = (tenantId: string) =>
+  apiGet<CheckinDto[]>(`/tenants/${tenantId}/checkins?from=${startOfToday().getTime()}&limit=1000`);
+
+/** Live count of today's check-ins for a tenant — powers the admin dashboard's "live" stat. */
+export function watchTodayCheckinCount(
+  tenantId: string,
+  onChange: (count: number) => void,
   onError?: WatchErrorHandler,
 ) {
-  return unavailableWatch('GET /tenants/:t/checkins?from= does not exist (gym-wide check-ins, today\'s list)', onError);
+  return live(`t:${tenantId}:checkins:today:count`, async () => (await todaysVisits(tenantId)).length, onChange, onError, { intervalMs: 20_000 });
+}
+
+/** Today's check-ins for the whole gym — powers the admin's "who's in right now" list. */
+export function watchTodayCheckins(
+  tenantId: string,
+  onChange: (entries: { id: string; userId: string; checkedInAt: Date }[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  return live(
+    `t:${tenantId}:checkins:today:list`,
+    async () => {
+      const rows = await todaysVisits(tenantId);
+      await selfInternalId();
+      return rows
+        .map((c) => ({ id: c.id, userId: toAppId(c.memberId), checkedInAt: new Date(c.createdAt) }))
+        .sort((a, b) => b.checkedInAt.getTime() - a.checkedInAt.getTime());
+    },
+    onChange,
+    onError,
+    { intervalMs: 20_000 },
+  );
 }

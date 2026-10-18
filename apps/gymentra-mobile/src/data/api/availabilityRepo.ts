@@ -10,8 +10,9 @@ interface AvailabilityDto {
   weekly: Partial<Record<Weekday, TimeWindow[]>>;
   slotMinutes: number;
   exceptions: AvailabilityException[];
+  updatedAt: number;
 }
-interface BusyDto { startsAt: number; durationMinutes: number }
+interface BusyDto { startsAt: number; durationMinutes: number; status: TrainerBusySlot['status'] }
 
 export function watchTrainerAvailability(
   tenantId: string,
@@ -30,9 +31,7 @@ export function watchTrainerAvailability(
           weekly: a.weekly ?? {},
           slotMinutes: a.slotMinutes ?? 60,
           exceptions: a.exceptions ?? [],
-          // GAP(api): the availability DTO has no `updatedAt`. Nothing in the app reads it (the Worker does its own
-          // optimistic check on the stored value), so it is the epoch rather than a made-up "now".
-          updatedAt: new Date(0),
+          updatedAt: new Date(a.updatedAt),
         };
       } catch (e) {
         // "Never configured" is a normal answer (404), not an error: the screen shows "tanımlamamış".
@@ -65,8 +64,7 @@ export async function setTrainerAvailability(params: {
 
 /**
  * A trainer's booked times for one day, stripped of who booked them (the Worker's `busy` route carries no
- * identity at all). The route lists cancelled sessions out already, and says nothing about whether a session
- * is done, so every slot reads `scheduled`; `computeFreeSlots` only cares about `cancelled`.
+ * identity at all). The route already leaves cancelled sessions out.
  */
 export function watchTrainerBusySlotsForDay(
   tenantId: string,
@@ -85,7 +83,7 @@ export function watchTrainerBusySlotsForDay(
       const rows = await apiGet<BusyDto[]>(`/tenants/${tenantId}/trainers/${await pid(trainerId)}/busy?from=${start.getTime()}`);
       return rows
         .filter((r) => r.startsAt >= start.getTime() && r.startsAt < end.getTime())
-        .map((r) => ({ date: new Date(r.startsAt), durationMinutes: r.durationMinutes, status: 'scheduled' as const }));
+        .map((r) => ({ date: new Date(r.startsAt), durationMinutes: r.durationMinutes, status: r.status }));
     },
     onChange,
     onError,

@@ -21,7 +21,17 @@ async function db(): Promise<D1Database> {
 
 /** D1 runs one statement per prepare(); split a migration file on statement boundaries. */
 function statements(sql: string): string[] {
-  return sql.replace(/--[^\n]*/g, '').split(/;\s*(?:\n|$)/).map((s) => s.trim()).filter(Boolean);
+  const parts = sql.replace(/--[^\n]*/g, '').split(/;\s*(?:\n|$)/).map((s) => s.trim()).filter(Boolean);
+  // A trigger body contains `;` before its closing END: glue the pieces back together.
+  const out: string[] = [];
+  let buf = '';
+  for (const p of parts) {
+    buf = buf ? `${buf};\n${p}` : p;
+    if (/^CREATE\s+TRIGGER/i.test(buf) && !/\bEND$/i.test(buf)) continue;
+    out.push(buf);
+    buf = '';
+  }
+  return out;
 }
 
 /**

@@ -17,20 +17,28 @@ const forbidden = (c: Ctx) => c.json({ error: 'forbidden' }, 403);
 const ROLES = ['member', 'trainer', 'admin'];
 const PERMISSIONS = ['checkin'];
 
-/** Admin assigns roles / delegated permissions (rules: only roles+permissions change; cap on GRANTING admin). */
+/**
+ * Admin assigns roles / delegated permissions (rules: only roles+permissions change; cap on GRANTING admin).
+ * Body: { roles?, permissions? } — at least one; the half that is absent keeps its stored value.
+ */
 writes.put('/tenants/:tenantId/members/:memberId/roles', async (c) => {
   const tenantId = c.req.param('tenantId')!;
   const memberId = c.req.param('memberId')!;
   if (!(await rolesOf(c)).includes('admin')) return forbidden(c);
   const b = await body(c);
-  const roles = b.roles, perms = b.permissions ?? [];
   const okList = (v: unknown, allowed: string[]) => Array.isArray(v) && v.every((x) => allowed.includes(x as string)) && new Set(v).size === v.length;
-  if (!okList(roles, ROLES) || (roles as string[]).length === 0 || !okList(perms, PERMISSIONS)) return bad(c, 'bad roles');
-  const next = roles as string[];
-  const m = await c.env.DB.prepare(`SELECT status, roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)
-    .bind(tenantId, memberId).first<{ status: string; roles: string }>();
+  const setRoles = b.roles !== undefined, setPerms = b.permissions !== undefined;
+  if (!setRoles && !setPerms) return bad(c, 'bad roles');
+  if (setRoles && (!okList(b.roles, ROLES) || (b.roles as string[]).length === 0)) return bad(c, 'bad roles');
+  if (setPerms && !okList(b.permissions, PERMISSIONS)) return bad(c, 'bad roles');
+  const m = await c.env.DB.prepare(`SELECT status, roles, permissions FROM memberships WHERE tenant_id = ? AND member_id = ?`)
+    .bind(tenantId, memberId).first<{ status: string; roles: string; permissions: string }>();
   if (!m || m.status === 'left') return c.json({ error: 'not found' }, 404);
   const hadRoles = JSON.parse(m.roles) as string[];
+  const next = setRoles ? (b.roles as string[]) : hadRoles;
+  const perms = setPerms ? (b.permissions as string[]) : (JSON.parse(m.permissions) as string[]);
+  // Compared and written verbatim, so an untouched half is never rewritten (a concurrent change to it survives).
+  const nextJson = setRoles ? JSON.stringify(next) : m.roles;
   const had = hadRoles.includes('admin');
   const will = next.includes('admin');
   const seatDelta = (next.includes('member') ? 1 : 0) - (hadRoles.includes('member') ? 1 : 0);
@@ -38,11 +46,12 @@ writes.put('/tenants/:tenantId/members/:memberId/roles', async (c) => {
   if (memberId === c.get('userId') && !will) return c.json({ error: 'cannot demote yourself' }, 409);
   const counts = m.status === 'active';
   const grant = !had && will, revoke = had && !will;
+  const sets = [...(setRoles ? ['roles = ?'] : []), ...(setPerms ? ['permissions = ?'] : [])];
   const stmts = [
     c.env.DB.prepare(
-      `UPDATE memberships SET roles = ?, permissions = ? WHERE tenant_id = ? AND member_id = ? AND status != 'left'
+      `UPDATE memberships SET ${sets.join(', ')} WHERE tenant_id = ? AND member_id = ? AND status != 'left'
          ${grant && counts ? `AND (SELECT active_admin_count FROM tenants WHERE id = ?) < ${ADMIN_LIMIT}` : ''}`,
-    ).bind(JSON.stringify(next), JSON.stringify(perms), tenantId, memberId, ...(grant && counts ? [tenantId] : [])),
+    ).bind(...(setRoles ? [nextJson] : []), ...(setPerms ? [JSON.stringify(perms)] : []), tenantId, memberId, ...(grant && counts ? [tenantId] : [])),
   ];
   if (counts && (grant || revoke)) {
     stmts.push(c.env.DB.prepare(
@@ -52,12 +61,12 @@ writes.put('/tenants/:tenantId/members/:memberId/roles', async (c) => {
   if (counts && seatDelta !== 0) {
     stmts.push(c.env.DB.prepare(
       `UPDATE tenants SET active_member_count = MAX(active_member_count + ?, 0) WHERE id = ? AND (SELECT roles FROM memberships WHERE tenant_id = ? AND member_id = ?) = ?`,
-    ).bind(seatDelta, tenantId, tenantId, memberId, JSON.stringify(next)));
+    ).bind(seatDelta, tenantId, tenantId, memberId, nextJson));
   }
   await c.env.DB.batch(stmts);
   const after = await c.env.DB.prepare(`SELECT roles FROM memberships WHERE tenant_id = ? AND member_id = ?`)
     .bind(tenantId, memberId).first<{ roles: string }>();
-  if (after?.roles !== JSON.stringify(next)) return c.json({ error: 'admin limit' }, 409);
+  if (after?.roles !== nextJson) return c.json({ error: 'admin limit' }, 409);
   return c.json({ roles: next, permissions: perms });
 });
 
@@ -136,7 +145,8 @@ writes.patch('/tenants/:tenantId/members/:memberId/details', async (c) => {
     if (k === 'displayName' && !(typeof v === 'string' && v.trim() && v.trim().length <= 100)) return bad(c, 'displayName');
     if (k === 'phone' && !(typeof v === 'string' && v.length <= 30)) return bad(c, 'phone');
     if (k === 'email' && !(typeof v === 'string' && v.length <= 254 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))) return bad(c, 'email');
-    if (k === 'heightCm' && !(typeof v === 'number' && v >= 100 && v <= 250)) return bad(c, 'heightCm');
+    // null clears the height (an absent height is a valid state, an absurd one is not).
+    if (k === 'heightCm' && v !== null && !(typeof v === 'number' && v >= 100 && v <= 250)) return bad(c, 'heightCm');
     if (k === 'birthDate') {
       if (typeof v !== 'number' || v > Date.now()) return bad(c, 'birthDate');
       if (asAdmin && v + 6575 * 86_400_000 > Date.now()) return bad(c, 'minor');

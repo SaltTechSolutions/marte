@@ -37,7 +37,9 @@ export const CHECKS = [
   by('members_flags', 'memberships', { tenant_id: tenant }, {
     n: N, managed: sum('managed'),
     with_guardian: ['COALESCE(SUM(guardian_id IS NOT NULL), 0)', (r) => (r.guardian_id ? 1 : 0)],
-    with_short_code: ['COALESCE(SUM(short_code IS NOT NULL), 0)', (r) => (r.short_code ? 1 : 0)],
+    // Since migration 0051 the database assigns a code to every row that arrives without one, so after a faithful
+    // migration EVERY membership has one (rows that carried a code keep it: asserted by the transform tests).
+    with_short_code: ['COALESCE(SUM(short_code IS NOT NULL), 0)', () => 1],
   }),
   by('classes', 'classes', { tenant_id: tenant }),
   by('class_bookings', 'class_bookings', { tenant_id: tenant }, {

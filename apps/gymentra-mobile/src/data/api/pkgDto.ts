@@ -62,11 +62,11 @@ export function promotionFromDto(d: Raw, tenantId: string): Promotion {
   };
 }
 
-export function memberPackageFromDto(d: Raw, tenantId: string, memberId: string): MemberPackage {
+export function memberPackageFromDto(d: Raw, tenantId: string, memberId?: string): MemberPackage {
   return {
     id: d.id,
     tenantId,
-    memberId,
+    memberId: memberId ?? toAppId(d.memberId) ?? '',
     memberName: d.memberName ?? '',
     packageId: d.packageId,
     packageName: d.packageName,
@@ -92,8 +92,7 @@ export function memberPackageFromDto(d: Raw, tenantId: string, memberId: string)
     status: d.status,
     paymentId: opt(d.paymentId),
     assignedAt: date(d.assignedAt),
-    // GAP(api): the member_packages DTO does not carry `assigned_by`. Nothing in the screens reads it back.
-    assignedBy: d.assignedBy ?? '',
+    assignedBy: toAppId(d.assignedBy) ?? '',
     cancelledAt: optDate(d.cancelledAt),
     cancelledBy: toAppId(opt(d.cancelledBy)),
     cancellationReason: opt(d.cancellationReason),
@@ -167,14 +166,14 @@ export function packageChangeRequestFromDto(d: Raw, tenantId: string): PackageCh
 }
 
 /**
- * `memberId` is passed in: the per-member payments list does not echo it (GAP(api), harmless there because
- * the caller asked for exactly that member, and it is the id the screen used). `memberName` is only on the DTO for refund rows.
+ * `memberId` is the id the screen asked with (preferred, so a self row shows the caller's own uid); empty for the gym-wide ledger, where the row's own id is used. The gym-wide ledger sends `memberId` and `memberName`;
+ * the per-member list sends `memberId` only (the name stays '' there, as the caller already knows whose it is).
  */
 export function paymentFromDto(d: Raw, tenantId: string, memberId: string): Payment {
   return {
     id: d.id,
     tenantId,
-    memberId: d.memberId ? (toAppId(d.memberId) ?? memberId) : memberId,
+    memberId: memberId || (toAppId(d.memberId) ?? ''),
     memberName: d.memberName ?? '',
     amount: fromApiMoney(d.amount),
     method: d.method,

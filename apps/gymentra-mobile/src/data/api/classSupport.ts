@@ -1,6 +1,6 @@
 import { sharedWatch } from '../firebase/sharedWatch';
 import type { WatchErrorHandler } from '../firebase/watch';
-import { ApiError, apiGet } from './client';
+import { ApiError } from './client';
 import { fetchMe, resetIdentity, selfInternalId, toInternalId, type MeDto } from './membershipIdentity';
 import { invalidate, pollWatch, type PollOptions } from './poll';
 
@@ -100,49 +100,9 @@ export function live<T>(
   );
 }
 
-/**
- * A `watch*` the Worker cannot serve yet. It must not hand the screen an empty list as if the data were
- * empty: the error callback gets a clear Error (and a no-op unsubscribe is returned); without a callback
- * it throws, which is loud on purpose.
- */
-export function unavailableWatch(what: string, onError?: WatchErrorHandler): () => void {
-  const error = new Error(`GAP(api): ${what}`);
-  if (!onError) throw error;
-  onError(error as never);
-  return () => {};
-}
-
 /** Refreshes the live queries of one gym: `invalidate('t:<tenant>:<area>')` for each area ('' = the whole gym). */
 export function refresh(tenantId: string, ...areas: string[]): void {
   (areas.length ? areas : ['']).forEach((a) => invalidate(a ? `t:${tenantId}:${a}` : `t:${tenantId}`));
-}
-
-// ---- the roster (staff only) ---------------------------------------------------------------------------------
-
-export interface RosterRow {
-  memberId: string;
-  status: string;
-  roles: string[];
-  displayName: string | null;
-  email: string | null;
-  birthDate: number | null;
-  shortCode: string | null;
-}
-
-const ROSTER_TTL_MS = 2 * 60_000;
-const rosters = new Map<string, { at: number; p: Promise<RosterRow[]> }>();
-
-/** `GET /tenants/:t/members` (admin / trainer), cached for a couple of minutes: names and short codes barely move. */
-export function getRoster(tenantId: string, maxAgeMs = ROSTER_TTL_MS): Promise<RosterRow[]> {
-  const hit = rosters.get(tenantId);
-  if (hit && Date.now() - hit.at < maxAgeMs) return hit.p;
-  const p = apiGet<RosterRow[]>(`/tenants/${tenantId}/members`);
-  const entry = { at: Date.now(), p };
-  rosters.set(tenantId, entry);
-  p.catch(() => {
-    if (rosters.get(tenantId) === entry) rosters.delete(tenantId);
-  });
-  return p;
 }
 
 // ---- utilities --------------------------------------------------------------------------------------------------
@@ -176,7 +136,6 @@ export function trackedMap<K, V>(): Map<K, V> {
 export function resetSchedulingCaches(): void {
   resetIdentity();
   owners.clear();
-  rosters.clear();
   tracked.forEach((m) => m.clear());
 }
 
@@ -186,37 +145,21 @@ export const __resetSupport = resetSchedulingCaches;
 // ---- refusals in Turkish -------------------------------------------------------------------------------------------
 
 /**
- * The Worker answers with a short English `error` code and `api/src/errorMessages.ts` only knows some of them;
- * the rest reach the screen as the generic "Bu işlem şu an yapılamıyor.". The Firebase callables carried the
- * useful sentence (no credit, slot taken ...), so it is restored here from the same wording
- * (backend/functions/src/sessions.ts). Unlisted refusals pass through untouched. Belongs in the Worker
- * eventually (reported as GAP(api)); harmless once it is there.
+ * The Worker sends the Turkish sentence itself (`message`, api/src/errorMessages.ts) and the screens show it
+ * verbatim. This is only the FALLBACK for input-validation codes the Worker has no sentence for yet, which would
+ * otherwise reach the screen as the generic "Bu işlem şu an yapılamıyor.". A refusal that the Worker covers is
+ * never touched (its code is not listed here).
  */
 const SCHED_MESSAGES: Record<string, string> = {
-  slot_taken: 'Seçtiğin saat az önce doldu, başka bir saat seç.',
-  slot_overlap: 'Seçtiğin saat antrenörün başka bir randevusuyla çakışıyor.',
-  outside_availability: 'Seçtiğin saat antrenörün çalışma saatleri dışında.',
-  no_availability: 'Bu antrenör çalışma saatlerini henüz tanımlamamış.',
-  trainer_unavailable: 'Bu antrenör artık salonda çalışmıyor.',
-  member_not_active: 'Bu üyenin salonda aktif üyeliği yok.',
-  no_credit: 'Seçtiğin tarih için geçerli ders kredin yok.',
-  conflict: 'Randevu az önce değişti. Lütfen yenileyip tekrar dene.',
-  already_cancelled: 'Randevu zaten iptal edilmiş.',
-  already_completed: 'Tamamlanmış randevu iptal edilemez.',
-  already_scheduled: 'Randevu zaten planlanmış durumda.',
-  already_assigned: 'Randevu zaten bu antrenörde.',
-  'slot in the past': 'Geçmiş bir saat seçilemez.',
-  'duplicate slot': 'Aynı saat birden fazla kez seçilemez.',
   'unreadable slot': 'Tarih okunamadı.',
   'at most 20 slots per request': 'Bir seferde en fazla 20 randevu alınabilir.',
-  'a trainer cannot book themselves': 'Antrenör kendi adına randevu alamaz.',
   'trainerId and slots required': 'Eksik bilgi.',
   'trainerId and memberId required': 'Eksik bilgi.',
   durationMinutes: 'Randevu süresi geçersiz.',
   startsAt: 'Tarih okunamadı.',
   'bad class': 'Ders bilgileri geçersiz. Ad, saat ve kontenjanı kontrol et.',
+  'bad repeat': 'Tekrar sayısı 1 ile 52 arasında olmalı.',
   'bad roles': 'Rol bilgisi geçersiz.',
-  'viewer must be a trainer': 'Takvim yalnızca bir antrenörle paylaşılabilir.',
   slotMinutes: 'Randevu süresi 30, 45, 60 ya da 90 dakika olmalı.',
   weekly: 'Çalışma saatleri geçersiz.',
   exceptions: 'İstisna günleri geçersiz.',
@@ -224,7 +167,7 @@ const SCHED_MESSAGES: Record<string, string> = {
 
 export function localizeSchedError(e: unknown): unknown {
   if (!(e instanceof ApiError) || !e.apiCode) return e;
-  const text = SCHED_MESSAGES[e.apiCode] ?? (e.apiCode.startsWith('already_') ? 'Randevunun durumu değişmiş. Lütfen yenileyip tekrar dene.' : undefined);
+  const text = SCHED_MESSAGES[e.apiCode];
   return text ? new ApiError(e.status, text, e.apiCode) : e;
 }
 

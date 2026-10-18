@@ -1,15 +1,25 @@
 import type { WatchErrorHandler } from '../firebase/watch';
 import { CalendarShare } from '../types';
-import { apiDelete, apiPut } from './client';
-import { localized, pid, refresh, unavailableWatch } from './classSupport';
+import { apiDelete, apiGet, apiPut } from './client';
+import { live, localized, pid, refresh } from './classSupport';
+import { selfInternalId, toAppId } from './membershipIdentity';
+import { calendarShareId } from '../firebase/calendarShareRepo';
 
 // Deterministic id: identical to Firestore's by construction (same code).
-export { calendarShareId } from '../firebase/calendarShareRepo';
+export { calendarShareId };
+
+interface ShareDto {
+  ownerTrainerId: string;
+  ownerName: string | null;
+  viewerTrainerId: string;
+  viewerName: string | null;
+  createdAt: number;
+}
 
 /**
  * A trainer grants a colleague access to their own calendar. The Worker takes the owner from the token (a trainer
- * can only ever share their OWN calendar), so `ownerTrainerId` / `ownerTrainerName` are not sent: the name is not
- * stored (it is read from the membership when needed).
+ * can only ever share their OWN calendar), so `ownerTrainerId` / `ownerTrainerName` are not sent: the name is read
+ * from the membership when the lists are read.
  */
 export async function grantCalendarShare(params: {
   tenantId: string;
@@ -26,34 +36,39 @@ export async function revokeCalendarShare(tenantId: string, ownerTrainerId: stri
   refresh(tenantId, 'shares', 'pt');
 }
 
-/**
- * Who I (a trainer) have granted access to — shown on my Profil screen.
- *
- * GAP(api): the Worker can write calendar shares (PUT/DELETE `/tenants/:t/calendar-shares/...`) but has NO route that
- * lists them (`calendar_shares` is only read inside the pt-sessions authorisation). Needed:
- * `GET /tenants/:t/calendar-shares?as=owner` -> `[{ ownerTrainerId, viewerTrainerId, createdAt }]` for the caller.
- * Until then the screen gets its error callback, never an empty list.
- */
-export function watchSharesIGranted(
-  _tenantId: string,
-  _ownerTrainerId: string,
-  _onChange: (shares: CalendarShare[]) => void,
-  onError?: WatchErrorHandler,
-) {
-  return unavailableWatch('GET /tenants/:t/calendar-shares?as=owner does not exist (calendar shares granted by me)', onError);
+async function sharesAs(tenantId: string, as: 'owner' | 'viewer'): Promise<CalendarShare[]> {
+  const rows = await apiGet<ShareDto[]>(`/tenants/${tenantId}/calendar-shares?as=${as}`);
+  await selfInternalId();   // primes toAppId: my side of a share is my Firebase uid
+  return rows.map((r) => {
+    const owner = toAppId(r.ownerTrainerId);
+    const viewer = toAppId(r.viewerTrainerId);
+    return {
+      id: calendarShareId(tenantId, owner, viewer),
+      tenantId,
+      ownerTrainerId: owner,
+      ownerTrainerName: r.ownerName ?? '',
+      viewerTrainerId: viewer,
+      createdAt: new Date(r.createdAt),
+    };
+  });
 }
 
-/**
- * Colleagues who have granted ME access — populates the trainer picker on Takvim.
- *
- * GAP(api): same missing list route, `?as=viewer`; each row also needs the owner's display name
- * (`ownerTrainerName`), which can come from the membership read once the ids are known.
- */
-export function watchSharesGrantedToMe(
-  _tenantId: string,
-  _viewerTrainerId: string,
-  _onChange: (shares: CalendarShare[]) => void,
+/** Who I (a trainer) have granted access to — shown on my Profil screen. The Worker reads it for the caller. */
+export function watchSharesIGranted(
+  tenantId: string,
+  ownerTrainerId: string,
+  onChange: (shares: CalendarShare[]) => void,
   onError?: WatchErrorHandler,
 ) {
-  return unavailableWatch('GET /tenants/:t/calendar-shares?as=viewer does not exist (calendars shared with me)', onError);
+  return live(`t:${tenantId}:shares:owner:${ownerTrainerId}`, () => sharesAs(tenantId, 'owner'), onChange, onError, { intervalMs: 60_000 });
+}
+
+/** Colleagues who have granted ME access — populates the trainer picker on Takvim. */
+export function watchSharesGrantedToMe(
+  tenantId: string,
+  viewerTrainerId: string,
+  onChange: (shares: CalendarShare[]) => void,
+  onError?: WatchErrorHandler,
+) {
+  return live(`t:${tenantId}:shares:viewer:${viewerTrainerId}`, () => sharesAs(tenantId, 'viewer'), onChange, onError, { intervalMs: 60_000 });
 }
