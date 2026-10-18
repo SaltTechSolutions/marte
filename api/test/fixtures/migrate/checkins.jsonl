@@ -1,0 +1,3 @@
+{"__id": "ci1", "tenantId": "tnA", "userId": "uidMemberAyseONeil000000003", "membershipId": "tnA_uidMemberAyseONeil000000003", "accessReason": "ok", "checkedInAt": {"__ts": 1789913600000}}
+{"__id": "ci2", "tenantId": "tnA", "userId": "mm0123456789abcdef0123", "membershipId": "tnA_mm0123456789abcdef0123", "accessReason": "no-package", "checkedInAt": {"__ts": 1789827200000}}
+{"__id": "ci3", "tenantId": "tnA", "userId": "uidGhostRemoved0000000000010", "membershipId": "tnA_uidGhostRemoved0000000000010", "accessReason": "ok", "checkedInAt": {"__ts": 1789827200000}}

@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-18 — Veri aktarım aracı hazır (F4 ilk yarı), para birimi TL
+
+**Yapıldı.** `api/scripts/migrate/`: salt-okunur Firestore dışa aktarıcı, saf dönüştürücü (şemayı gerçek migration'lardan okur, uyumsuzlukta hata verir; deterministik `u`+sha256 kimlikler; orphan'lar sessizce atılmaz, rapora yazılır; sayaçlar yeniden hesaplanır), mutabakat (33 çek, PASS/FAIL), Türkçe runbook. 36 test. **Üretime hiçbir şey yazılmadı, Firebase'e bağlanılmadı.**
+
+**Karar.** Para birimi: tutarlar **tam sayı TL** olarak taşınır (`--money-scale 1`); uygulama lira girer/gösterir, kuruş varsayımı yanlıştı. Hesabı silinmiş üyenin anonim ödeme satırı korunur. Veli için `users` satırı açılır (yoksa ilk girişte bağ kopar). Tenant sayaçları aktarımdan sonra taşınan satırlardan yeniden hesaplanır.
+
+**Bilerek yapılmadı.** Ters aktarım (D1→Firestore); Storage fotoğraf dosyaları (`photo_url` aynen); Auth parola/oturumları (Firebase Auth kalıyor); marte06 koleksiyonları.
+
+**Açık.** Üretim verisi görülmedi: eşleme SCHEMA.md ve koddan kuruldu, beklenmeyen alanlar `report.unmapped`/`invalid`'e düşer, ilk gerçek dökümle gözden geçirilmeli. Firestore salon kodu tekilliğini zorlamıyordu; D1 `UNIQUE` (çakışma çıkabilir). Hesabı silinen üyenin iptal edilmiş PT geçmişi aktarılamaz (üyelik yok). `duration_minutes ≤ 480` Firestore'da sınırsızdı. Yeşil mutabakat yalnız sayı/toplamı doğrular, alan içeriğini değil.
+
+**Nerede.** `api/scripts/migrate/README.md`.
+
 ## 2026-10-18 — F3 tamam (sunucu tarafı): PT, grup dersi, paket yaşam döngüsü, tenant/veli/hesap/faturalama, outbox, cron
 
 **Yapıldı.** Beş paralel dilim (PT oturumları; kredili ders/bekleme listesi/iade/yoklama; paket değişim-iptal-dondurma ve işler; tenant/ayar/iletişim/veli/hesap silme/RevenueCat; veri taşıma aracı) birleştirildi: `api/src/{pt,groupClasses,packageLifecycle,tenants,guardians,account,billing}.ts`, migration `0004, 0010, 0020, 0030, 0040`. **Transactional outbox** (`outbox` tablosu + `deliverOutbox`: Expo push, Resend e-posta, kiralama + üstel geri çekilme, 8 denemeden sonra `dead`) ve **Cron Trigger**'lar (dakikalık outbox, 15 dk hatırlatma, 00:05 İstanbul günlük paket işleri) bağlandı. Türkçe hata mesajı katmanı (`errorMessages.ts`): kodlar sürer, `message` Türkçe eklenir; bilinmeyen kod statü bazlı Türkçe yedeğe düşer. Matris: **250 satır, 228 eşlendi, 22 N/A, 0 F3, 0 GAP**. Staging D1'e migration'lar uygulandı ve Worker (cron'lu) deploy edildi.

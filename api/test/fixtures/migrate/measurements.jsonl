@@ -1,0 +1,4 @@
+{"__id": "ms1", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "weightKg": 71.5, "chestCm": 96, "recordedAt": {"__ts": 0}}
+{"__id": "ms2", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "weightKg": 70.9, "recordedAt": {"__ts": -1}}
+{"__id": "ms3", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "weightKg": 70.1, "waistCm": 80, "recordedAt": {"__ts": 1789913600000.7}}
+{"__id": "ms4", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "weightKg": 70.0, "recordedAt": {"__ts": "abc"}}

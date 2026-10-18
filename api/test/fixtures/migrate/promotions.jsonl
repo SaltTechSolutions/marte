@@ -1,0 +1,2 @@
+{"__id": "pr1", "tenantId": "tnA", "name": "Yaz %10", "kind": "percentDiscount", "value": 10, "appliesTo": ["gpGold"], "startsAt": {"__ts": 1750000000000}, "endsAt": {"__ts": 1798640000000}, "maxRedemptions": 50, "redeemed": 1, "isActive": true, "createdAt": {"__ts": 1750000000000}}
+{"__id": "pr2", "tenantId": "tnA", "name": "200 TL indirim", "kind": "amountDiscount", "value": 200, "appliesTo": [], "startsAt": {"__ts": 1750000000000}, "endsAt": {"__ts": 1790000000000}, "redeemed": 0, "isActive": false, "createdAt": {"__ts": 1750000000000}}

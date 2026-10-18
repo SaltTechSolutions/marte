@@ -1,7 +1,7 @@
 # D1 şeması (F0)
 
 Kaynak: `api/migrations/0001_init.sql`. Firestore ayrıntısı: `docs/SCHEMA.md`.
-Zaman = unix ms (INTEGER), para = tam sayı kuruş, esnek gövdeler JSON `data`
+Zaman = unix ms (INTEGER), para = **tam sayı TL** (uygulama tutarı lira olarak girer ve `₺n` gösterir; Firestore'daki değer olduğu gibi taşınır, kuruş çevrimi yok — migration'daki 'kuruş' yorumu yanlıştı), esnek gövdeler JSON `data`
 sütunu (sorgulanan alanlar ayrı sütun).
 
 | Firestore | D1 | Not |

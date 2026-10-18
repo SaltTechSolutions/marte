@@ -1,0 +1,1 @@
+{"__id": "wl1", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "programId": "pg1", "programName": "Güç Programı", "startedAt": {"__ts": 1789827200000}, "completedAt": {"__ts": 1789830800000}, "exerciseLogs": [{"exerciseId": "e1", "name": "Squat", "setsTarget": 3, "setsCompleted": 3, "weightKg": 60, "durationSeconds": 600}]}

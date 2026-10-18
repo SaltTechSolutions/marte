@@ -1,0 +1,2 @@
+{"__id": "tnA_uidMemberAyseONeil000000003", "tenantId": "tnA", "memberId": "uidMemberAyseONeil000000003", "memberName": "Ayşe O'Neil-Yıldız", "status": "pending", "note": "Yenilemek istiyorum", "createdAt": {"__ts": 1789913600000}}
+{"__id": "tnA_uidMemberCagriOzturk0000004", "tenantId": "tnA", "memberId": "uidMemberCagriOzturk0000004", "memberName": "Çağrı", "status": "handled", "createdAt": {"__ts": 1787408000000}, "handledAt": {"__ts": 1787494400000}, "handledBy": "uidOwnerSelinSahin000000001"}

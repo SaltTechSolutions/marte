@@ -1,0 +1,2 @@
+{"__id": "contact", "__tenantId": "tnA", "__path": "tenants/tnA/private/contact", "phone": "+90 212 555 0100", "email": "info@tarabya.example", "updatedAt": {"__ts": 1750172800000}}
+{"__id": "notes", "__tenantId": "tnA", "__path": "tenants/tnA/private/notes", "x": 1}

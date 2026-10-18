@@ -1,0 +1,1 @@
+{"__id": "tnA_uidTrainerIbrahimCaglar0002", "tenantId": "tnA", "trainerId": "uidTrainerIbrahimCaglar0002", "weekly": {"mon": [{"start": "09:00", "end": "17:00"}]}, "slotMinutes": 45, "exceptions": [{"date": "2026-12-31", "closed": true}], "updatedAt": {"__ts": 1788272000000}}

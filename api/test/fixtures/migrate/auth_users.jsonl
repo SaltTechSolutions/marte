@@ -1,0 +1,11 @@
+{"__id": "uidOwnerSelinSahin000000001", "email": "selin@example.com", "displayName": "Selin Şahin", "createdAtMs": 1741360000000, "disabled": false}
+{"__id": "uidTrainerIbrahimCaglar0002", "email": "ibrahim@example.com", "displayName": "İbrahim Çağlar", "createdAtMs": 1741446400000, "disabled": false}
+{"__id": "uidMemberAyseONeil000000003", "email": "ayse@example.com", "displayName": "Ayşe O'Neil-Yıldız", "createdAtMs": 1741532800000, "disabled": false}
+{"__id": "uidMemberCagriOzturk0000004", "email": "cagri@example.com", "displayName": "Çağrı \"Çağ\" Öztürk", "createdAtMs": 1741619200000, "disabled": false}
+{"__id": "uidKidDeniz0000000000000005", "email": null, "displayName": "Deniz Kaya", "createdAtMs": 1741705600000, "disabled": false}
+{"__id": "uidParentMehmet000000000006", "email": "mehmet@example.com", "displayName": "Mehmet Kaya", "createdAtMs": 1741792000000, "disabled": false}
+{"__id": "uidPendingElif00000000000007", "email": "elif@example.com", "displayName": "Elif Demir", "createdAtMs": 1741878400000, "disabled": false}
+{"__id": "uidSuspendedOnur0000000000008", "email": "onur@example.com", "displayName": "Onur Aksoy", "createdAtMs": 1741964800000, "disabled": false}
+{"__id": "uidOwnerBBurak00000000000009", "email": "burak@example.com", "displayName": "Burak Yılmaz", "createdAtMs": 1742051200000, "disabled": false}
+{"__id": "uidNoRole0000000000000013", "email": null, "displayName": null, "createdAtMs": 1742137600000, "disabled": false}
+{"__id": "uidBadStatus00000000000014", "email": null, "displayName": null, "createdAtMs": 1742224000000, "disabled": false}
