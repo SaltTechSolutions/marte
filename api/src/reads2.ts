@@ -95,7 +95,8 @@ reads2.get('/tenants/:tenantId/trainers/:trainerId/pt-sessions', async (c) => {
 function ptDto(r: any) {
   return { id: r.id, trainerId: r.trainer_id, memberId: r.member_id, originalTrainerId: r.original_trainer_id,
     startsAt: r.starts_at, durationMinutes: r.duration_minutes, status: r.status, creditId: r.credit_id,
-    cancellationDeadlineAt: r.cancellation_deadline_at };
+    cancellationDeadlineAt: r.cancellation_deadline_at, cancelledAt: r.cancelled_at, cancelledBy: r.cancelled_by,
+    cancelledByRole: r.cancelled_by_role, refundOutcome: r.refund_outcome };
 }
 
 // ---- gym-wide, any active member ----
