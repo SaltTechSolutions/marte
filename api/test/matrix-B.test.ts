@@ -57,6 +57,35 @@ describe('matrix B: announcements (PER-16)', () => {
     }
   });
 
+  it('[L1263] a new announcement queues one push for the gym, minus the author, managed members and people who left', async () => {
+    const h = await world();
+    await h.run(`INSERT INTO users (id, display_name, created_at) VALUES ('mm1','Elle',1), ('u-left','Left',1)`);
+    await h.run(`INSERT INTO memberships (tenant_id, member_id, status, roles, managed, created_by, requested_at) VALUES ('t1','mm1','active','["member"]',1,'u-admin',1)`);
+    await h.run(`INSERT INTO memberships (tenant_id, member_id, status, roles, requested_at) VALUES ('t1','u-left','left','["member"]',1)`);
+    const long = 'x'.repeat(300);
+    const res = await h.send('POST', '/v1/tenants/t1/announcements', 'fb-admin', { title: 'Pazar kapalıyız', body: long });
+    const { id } = await json(res);
+    const { results: rows } = await h.db.prepare(`SELECT kind, payload, dedupe_key FROM outbox`).all<any>();
+    expect(rows).toHaveLength(1);
+    const p = JSON.parse(rows[0].payload);
+    expect(rows[0]).toMatchObject({ kind: 'push', dedupe_key: `announcement:${id}` });
+    expect(p.category).toBe('announcements');
+    expect(p.title).toBe('Pazar kapalıyız');
+    expect(p.body).toBe('x'.repeat(140));
+    expect(p.data).toEqual({ screen: 'member/index' });
+    expect([...p.userIds].sort()).toEqual(['u-mem', 'u-mem2', 'u-trn']);
+  });
+
+  it('[L1263] an announcement with no body gets the stock push text; a gym with nobody else queues nothing', async () => {
+    const h = await world();
+    await h.send('POST', '/v1/tenants/t1/announcements', 'fb-admin', { title: 'Merhaba', body: '' });
+    expect(JSON.parse((await h.one(`SELECT payload p FROM outbox`)).p).body).toBe('Salonundan yeni bir duyuru var.');
+    await h.run(`DELETE FROM outbox`);
+    await h.run(`UPDATE memberships SET status = 'left' WHERE tenant_id = 't1' AND member_id != 'u-admin'`);
+    expect((await h.send('POST', '/v1/tenants/t1/announcements', 'fb-admin', { title: 'Yalnızım', body: '' })).status).toBe(201);
+    expect(await h.one(`SELECT 1 x FROM outbox`)).toBeNull();
+  });
+
   it('[L1272] member/trainer cannot post; nobody edits; admin deletes', async () => {
     const h = await world();
     const post = (sub: string) => h.send('POST', '/v1/tenants/t1/announcements', sub, { title: 'x', body: '' });

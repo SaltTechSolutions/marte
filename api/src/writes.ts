@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { rolesIn } from './auth';
 import { isAvatarId } from './avatars';
 import { ADMIN_LIMIT } from './membership';
+import { outboxStatement } from './outbox';
 import type { Env, Vars } from './types';
 
 type App = { Bindings: Env; Variables: Vars };
@@ -171,10 +172,24 @@ writes.post('/tenants/:tenantId/announcements', async (c) => {
   const now = Date.now();
   const expires = typeof b.expiresAt === 'number' ? b.expiresAt : now + 14 * 86_400_000;
   const id = 'a' + [...crypto.getRandomValues(new Uint8Array(10))].map((x) => x.toString(16).padStart(2, '0')).join('');
-  const u = await c.env.DB.prepare(`SELECT display_name FROM users WHERE id = ?`).bind(c.get('userId')).first<any>();
-  await c.env.DB.prepare(
+  const db = c.env.DB;
+  const tenantId = c.req.param('tenantId')!;
+  const uid = c.get('userId');
+  const u = await db.prepare(`SELECT display_name FROM users WHERE id = ?`).bind(uid).first<any>();
+  // Everyone in the gym but the author gets one push (PER-16). Account-less members have no device, so they are left out.
+  const { results: people } = await db.prepare(
+    `SELECT member_id FROM memberships WHERE tenant_id = ? AND status = 'active' AND managed = 0 AND member_id != ?`,
+  ).bind(tenantId, uid).all<{ member_id: string }>();
+  const stmts = [db.prepare(
     `INSERT INTO announcements (id, tenant_id, title, body, created_by, created_by_name, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(id, c.req.param('tenantId'), title, text, c.get('userId'), u?.display_name ?? null, now, expires).run();
+  ).bind(id, tenantId, title, text, uid, u?.display_name ?? null, now, expires)];
+  if (people.length) {
+    stmts.push(outboxStatement(db, 'push', {
+      userIds: people.map((p) => p.member_id), category: 'announcements', title,
+      body: text.slice(0, 140) || 'Salonundan yeni bir duyuru var.', data: { screen: 'member/index' },
+    }, `announcement:${id}`));
+  }
+  await db.batch(stmts);
   return c.json({ id }, 201);
 });
 writes.delete('/tenants/:tenantId/announcements/:id', async (c) => {
