@@ -44,6 +44,35 @@ export function outboxIfChanged(
   ).bind(newId('ob'), kind, JSON.stringify(payload), dedupeKey ?? null, now, now);
 }
 
+/**
+ * Outbox row written only while `condition` (a SQL boolean over the state this batch just wrote) holds.
+ * Unlike `outboxIfChanged` it does not depend on what statement ran before it, so it can close a batch
+ * whose earlier statements (seat counters) already use `changes()`.
+ */
+export function outboxWhere(
+  db: D1Database,
+  kind: 'push' | 'email',
+  payload: Record<string, unknown>,
+  dedupeKey: string,
+  condition: string,
+  ...binds: unknown[]
+): D1PreparedStatement {
+  const now = Date.now();
+  return db.prepare(
+    `INSERT OR IGNORE INTO outbox (id, kind, payload, dedupe_key, next_attempt_at, created_at)
+     SELECT ?, ?, ?, ?, ?, ? WHERE ${condition}`,
+  ).bind(newId('ob'), kind, JSON.stringify(payload), dedupeKey, now, now, ...binds);
+}
+
+/** Active admins of a gym, optionally without one person (the author of the change already knows). */
+export async function activeAdminIds(db: D1Database, tenantId: string, exceptUserId?: string | null): Promise<string[]> {
+  const { results } = await db.prepare(
+    `SELECT member_id FROM memberships WHERE tenant_id = ? AND status = 'active' AND member_id != ?
+       AND EXISTS (SELECT 1 FROM json_each(memberships.roles) WHERE value = 'admin')`,
+  ).bind(tenantId, exceptUserId ?? '').all<{ member_id: string }>();
+  return results.map((r) => r.member_id);
+}
+
 /** Display name for a user, falling back to e-mail (as the Firebase pushes did). */
 export async function nameOf(db: D1Database, userId: string): Promise<string | null> {
   const u = await db.prepare(`SELECT display_name, email FROM users WHERE id = ?`).bind(userId).first<{ display_name: string | null; email: string | null }>();

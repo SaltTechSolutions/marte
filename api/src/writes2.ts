@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
 import { findMember } from './checkins';
+import { formatTl } from './format';
 import { bookClass, cancelBooking, deleteClass } from './groupClasses';
+import { activeAdminIds, nameOf, outboxIfChanged, outboxWhere } from './guarded';
 import { outboxStatement } from './outbox';
 import type { Env, Vars } from './types';
 
@@ -223,13 +225,29 @@ writes2.post('/tenants/:tenantId/payments', async (c) => {
   const now = Date.now();
   const ins = c.env.DB.prepare(`INSERT INTO payments (id, tenant_id, member_id, amount, status, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`);
   if (!reversal) {
-    await ins.bind(id, tenantId, memberId, b.amount, status, JSON.stringify(data), now).run();
+    const stmts = [ins.bind(id, tenantId, memberId, b.amount, status, JSON.stringify(data), now)];
+    // A notice waiting in the approval queue tells the admins (Firebase notifyAdminsOnPaymentNotice); the one who filed it already knows.
+    // An admin recording a payment they just took lands as confirmed and needs no queue.
+    const admins = status === 'pending' ? await activeAdminIds(c.env.DB, tenantId, uid) : [];
+    if (admins.length) {
+      stmts.push(outboxIfChanged(c.env.DB, 'push', {
+        userIds: admins, category: 'payments', title: 'Yeni ödeme bildirimi',
+        body: `${(await nameOf(c.env.DB, memberId)) ?? 'Bir üye'} · ${formatTl(b.amount)} onayını bekliyor.`,
+        data: { screen: 'admin/payments', paymentId: id },
+      }, `payment-notice:${id}`));
+    }
+    await c.env.DB.batch(stmts);
     return c.json({ id }, 201);
   }
   // Reversal: the original must be this member's, in this gym, and not already reversed — one batch, one winner.
   if (typeof b.reversesPaymentId !== 'string') return bad(c, 'reversesPaymentId');
   data.reversesPaymentId = b.reversesPaymentId;
-  await c.env.DB.batch([
+  // Both sides hear about a correction (Firebase notifyOnPaymentReversed): the member sees why, the other admins see who did it.
+  const reason = typeof b.reason === 'string' ? b.reason.slice(0, 200).trim() : '';
+  const detail = reason ? ` Gerekçe: ${reason}` : '';
+  const memberName = await nameOf(c.env.DB, memberId);
+  const reverseAdmins = await activeAdminIds(c.env.DB, tenantId, uid);
+  const stmts: D1PreparedStatement[] = [
     c.env.DB.prepare(
       `UPDATE payments SET data = json_set(data, '$.reversedAt', ?, '$.reversedByPaymentId', ?, '$.reversalReason', ?)
        WHERE id = ? AND tenant_id = ? AND member_id = ? AND json_extract(data, '$.reversedAt') IS NULL AND json_extract(data, '$.kind') = 'charge'`,
@@ -237,7 +255,21 @@ writes2.post('/tenants/:tenantId/payments', async (c) => {
     c.env.DB.prepare(
       `INSERT INTO payments (id, tenant_id, member_id, amount, status, data, created_at) SELECT ?, ?, ?, ?, 'confirmed', ?, ? WHERE changes() = 1`,
     ).bind(id, tenantId, memberId, b.amount, JSON.stringify(data), now),
-  ]);
+    // Each outbox row is guarded by the statement right before it: a lost race (nothing reversed) queues nothing.
+    outboxIfChanged(c.env.DB, 'push', {
+      userIds: [memberId], category: 'payments', title: 'Ödeme kaydın düzeltildi',
+      body: `${formatTl(b.amount)} tutarındaki kaydın salon tarafından düzeltildi.${detail}`,
+      data: { screen: 'member/payments', paymentId: b.reversesPaymentId },
+    }, `payment-reversed:${b.reversesPaymentId}`),
+  ];
+  if (reverseAdmins.length) {
+    stmts.push(outboxIfChanged(c.env.DB, 'push', {
+      userIds: reverseAdmins, category: 'payments', title: 'Ödeme kaydı düzeltildi',
+      body: `${memberName ?? 'Bir üye'} · ${formatTl(b.amount)}${detail}`,
+      data: { screen: 'admin/payments', paymentId: b.reversesPaymentId },
+    }, `payment-reversed-admins:${b.reversesPaymentId}`));
+  }
+  await c.env.DB.batch(stmts);
   const made = await c.env.DB.prepare(`SELECT 1 AS x FROM payments WHERE id = ?`).bind(id).first();
   return made ? c.json({ id }, 201) : c.json({ error: 'cannot reverse' }, 409);
 });
@@ -245,10 +277,27 @@ writes2.put('/tenants/:tenantId/payments/:id/decision', async (c) => {
   if (!(await rolesOf(c)).includes('admin')) return forbidden(c);
   const to = (await body(c)).status;
   if (to !== 'confirmed' && to !== 'rejected') return bad(c, 'status');
-  const res = await c.env.DB.prepare(
-    `UPDATE payments SET status = ?, data = json_set(data, '$.confirmedAt', ?) WHERE id = ? AND tenant_id = ? AND status = 'pending' RETURNING id`,
-  ).bind(to, Date.now(), c.req.param('id'), c.req.param('tenantId')).first();
-  return res ? c.json({ status: to }) : c.json({ error: 'not pending' }, 409);
+  const tenantId = c.req.param('tenantId')!;
+  const id = c.req.param('id')!;
+  const pay = await c.env.DB.prepare(`SELECT member_id, amount FROM payments WHERE id = ? AND tenant_id = ? AND status = 'pending'`)
+    .bind(id, tenantId).first<{ member_id: string; amount: number }>();
+  if (!pay) return c.json({ error: 'not pending' }, 409);
+  const now = Date.now();
+  const amount = formatTl(pay.amount);
+  // The member hears the answer (Firebase notifyOnPaymentStatusChange). Keyed off the row this statement decided, so a lost race says nothing.
+  await c.env.DB.batch([
+    c.env.DB.prepare(`UPDATE payments SET status = ?, data = json_set(data, '$.confirmedAt', ?) WHERE id = ? AND tenant_id = ? AND status = 'pending'`)
+      .bind(to, now, id, tenantId),
+    outboxWhere(c.env.DB, 'push', {
+      userIds: [pay.member_id], category: 'payments',
+      title: to === 'confirmed' ? 'Ödemen onaylandı ✓' : 'Ödemen onaylanmadı',
+      body: to === 'confirmed' ? `${amount} tutarındaki ödemen onaylandı.` : `${amount} tutarındaki ödeme bildirimin reddedildi. Detay için salonla iletişime geç.`,
+      data: { screen: 'member/payments', paymentId: id },
+    }, `payment-decision:${id}`,
+    `EXISTS (SELECT 1 FROM payments WHERE id = ? AND status = ? AND json_extract(data, '$.confirmedAt') = ?)`, id, to, now),
+  ]);
+  const decided = await c.env.DB.prepare(`SELECT 1 AS x FROM payments WHERE id = ? AND status = ? AND json_extract(data, '$.confirmedAt') = ?`).bind(id, to, now).first();
+  return decided ? c.json({ status: to }) : c.json({ error: 'not pending' }, 409);
 });
 
 // ---- trainer availability & calendar shares & reports ----

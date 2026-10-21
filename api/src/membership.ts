@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { rolesIn } from './auth';
+import { activeAdminIds, nameOf, outboxIfChanged, outboxWhere } from './guarded';
 import type { Env, Vars } from './types';
 
 type App = { Bindings: Env; Variables: Vars };
@@ -42,17 +43,31 @@ membership.post('/tenants/:tenantId/join', async (c) => {
   const t = await c.env.DB.prepare(`SELECT code, name FROM tenants WHERE id = ?`).bind(tenantId).first();
   if (!t) return c.json({ error: 'not found' }, 404);
   const u = await c.env.DB.prepare(`SELECT display_name, email FROM users WHERE id = ?`).bind(uid).first<any>();
+  const prior = await c.env.DB.prepare(`SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id = ?`).bind(tenantId, uid).first();
+  const admins = await activeAdminIds(c.env.DB, tenantId, uid);
+  const who = u?.display_name || u?.email || 'Biri';
   const now = Date.now();
-  // RETURNING yields a row only when the row was inserted or reset (left/rejected); anything else is untouched.
-  const written = await c.env.DB.prepare(
+  // The row is inserted or reset only when absent / left / rejected; anything else is untouched (the WHERE).
+  const stmts = [c.env.DB.prepare(
     `INSERT INTO memberships (tenant_id, member_id, status, roles, display_name, email, requested_at)
      VALUES (?, ?, 'pending', '["member"]', ?, ?, ?)
      ON CONFLICT (tenant_id, member_id) DO UPDATE SET status = 'pending', roles = '["member"]', permissions = '[]',
        approved_at = NULL, left_at = NULL, requested_at = excluded.requested_at,
        display_name = excluded.display_name, email = excluded.email,   -- a scrubbed tombstone (removed from the gym) must not keep its blank name
        guardian_id = NULL, guardian_name = NULL, guardian_status = NULL
-     WHERE memberships.status IN ('left','rejected') RETURNING member_id`,
-  ).bind(tenantId, uid, u?.display_name ?? null, u?.email ?? null, now).first();
+     WHERE memberships.status IN ('left','rejected')`,
+  ).bind(tenantId, uid, u?.display_name ?? null, u?.email ?? null, now)];
+  // The owner's most time-sensitive event (Firebase notifyAdminsOnJoinRequest); written iff the request was.
+  if (admins.length) {
+    stmts.push(outboxIfChanged(c.env.DB, 'push', {
+      userIds: admins, category: 'account', title: 'Yeni katılım isteği',
+      body: prior ? `${who} salona tekrar katılmak istiyor.` : `${who} salona katılmak istiyor.`, data: { screen: 'admin/members' },
+    }, `join-request:${tenantId}:${uid}:${now}`));
+  }
+  await c.env.DB.batch(stmts);
+  // Written iff the row now carries the timestamp this very statement stamped (insert, or reset of a left/rejected row).
+  const written = await c.env.DB.prepare(`SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'pending' AND requested_at = ?`)
+    .bind(tenantId, uid, now).first();
   if (!written) {
     const row = await c.env.DB.prepare(`SELECT status FROM memberships WHERE tenant_id = ? AND member_id = ?`).bind(tenantId, uid).first<{ status: string }>();
     return c.json({ error: 'already a member', status: row?.status }, 409);
@@ -100,6 +115,14 @@ membership.put('/tenants/:tenantId/members/:memberId/status', async (c) => {
     if (isAdminRow) {
       stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_admin_count = active_admin_count + 1 WHERE id = ? AND changes() = 1`).bind(tenantId));
     }
+    // "Welcome" push (Firebase notifyOnMembershipApproved). Closes the batch and keys off the row this very statement stamped,
+    // so a refused activation (cap, guardian) queues nothing and the seat statements above keep their `changes()` chain.
+    const tenant = await c.env.DB.prepare(`SELECT name FROM tenants WHERE id = ?`).bind(tenantId).first<{ name: string }>();
+    stmts.push(outboxWhere(c.env.DB, 'push', {
+      userIds: [memberId], category: 'account', title: 'Üyeliğin onaylandı 🎉',
+      body: `${tenant?.name ?? 'Salon'} ailesine hoş geldin! Üyelik kartın artık hazır.`, data: { screen: 'member/card' },
+    }, `membership-approved:${tenantId}:${memberId}:${now}`,
+    `EXISTS (SELECT 1 FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'active' AND approved_at = ?)`, tenantId, memberId, now));
     await c.env.DB.batch(stmts);
     const after = await c.env.DB.prepare(`SELECT status FROM memberships WHERE tenant_id = ? AND member_id = ?`)
       .bind(tenantId, memberId).first<{ status: string }>();
@@ -139,11 +162,21 @@ membership.post('/tenants/:tenantId/leave', async (c) => {
     ).bind(tenantId, uid).first();
     if (!other) return c.json({ error: 'last admin cannot leave' }, 409);
   }
+  const leftAt = Date.now();
   const stmts = [c.env.DB.prepare(`UPDATE memberships SET status = 'left', left_at = ? WHERE tenant_id = ? AND member_id = ? AND status != 'left'`)
-    .bind(Date.now(), tenantId, uid)];
+    .bind(leftAt, tenantId, uid)];
   if (m.status === 'active') {
     if (isSeat) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_member_count = MAX(active_member_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
     if (isAdminRow) stmts.push(c.env.DB.prepare(`UPDATE tenants SET active_admin_count = MAX(active_admin_count - 1, 0) WHERE id = ? AND changes() = 1`).bind(tenantId));
+  }
+  // Tells the other admins a seat just freed up (Firebase notifyAdminsOnMemberLeft).
+  const admins = await activeAdminIds(c.env.DB, tenantId, uid);
+  if (admins.length) {
+    stmts.push(outboxWhere(c.env.DB, 'push', {
+      userIds: admins, category: 'account', title: 'Bir üye salondan ayrıldı',
+      body: `${(await nameOf(c.env.DB, uid)) ?? 'Bir üye'} üyeliğini sonlandırdı.`, data: { screen: 'admin/members' },
+    }, `member-left:${tenantId}:${uid}:${leftAt}`,
+    `EXISTS (SELECT 1 FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'left' AND left_at = ?)`, tenantId, uid, leftAt));
   }
   await c.env.DB.batch(stmts);
   return c.json({ status: 'left' });
