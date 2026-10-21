@@ -18,6 +18,7 @@ import { watchSessionsForTenant } from '@/data/repo/ptSessionRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { ClassSession, MemberPackage, Payment, PtSession, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { formatLira } from '@/utils/money';
 import {
   attendanceStats,
   burnedCredits,
@@ -35,7 +36,7 @@ const TREND_MONTHS = 6;
 const PREVIEW_ROWS = 5;
 
 function money(n: number): string {
-  return `${Math.round(n).toLocaleString('tr-TR')}₺`;
+  return `${formatLira(n)}₺`;
 }
 
 /** Bir bölümün başlığı ve altındaki tek cümlelik ne-demek açıklaması. */
