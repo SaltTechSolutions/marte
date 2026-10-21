@@ -9,8 +9,15 @@ import { Button } from './Button';
 import { Card } from './Card';
 import { Text } from './Text';
 
+const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+/**
+ * A birth date is a calendar date built from local components. `toLocaleDateString` re-applies the device's
+ * time-zone rules for that historic instant (Turkey's 1990 summer time), and on the simulator it printed
+ * 21 May 1990 as "20 Mayıs 1990" — so the day is read from the components instead.
+ */
 function formatBirthDate(d: Date): string {
-  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  return `${d.getDate()} ${MONTHS_TR[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function Row({ label, value }: { label: string; value?: string }) {

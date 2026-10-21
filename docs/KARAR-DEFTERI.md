@@ -31,6 +31,20 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-21 — API modu simülatörde üye ve giriş akışları (staging)
+
+**Yapıldı.** Aynı staging salonunda (fener) tek hesapla rol değiştirerek (yönetici/üye) üye tarafı uçtan uca denendi; her adım D1 satırıyla teyit edildi: **Bilgilerim** kaydı (telefon, doğum tarihi `1990-05-21` → D1'de 12:00 UTC, boy), **kendime paket atama** (Platinium, 30 gün, 12 özel ders), **grup dersine katılma** (rezervasyon satırı, sınırsız pakette `credit_id` boş), **özel ders randevusu** (Hoca Ayse, hak 12 → 11, kredi bağlandı), **geç iptal** (uyarı "ders hakkın yanacak", D1'de `cancelled` + `refund_outcome='late'`, hak 11'de kaldı), **kısa kodla giriş** (601920 → `checkins` satırı `accessReason: ok`, panelde "bugün içeri giren" canlı 0 → 1). Üye kendini antrenör seçince ekran "çalışma saatlerini tanımlamamış" der; sunucu kuralı ayrıca `a trainer cannot book themselves` ile reddeder (`api/src/pt.ts`). İki hata düzeltildi: yönetici paneli gelir kartı 250,50 TL'yi "251₺" yuvarlıyordu (`formatLira`); yönetici üye kartında doğum tarihi bir gün geri görünüyordu ("20 Mayıs 1990") çünkü `toLocaleDateString` 1990'ın yaz saati kuralını o tarihe yeniden uyguluyor (`MemberContactCard` artık günü bileşenlerden okuyor; cihazda "21 Mayıs 1990" görüldü).
+
+**Karar.** Takvim tarihi (doğum günü) gösteren ekran `toLocaleDateString` kullanmaz; yerel bileşenlerden (`getDate/getMonth/getFullYear`) biçimlendirir. Gerekçe: aynı Date, saat dilimi kurallarıyla geçmişte farklı güne düşebilir.
+
+**Bilerek yapılmadı.** Başarı kartının ekran görüntüsü alınmadı: giriş onayı 1,6 sn'de kendiliğinden kapanıyor (`checkin.tsx`), doğrulama D1 satırı ve panel sayacıyla yapıldı. `MemberContactCard`'ın yerel `formatBirthDate` kopyası `@/utils/birthDate` ile birleştirilmedi (istenmeyen refactor; iki biçim zaten farklı: ISO ve "21 Mayıs 1990").
+
+**Açık.** (1) Üye "Bugün" ekranına sekmeden dönünce paket kartı kısa süre "Paketin yükleniyor…" gösterirken "Yenileme talebi" çağrısı da görünüyor, 2–3 sn sonra doğru kartı çiziyor; yükleme durumunda yenileme çağrısı gizlenmeli. (2) Duyuru, promosyon, Ekip/roller, Antrenör yüzeyi ve raporlar bu turda denenmedi.
+
+**Nerede.** `apps/gymentra-mobile/src/app/admin/index.tsx`, `src/components/MemberContactCard.tsx`, `api/src/pt.ts`.
+
+---
+
 ## 2026-10-21 — API modu simülatörde ilk gerçek koşu (staging, iPhone 17e)
 
 **Yapıldı.** Dev client `EXPO_PUBLIC_BACKEND=api` + staging adresiyle derlendi ve gerçek bir Firebase hesabıyla (kullanıcı girdi) çalıştırıldı. Uçtan uca doğrulananlar (uygulama ekranı + D1 satırı): giriş → `/me/bootstrap` → **salon oluşturma** (tenant + sahip yönetici üyeliği + 3 varsayılan paket + kısa kod tetikleyicisi), yönetici paneli, **elle üye ekleme + avatar seçimi** (avatar D1'de `summit`), **paket atama** (Platinium → 12 özel ders, 19 Oca 2027'ye kadar, canlı yenileme), **ödeme** (250,50 TL → D1'de `25050` kuruş, onaylı), **4 haftalık ders serisi** (tek seri kimliği, haftalık aralık, "0/10 dolu"). Aynı koşuda bulunan iki hata düzeltildi: üye detay başlığı avatarı göstermiyordu (el yapımı baş harf dairesi `MemberAvatar` ile değişti); kesirli lira "₺250,5" basıyordu (`utils/money.ts: formatLira`, ondalık varsa 2 hane; 8 ekran güncellendi). `FEATURES.managedMembers` artık API modunda açık (`BACKEND === 'api'`).

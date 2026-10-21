@@ -12,6 +12,7 @@ import { Text } from '@/components/Text';
 import { useAuth } from '@/context/AuthContext';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { watchTodayCheckinCount } from '@/data/repo/checkinRepo';
+import { formatLira } from '@/utils/money';
 import { sumPayments } from '@/utils/revenue';
 import { countActiveMembers, watchPendingRequests } from '@/data/repo/membershipRepo';
 import { watchPaymentsForTenant } from '@/data/repo/paymentRepo';
@@ -145,7 +146,7 @@ export default function AdminPanel() {
         <Pressable style={{ flex: 1 }} onPress={() => router.push('/admin/payments')}>
           <Card style={{ alignItems: 'center' }}>
             <Text variant="body" weight="900">
-              {monthRevenue === null ? '–' : `${Math.round(monthRevenue).toLocaleString('tr-TR')}₺`}
+              {monthRevenue === null ? '–' : `${formatLira(monthRevenue)}₺`}
             </Text>
             <Text variant="label" tone="sub">
               bu ay gelir
