@@ -89,7 +89,9 @@ function ProgramBuilderForm({ program }: { program: Program }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pickingFromLibrary, setPickingFromLibrary] = useState(false);
   const [pickingTemplate, setPickingTemplate] = useState(false);
-  const [templates, setTemplates] = useState<ProgramTemplate[]>([]);
+  // null = not delivered yet; [] = delivered and genuinely empty (the two must not read the same).
+  const [loadedTemplates, setTemplates] = useState<ProgramTemplate[] | null>(null);
+  const templates = loadedTemplates ?? [];
   const [templatesFailed, setTemplatesFailed] = useState(false);
   const [templatesRetry, setTemplatesRetry] = useState(0);
   const [assigning, setAssigning] = useState(false);
@@ -345,7 +347,11 @@ function ProgramBuilderForm({ program }: { program: Program }) {
                 HAZIR ŞABLONLAR
               </Text>
               {templates.length === 0 ? (
-                templatesFailed ? (
+                loadedTemplates !== null ? (
+                  <Text variant="helper" tone="sub" style={{ textAlign: 'center', paddingVertical: 12 }}>
+                    Henüz hazır şablon yok.
+                  </Text>
+                ) : templatesFailed ? (
                   <ErrorNotice
                     message="Şablonlar yüklenemedi."
                     onRetry={() => {

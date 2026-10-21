@@ -281,7 +281,8 @@ export default function MemberHome() {
           groupCredits={groupCredits}
           ptCredits={ptCredits}
         />
-        {tenantId ? (
+        {/* Not before the packages arrive: with no end date yet the row would offer a renewal for a package it cannot see. */}
+        {tenantId && packages !== undefined ? (
           <RenewalRequestRow
             tenantId={tenantId}
             endsAt={packages?.find((p) => p.status === 'active' || p.status === 'frozen')?.endsAt ?? null}
