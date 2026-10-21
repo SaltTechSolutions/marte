@@ -238,7 +238,8 @@ function ProgramBuilderForm({ program }: { program: Program }) {
 
       {/* Gün sekmeleri. Tek günlü programda da görünür: ikinci günü eklemek
           buradan tek dokunuş, ve "program = günler" fikri baştan okunuyor. */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
+      {/* flexGrow: 0 — a horizontal ScrollView in this column otherwise takes all the spare height and the chips stretch into tall ovals. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingVertical: 2 }}>
         {days.map((d) => (
           <Chip
             key={d.id}

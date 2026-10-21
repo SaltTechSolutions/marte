@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { rolesIn } from './auth';
 import { findMember } from './checkins';
 import { bookClass, cancelBooking, deleteClass } from './groupClasses';
+import { outboxStatement } from './outbox';
 import type { Env, Vars } from './types';
 
 type App = { Bindings: Env; Variables: Vars };
@@ -114,8 +115,25 @@ writes2.post('/tenants/:tenantId/programs', async (c) => {
 writes2.put('/tenants/:tenantId/programs/:id', async (c) => {
   if (!isStaff(await rolesOf(c))) return forbidden(c);
   const { memberId: _ignored, ...data } = await body(c);   // tenant and member are pinned
-  await c.env.DB.prepare(`UPDATE programs SET data = ?, updated_at = ? WHERE id = ? AND tenant_id = ?`)
-    .bind(JSON.stringify(data), Date.now(), c.req.param('id'), c.req.param('tenantId')).run();
+  const db = c.env.DB;
+  const tenantId = c.req.param('tenantId')!;
+  const id = c.req.param('id')!;
+  const before = await db.prepare(
+    `SELECT p.member_id, p.updated_at, json_extract(p.data, '$.status') AS status, m.managed
+       FROM programs p LEFT JOIN memberships m ON m.tenant_id = p.tenant_id AND m.member_id = p.member_id
+      WHERE p.id = ? AND p.tenant_id = ?`,
+  ).bind(id, tenantId).first<{ member_id: string; updated_at: number; status: string | null; managed: number | null }>();
+  const stmts = [db.prepare(`UPDATE programs SET data = ?, updated_at = ? WHERE id = ? AND tenant_id = ?`)
+    .bind(JSON.stringify(data), Date.now(), id, tenantId)];
+  // Draft (or archived) to active is "your trainer prepared a program for you" (Firebase notifyOnProgramAssigned).
+  // Keyed by the version it replaces: a concurrent double save is one push, a later re-activation is a new one.
+  if (before && before.status !== 'active' && data.status === 'active' && !before.managed) {
+    stmts.push(outboxStatement(db, 'push', {
+      userIds: [before.member_id], category: 'programs', title: 'Yeni programın hazır 💪',
+      body: `Antrenörün senin için "${String(data.name ?? '')}" programını hazırladı.`, data: { screen: 'member/workout' },
+    }, `program-active:${id}:${before.updated_at}`));
+  }
+  await db.batch(stmts);
   return c.json({ ok: true });
 });
 writes2.delete('/tenants/:tenantId/programs/:id', async (c) => {

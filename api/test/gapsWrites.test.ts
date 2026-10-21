@@ -242,3 +242,42 @@ describe('promotions: update is a validated, 404-aware merge', () => {
     expect((await h.send('POST', `${T1}/promotions`, 'fb-admin', { ...promo, kind: 'amountDiscount', value: 5_050 })).status).toBe(201);
   });
 });
+
+describe('program activation queues a push (Firebase notifyOnProgramAssigned)', () => {
+  const outbox = async (h: H) => (await h.db.prepare(`SELECT payload, dedupe_key FROM outbox`).all<any>()).results;
+
+  it('only the draft-to-active transition notifies the member, once per transition', async () => {
+    const h = await harness();
+    await h.addUser('u-trn', ['trainer']);
+    const { id } = await json(await h.send('POST', `${T1}/programs`, 'fb-trn', { memberId: 'u-mem', name: 'Güç', status: 'draft' }));
+    expect(await outbox(h)).toHaveLength(0);
+    // an edit that leaves it a draft, and a repeat save of an active one, say nothing
+    expect((await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Güç 2', status: 'draft' })).status).toBe(200);
+    expect(await outbox(h)).toHaveLength(0);
+    expect((await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Güç 2', status: 'active' })).status).toBe(200);
+    const rows = await outbox(h);
+    expect(rows).toHaveLength(1);
+    const p = JSON.parse(rows[0].payload);
+    expect(p).toMatchObject({ userIds: ['u-mem'], category: 'programs', title: 'Yeni programın hazır 💪', data: { screen: 'member/workout' } });
+    expect(p.body).toBe('Antrenörün senin için "Güç 2" programını hazırladı.');
+    expect((await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Güç 2', status: 'active', warmup: 'w1' })).status).toBe(200);
+    expect(await outbox(h)).toHaveLength(1);
+    // archived and activated again is a new assignment
+    await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Güç 2', status: 'archived' });
+    await new Promise((r) => setTimeout(r, 5));
+    await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Güç 2', status: 'active' });
+    expect(await outbox(h)).toHaveLength(2);
+  });
+
+  it('creating a program says nothing (the Firebase trigger fired on updates only); an account-less member has no device to tell', async () => {
+    const h = await harness();
+    await h.addUser('u-trn', ['trainer']);
+    await h.send('POST', `${T1}/programs`, 'fb-trn', { memberId: 'u-mem', name: 'Direkt', status: 'active' });
+    expect(await outbox(h)).toHaveLength(0);
+    await h.run(`INSERT INTO users (id, display_name, created_at) VALUES ('mm1','Elle',1)`);
+    await h.run(`INSERT INTO memberships (tenant_id, member_id, status, roles, managed, created_by, requested_at) VALUES ('t1','mm1','active','["member"]',1,'u-admin',1)`);
+    const { id } = await json(await h.send('POST', `${T1}/programs`, 'fb-trn', { memberId: 'mm1', name: 'Elle için', status: 'draft' }));
+    await h.send('PUT', `${T1}/programs/${id}`, 'fb-trn', { name: 'Elle için', status: 'active' });
+    expect(await outbox(h)).toHaveLength(0);
+  });
+});
