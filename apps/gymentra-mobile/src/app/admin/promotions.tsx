@@ -14,10 +14,11 @@ import { watchPromotionsForTenant } from '@/data/repo/promotionRepo';
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { Promotion } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { formatLira } from '@/utils/money';
 
 const KIND_LABEL: Record<Promotion['kind'], (value: number) => string> = {
   percentDiscount: (v) => `%${v} indirim`,
-  amountDiscount: (v) => `${v.toLocaleString('tr-TR')} ₺ indirim`,
+  amountDiscount: (v) => `${formatLira(v)} ₺ indirim`,
   bonusDays: (v) => `+${v} gün hediye`,
   bonusLessons: (v) => `+${v} ders hediye`,
 };

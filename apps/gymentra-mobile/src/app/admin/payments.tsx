@@ -21,11 +21,12 @@ import { confirmPayment, rejectPayment, recordPayment, reversePayment, watchPaym
 import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
+import { formatLira } from '@/utils/money';
 
 const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi', card: 'Kredi Kartı' };
 
 function formatAmount(n: number): string {
-  return `₺${n.toLocaleString('tr-TR')}`;
+  return `₺${formatLira(n)}`;
 }
 
 /** Manual payment ledger — admin enters what they received, confirms/rejects member-submitted notices. */

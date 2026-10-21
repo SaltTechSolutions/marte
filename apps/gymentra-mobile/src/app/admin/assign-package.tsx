@@ -19,6 +19,7 @@ import { isPromotionUsable, watchPromotionsForTenant } from '@/data/repo/promoti
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage, Promotion } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { formatLira } from '@/utils/money';
 
 function summary(pkg: GymPackage): string {
   if (pkg.kind === 'lessons') return `${pkg.lessonCount ?? '?'} ders · ${pkg.lessonValidityDays ?? '?'} gün geçerli`;
@@ -149,7 +150,7 @@ export default function AdminAssignPackage() {
                       {pkg.name}
                     </Text>
                     <Text variant="body" weight="900" style={{ color: colors.pText }}>
-                      {pkg.price.toLocaleString('tr-TR')} ₺
+                      {formatLira(pkg.price)} ₺
                     </Text>
                   </View>
                   <Text variant="helper" tone="sub">
@@ -192,8 +193,8 @@ export default function AdminAssignPackage() {
             </Text>
             <Text variant="helper" weight="700">
               {effect.finalPrice === selected.price
-                ? `${selected.price.toLocaleString('tr-TR')} ₺`
-                : `${selected.price.toLocaleString('tr-TR')} ₺ → ${effect.finalPrice.toLocaleString('tr-TR')} ₺`}
+                ? `${formatLira(selected.price)} ₺`
+                : `${formatLira(selected.price)} ₺ → ${formatLira(effect.finalPrice)} ₺`}
             </Text>
           </View>
           {effect.bonusDays > 0 && (

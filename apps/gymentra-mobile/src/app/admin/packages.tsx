@@ -15,6 +15,7 @@ import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { useRefreshControl } from '@/components/useRefreshControl';
+import { formatLira } from '@/utils/money';
 
 function entitlementSummary(pkg: GymPackage): string {
   if (pkg.kind === 'lessons') {
@@ -110,7 +111,7 @@ function PackageRow({ pkg, onPress }: { pkg: GymPackage; onPress: () => void }) 
             {pkg.name}
           </Text>
           <Text variant="body" weight="900" style={{ color: colors.pText }}>
-            {pkg.price.toLocaleString('tr-TR')} ₺
+            {formatLira(pkg.price)} ₺
           </Text>
         </View>
         <Text variant="helper" tone="sub">

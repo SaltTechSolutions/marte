@@ -13,6 +13,7 @@ import { entitlementRows } from '@/data/entitlementRows';
 import { PackageChangeRequest } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
+import { formatLira } from '@/utils/money';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -111,7 +112,7 @@ export default function MemberPackageOffer() {
             ŞU AN
           </Text>
           <Text variant="body" weight="900">
-            {request.currentSummary.packageName} · {request.currentSummary.price.toLocaleString('tr-TR')} ₺
+            {request.currentSummary.packageName} · {formatLira(request.currentSummary.price)} ₺
           </Text>
           {entitlementRows(request.currentSummary).map((row) => (
             <Text key={row} variant="helper" tone="sub">
@@ -130,7 +131,7 @@ export default function MemberPackageOffer() {
           {request.currentSummary ? 'YENİ' : 'TEKLİF EDİLEN'}
         </Text>
         <Text variant="body" weight="900">
-          {request.proposedSummary.packageName} · {request.proposedSummary.price.toLocaleString('tr-TR')} ₺
+          {request.proposedSummary.packageName} · {formatLira(request.proposedSummary.price)} ₺
         </Text>
         {entitlementRows(request.proposedSummary).map((row) => (
           <Text key={row} variant="helper" tone="sub">
@@ -148,7 +149,7 @@ export default function MemberPackageOffer() {
             Fiyat farkı
           </Text>
           <Text variant="helper" weight="700" style={{ color: request.priceDelta > 0 ? colors.warn : request.priceDelta < 0 ? colors.ok : colors.txt }}>
-            {request.priceDelta === 0 ? 'Değişmiyor' : `${request.priceDelta > 0 ? '+' : ''}${request.priceDelta.toLocaleString('tr-TR')} ₺`}
+            {request.priceDelta === 0 ? 'Değişmiyor' : `${request.priceDelta > 0 ? '+' : ''}${formatLira(request.priceDelta)} ₺`}
           </Text>
         </View>
         {request.refundAmount != null && request.refundAmount > 0 && (
@@ -157,7 +158,7 @@ export default function MemberPackageOffer() {
               İade ({request.refundBasis})
             </Text>
             <Text variant="helper" weight="700" style={{ color: colors.ok }}>
-              {request.refundAmount.toLocaleString('tr-TR')} ₺
+              {formatLira(request.refundAmount)} ₺
             </Text>
           </View>
         )}

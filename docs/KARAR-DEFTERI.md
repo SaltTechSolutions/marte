@@ -31,6 +31,18 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-21 — API modu simülatörde ilk gerçek koşu (staging, iPhone 17e)
+
+**Yapıldı.** Dev client `EXPO_PUBLIC_BACKEND=api` + staging adresiyle derlendi ve gerçek bir Firebase hesabıyla (kullanıcı girdi) çalıştırıldı. Uçtan uca doğrulananlar (uygulama ekranı + D1 satırı): giriş → `/me/bootstrap` → **salon oluşturma** (tenant + sahip yönetici üyeliği + 3 varsayılan paket + kısa kod tetikleyicisi), yönetici paneli, **elle üye ekleme + avatar seçimi** (avatar D1'de `summit`), **paket atama** (Platinium → 12 özel ders, 19 Oca 2027'ye kadar, canlı yenileme), **ödeme** (250,50 TL → D1'de `25050` kuruş, onaylı), **4 haftalık ders serisi** (tek seri kimliği, haftalık aralık, "0/10 dolu"). Aynı koşuda bulunan iki hata düzeltildi: üye detay başlığı avatarı göstermiyordu (el yapımı baş harf dairesi `MemberAvatar` ile değişti); kesirli lira "₺250,5" basıyordu (`utils/money.ts: formatLira`, ondalık varsa 2 hane; 8 ekran güncellendi). `FEATURES.managedMembers` artık API modunda açık (`BACKEND === 'api'`).
+
+**Karar.** Elle üye özelliği Worker'da hazır olduğundan bayrak backend'e bağlandı; Firebase modunda kapalı kalır. Uygulama ikonu yeni logo (volt halter) ile derlenmiş geldi.
+
+**Bilerek yapılmadı.** Üye ve antrenör akışları (ders rezervasyonu, PT randevusu, check-in taraması, veli bağlantısı, bildirim): ikinci bir Firebase hesabı gerekir, kullanıcı giremedi. Demo hesap şifresini ben yazmadım (gerçek Firebase Auth, politika).
+
+**Açık.** Yukarıdakiler gerçek cihazda görülmedi. Dev client ilk yüklemede zaman aşımı verdi (Metro 3 gün açıktı); yeniden yükleme çözdü. Panelde gelir kartı ve Raporlar henüz bu veriyle bakılmadı. Üye eklerken çift boşluklu ad ("Deneme  Uye") simülatör klavyesinin gecikmeli yazmasından; uygulama hatası değil.
+
+**Nerede.** `apps/gymentra-mobile/src/utils/money.ts`, `src/app/admin/member.tsx`, `src/data/features.ts`.
+
 ## 2026-10-18 — Üye profil fotoğrafı kaldırıldı; 12 hazır avatar
 
 **Yapıldı.** Üye profil fotoğrafı özelliği tamamen kaldırıldı (yükleme, silme, `/me/photo`, `photo_url` okuma/yazma, mobil repo'lar). Yerine `scripts/avatars.py`'den üretilen 12 hazır avatar geldi (`rock, strength, tempo, rhythm, balance, breath, shield, spark, pass, unity, summit, trail` = Kaya, Güç, Tempo, Ritim, Denge, Nefes, Kalkan, Atak, Pas, Birlik, Zirve, Rota): yüzsüz, düz geometrik, tek renk, 34 px'te okunur; set önerisi codex ile birlikte seçildi. `memberships.avatar_id` (migration `0052`), `PATCH …/details {avatarId|null}` (üye kendisi; yönetici yalnız elle eklenen üye için), roster/üyelik/check-in DTO'larında `avatarId`. Mobilde `AvatarGlyph`, `MemberAvatar`, `AvatarPicker` (3x4, radiogroup, seçili = halka + onay işareti), profil ve yönetici ekranlarına bağlandı; `FEATURES.avatars = BACKEND === 'api'` (Firebase modunda baş harfler). Veri taşıma `photoUrl`'u taşımaz. `backend/scripts/delete_member_photos.cjs` mevcut fotoğrafları siler (dry-run varsayılan, `--apply` ile; ÇALIŞTIRILMADI).

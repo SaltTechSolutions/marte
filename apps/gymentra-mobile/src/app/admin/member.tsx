@@ -8,6 +8,7 @@ import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ListSkeleton } from '@/components/ListSkeleton';
+import { MemberAvatar } from '@/components/MemberAvatar';
 import { MemberContactCard } from '@/components/MemberContactCard';
 import { MemberNoteCard } from '@/components/MemberNoteCard';
 import { FEATURES } from '@/data/features';
@@ -32,6 +33,7 @@ import { TextField } from '@/components/TextField';
 import { useToast } from '@/components/Toast';
 import { reportError } from '@/data/errors';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { formatLira } from '@/utils/money';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -179,11 +181,7 @@ export default function AdminMemberDetail() {
   return (
     <ScrollView contentContainerStyle={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, gap: spacing.sm, paddingBottom: spacing.lg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surf2, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="helper" weight="900" style={{ color: colors.pText }}>
-            {name.slice(0, 2).toUpperCase()}
-          </Text>
-        </View>
+        <MemberAvatar name={name} avatarId={FEATURES.avatars ? membership?.avatarId : null} size={40} />
         <View style={{ flex: 1 }}>
           <Text variant="h3" numberOfLines={1}>
             {name}
@@ -437,7 +435,7 @@ export default function AdminMemberDetail() {
                     {p.packageName}
                   </Text>
                   <Text variant="body" weight="900" style={{ color: colors.pText }}>
-                    {p.finalPrice.toLocaleString('tr-TR')} ₺
+                    {formatLira(p.finalPrice)} ₺
                   </Text>
                 </View>
                 <Text variant="helper" tone="sub">

@@ -21,6 +21,7 @@ import { isPromotionUsable, watchPromotionsForTenant } from '@/data/repo/promoti
 import { canManageGym, tenantIdIf } from '@/data/membership';
 import { GymPackage, MemberPackage, PackageChangeKind, Promotion } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
+import { formatLira } from '@/utils/money';
 
 const KIND_LABEL: Record<PackageChangeKind, string> = {
   upgrade: 'Yükseltme',
@@ -162,7 +163,7 @@ function ProposeChangeBody({
           ŞU AN
         </Text>
         <Text variant="body" weight="900">
-          {current.packageName} · {current.finalPrice.toLocaleString('tr-TR')} ₺
+          {current.packageName} · {formatLira(current.finalPrice)} ₺
         </Text>
       </Card>
 
@@ -201,7 +202,7 @@ function ProposeChangeBody({
                         {pkg.name}
                       </Text>
                       <Text variant="body" weight="900" style={{ color: colors.pText }}>
-                        {pkg.price.toLocaleString('tr-TR')} ₺
+                        {formatLira(pkg.price)} ₺
                       </Text>
                     </View>
                     <Text variant="helper" tone="sub">
@@ -263,12 +264,12 @@ function ProposeChangeBody({
                 Fiyat
               </Text>
               <Text variant="helper" weight="700">
-                {current.finalPrice.toLocaleString('tr-TR')} ₺ → {effect!.finalPrice.toLocaleString('tr-TR')} ₺
+                {formatLira(current.finalPrice)} ₺ → {formatLira(effect!.finalPrice)} ₺
                 {priceDelta !== 0 && (
                   <Text variant="helper" weight="700" style={{ color: priceDelta > 0 ? colors.warn : colors.ok }}>
                     {' '}
                     ({priceDelta > 0 ? '+' : ''}
-                    {priceDelta.toLocaleString('tr-TR')} ₺)
+                    {formatLira(priceDelta)} ₺)
                   </Text>
                 )}
               </Text>

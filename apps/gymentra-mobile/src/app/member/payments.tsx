@@ -19,12 +19,13 @@ import { splitAmount } from '@/utils/splitAmount';
 import { Payment, PaymentMethod, TenantMembership } from '@/data/types';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { safeBack } from '@/utils/navigation';
+import { formatLira } from '@/utils/money';
 
 const METHOD_LABEL: Record<PaymentMethod, string> = { cash: 'Nakit', bank_transfer: 'Banka Transferi', card: 'Kredi Kartı' };
 const STATUS_LABEL: Record<Payment['status'], string> = { pending: 'Onay bekliyor', confirmed: 'Onaylandı', rejected: 'Reddedildi' };
 
 function formatAmount(n: number): string {
-  return `₺${n.toLocaleString('tr-TR')}`;
+  return `₺${formatLira(n)}`;
 }
 
 /** Member's own payment history + "I sent this" notice for the admin to confirm. */
