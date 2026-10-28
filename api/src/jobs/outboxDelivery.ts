@@ -11,27 +11,89 @@ type Row = { id: string; kind: string; payload: string; attempts: number };
 /** Exponential backoff: 1, 2, 4 ... minutes, capped at one hour. */
 export const backoffMs = (attempts: number) => Math.min(2 ** (attempts - 1) * 60_000, 3_600_000);
 
+/** Expo accepts at most 100 messages per request. */
+const EXPO_BATCH = 100;
+/** D1 allows at most 100 bound parameters per statement; leave room for the one extra `?` some queries carry. */
+const D1_IN_CHUNK = 90;
+
+const chunks = <T>(list: T[], size: number): T[][] => {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
+  return out;
+};
+
+/**
+ * Some Expo batches failed. `remaining` are the tokens whose batch was NOT accepted; the delivery loop stores
+ * them in the row's payload (`retryTokens`) so the retry sends only those and never re-sends a batch Expo
+ * already accepted.
+ */
+class PartialPushError extends Error {
+  constructor(message: string, readonly remaining: string[]) { super(message); }
+}
+
+/**
+ * Push delivery, chunked to stay inside the platform limits (Expo: 100 messages/request; D1: 100 bound
+ * parameters/statement).
+ *
+ * Chunk-failure semantics: every batch is attempted, a failing batch never stops the others. Tokens Expo
+ * reported as DeviceNotRegistered are pruned from the batches that succeeded. If any batch failed, the row
+ * fails (so it backs off and retries, then goes 'dead' after MAX_ATTEMPTS: never silently dropped) and its
+ * payload is rewritten to `retryTokens` = the failed batches only. A retry therefore re-sends nothing that
+ * was already accepted. Remaining duplicate window: a crash between a successful Expo response and the
+ * outbox update re-sends the batches of that run (at-least-once, same as before chunking).
+ */
 async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
-  const userIds: string[] = p.userIds ?? [];
-  const category: string = p.category ?? 'account';
-  const wanted: string[] = [];
-  for (const uid of userIds) {
-    if (MUTABLE.includes(category)) {
-      const s = await db.prepare(`SELECT json_extract(notifications, '$.' || ?) AS v FROM user_settings WHERE user_id = ?`).bind(category, uid).first<{ v: unknown }>();
-      if (s && (s.v === 0 || s.v === false)) continue;   // an absent answer means yes
+  let tokens: string[];
+  if (Array.isArray(p.retryTokens)) {
+    tokens = [...new Set<string>(p.retryTokens)];          // already filtered by preference on the first attempt
+  } else {
+    const userIds = [...new Set<string>(p.userIds ?? [])];
+    const category: string = p.category ?? 'account';
+    let wanted = userIds;
+    if (MUTABLE.includes(category) && userIds.length) {
+      // Muted = the stored answer is explicitly false/0; an absent answer means yes.
+      const muted = new Set<string>();
+      for (const part of chunks(userIds, D1_IN_CHUNK)) {
+        const marks = part.map(() => '?').join(',');
+        const { results } = await db.prepare(
+          `SELECT user_id FROM user_settings WHERE json_extract(notifications, '$.' || ?) = 0 AND user_id IN (${marks})`,
+        ).bind(category, ...part).all<{ user_id: string }>();
+        for (const r of results) muted.add(r.user_id);
+      }
+      wanted = userIds.filter((u) => !muted.has(u));
     }
-    wanted.push(uid);
+    if (!wanted.length) return;
+    const found = new Set<string>();
+    for (const part of chunks(wanted, D1_IN_CHUNK)) {
+      const marks = part.map(() => '?').join(',');
+      const { results } = await db.prepare(`SELECT token FROM push_tokens WHERE user_id IN (${marks})`).bind(...part).all<{ token: string }>();
+      for (const r of results) found.add(r.token);
+    }
+    tokens = [...found];
   }
-  if (!wanted.length) return;
-  const marks = wanted.map(() => '?').join(',');
-  const { results } = await db.prepare(`SELECT token FROM push_tokens WHERE user_id IN (${marks})`).bind(...wanted).all<{ token: string }>();
-  if (!results.length) return;                          // nobody to notify is success, not an error
-  const messages = results.map((r) => ({ to: r.token, title: p.title, body: p.body, sound: 'default', ...(p.data ? { data: p.data } : {}) }));
-  const res = await doFetch(EXPO_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(messages) });
-  if (!res.ok) throw new Error(`expo ${res.status}`);
-  const out = (await res.json().catch(() => null)) as { data?: { details?: { error?: string } }[] } | null;
-  const dead = (out?.data ?? []).map((t, i) => (t?.details?.error === 'DeviceNotRegistered' ? results[i].token : null)).filter((t): t is string => !!t);
-  if (dead.length) await db.batch(dead.map((t) => db.prepare(`DELETE FROM push_tokens WHERE token = ?`).bind(t)));
+  if (!tokens.length) return;                            // nobody to notify is success, not an error
+
+  const remaining: string[] = [];
+  let firstError = '';
+  let failedBatches = 0;
+  for (const batch of chunks(tokens, EXPO_BATCH)) {
+    const messages = batch.map((to) => ({ to, title: p.title, body: p.body, sound: 'default', ...(p.data ? { data: p.data } : {}) }));
+    try {
+      const res = await doFetch(EXPO_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(messages) });
+      if (!res.ok) throw new Error(`expo ${res.status}`);
+      const out = (await res.json().catch(() => null)) as { data?: { details?: { error?: string } }[] } | null;
+      const dead = (out?.data ?? []).map((t, i) => (t?.details?.error === 'DeviceNotRegistered' ? batch[i] : null)).filter((t): t is string => !!t);
+      if (dead.length) await db.batch(dead.map((t) => db.prepare(`DELETE FROM push_tokens WHERE token = ?`).bind(t)));
+    } catch (e) {
+      failedBatches++;
+      remaining.push(...batch);
+      firstError ||= (e as Error).message;
+    }
+  }
+  if (remaining.length) {
+    const total = chunks(tokens, EXPO_BATCH).length;
+    throw new PartialPushError(`${firstError} (${failedBatches}/${total} batches failed)`, remaining);
+  }
 }
 
 async function sendEmail(env: Omit<Env, 'MEDIA'>, p: any, doFetch: Fetch): Promise<void> {
@@ -68,8 +130,10 @@ export async function deliverOutbox(env: Omit<Env, 'MEDIA'>, now: number, limit 
       sent++;
     } catch (e) {
       const isDead = row.attempts >= MAX_ATTEMPTS;
-      await db.prepare(`UPDATE outbox SET status = ?, next_attempt_at = ?, last_error = ? WHERE id = ?`)
-        .bind(isDead ? 'dead' : 'pending', now + backoffMs(row.attempts), String((e as Error).message).slice(0, 300), row.id).run();
+      // A partly delivered push keeps only its undelivered tokens, so a retry cannot double-send the rest.
+      const payload = e instanceof PartialPushError ? JSON.stringify({ ...JSON.parse(row.payload), retryTokens: e.remaining }) : row.payload;
+      await db.prepare(`UPDATE outbox SET status = ?, next_attempt_at = ?, last_error = ?, payload = ? WHERE id = ?`)
+        .bind(isDead ? 'dead' : 'pending', now + backoffMs(row.attempts), String((e as Error).message).slice(0, 300), payload, row.id).run();
       isDead ? dead++ : failed++;
     }
   }
