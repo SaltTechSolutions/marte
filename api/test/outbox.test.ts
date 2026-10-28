@@ -57,19 +57,18 @@ describe('outbox delivery', () => {
   });
 });
 
-/** Seeds `n` users, each with `perUser` push tokens, in t1. Token = `ExponentPushToken[u<i>-<j>]`. */
+/**
+ * Seeds `n` users, each with `perUser` push tokens, in t1. Token = `ExponentPushToken[u<i>-<j>]`.
+ * Literal multi-row INSERTs (ids are generated here, nothing user-supplied) in ONE batch: cheap on workerd's D1.
+ */
 async function seedDevices(h: Awaited<ReturnType<typeof harness>>, n: number, perUser = 1) {
+  const userIds = Array.from({ length: n }, (_, i) => `u-bulk${i}`);
+  const userRows = userIds.map((id) => `('${id}','${id}',1)`);
+  const tokenRows = userIds.flatMap((id, i) => Array.from({ length: perUser }, (_, j) => `('ExponentPushToken[u${i}-${j}]','${id}','t1',1)`));
   const stmts: D1PreparedStatement[] = [];
-  const userIds: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const id = `u-bulk${i}`;
-    userIds.push(id);
-    stmts.push(h.db.prepare(`INSERT INTO users (id, display_name, created_at) VALUES (?, ?, 1)`).bind(id, id));
-    for (let j = 0; j < perUser; j++) {
-      stmts.push(h.db.prepare(`INSERT INTO push_tokens (token, user_id, tenant_id, updated_at) VALUES (?, ?, 't1', 1)`).bind(`ExponentPushToken[u${i}-${j}]`, id));
-    }
-  }
-  for (let i = 0; i < stmts.length; i += 100) await h.db.batch(stmts.slice(i, i + 100));
+  for (let i = 0; i < userRows.length; i += 100) stmts.push(h.db.prepare(`INSERT INTO users (id, display_name, created_at) VALUES ${userRows.slice(i, i + 100).join(',')}`));
+  for (let i = 0; i < tokenRows.length; i += 100) stmts.push(h.db.prepare(`INSERT INTO push_tokens (token, user_id, tenant_id, updated_at) VALUES ${tokenRows.slice(i, i + 100).join(',')}`));
+  await h.db.batch(stmts);
   return userIds;
 }
 const sentTokens = (f: { mock: { calls: unknown[][] } }) =>
@@ -97,9 +96,8 @@ describe('outbox push chunking (> 100 devices / users)', () => {
     const userIds = await seedDevices(h, 250);
     // 120 of them muted the announcements category (spread over several lookup chunks), one muted another category
     const muted = userIds.filter((_, i) => i % 2 === 0).slice(0, 120);
-    for (let i = 0; i < muted.length; i += 100) {
-      await h.db.batch(muted.slice(i, i + 100).map((u) => h.db.prepare(`INSERT INTO user_settings (user_id, notifications, updated_at) VALUES (?, '{"announcements":false}', 1)`).bind(u)));
-    }
+    await h.db.batch([0, 100].map((i) => h.db.prepare(
+      `INSERT INTO user_settings (user_id, notifications, updated_at) VALUES ${muted.slice(i, i + 100).map((u) => `('${u}','{"announcements":false}',1)`).join(',')}`)));
     await h.run(`INSERT INTO user_settings (user_id, notifications, updated_at) VALUES ('u-bulk1', '{"payments":false}', 1)`);
     await outboxStatement(h.db, 'push', { userIds, title: 'T', body: 'B', category: 'announcements' }).run();
     const f = okFor();
@@ -163,5 +161,56 @@ describe('outbox push chunking (> 100 devices / users)', () => {
     expect(row.e).toMatch(/expo 500.*2\/2 batches failed/);
     expect(JSON.parse(row.p).retryTokens).toHaveLength(150);                // all undelivered tokens kept for inspection
   });
-});
 
+  it('a retry re-checks who owns each token now: a token that moved to another user or was erased is not sent', async () => {
+    const h = await harness();
+    await h.run(`INSERT INTO push_tokens (token, user_id, tenant_id, updated_at) VALUES ('ExponentPushToken[moved]','u-mem','t1',1), ('ExponentPushToken[erased]','u-mem','t1',1), ('ExponentPushToken[kept]','u-mem','t1',1)`);
+    await outboxStatement(h.db, 'push', { userIds: ['u-mem'], title: 'T', body: 'B', category: 'bookings' }).run();
+    const env = { DB: h.db, FIREBASE_PROJECT_ID: 'x' };
+    const now = Date.now();
+    const down = vi.fn(async () => new Response('no', { status: 502 }));
+    expect(await deliverOutbox(env, now, 50, down as never)).toMatchObject({ failed: 1 });
+    // between the attempts: someone else signs in on the same phone / the account is erased
+    await h.run(`UPDATE push_tokens SET user_id = 'u-admin' WHERE token = 'ExponentPushToken[moved]'`);
+    await h.run(`DELETE FROM push_tokens WHERE token = 'ExponentPushToken[erased]'`);
+    const f = okFor();
+    expect(await deliverOutbox(env, now + 120_000, 50, f as never)).toMatchObject({ sent: 1 });
+    expect(sentTokens(f)).toEqual(['ExponentPushToken[kept]']);
+    // nothing left to send at all: success without calling Expo
+    await outboxStatement(h.db, 'push', { userIds: ['u-mem'], title: 'T', body: 'B', category: 'bookings' }).run();
+    await h.run(`UPDATE push_tokens SET user_id = 'u-admin'`);
+    await h.run(`UPDATE push_tokens SET user_id = 'u-mem' WHERE token = 'ExponentPushToken[kept]'`);
+    const down2 = vi.fn(async () => new Response('no', { status: 502 }));
+    expect(await deliverOutbox(env, now + 10_000_000, 50, down2 as never)).toMatchObject({ failed: 1 });
+    await h.run(`UPDATE push_tokens SET user_id = 'u-admin'`);
+    const f3 = okFor();
+    expect(await deliverOutbox(env, now + 20_000_000, 50, f3 as never)).toMatchObject({ sent: 1 });
+    expect(f3).not.toHaveBeenCalled();
+  });
+
+  it('retry ownership lookups stay under 100 bound parameters (250 stored tokens)', async () => {
+    const h = await harness();
+    const [uid] = await seedDevices(h, 1, 250);
+    await outboxStatement(h.db, 'push', { userIds: [uid], title: 'T', body: 'B', category: 'bookings' }).run();
+    const env = { DB: h.db, FIREBASE_PROJECT_ID: 'x' };
+    const now = Date.now();
+    await deliverOutbox(env, now, 50, vi.fn(async () => new Response('no', { status: 500 })) as never);
+    expect(JSON.parse((await h.one(`SELECT payload p FROM outbox`)).p).retryTokens).toHaveLength(250);
+    const f = okFor();
+    expect(await deliverOutbox(env, now + 120_000, 50, f as never)).toMatchObject({ sent: 1 });
+    expect(sentTokens(f)).toHaveLength(250);
+  });
+
+  it('a failing dead-token prune after an accepted batch is logged but never causes a re-send', async () => {
+    const h = await harness();
+    await h.run(`INSERT INTO push_tokens (token, user_id, tenant_id, updated_at) VALUES ('ExponentPushToken[dead]','u-mem','t1',1), ('ExponentPushToken[live]','u-mem','t1',1)`);
+    await outboxStatement(h.db, 'push', { userIds: ['u-mem'], title: 'T', body: 'B', category: 'bookings' }).run();
+    const broken = { ...h.db, batch: async () => { throw new Error('D1 down'); } } as unknown as D1Database;
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const f = vi.fn(async (_u: string, init: { body: string }) => new Response(JSON.stringify({ data: (JSON.parse(init.body) as { to: string }[]).map((m) => (m.to.includes('dead') ? { status: 'error', details: { error: 'DeviceNotRegistered' } } : { status: 'ok' })) }), { status: 200 }));
+    // db.batch is only used by the prune here (the claim and updates use prepare), so the prune is what throws
+    expect(await deliverOutbox({ DB: broken, FIREBASE_PROJECT_ID: 'x' }, Date.now(), 50, f as never)).toMatchObject({ sent: 1, failed: 0 });
+    expect(f).toHaveBeenCalledTimes(1);
+    log.mockRestore();
+  });
+});

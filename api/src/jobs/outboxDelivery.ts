@@ -39,13 +39,25 @@ class PartialPushError extends Error {
  * reported as DeviceNotRegistered are pruned from the batches that succeeded. If any batch failed, the row
  * fails (so it backs off and retries, then goes 'dead' after MAX_ATTEMPTS: never silently dropped) and its
  * payload is rewritten to `retryTokens` = the failed batches only. A retry therefore re-sends nothing that
- * was already accepted. Remaining duplicate window: a crash between a successful Expo response and the
- * outbox update re-sends the batches of that run (at-least-once, same as before chunking).
+ * was already accepted. On a retry each stored token is re-checked against its CURRENT owner: a token that
+ * moved to another user (someone signed in on the same phone) or was deleted (erased account) is dropped, so a
+ * message never reaches a person who was not a recipient.
+ * Remaining duplicate window: a crash between a successful Expo response and the outbox update re-sends the
+ * batches of that run (at-least-once, same as before chunking). A failing dead-token prune after an accepted
+ * batch is logged and does NOT fail the batch, so it cannot cause a re-send.
  */
 async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
   let tokens: string[];
   if (Array.isArray(p.retryTokens)) {
-    tokens = [...new Set<string>(p.retryTokens)];          // already filtered by preference on the first attempt
+    // Already filtered by preference on the first attempt; ownership is checked again (one chunked query).
+    const recipients = new Set<string>(p.userIds ?? []);
+    const stored = [...new Set<string>(p.retryTokens)];
+    tokens = [];
+    for (const part of chunks(stored, D1_IN_CHUNK)) {
+      const marks = part.map(() => '?').join(',');
+      const { results } = await db.prepare(`SELECT token, user_id FROM push_tokens WHERE token IN (${marks})`).bind(...part).all<{ token: string; user_id: string }>();
+      for (const r of results) if (recipients.has(r.user_id)) tokens.push(r.token);
+    }
   } else {
     const userIds = [...new Set<string>(p.userIds ?? [])];
     const category: string = p.category ?? 'account';
@@ -83,7 +95,11 @@ async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
       if (!res.ok) throw new Error(`expo ${res.status}`);
       const out = (await res.json().catch(() => null)) as { data?: { details?: { error?: string } }[] } | null;
       const dead = (out?.data ?? []).map((t, i) => (t?.details?.error === 'DeviceNotRegistered' ? batch[i] : null)).filter((t): t is string => !!t);
-      if (dead.length) await db.batch(dead.map((t) => db.prepare(`DELETE FROM push_tokens WHERE token = ?`).bind(t)));
+      if (dead.length) {
+        // The batch is already accepted: a prune failure must not put it back in the retry list (double send).
+        await db.batch(dead.map((t) => db.prepare(`DELETE FROM push_tokens WHERE token = ?`).bind(t)))
+          .catch((e) => console.error(JSON.stringify({ push: 'dead-token prune failed', error: String((e as Error).message).slice(0, 200) })));
+      }
     } catch (e) {
       failedBatches++;
       remaining.push(...batch);
@@ -98,10 +114,15 @@ async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
 
 async function sendEmail(env: Omit<Env, 'MEDIA'>, p: any, doFetch: Fetch): Promise<void> {
   if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+  // A recipient is either an address in the payload or the NAME of a Worker var, resolved now (delivery time), so
+  // no address has to live in the repo or in the row and a late-set var delivers rows that were waiting.
+  let to: string | undefined = p.to;
+  if (!to && p.toEnv === 'EXERCISE_REPORT_TO') to = env.EXERCISE_REPORT_TO?.trim();
+  if (!to) throw new Error(`${p.toEnv ?? 'recipient'} not configured`);
   const res = await doFetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM ?? 'GymEntra <bildirim@salt-tech-apps.com>', to: [p.to], subject: p.subject, text: p.text, ...(p.replyTo ? { reply_to: p.replyTo } : {}) }),
+    body: JSON.stringify({ from: env.EMAIL_FROM ?? 'GymEntra <bildirim@salt-tech-apps.com>', to: [to], subject: p.subject, text: p.text, ...(p.replyTo ? { reply_to: p.replyTo } : {}) }),
   });
   if (!res.ok) throw new Error(`resend ${res.status}`);
 }

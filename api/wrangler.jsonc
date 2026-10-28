@@ -1,9 +1,14 @@
 {
-  // The top level is deliberately a PLACEHOLDER: its D1 id is REPLACE_ON_CREATE, so a bare
-  // `wrangler deploy` (no --env) fails instead of reaching production. Deploy only with an
-  // explicit `--env staging` or `--env production`. Migrations always run before the Worker.
+  // The top level is deliberately a PLACEHOLDER: its Worker name can never be production's and its D1 id
+  // is REPLACE_ON_CREATE, so a bare `wrangler deploy` (no --env) should fail (Cloudflare rejects the
+  // placeholder id; dry-run does not check this) and in no case overwrites the production Worker.
+  // Deploy only with an explicit `--env staging` or `--env production`.
+  // Not in this file by design: secrets (RESEND_API_KEY, REVENUECAT_WEBHOOK_SECRET) and the exercise-report
+  // recipient EXERCISE_REPORT_TO: set those per environment as secrets (`wrangler secret put`); a plain
+  // dashboard variable is reset by the next deploy because this file defines vars.
+  // Migrations always run before the Worker.
   // Wrangler does not inherit vars/bindings/triggers into an env, so each env lists its own.
-  "name": "gymentra-api",
+  "name": "gymentra-api-unconfigured-do-not-deploy",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-06",
   "vars": { "FIREBASE_PROJECT_ID": "tarabyamarte" },
