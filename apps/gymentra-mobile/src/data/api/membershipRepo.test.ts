@@ -70,6 +70,9 @@ describe('requestJoin', () => {
     await repo.requestJoin({ tenantId: 't1', tenantCode: 'T1', tenantName: 'Gym', userId: 'fb-newbie', userDisplayName: 'Yeni Üye', userEmail: 'yeni@example.com' });
     const row = await w.h.one(`SELECT m.status, m.roles, m.display_name, m.email FROM memberships m JOIN identities i ON i.user_id = m.member_id WHERE i.subject = 'fb-newbie'`);
     expect(row).toMatchObject({ status: 'pending', roles: '["member"]', display_name: 'Yeni Üye', email: 'yeni@example.com' });
+    // The Worker decides "was my row written?" by comparing requested_at with its own Date.now(); a second join
+    // inside the same millisecond as the first reads as the first one's write. Real requests are never that close.
+    await new Promise((r) => setTimeout(r, 5));
     const second = await refusal(repo.requestJoin({ tenantId: 't1', tenantCode: 'T1', tenantName: 'Gym', userId: 'fb-newbie' }));
     expect(second.code).toBe('functions/failed-precondition');
     expect(second.message).toMatch(/zaten/);

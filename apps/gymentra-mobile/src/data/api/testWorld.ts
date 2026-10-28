@@ -15,6 +15,14 @@
 import { __setApiTransport } from './client';
 
 export async function startWorld() {
+  // Every test starts from the module state the app guarantees after sign-out. The API repos keep
+  // caches (`/me`, tenant and label lookups, id registries), running pollers and shared watches at
+  // module level; without this a test inherits whatever the previous one left, which is order-dependent
+  // (it failed under `--sequence.shuffle`). Stops pollers first, so nothing refills a cache afterwards.
+  const { resetApiState } = await import('./resetApiState');
+  const { resetSharedWatches } = await import('../firebase/sharedWatch');
+  resetSharedWatches();
+  resetApiState();
   const { harness } = await import('../../../../../api/test/helpers');
   const h = await harness();
   let subject = 'fb-mem';

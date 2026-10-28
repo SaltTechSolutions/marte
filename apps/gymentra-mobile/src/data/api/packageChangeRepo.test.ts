@@ -114,6 +114,7 @@ describe('reading offers', () => {
     const { propose, basic } = await downgradeSetup();
     await w.h.addUser('u-two', ['member']);
     await propose();
+    await new Promise((r) => setTimeout(r, 5));   // newest-first is by created_at: two offers in one millisecond tie
     await propose({ note: 'ikinci' });
     await repo.createPackageChangeRequest({ tenantId: 't1', memberId: 'u-two', memberName: 'İki', kind: 'addon', proposedPackage: basic, createdBy: 'a' });
     const first = (await pending())[1];
