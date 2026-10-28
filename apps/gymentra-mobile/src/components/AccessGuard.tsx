@@ -54,6 +54,7 @@ export function AccessGuard({ title, hint }: { title: string; hint?: string }) {
   if (isMembershipPending({ authLoading, user, membershipLoading, activeMembership })) {
     return (
       <View
+        accessible
         accessibilityLabel="Yükleniyor"
         accessibilityState={{ busy: true }}
         style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}

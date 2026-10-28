@@ -15,10 +15,11 @@
 import { __setApiTransport } from './client';
 
 export async function startWorld() {
-  // Every test starts from the module state the app guarantees after sign-out. The API repos keep
-  // caches (`/me`, tenant and label lookups, id registries), running pollers and shared watches at
-  // module level; without this a test inherits whatever the previous one left, which is order-dependent
-  // (it failed under `--sequence.shuffle`). Stops pollers first, so nothing refills a cache afterwards.
+  // Hygiene: start every test from the module state the app guarantees after sign-out. The API repos keep
+  // caches (`/me`, tenant and label lookups, id registries), pollers and shared watches at module level,
+  // and a test would otherwise inherit what the previous one left. This did NOT cure the observed
+  // `--sequence.shuffle` failures (those were same-millisecond ties). It is also not airtight: a `fetchMe`
+  // still in flight from the previous test can write the identity cache after its await.
   const { resetApiState } = await import('./resetApiState');
   const { resetSharedWatches } = await import('../firebase/sharedWatch');
   resetSharedWatches();
