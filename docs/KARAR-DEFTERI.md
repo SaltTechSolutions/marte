@@ -39,7 +39,7 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 **Bilerek yapılmadı.** `ptReminders.ts:45` ve `membership.ts` onay push'undaki aynı zaman damgası kalıbına dokunulmadı: yan etkileri `changes() = 1` ile korunuyor, yalnız bir sayaç fazla sayabilir. `reads3.ts:63` (`created_at DESC, id`) zaten belirleyici ama id rastgele; sırayı değiştirmek davranış kararı, ayrı iş. Sayfalama ve limitlere dokunulmadı.
 
-**Açık.** Önceki kaydın `/join` aynı-ms maddesi kapandı. Kalanlar: (1) staging D1'de `meta.changes` davranışı henüz ölçülmedi (yalnız Miniflare'de görüldü); (2) `prior` okuması batch'ten önce yapılır, eşzamanlı iki ilk katılımda yanlış "tekrar" metni seçebilir (çift push olmaz); (3) `ptReminders.ts:45` ve `reads3.ts:63` bilerek dokunulmadı.
+**Açık.** Önceki kaydın `/join` aynı-ms maddesi kapandı. Staging D1'de aynı upsert geçici bir kullanıcıyla ölçüldü (29 Ekim): yeni kayıt `changes=2` (short_code tetikleyicisi dahil), reddedilen upsert `0`, `left` sonrası sıfırlama `1` — `> 0` üç durumda da doğru; geçici satırlar silindi. Kalanlar: (1) `meta` hiç gelmezse varsayılan 0 olur ve gerçek katılım yanlışlıkla 409 alır (fail-closed; D1 her zaman `meta` döndürür, görülmedi); (2) `prior` okuması batch'ten önce yapılır, eşzamanlı iki ilk katılımda yanlış "tekrar" metni seçebilir (çift push olmaz); (3) `ptReminders.ts:45` ve `reads3.ts:63` bilerek dokunulmadı.
 
 **Nerede.** `api/src/membership.ts`, `api/src/reads2.ts`, `api/src/reads4.ts`, `api/test/notifyParity.test.ts`, `api/test/tieOrder.test.ts`.
 
