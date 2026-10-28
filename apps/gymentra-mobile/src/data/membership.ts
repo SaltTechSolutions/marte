@@ -86,6 +86,28 @@ export function primaryRole(m: Maybe): MembershipRole | null {
   return null;
 }
 
+/**
+ * Is "who is this person and which gym?" still being resolved?
+ *
+ * A role guard that decides while this is true would show "access denied" for a state that clears itself:
+ * `activeMembership` is null until the cache or the network answers, exactly like it is for a person with
+ * no gym. Pure on purpose (no React, no context) so the table of states is unit-tested.
+ *
+ * - auth still restoring: pending;
+ * - signed in, membership being loaded and nothing to show yet: pending;
+ * - a membership is present (cache hit, refresh in flight), or loading finished with none (no gym, revoked,
+ *   offline without cache), or signed out: not pending, the guard may decide.
+ */
+export function isMembershipPending(s: {
+  authLoading: boolean;
+  user: object | null | undefined;
+  membershipLoading: boolean;
+  activeMembership: Maybe;
+}): boolean {
+  if (s.authLoading) return true;
+  return !!s.user && s.membershipLoading && !s.activeMembership;
+}
+
 export const ROLE_HOME: Record<MembershipRole, Href> = {
   admin: '/admin',
   trainer: '/trainer',

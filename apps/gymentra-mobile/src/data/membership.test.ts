@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canCheckIn, canCoach, canManageGym, canOverseeCalendars, isStaff, primaryRole, selectMembership } from './membership';
+import { canCheckIn, canCoach, canManageGym, canOverseeCalendars, isMembershipPending, isStaff, primaryRole, selectMembership } from './membership';
 import { TenantMembership } from './types';
 
 const make = (over: Partial<TenantMembership>): TenantMembership =>
@@ -87,5 +87,24 @@ describe('selectMembership (P1-8)', () => {
   it('ayrılınan salonda takılı kalmaz', () => {
     // Salondan ayrılan biri, artık üye olmadığı bir salonun ekranını açamaz.
     expect(selectMembership([m('a')], 'silinmis')?.tenantId).toBe('a');
+  });
+});
+
+describe('isMembershipPending', () => {
+  const user = { uid: 'u' };
+  const base = { authLoading: false, user, membershipLoading: false, activeMembership: null as TenantMembership | null };
+
+  // Cold start from a deep link or a push tap skips the launcher, so a guard sees these states first.
+  it.each([
+    ['auth still restoring', { authLoading: true, user: null }, true],
+    ['auth restoring, even with a membership in hand', { authLoading: true, activeMembership: admin }, true],
+    ['signed in, membership loading, nothing cached yet', { membershipLoading: true }, true],
+    ['signed in, membership loading, cached card present', { membershipLoading: true, activeMembership: admin }, false],
+    ['loading finished with no gym / revoked / offline without cache', {}, false],
+    ['signed in, membership resolved', { activeMembership: admin }, false],
+    ['signed out, auth finished', { user: null }, false],
+    ['signed out but a stale loading flag', { user: null, membershipLoading: true }, false],
+  ] as const)('%s', (_name, over, expected) => {
+    expect(isMembershipPending({ ...base, ...over })).toBe(expected);
   });
 });

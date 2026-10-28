@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { useAuth } from '@/context/AuthContext';
-import { ROLE_HOME, primaryRole } from '@/data/membership';
+import { ROLE_HOME, isMembershipPending, primaryRole } from '@/data/membership';
 import { signOutAndForget } from '@/services/signOut';
 import { useAppTheme } from '@/theme/ThemeContext';
 import { confirmDestructive } from '@/utils/confirm';
@@ -28,7 +28,7 @@ import { Text } from './Text';
 export function AccessGuard({ title, hint }: { title: string; hint?: string }) {
   const router = useRouter();
   const { colors, spacing } = useAppTheme();
-  const { activeMembership } = useAuth();
+  const { activeMembership, authLoading, membershipLoading, user } = useAuth();
   const [leaving, setLeaving] = useState(false);
 
   const home = primaryRole(activeMembership);
@@ -45,6 +45,23 @@ export function AccessGuard({ title, hint }: { title: string; hint?: string }) {
         signOutAndForget().catch(() => setLeaving(false));
       },
     });
+
+  // A cold start from a deep link or a push tap mounts this screen directly and skips the launcher
+  // (`app/index.tsx`), the only place that waits for auth and membership. Until they resolve,
+  // `activeMembership` is null, which is indistinguishable from "no access": showing the lock for a state that
+  // clears itself (and offering sign-out as the way out) was the bug. Nothing gated is rendered meanwhile, so
+  // this still fails closed; the flags always end (first auth callback, `finally` in AuthContext.loadMembership).
+  if (isMembershipPending({ authLoading, user, membershipLoading, activeMembership })) {
+    return (
+      <View
+        accessibilityLabel="Yükleniyor"
+        accessibilityState={{ busy: true }}
+        style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <ActivityIndicator color={colors.sub} />
+      </View>
+    );
+  }
 
   // No <Screen> wrapper: every role layout already renders one, and
   // react-native-safe-area-context applies the top inset again when nested.
