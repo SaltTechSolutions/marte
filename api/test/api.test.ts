@@ -35,7 +35,7 @@ const call = async (path: string, init: RequestInit & { token?: string } = {}) =
     headers: { 'content-type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   // keyResolver is injected through app.fetch's env-less variable seam below.
-  return app.fetch(req, { DB: db, FIREBASE_PROJECT_ID: PROJECT });
+  return app.fetch(req, { DB: db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
 };
 
 beforeEach(async () => { db = makeDb(); await seed(); });

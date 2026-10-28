@@ -5,6 +5,8 @@ export type Env = {
   /** Origin used in media URLs (the custom domain); falls back to the request origin. */
   PUBLIC_BASE_URL?: string;
   FIREBASE_PROJECT_ID: string;
+  /** Maintenance gate: only the exact value "1" opens /v1/*. Unset or anything else answers 503 maintenance (fail closed). */
+  API_OPEN?: string;
   /** Resend API key (secret). Without it e-mail outbox rows retry, then die: never silently dropped. */
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;

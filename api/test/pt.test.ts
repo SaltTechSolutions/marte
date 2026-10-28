@@ -38,13 +38,13 @@ type Db = D1Database;
 async function send(method: string, path: string, sub: string | null, body?: object, db: Db = h.db) {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (sub) headers.Authorization = `Bearer ${await h.sign(sub)}`;
-  const res = await app.fetch(new Request(`http://x${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined }), { DB: db, FIREBASE_PROJECT_ID: PROJECT });
+  const res = await app.fetch(new Request(`http://x${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined }), { DB: db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
   return res;
 }
 /** The whole app (reads2 etc.), for checks that the existing read endpoints keep working. */
 async function getFull(path: string, sub: string) {
   const { default: full } = await import('../src/index');
-  return full.fetch(new Request(`http://x${path}`, { headers: { Authorization: `Bearer ${await h.sign(sub)}` } }), { DB: h.db, FIREBASE_PROJECT_ID: PROJECT });
+  return full.fetch(new Request(`http://x${path}`, { headers: { Authorization: `Bearer ${await h.sign(sub)}` } }), { DB: h.db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
 }
 /** A DB whose batch() first runs `hook`, to land a rival write between the pre-checks and the batch. */
 /** A DB whose single-statement writes matching `match` first run `hook` (for routes without a batch). */

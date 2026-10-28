@@ -37,6 +37,18 @@ app.get('/healthz', (c) => c.json({ ok: true }));
 app.route('/v1', billingWebhook as never);
 app.route('/', mediaPublic as never);       // /media/* (public, unguessable keys)
 
+/**
+ * Maintenance gate (fail closed). Production stays shut until the data import and reconcile are done: unless the
+ * var API_OPEN is exactly "1", every /v1 route answers 503 {"error":"maintenance"}. Unset, empty or any other
+ * value means closed. It sits HERE on purpose: after /healthz, the RevenueCat webhook (it has its own fail-closed
+ * 503 when its secret is unset) and public /media, which are mounted above and answer without reaching it, and
+ * before requireAuth and every router below, so no authenticated route can be reached around it.
+ */
+app.use('/v1/*', async (c, next) => {
+  if (c.env.API_OPEN !== '1') return c.json({ error: 'maintenance' }, 503);
+  await next();
+});
+
 app.use('/v1/*', requireAuth);
 
 app.get('/v1/me', async (c) => {

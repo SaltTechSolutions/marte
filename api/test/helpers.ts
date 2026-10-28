@@ -42,14 +42,14 @@ export async function harness() {
       method,
       headers: { 'content-type': 'application/json', ...(sub ? { Authorization: `Bearer ${await sign(sub)}` } : {}) },
       body: body ? JSON.stringify(body) : undefined,
-    }), { DB: db, MEDIA: media as never, FIREBASE_PROJECT_ID: PROJECT });
+    }), { DB: db, MEDIA: media as never, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
   /** Same as send() but takes an already-signed token's SUBJECT as `fb-…` and a raw JSON string body: for the mobile client contract tests. */
   const sendRaw = async (method: string, path: string, tokenOrSub: string, body?: string) =>
     app.fetch(new Request(`http://x${path}`, {
       method,
       headers: { 'content-type': 'application/json', Authorization: `Bearer ${tokenOrSub.startsWith('fb-') ? await sign(tokenOrSub) : tokenOrSub}` },
       body,
-    }), { DB: db, MEDIA: media as never, FIREBASE_PROJECT_ID: PROJECT });
+    }), { DB: db, MEDIA: media as never, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
   /** Adds a user with a Firebase identity and, optionally, an active membership in t1. */
   const addUser = async (id: string, roles: string[] | null = ['member'], extra: { permissions?: string[]; status?: string } = {}) => {
     await run(`INSERT INTO users (id, display_name, created_at) VALUES (?, ?, 1)`, id, id);

@@ -31,7 +31,7 @@ const send = async (method: string, path: string, sub: string | null, body?: obj
     method,
     headers: { 'content-type': 'application/json', ...(sub ? { Authorization: `Bearer ${await h.sign(sub)}` } : {}) },
     body: body ? JSON.stringify(body) : undefined,
-  }), { DB: h.db, FIREBASE_PROJECT_ID: PROJECT });
+  }), { DB: h.db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
 const json = async (r: Response) => (await r.json()) as any;
 
 const klass = (id: string, o: { cap?: number; trainerId?: string; startsAt?: number; name?: string; tenant?: string } = {}) =>

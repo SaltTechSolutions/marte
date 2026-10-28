@@ -200,7 +200,7 @@ describe('DELETE /tenants/:t/members/:id — an admin removes one person from on
 
     // race: between the route's checks and its batch, the caller is demoted
     const racing = { ...h.db, batch: async (l: any[]) => { await h.run(`UPDATE memberships SET roles = '["member"]' WHERE member_id = 'u-admin'`); return h.db.batch(l); } } as unknown as D1Database;
-    const lost = await app.fetch(new Request(`http://x${T1}/members/u-victim`, { method: 'DELETE', headers: { Authorization: `Bearer ${await h.sign('fb-admin')}` } }), { DB: racing, FIREBASE_PROJECT_ID: PROJECT });
+    const lost = await app.fetch(new Request(`http://x${T1}/members/u-victim`, { method: 'DELETE', headers: { Authorization: `Bearer ${await h.sign('fb-admin')}` } }), { DB: racing, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
     expect(lost.status).toBe(403);
     expect(await h.one(`SELECT 1 x FROM memberships WHERE member_id = 'u-victim'`)).not.toBeNull();
     expect(await count(h, 'class_bookings', `member_id = 'u-victim'`)).toBe(1);   // nothing half-done

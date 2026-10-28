@@ -15,7 +15,7 @@ const racing = (h: H, before: () => Promise<unknown>) => {
   const db = { ...h.db, batch: async (l: any[]) => { await before(); return h.db.batch(l); }, prepare: h.db.prepare.bind(h.db) } as unknown as D1Database;
   return async (method: string, path: string, sub: string, body?: object) =>
     app.fetch(new Request(`http://x${path}`, { method, headers: { 'content-type': 'application/json', Authorization: `Bearer ${await h.sign(sub)}` }, body: body ? JSON.stringify(body) : undefined }),
-      { DB: db, FIREBASE_PROJECT_ID: PROJECT });
+      { DB: db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
 };
 
 describe('PATCH details: heightCm null clears', () => {
@@ -174,7 +174,7 @@ describe('PUT packages/:id: partial body when not in use, 409 when the write los
       return realPrepare(q);
     }, batch: h.db.batch.bind(h.db) } as unknown as D1Database;
     const r = await app.fetch(new Request(`http://x${T1}/packages/${id}`, { method: 'PUT', headers: { 'content-type': 'application/json', Authorization: `Bearer ${await h.sign('fb-admin')}` }, body: JSON.stringify({ price: 1 }) }),
-      { DB: db, FIREBASE_PROJECT_ID: PROJECT });
+      { DB: db, API_OPEN: '1', FIREBASE_PROJECT_ID: PROJECT });
     expect(r.status).toBe(409);
     expect(((await r.json()) as any).error).toBe('package in use: only isActive/sortOrder can change');
     expect((await data(h, id)).price).toBe(100_000);

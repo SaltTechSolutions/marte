@@ -53,7 +53,7 @@ describe('media (R2): gym logos only', () => {
     const { default: app } = await import('../src/index');
     const res = await app.fetch(new Request('http://internal/v1/tenants/t1/logo', {
       method: 'POST', headers: { Authorization: `Bearer ${await h.sign('fb-admin')}`, 'content-type': 'application/json' }, body: JSON.stringify({ base64: jpeg() }),
-    }), { DB: h.db, MEDIA: h.media as never, FIREBASE_PROJECT_ID: 'proj-test', PUBLIC_BASE_URL: 'https://api.example.test/' });
+    }), { DB: h.db, MEDIA: h.media as never, API_OPEN: '1', FIREBASE_PROJECT_ID: 'proj-test', PUBLIC_BASE_URL: 'https://api.example.test/' });
     expect(((await res.json()) as { url: string }).url).toMatch(/^https:\/\/api\.example\.test\/media\/tenants\/t1\//);
   });
 });
