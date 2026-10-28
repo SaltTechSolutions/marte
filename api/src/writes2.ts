@@ -338,8 +338,6 @@ writes2.delete('/tenants/:tenantId/calendar-shares/:ownerId/:viewerId', async (c
 });
 /** Same labels as backend/functions/src/exerciseReports.ts. */
 const REPORT_REASON_LABEL: Record<string, string> = { pose: 'Çizim yanlış', muscles: 'Kaslar yanlış', text: 'Anlatım yanlış', other: 'Başka' };
-/** Where exercise reports are mailed unless the EXERCISE_REPORT_TO var says otherwise: the content owner, as in the Firebase trigger. */
-const REPORT_DEFAULT_TO = 'tarkan.cicek@gmail.com';
 const oneLine = (v: string, max: number) => v.replace(/\s+/g, ' ').trim().slice(0, max);
 
 writes2.post('/tenants/:tenantId/exercise-reports', async (c) => {
@@ -379,7 +377,7 @@ writes2.post('/tenants/:tenantId/exercise-reports', async (c) => {
       `INSERT INTO exercise_reports (id, exercise_id, exercise_name, tenant_id, reported_by, reported_by_name, reason, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(id, b.exerciseId, exerciseName, tenantId, userId, who?.name ?? null, b.reason, b.note, Date.now()),
     outboxStatement(c.env.DB, 'email', {
-      to: c.env.EXERCISE_REPORT_TO?.trim() || REPORT_DEFAULT_TO,
+      toEnv: 'EXERCISE_REPORT_TO',   // resolved at delivery; unset = the row fails visibly (retries, ends 'dead'), the report stays saved
       subject: `GymEntra · ${label} — ${reason}`,
       text,
       ...(who?.email ? { replyTo: who.email } : {}),

@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import app from '../src/index';
 import { deliverOutbox } from '../src/jobs/outboxDelivery';
-import { harness, PROJECT } from './helpers';
+import { harness } from './helpers';
 
 vi.setConfig({ testTimeout: 60_000 });
 const T1 = '/v1/tenants/t1';
@@ -25,7 +24,8 @@ describe('exercise report e-mail (Firebase parity)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ kind: 'email', status: 'pending', dedupe_key: `exercise-report:${report.id}` });
     const p = JSON.parse(rows[0].payload);
-    expect(p).toMatchObject({ to: 'tarkan.cicek@gmail.com', subject: 'GymEntra · Back squat — Kaslar yanlış', replyTo: 'ayse@example.test' });
+    expect(p).toMatchObject({ toEnv: 'EXERCISE_REPORT_TO', subject: 'GymEntra · Back squat — Kaslar yanlış', replyTo: 'ayse@example.test' });
+    expect(p.to).toBeUndefined();                     // the address is resolved at delivery, never stored
     expect(p.text).toBe([
       'Hareket:  Back squat (back-squat)',
       'Sorun:    Kaslar yanlış',
@@ -54,33 +54,39 @@ describe('exercise report e-mail (Firebase parity)', () => {
     expect(p.text).toContain('Not girilmedi.');
   });
 
-  it('every report gets its own mail (distinct dedupe keys) and the recipient can be set with EXERCISE_REPORT_TO', async () => {
+  it('every report gets its own mail (distinct dedupe keys), none carries an address', async () => {
     const h = await harness();
     await h.addUser('u-coach', ['trainer']);
-    const post = async (env: Record<string, unknown>) => app.fetch(new Request(`http://x${T1}/exercise-reports`, {
-      method: 'POST', headers: { 'content-type': 'application/json', Authorization: `Bearer ${await h.sign('fb-coach')}` },
-      body: JSON.stringify({ exerciseId: 'x', reason: 'pose', note: 'same text' }),
-    }), { DB: h.db, MEDIA: h.media as never, FIREBASE_PROJECT_ID: PROJECT, API_OPEN: '1', ...env } as never);
-    expect((await post({})).status).toBe(201);
-    expect((await post({ EXERCISE_REPORT_TO: ' content@example.test ' })).status).toBe(201);
-    const rows = (await h.db.prepare(`SELECT payload, dedupe_key FROM outbox ORDER BY created_at, rowid`).all<any>()).results;
+    for (let i = 0; i < 2; i++) expect((await h.send('POST', `${T1}/exercise-reports`, 'fb-coach', { exerciseId: 'x', reason: 'pose', note: 'same text' })).status).toBe(201);
+    const rows = (await h.db.prepare(`SELECT payload, dedupe_key FROM outbox`).all<any>()).results;
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((r) => r.dedupe_key)).size).toBe(2);
-    expect(rows.map((r) => JSON.parse(r.payload).to).sort()).toEqual(['content@example.test', 'tarkan.cicek@gmail.com']);
+    for (const r of rows) expect(JSON.parse(r.payload).to).toBeUndefined();
   });
 
-  it('delivery sends it through Resend from the default sender; without a key the row fails visibly, never silently', async () => {
+  it('delivery resolves the recipient from EXERCISE_REPORT_TO at delivery time; unset fails visibly and the report stays saved', async () => {
     const h = await harness();
     await h.addUser('u-coach', ['trainer']);
     await h.run(`UPDATE memberships SET email = 'coach@example.test' WHERE member_id = 'u-coach'`);
-    await h.send('POST', `${T1}/exercise-reports`, 'fb-coach', { exerciseId: 'x', exerciseName: 'X', reason: 'pose', note: 'n' });
-    const now = Date.now();
-    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x' }, now, 50, vi.fn() as never)).toMatchObject({ failed: 1 });
-    expect((await h.one(`SELECT last_error e FROM outbox`)).e).toMatch(/RESEND_API_KEY/);
+    expect((await h.send('POST', `${T1}/exercise-reports`, 'fb-coach', { exerciseId: 'x', exerciseName: 'X', reason: 'pose', note: 'n' })).status).toBe(201);
     const f = vi.fn(async () => new Response('{}', { status: 200 }));
-    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', RESEND_API_KEY: 'test-key' }, now + 120_000, 50, f as never)).toMatchObject({ sent: 1 });
+    let now = Date.now();
+    // no key
+    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EXERCISE_REPORT_TO: 'owner@example.test' }, now, 50, f as never)).toMatchObject({ failed: 1 });
+    expect((await h.one(`SELECT last_error e FROM outbox`)).e).toMatch(/RESEND_API_KEY/);
+    // key but no recipient (or only whitespace): fails, readable error, nothing sent
+    now += 120_000;
+    for (const to of [undefined, '   ']) {
+      expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', RESEND_API_KEY: 'test-key', EXERCISE_REPORT_TO: to }, now, 50, f as never)).toMatchObject({ failed: 1, sent: 0 });
+      expect((await h.one(`SELECT last_error e FROM outbox`)).e).toBe('EXERCISE_REPORT_TO not configured');
+      now += 4_000_000;
+    }
+    expect(f).not.toHaveBeenCalled();
+    expect((await h.one(`SELECT count(*) c FROM exercise_reports`)).c).toBe(1);
+    // the var is set later: the waiting row is delivered without any data fix
+    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', RESEND_API_KEY: 'test-key', EXERCISE_REPORT_TO: ' owner@example.test ' }, now, 50, f as never)).toMatchObject({ sent: 1 });
     const [url, init] = f.mock.calls[0] as unknown as [string, { body: string }];
     expect(url).toBe('https://api.resend.com/emails');
-    expect(JSON.parse(init.body)).toMatchObject({ from: 'GymEntra <bildirim@salt-tech-apps.com>', to: ['tarkan.cicek@gmail.com'], reply_to: 'coach@example.test', subject: 'GymEntra · X — Çizim yanlış' });
+    expect(JSON.parse(init.body)).toMatchObject({ from: 'GymEntra <bildirim@salt-tech-apps.com>', to: ['owner@example.test'], reply_to: 'coach@example.test', subject: 'GymEntra · X — Çizim yanlış' });
   });
 });
