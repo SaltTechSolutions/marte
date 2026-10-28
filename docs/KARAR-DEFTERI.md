@@ -31,6 +31,20 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-29 — /join "yazıldı mı" kararı batch sonucundan
+
+**Yapıldı.** `POST /tenants/:t/join` artık satırın yazılıp yazılmadığını `requested_at = Date.now()` eşitliğine bakarak değil, aynı batch'teki upsert'in `meta.changes` değerinden çıkarır (0 = reddedildi, 409; sıfırdan büyük = eklendi/sıfırlandı, 201). Aynı milisaniyedeki ikinci katılım artık 409 döner; admin push'u (`join-request:…`, `changes() = 1` kapılı) gerçek istek başına bir kez kalır, "tekrar" metni ve left/rejected sonrası yeniden katılım (201) değişmedi. Ek olarak üç okumaya belirleyici eşitlik bozucu eklendi: duyurular (`created_at DESC, id DESC`), üye ve yönetici program listeleri (`updated_at DESC, id DESC`).
+
+**Karar.** Koşul `> 0`, `=== 1` değil: gerçek D1 `meta.changes` değerine tetikleyicinin kendi UPDATE'ini de sayar (`short_code` tetikleyicisi yüzünden ekleme 2 döner), `node:sqlite` tabanlı test taklidi saymaz. Reddedilen upsert iki motorda da 0 döner. Karar iki motorda da koşulur (`REAL_D1=1`), yalnız taklitte değil.
+
+**Bilerek yapılmadı.** `ptReminders.ts:45` ve `membership.ts` onay push'undaki aynı zaman damgası kalıbına dokunulmadı: yan etkileri `changes() = 1` ile korunuyor, yalnız bir sayaç fazla sayabilir. `reads3.ts:63` (`created_at DESC, id`) zaten belirleyici ama id rastgele; sırayı değiştirmek davranış kararı, ayrı iş. Sayfalama ve limitlere dokunulmadı.
+
+**Açık.** Önceki kaydın `/join` aynı-ms maddesi bununla kapandı. Üretim kesimi öncesi gerçek (staging) D1'de `meta.changes` davranışı Miniflare'den başka görülmedi ama staging'de ayrıca denenmedi.
+
+**Nerede.** `api/src/membership.ts`, `api/src/reads2.ts`, `api/src/reads4.ts`, `api/test/notifyParity.test.ts`, `api/test/tieOrder.test.ts`.
+
+---
+
 ## 2026-10-28 — Yönetici derin bağlantısı ve aralıklı test
 
 **Yapıldı.** (1) `gymentramobile://admin/staff` soğuk açılışta "Salon yönetici oturumu gerekli" gösteriyordu. Neden: derin bağlantı ve bildirim dokunuşu açılış ekranını (`app/index.tsx`) atlayıp ekranı doğrudan açar; oturum ve üyelik çözülene kadar `activeMembership` null'dır ve 31 `AccessGuard` kullanımı bunu "erişim yok" diye gösteriyordu. Seçili rol (Üye/Yönetici) nedeni değil: `canManageGym` yalnız `roles` ve `status`'a bakar, `activeRole`'e bakmaz. Güvenlik açığı değil, kapı baştan beri kapalı kalıyordu; sorun, yüklenmenin erişim reddi gibi görünmesiydi. Düzeltme tek yerde: saf `isMembershipPending` (`src/data/membership.ts`, tablo testli), `AccessGuard` çözülme sürerken kilit yerine yükleniyor görünümü basar. Ekranlara dokunulmadı. (2) Aralıklı test: 2026-10-21'deki düşen test **adlandırılamadı** (kanıt tutulmamıştı). Varsayılan sırada 59 koşuda hiç düşmedi; karışık sırada (`--sequence.shuffle`, 60 tohumun 4'ü: 2, 8, 29, 57) iki test düştü ve iki ayrı kök neden bulundu, ikisi de **aynı milisaniye çakışması** (tohumlar yalnız yaklaşık yeniden üretiliyor, zamanlamaya bağlı; `membershipRepo` nedeni kod okumasından ve zamanlama gözleminden çıkarıldı, `packageChangeRepo` nedeni `Date.now` dondurularak gösterildi): `membershipRepo` "ikinci katılım reddedilir" testi (Worker `/join` "satırı ben mi yazdım" kararını `requested_at = Date.now()` ile verir, ilk ve ikinci istek aynı ms'ye düşerse ikincisi yazılmış sayılır) ve `packageChangeRepo` "bekleyen liste" testi (iki teklif aynı ms'de, "en yeni önce" sırası belirsiz; `Date.now` donduğunda aynı iddia deterministik düşer). İki teste de 5 ms bekleme eklendi (aynı dosyadaki mevcut örneğin biçimiyle); beklenen değer değişmedi, `retry`/`skip` yok. Sonuç: aynı 60 tohum 60/60 yeşil, varsayılan sırada ardışık 30/30, karışık sırada 20/20, API paketi eşzamanlı koşarken 10/10. Ayrıca ortak kurulumda (`testWorld.startWorld`) her teste `resetApiState()` + `resetSharedWatches()` eklendi: API depoları modül düzeyinde önbellek tutuyor ve test bunları bir öncekinden devralıyordu. Bu kötü hijyendi ama gözlenen iki düşüşün nedeni bu çıkmadı (kurulum tek başına seed 2'yi düzeltmedi).

@@ -64,10 +64,11 @@ membership.post('/tenants/:tenantId/join', async (c) => {
       body: prior ? `${who} salona tekrar katılmak istiyor.` : `${who} salona katılmak istiyor.`, data: { screen: 'admin/members' },
     }, `join-request:${tenantId}:${uid}:${now}`));
   }
-  await c.env.DB.batch(stmts);
-  // Written iff the row now carries the timestamp this very statement stamped (insert, or reset of a left/rejected row).
-  const written = await c.env.DB.prepare(`SELECT 1 AS x FROM memberships WHERE tenant_id = ? AND member_id = ? AND status = 'pending' AND requested_at = ?`)
-    .bind(tenantId, uid, now).first();
+  const results = await c.env.DB.batch(stmts);
+  // Written iff the upsert changed a row (insert, or reset of a left/rejected row); a refused DO UPDATE reports 0.
+  // "> 0", not "=== 1": real D1 adds the short_code trigger's own UPDATE to meta.changes (2 on an insert), node:sqlite does not.
+  // Deliberately not "requested_at = now": two joins in the same millisecond would both match that.
+  const written = (results[0]?.meta?.changes ?? 0) > 0;
   if (!written) {
     const row = await c.env.DB.prepare(`SELECT status FROM memberships WHERE tenant_id = ? AND member_id = ?`).bind(tenantId, uid).first<{ status: string }>();
     return c.json({ error: 'already a member', status: row?.status }, 409);

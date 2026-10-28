@@ -44,6 +44,26 @@ describe('join request', () => {
   });
 });
 
+describe('join request in one millisecond', () => {
+  it('two joins that share a Date.now() value: one 201, one 409, one admin push', async () => {
+    const h = await world();
+    // Frozen clock: both requests stamp the very same requested_at, the case a timestamp-equality check cannot tell apart.
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(1_900_000_000_000);
+    try {
+      expect((await h.send('POST', `${T1}/join`, 'fb-new')).status).toBe(201);
+      const second = await h.send('POST', `${T1}/join`, 'fb-new');
+      expect(second.status).toBe(409);
+      expect(await json(second)).toMatchObject({ error: 'already a member', status: 'pending' });
+    } finally { spy.mockRestore(); }
+    expect(await pushes(h)).toHaveLength(1);
+    // a rejected member re-joining in the same frozen ms is still a real request
+    await h.run(`UPDATE memberships SET status = 'rejected' WHERE member_id = 'u-new'`);
+    const spy2 = vi.spyOn(Date, 'now').mockReturnValue(1_900_000_000_001);
+    try { expect((await h.send('POST', `${T1}/join`, 'fb-new')).status).toBe(201); } finally { spy2.mockRestore(); }
+    expect(await pushes(h)).toHaveLength(2);
+  });
+});
+
 describe('membership approved', () => {
   it('tells the member (account category, card screen) and only on a real activation', async () => {
     const h = await world();

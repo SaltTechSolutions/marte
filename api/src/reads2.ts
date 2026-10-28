@@ -66,7 +66,7 @@ const memberLists: Array<{ path: string; who: Who; sql: string; map: (r: any) =>
     sql: `SELECT ${MEMBER_PACKAGE_COLS} FROM member_packages WHERE tenant_id = ? AND member_id = ? ORDER BY ends_at DESC LIMIT ?`,
     map: memberPackageDto },
   { path: 'programs', who: 'self+staff+guardian',
-    sql: `SELECT id, member_id, data, updated_at FROM programs WHERE tenant_id = ? AND member_id = ? ORDER BY updated_at DESC LIMIT ?`,
+    sql: `SELECT id, member_id, data, updated_at FROM programs WHERE tenant_id = ? AND member_id = ? ORDER BY updated_at DESC, id DESC LIMIT ?`,
     map: (r) => ({ ...json(r.data), id: r.id, memberId: r.member_id, updatedAt: r.updated_at }) },
   { path: 'workout-logs', who: 'self+staff+guardian',
     sql: `SELECT id, member_id, data, logged_at FROM workout_logs WHERE tenant_id = ? AND member_id = ? ORDER BY logged_at DESC LIMIT ?`,
@@ -186,7 +186,7 @@ reads2.get('/tenants/:tenantId/announcements', async (c) => {
   const all = c.req.query('all') === '1' && roles.includes('admin');
   const { results } = await c.env.DB.prepare(
     `SELECT id, title, body, created_by_name, created_at, expires_at FROM announcements
-     WHERE tenant_id = ?${all ? '' : ' AND (expires_at IS NULL OR expires_at > ?)'} ORDER BY created_at DESC LIMIT ${all ? 200 : 50}`,
+     WHERE tenant_id = ?${all ? '' : ' AND (expires_at IS NULL OR expires_at > ?)'} ORDER BY created_at DESC, id DESC LIMIT ${all ? 200 : 50}`,
   ).bind(...[c.req.param('tenantId'), ...(all ? [] : [Date.now()])]).all<any>();
   return c.json(results.map((r) => ({ id: r.id, title: r.title, body: r.body, createdByName: r.created_by_name, createdAt: r.created_at, expiresAt: r.expires_at })));
 });

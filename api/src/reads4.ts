@@ -30,7 +30,7 @@ reads4.get('/tenants/:tenantId/programs', async (c) => {
   if (!isStaff(await rolesIn(c.env.DB, tenantId, c.get('userId')))) return c.json({ error: 'forbidden' }, 403);
   const status = c.req.query('status');
   const { results } = await c.env.DB.prepare(
-    `SELECT id, member_id, data, updated_at FROM programs WHERE tenant_id = ?${status ? ` AND json_extract(data, '$.status') = ?` : ''} ORDER BY updated_at DESC LIMIT ?`,
+    `SELECT id, member_id, data, updated_at FROM programs WHERE tenant_id = ?${status ? ` AND json_extract(data, '$.status') = ?` : ''} ORDER BY updated_at DESC, id DESC LIMIT ?`,
   ).bind(...[tenantId, ...(status ? [status] : []), page(c)]).all<any>();
   return c.json(results.map((r) => ({ ...json(r.data), id: r.id, memberId: r.member_id, updatedAt: r.updated_at })));
 });
