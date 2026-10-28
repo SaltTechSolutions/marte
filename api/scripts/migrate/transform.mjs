@@ -223,7 +223,13 @@ async function main() {
   const db = values.db ?? '<DB_NAME>';
   const envFlag = values.env ? ` --env ${shellQuote(values.env)}` : '';
   console.log('\nCommands to run BY HAND, staging first (nothing here runs them):');
-  console.log(`  wrangler d1 execute ${db}${envFlag} --remote --file ${shellQuote(join(out, 'reset-STAGING-ONLY.sql'))}   # staging only, optional`);
+  // The reset file empties every table the tool fills. Its execute line is printed ONLY for a database whose name says
+  // staging, so a copy-paste from a production run (or a run without --db) can never wipe the wrong database.
+  if (/staging/i.test(values.db ?? '')) {
+    console.log(`  wrangler d1 execute ${db}${envFlag} --remote --file ${shellQuote(join(out, 'reset-STAGING-ONLY.sql'))}   # staging only, optional`);
+  } else {
+    console.log('  (no reset command: it is printed only when --db names a staging database)');
+  }
   for (const f of files) console.log(`  wrangler d1 execute ${db}${envFlag} --remote --file ${shellQuote(join(out, f))}`);
 }
 

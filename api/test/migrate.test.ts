@@ -143,6 +143,24 @@ describe('migration tool: applying the output', () => {
     expect((await one(db, 'SELECT count(*) c FROM memberships')).c).toBe(11);
   });
 
+  it('the reset command is printed only for a database named staging, never for production or an unnamed one', () => {
+    const cli = (...extra: string[]) => {
+      const out = mkdtempSync(join(tmpdir(), 'migrate-'));
+      const p = spawnSync(process.execPath, ['scripts/migrate/transform.mjs', '--in', FIX, '--out', out, ...extra], { encoding: 'utf8' });
+      expect(p.status, p.stderr).toBe(0);
+      // the file is always written (its name and header warn); what matters is whether a command to run it is offered
+      expect(readdirSync(out)).toContain('reset-STAGING-ONLY.sql');
+      return p.stdout;
+    };
+    const resetLine = /wrangler d1 execute .*reset-STAGING-ONLY\.sql/;
+    expect(cli('--db', 'gymentra-staging', '--env', 'staging')).toMatch(resetLine);
+    const prod = cli('--db', 'gymentra-prod', '--env', 'production');
+    expect(prod).not.toMatch(resetLine);
+    expect(prod).toMatch(/wrangler d1 execute gymentra-prod --env 'production' --remote --file .*data-0001\.sql/);   // data files still listed
+    expect(cli()).not.toMatch(resetLine);                                   // no --db at all
+    expect(cli('--db', 'gymentra-prod')).not.toMatch(resetLine);
+  });
+
   it('no Firebase uid survives anywhere except identities.subject', () => {
     const r = run();
     expect(r.report.warningCounts['uid-leak']).toBeUndefined();
