@@ -35,11 +35,11 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 **Yapıldı.** `POST /tenants/:t/join` artık satırın yazılıp yazılmadığını `requested_at = Date.now()` eşitliğine bakarak değil, aynı batch'teki upsert'in `meta.changes` değerinden çıkarır (0 = reddedildi, 409; sıfırdan büyük = eklendi/sıfırlandı, 201). Aynı milisaniyedeki ikinci katılım artık 409 döner; admin push'u (`join-request:…`, `changes() = 1` kapılı) gerçek istek başına bir kez kalır, "tekrar" metni ve left/rejected sonrası yeniden katılım (201) değişmedi. Ek olarak üç okumaya belirleyici eşitlik bozucu eklendi: duyurular (`created_at DESC, id DESC`), üye ve yönetici program listeleri (`updated_at DESC, id DESC`).
 
-**Karar.** Koşul `> 0`, `=== 1` değil: gerçek D1 `meta.changes` değerine tetikleyicinin kendi UPDATE'ini de sayar (`short_code` tetikleyicisi yüzünden ekleme 2 döner), `node:sqlite` tabanlı test taklidi saymaz. Reddedilen upsert iki motorda da 0 döner. Karar iki motorda da koşulur (`REAL_D1=1`), yalnız taklitte değil.
+**Karar.** Koşul `> 0`, `=== 1` değil: Miniflare (workerd) D1 `meta.changes` değerine tetikleyicinin kendi UPDATE'ini de sayar (`short_code` tetikleyicisi yüzünden ekleme 2 döner), `node:sqlite` tabanlı test taklidi saymaz. Reddedilen upsert ikisinde de 0 döner. Testler iki motorda da koşulur (`REAL_D1=1` = Miniflare), yalnız taklitte değil.
 
 **Bilerek yapılmadı.** `ptReminders.ts:45` ve `membership.ts` onay push'undaki aynı zaman damgası kalıbına dokunulmadı: yan etkileri `changes() = 1` ile korunuyor, yalnız bir sayaç fazla sayabilir. `reads3.ts:63` (`created_at DESC, id`) zaten belirleyici ama id rastgele; sırayı değiştirmek davranış kararı, ayrı iş. Sayfalama ve limitlere dokunulmadı.
 
-**Açık.** Önceki kaydın `/join` aynı-ms maddesi bununla kapandı. Üretim kesimi öncesi gerçek (staging) D1'de `meta.changes` davranışı Miniflare'den başka görülmedi ama staging'de ayrıca denenmedi.
+**Açık.** Önceki kaydın `/join` aynı-ms maddesi kapandı. Kalanlar: (1) staging D1'de `meta.changes` davranışı henüz ölçülmedi (yalnız Miniflare'de görüldü); (2) `prior` okuması batch'ten önce yapılır, eşzamanlı iki ilk katılımda yanlış "tekrar" metni seçebilir (çift push olmaz); (3) `ptReminders.ts:45` ve `reads3.ts:63` bilerek dokunulmadı.
 
 **Nerede.** `api/src/membership.ts`, `api/src/reads2.ts`, `api/src/reads4.ts`, `api/test/notifyParity.test.ts`, `api/test/tieOrder.test.ts`.
 

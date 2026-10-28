@@ -56,7 +56,7 @@ describe('join request in one millisecond', () => {
       expect(await json(second)).toMatchObject({ error: 'already a member', status: 'pending' });
     } finally { spy.mockRestore(); }
     expect(await pushes(h)).toHaveLength(1);
-    // a rejected member re-joining in the same frozen ms is still a real request
+    // a rejected member re-joining in a later ms is still a real request (the ms must differ: it is part of the push dedupe key)
     await h.run(`UPDATE memberships SET status = 'rejected' WHERE member_id = 'u-new'`);
     const spy2 = vi.spyOn(Date, 'now').mockReturnValue(1_900_000_000_001);
     try { expect((await h.send('POST', `${T1}/join`, 'fb-new')).status).toBe(201); } finally { spy2.mockRestore(); }

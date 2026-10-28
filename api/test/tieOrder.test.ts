@@ -4,7 +4,7 @@ import { harness } from './helpers';
 
 vi.setConfig({ testTimeout: 60_000 });
 
-/** Rows that share a timestamp must come back in a fixed order (newest id first), not in whatever order the planner picks. */
+/** Rows that share a timestamp must come back in a fixed order (highest id first), not in whatever order the planner picks. */
 const ids = async (r: Response) => ((await r.json()) as any[]).map((x) => x.id);
 
 describe('same-timestamp ordering', () => {

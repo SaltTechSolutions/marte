@@ -66,7 +66,7 @@ membership.post('/tenants/:tenantId/join', async (c) => {
   }
   const results = await c.env.DB.batch(stmts);
   // Written iff the upsert changed a row (insert, or reset of a left/rejected row); a refused DO UPDATE reports 0.
-  // "> 0", not "=== 1": real D1 adds the short_code trigger's own UPDATE to meta.changes (2 on an insert), node:sqlite does not.
+  // "> 0", not "=== 1": Miniflare (workerd) D1 adds the short_code trigger's own UPDATE to meta.changes (2 on an insert), node:sqlite does not.
   // Deliberately not "requested_at = now": two joins in the same millisecond would both match that.
   const written = (results[0]?.meta?.changes ?? 0) > 0;
   if (!written) {
