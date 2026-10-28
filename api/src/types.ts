@@ -10,6 +10,8 @@ export type Env = {
   /** Resend API key (secret). Without it e-mail outbox rows retry, then die: never silently dropped. */
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  /** Recipient of exercise-report e-mails (var). Unset = the content owner's address, as the Firebase trigger did. */
+  EXERCISE_REPORT_TO?: string;
   /** RevenueCat webhook shared secret (secret). Unset = webhook answers 503 (fail closed). */
   REVENUECAT_WEBHOOK_SECRET?: string;
 };

@@ -336,16 +336,54 @@ writes2.delete('/tenants/:tenantId/calendar-shares/:ownerId/:viewerId', async (c
     .bind(c.req.param('tenantId'), c.req.param('ownerId'), c.req.param('viewerId')).run();
   return c.json({ ok: true });
 });
+/** Same labels as backend/functions/src/exerciseReports.ts. */
+const REPORT_REASON_LABEL: Record<string, string> = { pose: 'Çizim yanlış', muscles: 'Kaslar yanlış', text: 'Anlatım yanlış', other: 'Başka' };
+/** Where exercise reports are mailed unless the EXERCISE_REPORT_TO var says otherwise: the content owner, as in the Firebase trigger. */
+const REPORT_DEFAULT_TO = 'tarkan.cicek@gmail.com';
+const oneLine = (v: string, max: number) => v.replace(/\s+/g, ' ').trim().slice(0, max);
+
 writes2.post('/tenants/:tenantId/exercise-reports', async (c) => {
   if (!isStaff(await rolesOf(c))) return forbidden(c);
   const b = await body(c);
   if (typeof b.exerciseId !== 'string' || !b.exerciseId || b.exerciseId.length > 64 || !['pose', 'muscles', 'text', 'other'].includes(b.reason as string)
       || typeof b.note !== 'string' || b.note.length > 500) return bad(c, 'bad report');
-  const u = await c.env.DB.prepare(`SELECT display_name FROM users WHERE id = ?`).bind(c.get('userId')).first<any>();
-  await c.env.DB.prepare(
-    `INSERT INTO exercise_reports (id, exercise_id, exercise_name, tenant_id, reported_by, reported_by_name, reason, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  ).bind(newId('er'), b.exerciseId, typeof b.exerciseName === 'string' ? b.exerciseName : null, c.req.param('tenantId'), c.get('userId'),
-    u?.display_name ?? null, b.reason, b.note, Date.now()).run();
-  // The e-mail to the content owner is a trigger in Firebase; here it becomes an outbox row in F3.
+  const tenantId = c.req.param('tenantId')!;
+  const userId = c.get('userId');
+  // Reporter name and address plus the gym's name make the mail answerable ("which frame exactly?").
+  const who = await c.env.DB.prepare(
+    `SELECT u.display_name AS name, COALESCE(m.email, u.email) AS email, t.name AS gym
+       FROM users u LEFT JOIN memberships m ON m.tenant_id = ? AND m.member_id = u.id LEFT JOIN tenants t ON t.id = ?
+      WHERE u.id = ?`,
+  ).bind(tenantId, tenantId, userId).first<{ name: string | null; email: string | null; gym: string | null }>();
+  const id = newId('er');
+  const exerciseName = typeof b.exerciseName === 'string' && b.exerciseName.trim() ? b.exerciseName : null;
+  const reason = REPORT_REASON_LABEL[b.reason as string];
+  const label = oneLine(exerciseName ?? b.exerciseId, 120);
+  const note = b.note.trim();
+  const text = [
+    `Hareket:  ${label} (${b.exerciseId})`,
+    `Sorun:    ${reason}`,
+    `Bildiren: ${[who?.name, who?.email].filter(Boolean).join(' · ') || String(userId)}`,
+    `Salon:    ${who?.gym ? `${who.gym} (${tenantId})` : tenantId}`,
+    '',
+    note ? `Not:\n${note}` : 'Not girilmedi.',
+    '',
+    `Kayıt: exercise_reports/${id}`,
+    'Düzeltme: backend/scripts/build_exercise_library.py → python3 scripts/build_exercise_library.py',
+  ].join('\n');
+  // The report and its e-mail are one batch: either both exist or neither. The outbox row (not this request)
+  // talks to Resend, so a provider outage never fails the report; a missing key or repeated failure ends as a
+  // visible 'dead' outbox row instead of a lost mail. Answering the mail reaches the reporter (replyTo).
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      `INSERT INTO exercise_reports (id, exercise_id, exercise_name, tenant_id, reported_by, reported_by_name, reason, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(id, b.exerciseId, exerciseName, tenantId, userId, who?.name ?? null, b.reason, b.note, Date.now()),
+    outboxStatement(c.env.DB, 'email', {
+      to: c.env.EXERCISE_REPORT_TO?.trim() || REPORT_DEFAULT_TO,
+      subject: `GymEntra · ${label} — ${reason}`,
+      text,
+      ...(who?.email ? { replyTo: who.email } : {}),
+    }, `exercise-report:${id}`),
+  ]);
   return c.json({ ok: true }, 201);
 });
