@@ -19,6 +19,25 @@ temizliği işine başlamadan önce oku.
   web'de olmadığı için düşüyor. `--non-interactive` ise `--environment`
   istiyor.
 
+- **`eas update` eas.json'daki `env`'i okumaz.** *(EAS belgesi; denenmedi.)*
+  `production` profilindeki `EXPO_PUBLIC_BACKEND=api` ve
+  `EXPO_PUBLIC_API_URL` yalnızca `eas build` içindir. `EXPO_PUBLIC_*` JS
+  paketine derleme anında gömülür; `eas update` ise o değerleri çalıştığı
+  kabuktan, yerel `.env`'den ve `--environment` ile seçilen EAS ortamının
+  değişkenlerinden alır (temiz yol: `--environment production` + değişkenleri
+  EAS `production` ortamına eklemek). Bu, yalnızca EAS'ta derlenmiş binary'ler
+  için geçerli: yukarıdaki madde, OTA'nın yerelde derlenmiş binary'ye
+  ulaşmadığını söylüyor. Bu makinenin `.env`'inde
+  `EXPO_PUBLIC_BACKEND` yok, yani değişken verilmeden gönderilen bir OTA
+  **Firebase kipinde** paketlenir ve api kipindeki binary'nin arka ucunu
+  sessizce geri çevirir. Api sürümü mağazaya çıktıktan sonra her
+  `eas update` öncesi ikisini de kabukta ver
+  (`EXPO_PUBLIC_BACKEND=api EXPO_PUBLIC_API_URL=https://api.gymentra.salt-tech-apps.com`)
+  ya da değerleri EAS `production` ortamına ekle (dış servis yazımı, onay
+  ister). OTA sonrası paketin üretim adresini taşıdığını doğrula. Parmak
+  izinin bu değerle değişip değişmediği doğrulanmadı
+  (`npx expo-updates fingerprint:generate`, iki ortamda karşılaştır).
+
 ## Yerel build
 
 **Build önce yerelde alınır.** *(Karar: kullanıcı, 6 Eylül 2026.)* EAS'ın
