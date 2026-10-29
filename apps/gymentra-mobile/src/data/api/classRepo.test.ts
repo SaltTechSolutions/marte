@@ -334,8 +334,8 @@ describe('series', () => {
     expect(out.seriesId).toBeTruthy();
     const rows = (await w.h.db.prepare(`SELECT data, starts_at FROM classes WHERE json_extract(data,'$.seriesId') = ? ORDER BY starts_at`).bind(out.seriesId).all<any>()).results;
     expect(rows).toHaveLength(3);
-    const d1 = new Date(start); d1.setDate(d1.getDate() + 7);
-    expect(rows[1].starts_at).toBe(d1.getTime());
+    // The Worker steps `everyDays: 7` as exact 24h days (the gym zone has no DST); a device-zone calendar step would drift an hour across a DST change.
+    expect(rows[1].starts_at).toBe(start.getTime() + 7 * DAY);
     expect(JSON.parse(rows[0].data)).toMatchObject({ name: 'Zumba', trainerId: 'u-trn', capacity: 20 });
   });
 

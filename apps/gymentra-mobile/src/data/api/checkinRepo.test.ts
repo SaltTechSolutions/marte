@@ -43,11 +43,18 @@ const ptCredit = (member: string, source: string, o: { total?: number; used?: nu
      VALUES (?, 't1', ?, 'ptLesson', 'purchase', ?, ?, ?, 1, ?, 'active')`,
     `cr${++n}`, member, source, o.total ?? 5, o.used ?? 0, o.expires ?? Date.now() + 20 * DAY,
   );
+// The Worker decides "today" in the gym's time zone (api/src/checkins.ts -> tenantTimeFrom, default Europe/Istanbul), so a
+// "session today" fixture must be built from that day, not from the test process's zone. Istanbul has no DST (UTC+3).
+const gymNoonToday = () => {
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(Date.now()).split('-').map(Number);
+  return Date.UTC(y, m - 1, d, 9, 0, 0, 0); // 12:00 in Istanbul
+};
 const sessionToday = (member: string, status = 'scheduled') => {
-  const noon = new Date(); noon.setHours(12, 0, 0, 0);
+  const noon = gymNoonToday();
   return w.h.run(
     `INSERT INTO pt_sessions (id, tenant_id, trainer_id, member_id, starts_at, duration_minutes, status, created_at, updated_at) VALUES (?, 't1', 'u-admin', ?, ?, 60, ?, 1, 1)`,
-    `ps${++n}`, member, noon.getTime(), status,
+    `ps${++n}`, member, noon, status,
   );
 };
 const visits = async (member = 'u-mem') =>
