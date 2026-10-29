@@ -370,7 +370,7 @@ writes2.post('/tenants/:tenantId/exercise-reports', async (c) => {
     'Düzeltme: backend/scripts/build_exercise_library.py → python3 scripts/build_exercise_library.py',
   ].join('\n');
   // The report and its e-mail are one batch: either both exist or neither. The outbox row (not this request)
-  // talks to Resend, so a provider outage never fails the report; a missing key or repeated failure ends as a
+  // talks to Cloudflare Email Service, so a provider outage never fails the report; a missing binding or repeated failure ends as a
   // visible 'dead' outbox row instead of a lost mail. Answering the mail reaches the reporter (replyTo).
   await c.env.DB.batch([
     c.env.DB.prepare(

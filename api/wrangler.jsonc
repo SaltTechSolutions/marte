@@ -3,7 +3,7 @@
   // is REPLACE_ON_CREATE, so a bare `wrangler deploy` (no --env) should fail (Cloudflare rejects the
   // placeholder id; dry-run does not check this) and in no case overwrites the production Worker.
   // Deploy only with an explicit `--env staging` or `--env production`.
-  // Not in this file by design: secrets (RESEND_API_KEY, REVENUECAT_WEBHOOK_SECRET) and the exercise-report
+  // Not in this file by design: secrets (REVENUECAT_WEBHOOK_SECRET) and the exercise-report
   // recipient EXERCISE_REPORT_TO: set those per environment as secrets (`wrangler secret put`); a plain
   // dashboard variable is reset by the next deploy because this file defines vars.
   // Migrations always run before the Worker.
@@ -34,7 +34,11 @@
       "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gymentra-media-prod", "jurisdiction": "eu" }],
       "d1_databases": [
         { "binding": "DB", "database_name": "gymentra-prod", "database_id": "006ab9a2-b2f6-453b-8254-faaf59fcf581", "migrations_dir": "migrations" }
-      ]
+      ],
+      // Cloudflare Email Service (Beta). Not inherited between envs, so staging lists its own. No
+      // allowed_sender_addresses/recipient restriction: the sender is fixed in our own code (a restriction only
+      // adds a way to break a send we cannot test here) and the recipient is a secret (EXERCISE_REPORT_TO) resolved at delivery.
+      "send_email": [{ "name": "EMAIL" }]
     },
     "staging": {
       "name": "gymentra-api-staging",
@@ -45,7 +49,8 @@
       "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gymentra-media-staging" }],
       "d1_databases": [
         { "binding": "DB", "database_name": "gymentra-staging", "database_id": "8ccc4262-104a-4064-9081-0a5810b519f1", "migrations_dir": "migrations" }
-      ]
+      ],
+      "send_email": [{ "name": "EMAIL" }]
     }
   }
 }

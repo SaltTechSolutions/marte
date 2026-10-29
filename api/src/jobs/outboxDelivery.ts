@@ -112,19 +112,42 @@ async function sendPush(db: D1Database, p: any, doFetch: Fetch): Promise<void> {
   }
 }
 
-async function sendEmail(env: Omit<Env, 'MEDIA'>, p: any, doFetch: Fetch): Promise<void> {
-  if (!env.RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+/** Default sender; the domain must be onboarded for Cloudflare Email Sending (docs/CUTOVER.md §5). */
+const DEFAULT_FROM = 'GymEntra <bildirim@salt-tech-apps.com>';
+
+/** `Name <addr@host>` or a bare address -> the shape the send binding takes. */
+function parseSender(from: string): string | { email: string; name: string } {
+  const m = /^\s*(.*?)\s*<([^<>]+)>\s*$/.exec(from);
+  return m && m[1] ? { email: m[2].trim(), name: m[1].replace(/^"|"$/g, '') } : m ? m[2].trim() : from.trim();
+}
+
+/**
+ * E-mail delivery through the Cloudflare Email Service `send_email` binding (`env.EMAIL`): no HTTP call, no API
+ * key. A missing binding or a thrown send error fails the row (backoff, then 'dead'), never a silent drop.
+ * The thrown error carries a `code`; the row stores `email <code>: <message>` with any address masked, so a
+ * recipient never lands in `last_error`.
+ */
+async function sendEmail(env: Omit<Env, 'MEDIA'>, p: any): Promise<void> {
+  if (!env.EMAIL) throw new Error('EMAIL binding not configured');
   // A recipient is either an address in the payload or the NAME of a Worker var, resolved now (delivery time), so
   // no address has to live in the repo or in the row and a late-set var delivers rows that were waiting.
   let to: string | undefined = p.to;
   if (!to && p.toEnv === 'EXERCISE_REPORT_TO') to = env.EXERCISE_REPORT_TO?.trim();
   if (!to) throw new Error(`${p.toEnv ?? 'recipient'} not configured`);
-  const res = await doFetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env.EMAIL_FROM ?? 'GymEntra <bildirim@salt-tech-apps.com>', to: [to], subject: p.subject, text: p.text, ...(p.replyTo ? { reply_to: p.replyTo } : {}) }),
-  });
-  if (!res.ok) throw new Error(`resend ${res.status}`);
+  try {
+    await env.EMAIL.send({
+      from: parseSender(env.EMAIL_FROM || DEFAULT_FROM),
+      to,
+      subject: p.subject,
+      text: p.text,
+      ...(p.replyTo ? { replyTo: p.replyTo } : {}),
+    });
+  } catch (e) {
+    const err = e as { code?: unknown; message?: unknown };
+    const code = typeof err.code === 'string' || typeof err.code === 'number' ? ` ${err.code}` : '';
+    const msg = String(err.message ?? 'send failed').replace(/[^\s<>"',;]+@[^\s<>"',;]+/g, '[address]');
+    throw new Error(`email${code}: ${msg}`);
+  }
 }
 
 /**
@@ -145,7 +168,7 @@ export async function deliverOutbox(env: Omit<Env, 'MEDIA'>, now: number, limit 
     try {
       const payload = JSON.parse(row.payload);
       if (row.kind === 'push') await sendPush(db, payload, doFetch);
-      else if (row.kind === 'email') await sendEmail(env, payload, doFetch);
+      else if (row.kind === 'email') await sendEmail(env, payload);
       else throw new Error(`unknown kind ${row.kind}`);
       await db.prepare(`UPDATE outbox SET status = 'sent', last_error = NULL WHERE id = ?`).bind(row.id).run();
       sent++;

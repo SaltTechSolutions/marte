@@ -40,7 +40,7 @@ describe('outbox delivery', () => {
     expect(await h.one(`SELECT 1 x FROM push_tokens`)).toBeNull();
   });
 
-  it('failures back off, then die after 8 attempts; a leased row is not claimed twice; missing e-mail key fails closed', async () => {
+  it('failures back off, then die after 8 attempts; a leased row is not claimed twice; missing e-mail binding fails closed', async () => {
     const h = await harness();
     await h.run(`INSERT INTO push_tokens (token, user_id, tenant_id, updated_at) VALUES ('ExponentPushToken[a]','u-mem','t1',1)`);
     await outboxStatement(h.db, 'push', { userIds: ['u-mem'], title: 'T', body: 'B', category: 'bookings' }).run();
@@ -53,7 +53,7 @@ describe('outbox delivery', () => {
     expect((await h.one(`SELECT status s, attempts a FROM outbox`))).toEqual({ s: 'dead', a: 8 });
     await outboxStatement(h.db, 'email', { to: 'a@b.co', subject: 's', text: 't' }).run();
     expect(await deliverOutbox(env, now + 1, 50, bad as never)).toMatchObject({ failed: 1 });
-    expect((await h.one(`SELECT last_error e FROM outbox WHERE kind = 'email'`)).e).toMatch(/RESEND_API_KEY/);
+    expect((await h.one(`SELECT last_error e FROM outbox WHERE kind = 'email'`)).e).toBe('EMAIL binding not configured');
   });
 });
 

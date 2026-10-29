@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { deliverOutbox } from '../src/jobs/outboxDelivery';
+import { outboxStatement } from '../src/outbox';
 import { harness } from './helpers';
 
 vi.setConfig({ testTimeout: 60_000 });
@@ -69,24 +70,64 @@ describe('exercise report e-mail (Firebase parity)', () => {
     await h.addUser('u-coach', ['trainer']);
     await h.run(`UPDATE memberships SET email = 'coach@example.test' WHERE member_id = 'u-coach'`);
     expect((await h.send('POST', `${T1}/exercise-reports`, 'fb-coach', { exerciseId: 'x', exerciseName: 'X', reason: 'pose', note: 'n' })).status).toBe(201);
-    const f = vi.fn(async () => new Response('{}', { status: 200 }));
+    const send = vi.fn(async (_m: unknown) => ({ messageId: 'm1' }));
+    const EMAIL = { send } as unknown as SendEmail;
     let now = Date.now();
-    // no key
-    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EXERCISE_REPORT_TO: 'owner@example.test' }, now, 50, f as never)).toMatchObject({ failed: 1 });
-    expect((await h.one(`SELECT last_error e FROM outbox`)).e).toMatch(/RESEND_API_KEY/);
-    // key but no recipient (or only whitespace): fails, readable error, nothing sent
+    // no binding: fails visibly, nothing sent
+    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EXERCISE_REPORT_TO: 'owner@example.test' }, now)).toMatchObject({ failed: 1 });
+    expect((await h.one(`SELECT last_error e FROM outbox`)).e).toBe('EMAIL binding not configured');
+    // binding but no recipient (or only whitespace): fails, readable error, nothing sent
     now += 120_000;
     for (const to of [undefined, '   ']) {
-      expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', RESEND_API_KEY: 'test-key', EXERCISE_REPORT_TO: to }, now, 50, f as never)).toMatchObject({ failed: 1, sent: 0 });
+      expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL, EXERCISE_REPORT_TO: to }, now)).toMatchObject({ failed: 1, sent: 0 });
       expect((await h.one(`SELECT last_error e FROM outbox`)).e).toBe('EXERCISE_REPORT_TO not configured');
       now += 4_000_000;
     }
-    expect(f).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
     expect((await h.one(`SELECT count(*) c FROM exercise_reports`)).c).toBe(1);
     // the var is set later: the waiting row is delivered without any data fix
-    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', RESEND_API_KEY: 'test-key', EXERCISE_REPORT_TO: ' owner@example.test ' }, now, 50, f as never)).toMatchObject({ sent: 1 });
-    const [url, init] = f.mock.calls[0] as unknown as [string, { body: string }];
-    expect(url).toBe('https://api.resend.com/emails');
-    expect(JSON.parse(init.body)).toMatchObject({ from: 'GymEntra <bildirim@salt-tech-apps.com>', to: ['owner@example.test'], reply_to: 'coach@example.test', subject: 'GymEntra · X — Çizim yanlış' });
+    expect(await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL, EXERCISE_REPORT_TO: ' owner@example.test ' }, now)).toMatchObject({ sent: 1 });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0][0]).toEqual({
+      from: { email: 'bildirim@salt-tech-apps.com', name: 'GymEntra' },
+      to: 'owner@example.test',
+      replyTo: 'coach@example.test',
+      subject: 'GymEntra · X — Çizim yanlış',
+      text: expect.stringContaining('Hareket:  X (x)'),
+    });
+    expect((await h.one(`SELECT status s FROM outbox`)).s).toBe('sent');
+  });
+
+  it('EMAIL_FROM overrides the sender (name form and bare address); no replyTo key without a reporter e-mail', async () => {
+    const h = await harness();
+    await outboxStatement(h.db, 'email', { to: 'a@b.co', subject: 's', text: 't' }).run();
+    const send = vi.fn(async (_m: unknown) => ({ messageId: 'm' }));
+    const EMAIL = { send } as unknown as SendEmail;
+    let now = Date.now();
+    await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL, EMAIL_FROM: 'Salon Ekibi <ekip@example.test>' }, now);
+    await h.run(`UPDATE outbox SET status = 'pending', next_attempt_at = 0`);
+    now += 10;
+    await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL, EMAIL_FROM: 'ekip@example.test' }, now);
+    expect(send.mock.calls[0][0]).toEqual({ from: { email: 'ekip@example.test', name: 'Salon Ekibi' }, to: 'a@b.co', subject: 's', text: 't' });
+    expect((send.mock.calls[1][0] as { from: unknown }).from).toBe('ekip@example.test');
+    // an empty EMAIL_FROM counts as unset
+    await h.run(`UPDATE outbox SET status = 'pending', next_attempt_at = 0`);
+    await deliverOutbox({ DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL, EMAIL_FROM: '' }, now + 10);
+    expect((send.mock.calls[2][0] as { from: unknown }).from).toEqual({ email: 'bildirim@salt-tech-apps.com', name: 'GymEntra' });
+  });
+
+  it('a thrown send error backs off, keeps a readable code, never stores the address, and the row ends dead after 8 attempts', async () => {
+    const h = await harness();
+    await outboxStatement(h.db, 'email', { to: 'secret-person@example.test', subject: 's', text: 't' }).run();
+    const send = vi.fn(async (_m: unknown) => { throw Object.assign(new Error('recipient secret-person@example.test is not verified'), { code: 'E_RECIPIENT_NOT_ALLOWED' }); });
+    const env = { DB: h.db, FIREBASE_PROJECT_ID: 'x', EMAIL: { send } as unknown as SendEmail };
+    let now = Date.now();
+    expect(await deliverOutbox(env, now)).toMatchObject({ failed: 1 });
+    expect(await deliverOutbox(env, now)).toMatchObject({ claimed: 0 });   // backing off
+    const err = (await h.one(`SELECT last_error e FROM outbox`)).e as string;
+    expect(err).toBe('email E_RECIPIENT_NOT_ALLOWED: recipient [address] is not verified');
+    expect(err).not.toContain('secret-person');
+    for (let i = 0; i < 7; i++) { now += 4_000_000; await deliverOutbox(env, now); }
+    expect(await h.one(`SELECT status s, attempts a FROM outbox`)).toEqual({ s: 'dead', a: 8 });
   });
 });
