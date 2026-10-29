@@ -73,7 +73,7 @@ deploy edilmiş kuralların izin verdiği eski davranışı korur.
 | F2 | Yazma + yetki: kuralların middleware'e taşınması; 250 testin karşılığı | Kural test envanteri %100 karşılandı |
 | F3 | Sunucu mantığı: 28 callable → uç, 31 tetikleyici → açık çağrı/Queue, 9 zamanlanmış → Cron | Fonksiyon testlerinin (141) karşılığı geçiyor |
 | F4 | Canlı veri ve çevrimdışı (üye kartı önbelleği) | 49 dinleyicinin karşılığı çalışıyor |
-| F5 | Geçiş: yeni mağaza sürümü; Firestore → D1 aktarım betiği; eski sürümler için Firebase'i belirli süre açık tut; kapat | Eski projeye trafik sıfır |
+| F5 | ~~Geçiş: Firestore → D1 aktarımı, eski sürümler için Firebase'i açık tut~~ **Sahip kararı 2026-10-29: veri taşınmadan sıfırdan açılış** (kullanıcı ve önemli veri yok): üretim D1/R2 + yeni mağaza sürümü; Firebase kullanılmaz ama kapatılmaz (`docs/CUTOVER.md`) | Üretim api'si açık, yeni sürüm mağazada |
 
 Her aşama ayrı onay ister; F5'e kadar üretimde hiçbir şey değişmez. Aşamalar
 birbirinin üstüne kurulur ama hiçbiri tek başına üretime çıkmaz.
@@ -152,4 +152,4 @@ saydı, plan 28/31/9 diyor; kapsam F1 başında doğrulanacak.
 
 ## Durum (18 Ekim 2026)
 
-F0–F4 teknik olarak tamam, **kesim (F5) bekliyor**: sunucu (`api/`, 590 test iki D1 motorunda), veri taşıma aracı, mobil API modu (`EXPO_PUBLIC_BACKEND=api`, 735 test), medya (R2), cron + outbox staging'de çalışıyor. Henüz yapılmayanlar sahibinin onayını/hesabını ister ve `docs/CUTOVER.md`'de sıralı: üretim D1/R2/secret'lar/alan adı, geçerli Firebase hesabıyla cihazda uçtan uca deneme, mağaza sürümü, dondurma + veri taşıma + mutabakat, eski istemcilerin kesilmesi.
+F0–F4 teknik olarak tamam, **kesim (F5) bekliyor**: sunucu (`api/`, 590 test iki D1 motorunda), veri taşıma aracı, mobil API modu (`EXPO_PUBLIC_BACKEND=api`, 735 test), medya (R2), cron + outbox staging'de çalışıyor. Henüz yapılmayanlar sahibinin onayını/hesabını ister ve `docs/CUTOVER.md`'de sıralı (2026-10-29'dan beri **veri taşımasız, sıfırdan açılış**): üretim D1/R2/secret'lar/alan adı, demo hesap ve salon, mağaza sürümü. Dondurma, Firestore taşıma ve eski istemcilerin kesilmesi artık gerekmiyor.
