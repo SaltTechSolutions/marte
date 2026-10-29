@@ -4,6 +4,10 @@ Bu dizindeki araçlar Firestore'daki GymEntra verisini D1'e taşımak içindir. 
 başına hiçbir yere bağlanıp yazmaz.** Ne wrangler çalıştırırlar, ne Cloudflare'e erişirler, ne de
 Firestore'a yazarlar. Ürettikleri komutları ekrana basarlar; çalıştırmak operatörün işidir.
 
+> **İlk üretim açılışında KULLANILMAZ (sahip kararı, 2026-10-29).** Uygulamayı kullanan aktif kullanıcı yok ve eski verinin önemi
+> yok; üretim boş D1 ile sıfırdan açılır (`docs/CUTOVER.md`). Bu araçlar ileride gerçek bir taşıma ya da staging sıfırlaması için
+> repoda durur. Aşağıdaki "ÜRETİM" adımları yalnızca böyle bir taşıma kararı verilirse geçerlidir; üretim komutları `--env production` ister.
+
 > **Üretim D1'ine yazmak sahibin (Tarkan'ın) açık onayını ister.** Bu runbook'taki "ÜRETİM"
 > adımlarının hiçbiri onay olmadan çalıştırılmaz. Önce STAGING, her zaman.
 

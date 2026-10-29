@@ -19,15 +19,16 @@
   ],
   "env": {
     // Production. Not deployed yet: the D1 id is filled in after `d1 create` (docs/CUTOVER.md).
-    // API_OPEN is intentionally NOT set here: the Worker answers 503 "maintenance" on every /v1 route
-    // (except the RevenueCat webhook) until the owner sets API_OPEN to "1" after import + reconcile.
+    // API_OPEN is "1" because production starts empty (no data migration, owner decision 2026-10-29), so
+    // the maintenance gate is not needed at launch. The gate stays in src/index.ts for emergencies: set
+    // API_OPEN to "0" here and deploy, and every /v1 route (except the RevenueCat webhook) answers 503.
     "production": {
       "name": "gymentra-api",
       "workers_dev": false,
       "preview_urls": false,
       "routes": [{ "pattern": "api.gymentra.salt-tech-apps.com", "custom_domain": true }],
       "observability": { "enabled": true },
-      "vars": { "FIREBASE_PROJECT_ID": "tarabyamarte", "PUBLIC_BASE_URL": "https://api.gymentra.salt-tech-apps.com" },
+      "vars": { "FIREBASE_PROJECT_ID": "tarabyamarte", "PUBLIC_BASE_URL": "https://api.gymentra.salt-tech-apps.com", "API_OPEN": "1" },
       "triggers": { "crons": ["* * * * *", "*/15 * * * *", "5 21 * * *"] },
       // The EU jurisdiction is fixed when the bucket is created (`r2 bucket create ... --jurisdiction eu`).
       "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gymentra-media-prod", "jurisdiction": "eu" }],
