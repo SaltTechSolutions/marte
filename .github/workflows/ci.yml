@@ -28,11 +28,21 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/gymentra-mobile/package-lock.json
+          cache-dependency-path: |
+            apps/gymentra-mobile/package-lock.json
+            api/package-lock.json
 
       # `npm ci` needs the lockfile to match package.json exactly, which is
       # what we want in CI — a drifted lockfile should fail here, not later.
       - run: npm ci
+
+      # The mobile tests run the real Worker in-process (testWorld.ts,
+      # membershipTestKit.ts import api/src and api/test/helpers.ts), so the
+      # api dependencies (hono, jose, ...) must be installed too. Without
+      # this ~299 tests fail with "Cannot find package 'jose'".
+      - name: Install (api, used by the in-process Worker tests)
+        run: npm ci
+        working-directory: api
 
       - name: TypeScript
         run: npm run typecheck
