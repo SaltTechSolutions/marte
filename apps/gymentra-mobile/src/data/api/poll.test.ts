@@ -82,3 +82,34 @@ describe('pollWatch', () => {
     expect(listeners).toHaveLength(0);
   });
 });
+
+describe('pollWatch during maintenance', () => {
+  it('backs off to the cap (no tight loop), reports once, and recovers on the next tick or on invalidate()', async () => {
+    let closed = true;
+    const gate = Object.assign(new Error('maintenance'), { status: 503, apiCode: 'maintenance' });
+    const fetcher = vi.fn(async () => { if (closed) throw gate; return 7; });
+    const onError = vi.fn(); const onChange = vi.fn();
+    const stop = pollWatch('maint', fetcher, onChange, onError, { intervalMs: 20_000, jitter: 0 });
+    await vi.advanceTimersByTimeAsync(30 * 60_000);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls.length).toBeLessThanOrEqual(12);
+    expect(onChange).not.toHaveBeenCalled();
+
+    closed = false;
+    await vi.advanceTimersByTimeAsync(5 * 60_000);       // next backoff tick at the 5-min cap
+    expect(onChange).toHaveBeenCalledWith(7);
+    stop();
+
+    // And immediately after invalidate(): no waiting for the tick.
+    closed = true;
+    const onChange2 = vi.fn();
+    const stop2 = pollWatch('maint2', fetcher, onChange2, undefined, { intervalMs: 20_000, jitter: 0 });
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    closed = false;
+    invalidate('maint2');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onChange2).toHaveBeenCalledWith(7);
+    stop2();
+    stopAllPollers();
+  });
+});

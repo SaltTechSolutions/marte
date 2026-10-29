@@ -1,5 +1,7 @@
 import * as Sentry from '@sentry/react-native';
 
+import { isMaintenanceError, MAINTENANCE_INLINE } from './api/maintenance';
+
 /**
  * plan-eng-review Faz 2.1 (Q1). A Cloud Functions `httpsCallable` rejection
  * carries the exact Turkish sentence the server wrote — e.g.
@@ -56,6 +58,8 @@ function maybeCapture(e: unknown, trusted: string | null): void {
  * fallback, same as before. Reports the unexpected case to Sentry.
  */
 export function reportError(e: unknown, sink: ErrorSink, fallback: string): void {
+  // Expected during the cutover window and counted server-side: no Sentry event (review S7).
+  if (isMaintenanceError(e)) return sink.error(MAINTENANCE_INLINE);
   const trusted = trustedCallableMessage(e);
   maybeCapture(e, trusted);
   sink.error(trusted ?? fallback);
@@ -66,6 +70,7 @@ export function reportError(e: unknown, sink: ErrorSink, fallback: string): void
  * instead of a toast (e.g. `checkin.tsx`'s scan result card).
  */
 export function errorMessage(e: unknown, fallback: string): string {
+  if (isMaintenanceError(e)) return MAINTENANCE_INLINE;
   const trusted = trustedCallableMessage(e);
   maybeCapture(e, trusted);
   return trusted ?? fallback;

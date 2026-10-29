@@ -67,3 +67,24 @@ describe('reportError / errorMessage', () => {
     expect(captureException).toHaveBeenCalledWith(networkError);
   });
 });
+
+describe('maintenance (503 from the API gate)', () => {
+  const maintenance = { code: 'functions/internal', status: 503, apiCode: 'maintenance', message: 'maintenance' };
+
+  it('shows the neutral bakım text and does not report to Sentry', () => {
+    const MSG = 'Şu an kısa bir bakım var. Biraz sonra tekrar dene.';
+    expect(errorMessage(maintenance, FALLBACK)).toBe(MSG);
+    const sink = { error: vi.fn() };
+    reportError(maintenance, sink, FALLBACK);
+    expect(sink.error).toHaveBeenCalledWith(MSG);
+    expect(captureException).not.toHaveBeenCalled();
+  });
+
+  it('other 5xx and network failures still show the fallback and are reported', () => {
+    for (const e of [{ code: 'functions/internal', status: 503, apiCode: 'other', message: 'x' }, { code: 'functions/internal', status: 0, message: 'offline' }]) {
+      captureException.mockReset();
+      expect(errorMessage(e, FALLBACK)).toBe(FALLBACK);
+      expect(captureException).toHaveBeenCalledWith(e);
+    }
+  });
+});

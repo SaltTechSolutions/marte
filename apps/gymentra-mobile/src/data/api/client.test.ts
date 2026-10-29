@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@/services/firebase', () => ({ auth: { currentUser: null } }));
 
 const { apiGet, apiPost, ApiError, __setApiTransport } = await import('./client');
+const { isMaintenanceError, isUnderMaintenance, resetMaintenance, setMaintenance } = await import('./maintenance');
 
 const res = (status: number, body: unknown) => new Response(body === null ? '' : JSON.stringify(body), { status });
 
@@ -38,5 +39,59 @@ describe('api client', () => {
     __setApiTransport(f as never, async () => null);
     expect(((await apiGet('/x').catch((x) => x)) as any).code).toBe('functions/unauthenticated');
     expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe('api client: maintenance gate', () => {
+  const tok = async () => 'tok';
+  const gate = () => res(503, { error: 'maintenance' });
+
+  it('turns 503 maintenance into a typed error and raises the flag', async () => {
+    resetMaintenance();
+    __setApiTransport((async () => gate()) as never, tok);
+    const e: any = await apiGet('/x').catch((x) => x);
+    expect(e).toBeInstanceOf(ApiError);
+    expect(e.status).toBe(503);
+    expect(e.apiCode).toBe('maintenance');
+    expect(isMaintenanceError(e)).toBe(true);
+    expect(isUnderMaintenance()).toBe(true);
+  });
+
+  it.each([[200, { ok: true }], [404, { error: 'not_found' }]])('a following %s clears the flag (the request got past the gate)', async (status, body) => {
+    setMaintenance(true);
+    __setApiTransport((async () => res(status, body)) as never, tok);
+    await apiGet('/x').catch(() => undefined);
+    expect(isUnderMaintenance()).toBe(false);
+  });
+
+  it('a network failure and a plain 500 leave the flag as it was', async () => {
+    for (const initial of [true, false]) {
+      setMaintenance(initial);
+      __setApiTransport((async () => { throw new Error('offline'); }) as never, tok);
+      await apiGet('/x').catch(() => undefined);
+      expect(isUnderMaintenance()).toBe(initial);
+      __setApiTransport((async () => res(500, { error: 'boom' })) as never, tok);
+      await apiGet('/x').catch(() => undefined);
+      expect(isUnderMaintenance()).toBe(initial);
+    }
+  });
+
+  it('a non-JSON 503 (edge page) is not maintenance: generic error, flag untouched', async () => {
+    resetMaintenance();
+    __setApiTransport((async () => new Response('<html>Service Unavailable</html>', { status: 503 })) as never, tok);
+    const e: any = await apiGet('/x').catch((x) => x);
+    expect(isMaintenanceError(e)).toBe(false);
+    expect(e.code).toBe('functions/internal');
+    expect(isUnderMaintenance()).toBe(false);
+  });
+
+  it('an edge HTML 403 (never reached the Worker) does not clear the flag; a JSON 404 does', async () => {
+    setMaintenance(true);
+    __setApiTransport((async () => new Response('<html>blocked</html>', { status: 403 })) as never, tok);
+    await apiGet('/x').catch(() => undefined);
+    expect(isUnderMaintenance()).toBe(true);
+    __setApiTransport((async () => res(404, { error: 'not_found' })) as never, tok);
+    await apiGet('/x').catch(() => undefined);
+    expect(isUnderMaintenance()).toBe(false);
   });
 });

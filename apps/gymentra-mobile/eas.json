@@ -26,7 +26,11 @@
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_BACKEND": "api",
+        "EXPO_PUBLIC_API_URL": "https://api.gymentra.salt-tech-apps.com"
+      }
     },
     "simulator": {
       "extends": "production",
@@ -35,7 +39,11 @@
         "simulator": true
       },
       "autoIncrement": false,
-      "channel": "simulator"
+      "channel": "simulator",
+      "env": {
+        "EXPO_PUBLIC_BACKEND": "api",
+        "EXPO_PUBLIC_API_URL": "https://gymentra-api-staging.tarkan-cicek.workers.dev"
+      }
     }
   },
   "submit": {

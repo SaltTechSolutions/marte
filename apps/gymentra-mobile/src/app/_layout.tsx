@@ -14,10 +14,12 @@ import React, { useEffect } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { MaintenanceGate } from '@/components/MaintenanceGate';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthRedirect } from '@/context/AuthRedirect';
 import { PushNotificationSync } from '@/notifications/PushNotificationSync';
+import { isMaintenanceError } from '@/data/api/maintenance';
 import { createEventBudget } from '@/services/eventBudget';
 import { ThemeProvider as AppThemeProvider } from '@/theme/ThemeContext';
 import { ThemeSync } from '@/theme/ThemeSync';
@@ -51,7 +53,10 @@ if (process.env.EXPO_PUBLIC_SENTRY_DSN) {
     // native-frames, stall, user-interaction and time-to-display integrations
     // were installed and ran for traces that were never going to be sent
     // (DEN-11).
-    beforeSend: (event) => (allowEvent(event) ? event : null),
+    //
+    // Maintenance (503 from the Worker's gate) is expected during the cutover window: never an event, so an
+    // unhandled rejection of one cannot fan out one event per device per launch.
+    beforeSend: (event, hint) => (isMaintenanceError(hint?.originalException) ? null : allowEvent(event) ? event : null),
   });
 }
 
@@ -105,6 +110,7 @@ function RootLayout() {
             {/* Shared: version and open-source licences, linked from every role's settings. */}
             <Stack.Screen name="about" />
           </Stack>
+          <MaintenanceGate />
         </AuthProvider>
       </ToastProvider>
     </AppThemeProvider>

@@ -1,5 +1,7 @@
 import { auth } from '@/services/firebase';
 
+import { isMaintenanceError, setMaintenance } from './maintenance';
+
 /**
  * Cloudflare API client. Authenticates every call with the Firebase ID token (Firebase Auth stays the
  * identity provider) and turns failures into the SAME error shape `data/errors.ts` already understands
@@ -59,9 +61,15 @@ export async function apiFetch<T>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DE
   }
   const text = await res.text();
   const json = text ? safeParse(text) : null;
+  // An answer from our Worker below 500 got past the maintenance gate, so the gate is open. "From our Worker"
+  // means a success or a JSON body: an edge HTML 403/429 never reached it. A network failure (thrown above)
+  // and other 5xx say nothing about the gate and leave the flag alone.
+  if (res.status < 500 && (res.ok || json !== null)) setMaintenance(false);
   if (!res.ok) {
     const j = json as { error?: string; message?: string } | null;
-    throw new ApiError(res.status, j?.message ?? j?.error ?? `HTTP ${res.status}`, j?.error, (j ?? undefined) as Record<string, unknown> | undefined);
+    const err = new ApiError(res.status, j?.message ?? j?.error ?? `HTTP ${res.status}`, j?.error, (j ?? undefined) as Record<string, unknown> | undefined);
+    if (isMaintenanceError(err)) setMaintenance(true);
+    throw err;
   }
   return json as T;
 }

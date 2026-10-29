@@ -3,6 +3,7 @@ import { forgetDetails, forgetLabels } from './membershipDto';
 import { resetIdentity } from './membershipIdentity';
 import { resetSchedulingCaches } from './classSupport';
 import { forgetTenants } from './pkgTenant';
+import { resetMaintenance } from './maintenance';
 
 /**
  * Everything the API repos cache in memory about the signed-in person: id translation, `/me`, tenant and
@@ -16,4 +17,5 @@ export function resetApiState(): void {
   forgetLabels();
   forgetTenants();
   resetSchedulingCaches();
+  resetMaintenance();
 }
