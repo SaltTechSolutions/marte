@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import * as fbTenant from '../firebase/tenantRepo';
+import { seedDefaultPackages } from './packageRepo';
+import { calls, lastCall, refusal, world } from './membershipTestKit';
+import * as repo from './tenantRepo';
+import type { Tenant } from '../types';
+
 vi.hoisted(() => { process.env.EXPO_PUBLIC_API_URL = 'http://worker.test'; });   // before client.ts is imported
 vi.mock('@/services/firebase', () => ({ app: {}, db: {}, auth: { currentUser: null } }));
 vi.mock('react-native', () => ({ AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
 // The default-package seeding belongs to packageRepo (another area); the logo upload is the Firebase callable.
 vi.mock('./packageRepo', () => ({ seedDefaultPackages: vi.fn(async () => {}) }));
 vi.mock('../firebase/tenantRepo', () => ({ uploadTenantLogo: vi.fn(async () => 'https://logo.example/x.jpg') }));
-
-import * as fbTenant from '../firebase/tenantRepo';
-import { seedDefaultPackages } from './packageRepo';
-import { calls, lastCall, refusal, world } from './membershipTestKit';
-import * as repo from './tenantRepo';
-import type { Tenant } from '../types';
 
 type W = Awaited<ReturnType<typeof world>>;
 let w: W;

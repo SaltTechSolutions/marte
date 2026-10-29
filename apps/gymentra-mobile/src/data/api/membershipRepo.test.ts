@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.hoisted(() => { process.env.EXPO_PUBLIC_API_URL = 'http://worker.test'; });   // before client.ts is imported
-vi.mock('@/services/firebase', () => ({ app: {}, db: {}, auth: { currentUser: null } }));
-vi.mock('react-native', () => ({ AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
-
 import { resetSharedWatches } from '../firebase/sharedWatch';
 import * as fb from '../firebase/membershipRepo';
 import { calls, lastCall, refusal, world } from './membershipTestKit';
 import { invalidate } from './poll';
 import * as repo from './membershipRepo';
 import type { TenantMembership } from '../types';
+
+vi.hoisted(() => { process.env.EXPO_PUBLIC_API_URL = 'http://worker.test'; });   // before client.ts is imported
+vi.mock('@/services/firebase', () => ({ app: {}, db: {}, auth: { currentUser: null } }));
+vi.mock('react-native', () => ({ AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
 
 type W = Awaited<ReturnType<typeof world>>;
 let w: W;

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { ExerciseLog, Program } from '../types';
+
 vi.stubEnv('EXPO_PUBLIC_API_URL', 'http://worker.test');
 vi.mock('@/services/firebase', () => ({ auth: { currentUser: null } }));
 vi.mock('react-native', () => ({ AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
@@ -8,8 +10,6 @@ const { startWorld } = await import('./testWorld');
 const repo = await import('./workoutLogRepo');
 const { auth } = await import('@/services/firebase');
 const { resetIdentity } = await import('./membershipIdentity');
-
-import type { ExerciseLog, Program } from '../types';
 
 type World = Awaited<ReturnType<typeof startWorld>>;
 let w: World;
