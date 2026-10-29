@@ -33,7 +33,7 @@
       // The EU jurisdiction is fixed when the bucket is created (`r2 bucket create ... --jurisdiction eu`).
       "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "gymentra-media-prod", "jurisdiction": "eu" }],
       "d1_databases": [
-        { "binding": "DB", "database_name": "gymentra-prod", "database_id": "REPLACE_ON_CREATE", "migrations_dir": "migrations" }
+        { "binding": "DB", "database_name": "gymentra-prod", "database_id": "006ab9a2-b2f6-453b-8254-faaf59fcf581", "migrations_dir": "migrations" }
       ]
     },
     "staging": {
