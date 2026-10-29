@@ -68,7 +68,7 @@ Temiz `main`, gözden geçirilmiş commit'ten; SHA'yı not et.
 1. `grep -c REPLACE_ON_CREATE api/wrangler.jsonc` → tam **2** (bir yorum satırı + üst seviye yer tutucu). Dosya bugün 3 veriyor; 3 ise `env.production` id'si hâlâ yer tutucu, 1. adım eksik. Staging'in kendi gerçek id'si vardır, sayıya girmez. Staging id'sini üretime yapıştırmak da bu sayımı geçer: bu yüzden 2. okuma şart.
 2. `npx wrangler d1 info gymentra-prod --env production` → ad `gymentra-prod`, jurisdiction `eu`, `num_tables` 37 (committed id'yi çözer; yanlış ya da staging id'si burada ortaya çıkar).
 ```bash
-npx wrangler deploy --dry-run --env production   # derlenir; bağlamalar DB, MEDIA (eu), FIREBASE_PROJECT_ID, PUBLIC_BASE_URL, API_OPEN="1"
+npx wrangler deploy --dry-run --env production   # derlenir; bağlamalar DB, MEDIA (eu), EMAIL (send_email), FIREBASE_PROJECT_ID, PUBLIC_BASE_URL, API_OPEN="1"
 npx wrangler deploy --env production
 ```
 **Terim (her yerde aynı):** bakım modu = `API_OPEN` yok ya da `"1"` dışında bir değer → `/v1/*` 503 `maintenance`; api açık = `API_OPEN="1"`.
@@ -91,7 +91,11 @@ hariç) 503 `maintenance` döner ve mobil uygulama bunu bakım ekranı olarak g�
 
 ## 5. Secret'lar — ONAY (sahip değeri kendisi yazar; **Worker deploy edildikten sonra**, yoksa `secret put` boş bir Worker açar)
 Değerleri sohbete, repoya, loga yazma. Secret'lar `wrangler.jsonc`'ta bilerek yoktur (panelden yazılan düz değişken bir sonraki deploy'da silinir).
-1. `npx wrangler secret put RESEND_API_KEY --env production`
+1. **E-posta gönderimi (Cloudflare Email Service, Beta; API anahtarı yok, `send_email` bağlaması `EMAIL` `wrangler.jsonc`'ta).**
+   - **Yapıldı (sahip, 2026-10-30):** `salt-tech-apps.com` Email Sending'e kuruldu (`npx wrangler email sending enable salt-tech-apps.com`, çıktı `enabled: true`); aynı bölgenin diğer alt alan adları başka uygulamalar için zaten açıktı, yani gönderen itibarı ortaktır. `EXERCISE_REPORT_TO` adresi Email Routing'de **doğrulanmış hedef adres** (sahip beyanı; panelden/terminalden yapıldı, repoda adres yok).
+   - **Salt okunur geri okuma (deploy öncesi, ikisi de):** `npx wrangler email sending list salt-tech-apps.com` → `enabled: yes`; `npx wrangler email sending dns get salt-tech-apps.com` → kayıtlar var; `npx wrangler email routing addresses list` → alıcı adres `verified` (adresi sohbete/repoya yazma). Doğrulanmış hedef **zorunlu** kalır: dokümanlar iki şey söylüyor (bağlama "doğrulanmış hedeflere" gönderir; limitler sayfası alan adı kurulunca her alıcı der), yalnız doğrulanmış hedef ikisinde de çalışır, ücretsizdir ve günlük kotaya sayılmaz.
+   - **ÜRETİM YENİDEN DEPLOY İSTER (ONAY):** üretimdeki `gymentra-api` hâlâ eski Resend koduyla çalışıyor (sürüm `2cb226ff`; `RESEND_API_KEY` arıyor, `EMAIL` bağlaması yok). Bu değişiklik commit edildikten sonra sahip `npx wrangler deploy --env production` çalıştırmalı (§4 onayı kapsamında; önce `--dry-run` çıktısı `env.EMAIL` listelemeli) ve **§6'daki test raporundan ÖNCE** yapılmalı, yoksa satır `RESEND_API_KEY not configured` ile `dead` olur. Yeni sürümü geri okuma: `npx wrangler deployments list --env production` (en üstteki sürüm `2cb226ff` olmamalı); `npx wrangler deploy --dry-run --env production` bağlama listesinde `EMAIL`; `npx wrangler tail --env production` dakikalık cron satırı `"outbox":{"claimed":0` (hata yok).
+   - Gönderen `GymEntra <bildirim@salt-tech-apps.com>` (`EMAIL_FROM` ile değişir; boş değer tanımsız sayılır, alan adı kurulu olmalı). Eski `RESEND_API_KEY` artık kullanılmaz; konulmuşsa `npx wrangler secret delete RESEND_API_KEY --env production`.
 2. `npx wrangler secret put EXERCISE_REPORT_TO --env production` (egzersiz raporlarının gideceği adres; repoda yok). **Boş kalırsa** rapor
    satırı yeniden denenir ve sonunda `dead` olur (rapor kaydedilmiş kalır, e-posta gitmez).
 3. RevenueCat webhook'u: sahip yeni bir rastgele değer üretir (Firebase'deki eski token'ı **okumaya gerek yok**). Önce RevenueCat
@@ -99,8 +103,8 @@ Değerleri sohbete, repoya, loga yazma. Secret'lar `wrangler.jsonc`'ta bilerek y
    aynı değeri koy; sonra `npx wrangler secret put REVENUECAT_WEBHOOK_SECRET --env production` (aynı değer).
    Secret girilene kadar Worker 503 döner, RevenueCat yeniden dener; ikisi de koyulduktan sonra RevenueCat'ten "test olayı" gönder.
    RevenueCat'te tek webhook adresi var: bundan sonra staging build'lerinin sandbox olayları da üretime gider (bilinmeyen salon → yok sayılır), yani staging abonelik denemeleri artık güncellenmez. App Review satın alımları sandbox olaydır; webhook'un ortam filtresini kontrol et.
-- Kontrol: `npx wrangler secret list --env production` yalnız **adları** gösterir (üçü de var); RevenueCat test olayı **200** (bilinmeyen salon
-  olduğundan `ignored`; `billing_events` satırı oluşmaz). Staging'de bugüne kadar secret yoktu, yani Resend ve RevenueCat yolu
+- Kontrol: `npx wrangler secret list --env production` yalnız **adları** gösterir (`EXERCISE_REPORT_TO` ve `REVENUECAT_WEBHOOK_SECRET` var; `RESEND_API_KEY` yok); RevenueCat test olayı **200** (bilinmeyen salon
+  olduğundan `ignored`; `billing_events` satırı oluşmaz). Staging'de bugüne kadar secret yoktu, yani e-posta ve RevenueCat yolu
   deploy edilmiş bir Worker'da hiç çalışmadı: ilk gerçek deneme burası, sonucu kayda geç.
   E-postanın gerçekten gittiğini 6. adım kanıtlar (bir salon gerekir).
 - Geri alma: `npx wrangler secret delete <AD> --env production`; RevenueCat adresini eski haline döndür.
@@ -116,7 +120,7 @@ Değerleri sohbete, repoya, loga yazma. Secret'lar `wrangler.jsonc`'ta bilerek y
   5. Salon kodunu inceleme notlarına yaz (Apple ile giriş yapan inceleyici `gym-code` ekranına düşer).
   Not: Supergym tohum betiği (`marte06/scripts/seed_supergym_demo.cjs`, `docs/BUILD.md`) **Firestore'a** yazar, D1'e değil; D1 için tohum betiği yok. Demo salon elle kurulur ya da D1'e tohumlayan ayrı bir iş açılır. Gerçek kişi verisi demo salona girmez.
 - Kontrol: sahip demo hesapla cihazda yönetici, üye ve antrenör akışlarını açar; `npx wrangler d1 execute gymentra-prod --remote --env production --command "SELECT count(*) FROM tenants"` ≥ 1.
-- **E-posta yolu (5. adımın kanıtı):** demo salondan bir egzersiz raporu gönder, sonra `npx wrangler d1 execute gymentra-prod --remote --env production --command "SELECT kind, status, last_error FROM outbox ORDER BY rowid DESC LIMIT 5"` → `email` satırı birkaç dakika içinde `sent`. `pending` kalır ya da `dead` olursa Resend alan adı/anahtar ya da `EXERCISE_REPORT_TO` yanlıştır.
+- **E-posta yolu (5. adımın kanıtı):** demo salondan bir egzersiz raporu gönder, sonra `npx wrangler d1 execute gymentra-prod --remote --env production --command "SELECT kind, status, last_error FROM outbox ORDER BY rowid DESC LIMIT 5"` → `email` satırı birkaç dakika içinde `sent`. `pending` kalır ya da `dead` olursa `last_error` nedeni söyler (`email <kod>: ...`, adres maskelenir): `EMAIL binding not configured` = yeni sürüm deploy edilmemiş (§5); `RESEND_API_KEY not configured` = hâlâ eski sürüm; `E_RECIPIENT_NOT_ALLOWED` = alıcı doğrulanmış hedef değil (yalnız bağlama doğrulanmış hedef istiyorsa); `E_SENDER_DOMAIN_NOT_AVAILABLE` / `E_SENDER_NOT_VERIFIED` = gönderen alan adı kurulumu.
 
 ## 7. Mobil sürüm (mağaza) — ONAY (EAS bulut build ve mağaza gönderimi ayrı onay ister)
 Playbook'lar: `pb-expo-eas`, `pb-store-release`; build öncesi `docs/BUILD.md` (yalnız yerel build, JDK tuzağı).
@@ -162,7 +166,7 @@ yer almalı, çünkü api bunları kullanır:
 - **Cloudflare** (Workers, D1, R2; barındırma ve günlükler/Workers Logs): veri işleyen taraf, AB jurisdiction'ı (D1 ve R2 `eu`). Firebase
   yalnız **Authentication** (ve FCM bildirim altyapısı) olarak anılır; Firestore/Cloud Storage ibareleri kalkar
   (`apps/gymentra-site/privacy/index.html` ~satır 43, 81, 95; `APP_PRIVACY.md` ~112). Yeni arka uç Firestore/Storage'ı kullanmadığı için eski ibareler yanlış olur.
-- **Resend**: e-posta gönderimi (egzersiz raporu e-postaları); alıcı adresi ve rapor içeriği Resend üzerinden geçer, gönderen alan adı bizim.
+- **Cloudflare Email Service**: e-posta gönderimi (egzersiz raporu e-postaları); raporu bildirenin adı, e-postası ve salonu platform sahibinin adresine gider; ayrı bir e-posta sağlayıcısı yoktur (Cloudflare zaten işleyen taraf). E-posta gönderimi D1/R2'nin AB jurisdiction'ı kapsamında **değildir** (Email Service'te belgelenmiş bir bölge ayarı yok); ileti alıcının e-posta sağlayıcısına teslim edilir. "AB'de işlenir" diye yazma; `pb-privacy-legal` geçişinde kontrol et.
 - **Cloudflare günlükleri**: istek günlükleri (IP, yol, durum) hata ayıklama için tutulur; saklama süresi ve amaç yazılmalı.
 - Profil fotoğrafı kaldırıldı (önceki sürümlerden kalan metin) ve hesap silme akışı yeni arka uçta da çalışmalı.
 - Mağaza etiketleri (App Store "App Privacy", Play "Data safety") veri türleri aynı kalsa da gözden geçirilir.

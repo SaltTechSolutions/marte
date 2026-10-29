@@ -31,6 +31,20 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-10-30 — Worker e-postası Resend yerine Cloudflare Email Service
+
+**Yapıldı.** Outbox'ın `email` teslimi (`api/src/jobs/outboxDelivery.ts`) Resend `fetch`'i yerine `send_email` bağlaması `EMAIL` ile gidiyor (`env.EMAIL.send`); `wrangler.jsonc`'ta bağlama `staging` ve `production` env'lerinde ayrı ayrı tanımlı (env'ler bağlama miras almaz), iki `deploy --dry-run` de `env.EMAIL` listeliyor ve 0 ile bitiyor. `RESEND_API_KEY` ve tüm API anahtarı yolu kalktı. Gönderen adı `GymEntra <bildirim@...>` biçiminden `{email, name}` yapısına çevriliyor. Geri çekme/`dead`, `toEnv` ile teslimde alıcı çözme, dedupe, `replyTo` aynen. Bağlama yoksa satır `EMAIL binding not configured` ile görünür biçimde başarısız olur (import'ta atmaz). Fırlatılan hata `email <kod>: <ileti>` olarak `last_error`'a yazılır, ileti içindeki adresler `[address]` ile maskelenir. Testler sahte `EMAIL.send` ile yeniden yazıldı (başarı, hata → `dead`, bağlama yok, alıcı yok, `replyTo`, gönderen adı eşlemesi). `docs/CUTOVER.md` §5, §6, §9 güncellendi.
+
+**Karar.** Tek e-posta türü için ayrı sağlayıcı, API anahtarı ve üçüncü taraf veri işleyici gereksiz; Cloudflare zaten Worker'ın barındırıcısı. Alıcı adresi (sahibin) hiçbir yerde yok, `EXERCISE_REPORT_TO` secret'ı olarak teslimde okunur.
+
+**Bilerek yapılmadı.** Resend'e yedek (fallback) yok: iki yol iki sır ve iki veri işleyici demek, hata yine görünür `dead` satırı olur. `send_email`'e `allowed_sender_addresses` / alıcı kısıtı konmadı: gönderen kodda sabit, alıcı secret olduğundan kısıtlanamaz, gönderen kısıtı ise gerçek Cloudflare'de deneyemediğimiz bir kırılma yolu ekler. Email Routing ile gelen e-posta işleme yok. `backend/` (Firebase) ve `docs/SCHEMA.md` / `docs/plan.md` içindeki eski Resend anlatımı, Firebase fonksiyonunu anlattığı için dokunulmadı.
+
+**Açık.** Alan adı sahip tarafından kuruldu (`salt-tech-apps.com`, `enabled: true`; aynı bölgenin diğer alt alan adları başka uygulamalar için zaten açık, gönderen itibarı ortak) ve `EXERCISE_REPORT_TO` adresi doğrulanmış hedef (sahip beyanı); ikisi için CUTOVER §5'te salt okunur geri okuma var, ajan görmedi. **Üretim hâlâ eski Resend Worker'ını çalıştırıyor (sürüm `2cb226ff`): bu değişiklik commit + `npx wrangler deploy --env production` (sahip, onaylı) olmadan canlı değil ve CUTOVER §6'daki test raporundan önce yapılmalı;** yoksa satır `RESEND_API_KEY not configured` ile `dead` olur. Email Service Beta; yeni hesaplarda günlük gönderim sınırı olabilir ve aşılırsa (`E_DAILY_LIMIT_EXCEEDED`) satır yeniden deneme bütçesiyle (8 deneme, ~2 saat) `dead` olur, sınır sıfırlanmadan kaybolur (rapor kayıtlı kalır); doğrulanmış hedefe gönderim kotaya sayılmadığı için bugün olası değil, yeni e-posta türü gelirse kota hatalarına daha uzun geri çekme verilmeli. E-posta gönderiminin AB'de işlendiği iddia edilemez (gizlilik metni). Hiçbir şey deploy edilmiş bir Worker'da, gerçek Cloudflare'e karşı denenmedi: bağlama yalnız sahte `send` ile ve `--dry-run` ile doğrulandı; fırlatılan hatanın gerçek `code` değerleri görülmedi.
+
+**Nerede.** `api/src/jobs/outboxDelivery.ts`, `api/src/types.ts`, `api/wrangler.jsonc`, `api/test/exerciseReportEmail.test.ts`, `api/test/outbox.test.ts`, `docs/CUTOVER.md`.
+
+---
+
 ## 2026-10-30 — Üretim Worker'ı yayında, cron'lar olduğu gibi kalıyor
 
 **Yapıldı.** Üretim kaynakları sahibin terminalinden açıldı (otomatik güvenlik denetimi ajana üretim komutu vermiyor): D1 `gymentra-prod` (AB jurisdiction, 11 migration, 37 tablo, `users`/`tenants` 0), R2 `gymentra-media-prod` (AB, kilit yok, `r2.dev` kapalı), Worker `gymentra-api` (`api.gymentra.salt-tech-apps.com`, üç cron). Dış kapı kontrolleri geçti: `/healthz` 200, `/v1/me` 401, `/.dev.vars` ve `/wrangler.jsonc` 404, `/media/…` 404 (500 değil), RevenueCat webhook 503 (secret yok). `main` CI'da ilk kez tamamen yeşil: mobil iş `api` bağımlılıkları kurulmadığı için ve iki test salon saat dilimi yerine süreç saat dilimini kullandığı için kırmızıydı (ayrı commit'ler).
