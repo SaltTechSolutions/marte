@@ -31,6 +31,20 @@ Bir başlığın içeriği yoksa satırı yaz, "—" koy. Boş bırakma: "redded
 
 ---
 
+## 2026-11-05 — Üretim gerçek hesapla uçtan uca doğrulandı
+
+**Yapıldı.** Sahip, simülatörde (iPhone 17 Pro, iOS 26.0; geliştirme istemcisi yerelde derlendi, Metro `EXPO_PUBLIC_BACKEND=api` + üretim adresiyle) yepyeni bir e-posta/parola hesabıyla kayıt oldu, bir salon açtı ve bir egzersiz raporu gönderdi; parolayı ve e-postayı kendisi yazdı. Üretim Worker log'unda (`wrangler tail`) 32 olay, hepsi `ok`, istisna yok: `GET /v1/me` 200, `POST /v1/me/bootstrap` 201, `POST /v1/tenants` 201, 3 paket 201, logo yükleme 200, ayar güncelleme 200, yönetici panelinin okumaları 200. Üretim D1: 1 kullanıcı, 1 kimlik, 1 salon, 1 üyelik. Logo R2'ye yazıldı ve halka açık `/media/…` adresinden `200 image/jpeg` okundu (`r2 bucket info` sayacı 0 gösterdi: gecikmeli sayaç, güvenilmez). Rapor e-postası: `exercise_reports` 1 satır, `outbox` `email` satırı dakikalık cron'da `sent` (1 deneme, `last_error` boş) ve mesaj sahibin kutusuna ulaştı (konu, gönderen `bildirim@salt-tech-apps.com`, hareket/sorun/bildiren/salon/not/düzeltme yolu doğru). Yani Cloudflare Email Service (Beta) üretimde gerçek bir gönderimle kanıtlandı.
+
+**Karar.** Rapor alıcısı `EXERCISE_REPORT_TO` secret'ı olarak kalır (adres repoda yok); egzersiz kütüphanesi bütün salonlar için ortak olduğundan tek bir platform adresi doğru kurgudur. Salona özel kütüphane gelirse alıcı salon yöneticisi olur (ayrı iş).
+
+**Bilerek yapılmadı.** Üye/antrenör akışı denenmedi (ikinci hesapla salon koduyla katılım); mağaza build'i ve App Review notları yapılmadı; salon kodu ve hesap bilgisi hiçbir yere yazılmadı (App Review notları App Store Connect'te tutulur). RevenueCat webhook secret'ı ve adresi bekliyor (abone yok).
+
+**Açık.** Geliştirme istemcisini yerelde derlerken iki tuzak çıktı: Metro `localhost`'u yalnız IPv6'da (`[::1]`) dinleyince uygulama `127.0.0.1`'e bağlanamıyor ("Could not connect to development server"); çözüm `NODE_OPTIONS=--dns-result-order=ipv4first` ile başlatmak, ağa açmak değil. `expo run:ios` arka planda iş sınırı koyan hook'a takılabilir: derleme `timeout 900 … --no-bundler`, Metro ayrı başlatılır. Sırada: demo salonun üye/antrenör ekranları, EAS `production` ortam değişkenleri, mağaza build'i, gizlilik metni (`docs/CUTOVER.md` §7–9).
+
+**Nerede.** `docs/CUTOVER.md` §5–6; üretim log'u `wrangler tail --env production`; plan `~/Codes/_merkez/docs/tasks/marte/20261030-cloudflare-email-service.md`.
+
+---
+
 ## 2026-10-30 — Worker e-postası Resend yerine Cloudflare Email Service
 
 **Yapıldı.** Outbox'ın `email` teslimi (`api/src/jobs/outboxDelivery.ts`) Resend `fetch`'i yerine `send_email` bağlaması `EMAIL` ile gidiyor (`env.EMAIL.send`); `wrangler.jsonc`'ta bağlama `staging` ve `production` env'lerinde ayrı ayrı tanımlı (env'ler bağlama miras almaz), iki `deploy --dry-run` de `env.EMAIL` listeliyor ve 0 ile bitiyor. `RESEND_API_KEY` ve tüm API anahtarı yolu kalktı. Gönderen adı `GymEntra <bildirim@...>` biçiminden `{email, name}` yapısına çevriliyor. Geri çekme/`dead`, `toEnv` ile teslimde alıcı çözme, dedupe, `replyTo` aynen. Bağlama yoksa satır `EMAIL binding not configured` ile görünür biçimde başarısız olur (import'ta atmaz). Fırlatılan hata `email <kod>: <ileti>` olarak `last_error`'a yazılır, ileti içindeki adresler `[address]` ile maskelenir. Testler sahte `EMAIL.send` ile yeniden yazıldı (başarı, hata → `dead`, bağlama yok, alıcı yok, `replyTo`, gönderen adı eşlemesi). `docs/CUTOVER.md` §5, §6, §9 güncellendi.
