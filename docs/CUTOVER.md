@@ -128,8 +128,7 @@ Playbook'lar: `pb-expo-eas`, `pb-store-release`; build öncesi `docs/BUILD.md` (
   `EXPO_PUBLIC_API_URL=https://api.gymentra.salt-tech-apps.com` gömer (**build anında**). Paketin içinde
   üretim adresinin geçtiğini, `workers.dev`'in geçmediğini artefakt üzerinde doğrula.
 - **`eas update` eas.json'daki `env`'i okumaz** (`docs/BUILD.md`). Bu iki değişken EAS **`production` ortamında** yoksa, ilk `eas update`
-  paketi **Firebase kipinde** derler ve api kipindeki binary'nin arka ucunu sessizce geri çevirir. İlk OTA'dan önce, sahip onayıyla
-  (dış servis yazımı), düz metin olarak ekle: 
+  paketi **Firebase kipinde** derler ve api kipindeki binary'nin arka ucunu sessizce geri çevirir. **Yapıldı (2026-11-05, sahip onayıyla):** ikisi de EAS `production` ortamında düz metin olarak var (`eas env:list production` ile okundu; `preview` ortamına eklenmedi). Gerekirse yeniden eklemek için:
   ```bash
   cd apps/gymentra-mobile
   npx eas env:set production --name EXPO_PUBLIC_BACKEND --value api --visibility plaintext
@@ -137,8 +136,7 @@ Playbook'lar: `pb-expo-eas`, `pb-store-release`; build öncesi `docs/BUILD.md` (
   ```
   (`eas env:set` bu eas-cli'da mevcut; `env:create` kullanımdan kalkmış.) Sonra OTA'yı `eas update --environment production ...` ile gönder
   ve paketin üretim adresini taşıdığını doğrula. Eski satır "OTA ile açılmaz, çünkü fingerprint değişir" **doğrulanmamış ve büyük olasılıkla yanlıştı**:
-  `app.json` `runtimeVersion` politikası `fingerprint`, `app.config.*` yok, env değeri parmak izini muhtemelen değiştirmez. Kesin için
-  `npx expo-updates fingerprint:generate`'i iki ortamda karşılaştır (henüz yapılmadı).
+  `app.json` `runtimeVersion` politikası `fingerprint`, `app.config.*` yok, env değeri parmak izini muhtemelen değiştirmez. **Ölçüldü (2026-11-05):** `npx expo-updates fingerprint:generate --platform ios` iki değişkenle ve değişkensiz **aynı** parmak izini veriyor (`102865de…`), yani değerler `runtimeVersion`'ı değiştirmiyor: eski (Firebase kipi) bir binary de aynı runtime'a sahipse api kipinde derlenmiş bir OTA'yı alır ve arka ucu sessizce değiştirir, tersi de geçerli. Bugün mağazada Firebase kipinde dağıtılmış binary yok sayıldığı için sorun değil; ileride kipi değiştiren bir OTA göndermeden önce bunu hatırla.
 - **OTA yalnız EAS'ta derlenmiş binary'lere ulaşır** (`docs/BUILD.md`, `eas update` bölümü): yerelde derlenen mağaza sürümü OTA'yı görmez (`CheckCompleteUnavailable`), bu yüzden düzeltme için yeni build gerekir. Yukarıdaki EAS ortamı adımı OTA kullanılacaksa geçerlidir.
 - Android güncellemesi durduruldu (Play'de ilerleme olmadıkça Android'e build/OTA yok); bu sürüm iOS içindir.
 - TestFlight/App Store sürümü gerçek hesapla doğrudan üretime bakar; kullanıcı yok, bu yüzden "bekletmeli yayın" gerekmez.
